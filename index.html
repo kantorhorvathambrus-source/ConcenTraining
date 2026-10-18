@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ConcenTraining</title>
+  <meta name="description" content="A focus timer with characters that react when you get distracted.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main class="app">
+
+    <!-- ========== SETUP ========== -->
+    <section id="setupScreen" class="screen" hidden>
+      <header class="app-header">
+        <h1>ConcenTraining</h1>
+        <p class="muted">Pick a buddy, set a timer, and get focused.</p>
+      </header>
+
+      <div class="step">
+        <h2>1. Choose your character</h2>
+        <div id="characterList" class="character-list"></div>
+        <p id="characterError" class="error" hidden>Pick a character first.</p>
+      </div>
+
+      <div class="step">
+        <h2>2. Choose a style</h2>
+        <div class="choice-group" data-pref="style">
+          <button type="button" class="choice" data-value="kind">
+            <strong>Kind</strong>
+            <span>Happy you're back and cheers you on.</span>
+          </button>
+          <button type="button" class="choice" data-value="strict">
+            <strong>Strict</strong>
+            <span>Stern when you drift off and pushes you back on track.</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="step">
+        <h2>3. Choose a mode</h2>
+        <div class="choice-group" data-pref="mode">
+          <button type="button" class="choice" data-value="simple">
+            <strong>Simple</strong>
+            <span>Say how distracted you were with 5 buttons.</span>
+          </button>
+          <button type="button" class="choice" data-value="advanced">
+            <strong>Advanced</strong>
+            <span>Log how long you were distracted and see your focus % at the end.</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="step">
+        <h2>4. How long do you want to focus?</h2>
+        <div id="setupDuration" class="duration-picker"></div>
+      </div>
+
+      <button id="startButton" type="button" class="btn primary big">Start session</button>
+    </section>
+
+    <!-- ========== SESSION ========== -->
+    <section id="sessionScreen" class="screen" hidden>
+      <p id="sessionInfo" class="session-info muted"></p>
+
+      <div id="sessionStage" class="stage">
+        <img id="sessionImg" class="char-img" alt="">
+      </div>
+
+      <div class="timer-block">
+        <div id="timer" class="timer">00:00</div>
+        <div class="progress" aria-hidden="true"><div id="progressBar" class="progress-bar"></div></div>
+      </div>
+
+      <div class="distraction">
+        <h2 id="distractionPrompt"></h2>
+        <div id="distractionButtons" class="distraction-buttons"></div>
+      </div>
+
+      <div id="motivationCard" class="motivation-card" aria-live="polite" hidden>
+        <span id="motivationBadge" class="motivation-badge"></span>
+        <p id="motivationText"></p>
+        <button id="motivationClose" type="button" class="icon-btn" aria-label="Hide message">×</button>
+      </div>
+
+      <div class="session-bar">
+        <button id="motivateButton" type="button" class="btn primary">Motivate me</button>
+        <button id="endButton" type="button" class="btn">End session</button>
+      </div>
+    </section>
+
+    <!-- ========== SUMMARY ========== -->
+    <section id="summaryScreen" class="screen" hidden>
+      <div class="stage">
+        <img id="summaryImg" class="char-img" alt="">
+      </div>
+      <h1 id="summaryTitle" class="summary-title"></h1>
+      <p id="summaryPercent" class="summary-percent" hidden></p>
+      <p id="summaryText" class="summary-text"></p>
+      <button id="newSessionButton" type="button" class="btn primary big">Start another session</button>
+    </section>
+  </main>
+
+  <!-- ========== DIALOGS ========== -->
+  <dialog id="ragebaitDialog">
+    <form method="dialog">
+      <h2>Heads up!</h2>
+      <p id="ragebaitText"></p>
+      <div class="dialog-actions">
+        <button value="cancel" class="btn">Pick someone else</button>
+        <button value="ok" class="btn primary">Bring it on</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="restartDialog">
+    <form method="dialog">
+      <h2>That was a long break</h2>
+      <p>Do you want to keep going with this session, or start fresh? After a long distraction, starting over is often easier.</p>
+      <button value="continue" class="btn primary wide">Continue this session</button>
+      <p class="divider"><span>or start over with</span></p>
+      <div id="restartDuration" class="duration-picker"></div>
+      <button value="restart" class="btn wide">Start over</button>
+    </form>
+  </dialog>
+
+  <dialog id="endDialog">
+    <form method="dialog">
+      <h2>End this session now?</h2>
+      <div class="dialog-actions">
+        <button value="cancel" class="btn">Keep going</button>
+        <button value="end" class="btn primary">End session</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="js/data/characters.js"></script>
+  <script src="js/data/messages.js"></script>
+  <script src="js/placeholder-art.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
