@@ -78,8 +78,10 @@ The history page says so, too.
   ```
 
 - **Import** reads such a file and **adds** its sessions to the history. A session whose start time
-  is already in the history is skipped, and nothing is ever deleted. If the result is over 1000
-  sessions, the oldest ones are left out.
+  is already in the history is skipped. Like when a new session is saved, only the newest 1000
+  sessions are kept: if the total goes over 1000, the oldest sessions are removed, whether they
+  came from the file or were already in the history. The result message says how many were
+  imported, how many from the file didn't fit, and how many existing sessions were removed.
 - The whole file is checked before anything is saved: `app`, `type` and `version` must match,
   and every session must have valid times, mode, style, focus % and distractions. If anything is
   wrong, nothing is imported and the page says what's wrong (for example
