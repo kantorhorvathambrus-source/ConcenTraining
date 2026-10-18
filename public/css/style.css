@@ -556,6 +556,39 @@ dialog p {
   margin-bottom: 14px;
 }
 
+/* ---------- stats page ---------- */
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  margin-bottom: 16px;
+}
+
+.stats-table th,
+.stats-table td {
+  padding: 12px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.stats-table th:not(:first-child),
+.stats-table td:not(:first-child) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.stats-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+a {
+  color: var(--primary);
+}
+
 /* ---------- small screens ---------- */
 
 @media (max-width: 380px) {

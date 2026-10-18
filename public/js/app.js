@@ -3,7 +3,6 @@
 const MIN = 60 * 1000;
 const SESSION_KEY = "ct_session_v1";
 const PREFS_KEY = "ct_prefs_v1";
-const PICKS_KEY = "ct_character_picks_v1";
 const BASE_TITLE = "ConcenTraining";
 
 const GOOD_EVERY_MS = 5 * MIN; // show the "doing well" pose after this much undistracted time
@@ -60,11 +59,15 @@ function remove(key) {
 }
 
 // Popularity stats: every tap on a character card counts, finished session or not.
-// Stored only in this browser for now; global stats will need a small backend later.
+// Sent to the Netlify Function in netlify/functions/picks.mjs. Fire-and-forget:
+// if it fails (offline, or index.html opened as a local file) the app works the same.
 function countCharacterPick(id) {
-  const picks = load(PICKS_KEY, {});
-  picks[id] = (picks[id] || 0) + 1;
-  save(PICKS_KEY, picks);
+  fetch("/api/picks", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ characterId: id }),
+    keepalive: true,
+  }).catch(() => {});
 }
 
 // ---------- state ----------

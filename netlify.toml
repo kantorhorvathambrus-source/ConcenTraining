@@ -1,0 +1,5 @@
+# The website is the public/ folder. There is no build command: Netlify only
+# installs package.json dependencies for the functions in netlify/functions/
+# and applies database migrations from netlify/database/migrations/.
+[build]
+  publish = "public"

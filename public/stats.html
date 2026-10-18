@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Character Stats · ConcenTraining</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main class="app">
+    <header class="app-header">
+      <h1>Character stats</h1>
+      <p class="muted">How often each character was tapped on the setup screen.</p>
+    </header>
+
+    <p id="statsStatus" class="muted">Loading…</p>
+
+    <table id="statsTable" class="stats-table" hidden>
+      <thead>
+        <tr>
+          <th scope="col">Character</th>
+          <th scope="col" id="recentHeader">Last 30 days</th>
+          <th scope="col">All time</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <p id="paidNote" class="muted"></p>
+    <p><a href="./">← Back to the timer</a></p>
+  </main>
+
+  <script>
+    "use strict";
+
+    async function loadStats() {
+      const status = document.getElementById("statsStatus");
+      try {
+        const response = await fetch("/api/stats");
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const stats = await response.json();
+
+        document.getElementById("recentHeader").textContent = `Last ${stats.recentDays} days`;
+        const body = document.querySelector("#statsTable tbody");
+        for (const character of stats.characters) {
+          const row = document.createElement("tr");
+          const paid = stats.paidCharacterIds.includes(character.id) ? " (paid)" : "";
+          for (const text of [character.name + paid, character.recentPicks, character.totalPicks]) {
+            const cell = document.createElement("td");
+            cell.textContent = text;
+            row.append(cell);
+          }
+          body.append(row);
+        }
+
+        document.getElementById("paidNote").textContent = stats.paidCharacterIds.length
+          ? `Paid right now: the top ${stats.paidCharacterIds.length} by the last ${stats.recentDays} days.`
+          : `No paid characters yet: that starts once there are at least 10 characters.`;
+        document.getElementById("statsTable").hidden = false;
+        status.hidden = true;
+      } catch (error) {
+        status.textContent = `Couldn't load stats (${error.message}). They only work on the deployed Netlify site.`;
+      }
+    }
+
+    loadStats();
+  </script>
+</body>
+</html>
