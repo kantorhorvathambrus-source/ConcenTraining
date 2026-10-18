@@ -40,7 +40,11 @@ on the device. Sessions abandoned with **Start over** aren't saved. The page sho
   Each week is total focused time ÷ total session time, so longer sessions count more.
   Weeks without Advanced sessions are a gap in the line.
 - **Best time of day:** focus % by start time: Morning 5–12, Afternoon 12–17, Evening 17–22, Night 22–5.
+  A slot can only be "best" once it has at least 3 sessions with a focus %
+  (`MIN_SESSIONS_FOR_BEST_TIME` at the top of `public/js/history.js`). Until one does, the page says
+  "Not enough data yet".
 - **Last 30 sessions** with date, character, mode, length, distractions and focus %.
+- **Backup:** Export and Import buttons (see below).
 
 Simple-mode sessions have no focus % (their buttons aren't time-based). They count for streaks and
 appear in the list as "—", but are left out of the trend and time-of-day numbers.
@@ -57,6 +61,31 @@ Each history entry: `startedAt`, `endedAt` (timestamps in ms), `endedBy` (`"time
 `characterId`, `style`, `mode`, `plannedMs`, `elapsedMs`, `distractedMs`, `focusPercent`
 (`null` in Simple mode) and `distractions` (`[{ at, level, ms }]`).
 History lives only in this browser: clearing site data or switching devices starts it over.
+The history page says so, too.
+
+### Export and import
+
+- **Export** downloads `concentraining-history-YYYY-MM-DD.json`:
+
+  ```json
+  {
+    "app": "ConcenTraining",
+    "type": "session-history",
+    "version": 1,
+    "exportedAt": "2026-10-28T09:00:00.000Z",
+    "sessions": [ /* history entries, newest first */ ]
+  }
+  ```
+
+- **Import** reads such a file and **adds** its sessions to the history. A session whose start time
+  is already in the history is skipped, and nothing is ever deleted. If the result is over 1000
+  sessions, the oldest ones are left out.
+- The whole file is checked before anything is saved: `app`, `type` and `version` must match,
+  and every session must have valid times, mode, style, focus % and distractions. If anything is
+  wrong, nothing is imported and the page says what's wrong (for example
+  "Session 4 in the file can't be imported: its focus % is invalid"). Max. file size: 5 MB.
+- If the session fields ever change, raise `EXPORT_VERSION` in `public/js/history-store.js`
+  and teach the import how to read version 1 files.
 
 ## Files
 
@@ -70,8 +99,8 @@ History lives only in this browser: clearing site data or switching devices star
 | `public/js/data/messages.js` | Motivation messages and Simple-mode summary messages |
 | `public/js/placeholder-art.js` | Built-in placeholder drawings for characters without real art |
 | `public/js/app.js` | Timer, reaction engine, motivation rotation, summary |
-| `public/js/history-store.js` | Saving/loading history and the focus % calculation (used by both pages) |
-| `public/js/history.js` | Streaks, weekly chart, time of day and session list on `history.html` |
+| `public/js/history-store.js` | Saving/loading history, focus % calculation, export/import checks (used by both pages) |
+| `public/js/history.js` | Streaks, weekly chart, time of day, session list and backup buttons on `history.html` |
 | `netlify/functions/picks.mjs` | `POST /api/picks`: counts one tap on a character |
 | `netlify/functions/stats.mjs` | `GET /api/stats`: popularity + which characters are paid |
 | `netlify/database/migrations/` | Database tables (SQL), applied automatically on deploy |

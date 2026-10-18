@@ -5,6 +5,8 @@
 
 const TREND_WEEKS = 12;
 const LIST_SIZE = 30;
+// A time-of-day slot can only be "best" once it has this many sessions with a focus %.
+const MIN_SESSIONS_FOR_BEST_TIME = 3;
 
 // Sessions are grouped by the hour they started.
 const DAY_PARTS = [
@@ -214,13 +216,13 @@ function renderTrend(history, now) {
 
 function renderDayParts(history) {
   const parts = calcDayParts(history);
-  const measured = parts.filter((part) => part.percent !== null);
+  const eligible = parts.filter((part) => part.count >= MIN_SESSIONS_FOR_BEST_TIME);
   // Highest %, and with a tie the one with more sessions behind it.
-  const best = measured.sort((a, b) => b.percent - a.percent || b.count - a.count)[0] || null;
+  const best = eligible.sort((a, b) => b.percent - a.percent || b.count - a.count)[0] || null;
 
   document.getElementById("bestTime").textContent = best
     ? `You focus best in the ${best.label.toLowerCase()} (${best.percent}% on average).`
-    : "Finish a few Advanced-mode sessions to see when you focus best.";
+    : `Not enough data yet. A time of day counts once it has ${MIN_SESSIONS_FOR_BEST_TIME} Advanced-mode sessions.`;
 
   const list = document.getElementById("dayParts");
   list.innerHTML = "";
@@ -238,7 +240,10 @@ function renderDayParts(history) {
     item.querySelector(".day-part-head .muted").textContent = part.hours;
     item.querySelector(".day-part-value").textContent = part.percent === null ? "—" : `${part.percent}%`;
     item.querySelector(".day-part-fill").style.width = `${part.percent || 0}%`;
-    item.querySelector(".day-part-count").textContent = plural(part.count, "session");
+    item.querySelector(".day-part-count").textContent =
+      part.count >= MIN_SESSIONS_FOR_BEST_TIME
+        ? plural(part.count, "session")
+        : `${plural(part.count, "session")} · needs ${MIN_SESSIONS_FOR_BEST_TIME} to count`;
     list.append(item);
   }
 }
@@ -278,18 +283,85 @@ function renderSessionList(history) {
   }
 }
 
-function init() {
+// Draws (or redraws, after an import) everything that depends on the history.
+function render() {
   const history = loadHistory();
-  if (history.length === 0) {
-    document.getElementById("historyEmpty").hidden = false;
-    return;
-  }
+  const empty = history.length === 0;
+  document.getElementById("historyEmpty").hidden = !empty;
+  document.getElementById("historyContent").hidden = empty;
+  document.getElementById("exportButton").disabled = empty;
+  if (empty) return;
+
   const now = Date.now();
   renderStreaks(history, now);
   renderTrend(history, now);
   renderDayParts(history);
   renderSessionList(history);
-  document.getElementById("historyContent").hidden = false;
+}
+
+// ---------- export / import ----------
+
+function showBackupStatus(message, isError) {
+  const status = document.getElementById("backupStatus");
+  status.textContent = message;
+  status.classList.toggle("error", isError);
+  status.hidden = false;
+}
+
+function exportHistory() {
+  const data = buildHistoryExport();
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `concentraining-history-${dayKey(new Date())}.json`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showBackupStatus(`Exported ${plural(data.sessions.length, "session")}.`, false);
+}
+
+async function importHistory(file) {
+  if (file.size > IMPORT_MAX_BYTES) {
+    showBackupStatus("This file is too big to be a ConcenTraining export.", true);
+    return;
+  }
+
+  let sessions;
+  try {
+    sessions = parseHistoryExport(await file.text());
+  } catch (error) {
+    showBackupStatus(error.message, true);
+    return;
+  }
+
+  const { added, skipped, dropped, saved } = mergeIntoHistory(sessions);
+  if (!saved) {
+    showBackupStatus("Couldn't save the imported sessions: this browser's storage is full or blocked.", true);
+    return;
+  }
+
+  let message =
+    added === 0
+      ? `Nothing new to import: you already have every session in this file (${sessions.length}).`
+      : `Imported ${plural(added, "session")}.`;
+  if (added > 0 && skipped > 0) message += ` Skipped ${plural(skipped, "session")} you already had.`;
+  if (dropped > 0) message += ` The oldest ${plural(dropped, "session")} didn't fit (max. ${HISTORY_LIMIT}) and were left out.`;
+  showBackupStatus(message, false);
+  render();
+}
+
+function init() {
+  const fileInput = document.getElementById("importFile");
+  document.getElementById("exportButton").addEventListener("click", exportHistory);
+  document.getElementById("importButton").addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", () => {
+    const file = fileInput.files[0];
+    fileInput.value = ""; // so picking the same file again still triggers "change"
+    if (file) importHistory(file);
+  });
+  render();
 }
 
 init();

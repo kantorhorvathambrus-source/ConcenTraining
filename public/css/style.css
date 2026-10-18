@@ -608,6 +608,7 @@ a {
 /* ---------- history page ---------- */
 
 .empty-state {
+  margin: 0 0 32px;
   padding: 24px;
   text-align: center;
   background: var(--surface);
@@ -617,6 +618,38 @@ a {
 
 .history-section {
   margin-bottom: 32px;
+}
+
+.storage-note {
+  margin: 0 0 24px;
+  padding: 12px 14px;
+  font-size: 0.9rem;
+  background: var(--surface-2);
+  border-radius: 12px;
+}
+
+.backup-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.backup-status {
+  margin: 12px 0 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1.5px solid var(--relaxed);
+  background: var(--surface);
+}
+
+.backup-status.error {
+  border-color: var(--error);
+  color: var(--error);
 }
 
 .history-section > p {
