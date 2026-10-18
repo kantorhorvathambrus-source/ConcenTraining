@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Your History · ConcenTraining</title>
+  <meta name="description" content="Your finished focus sessions, streaks and focus trends.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main class="app">
+    <header class="app-header">
+      <h1>Your history</h1>
+      <p class="muted">Finished sessions saved on this device.</p>
+    </header>
+
+    <p id="historyEmpty" class="empty-state" hidden>
+      No finished sessions yet. Every session that runs at least 1 minute shows up here once it ends.
+      <a href="./">Start one →</a>
+    </p>
+
+    <div id="historyContent" hidden>
+      <section class="history-section">
+        <div class="stat-cards">
+          <div class="stat-card">
+            <span class="stat-label">Current streak</span>
+            <span id="currentStreak" class="stat-value"></span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Longest streak</span>
+            <span id="longestStreak" class="stat-value"></span>
+          </div>
+        </div>
+        <p class="muted small">A streak counts days with at least one finished session.</p>
+      </section>
+
+      <section class="history-section">
+        <h2>Weekly focus</h2>
+        <p class="muted small">Advanced-mode sessions over the last 12 weeks. Longer sessions count more.</p>
+        <div id="trendChart" class="chart"></div>
+        <p id="trendNote" class="muted"></p>
+      </section>
+
+      <section class="history-section">
+        <h2>Best time of day</h2>
+        <p id="bestTime"></p>
+        <ul id="dayParts" class="day-parts"></ul>
+      </section>
+
+      <section class="history-section">
+        <h2 id="listTitle">Last 30 sessions</h2>
+        <ol id="sessionList" class="session-list"></ol>
+      </section>
+    </div>
+
+    <p><a href="./">← Back to the timer</a></p>
+  </main>
+
+  <script src="js/data/characters.js"></script>
+  <script src="js/history-store.js"></script>
+  <script src="js/history.js"></script>
+</body>
+</html>

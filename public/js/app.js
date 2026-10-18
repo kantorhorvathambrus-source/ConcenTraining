@@ -406,6 +406,7 @@ function finishSession(endedAt) {
   clearInterval(tickTimer);
   stopStage();
   session.endedAt = Math.min(endedAt, session.startedAt + session.durationMs);
+  saveFinishedSession(session);
   remove(SESSION_KEY);
   document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
   document.title = BASE_TITLE;
@@ -464,10 +465,7 @@ function renderSummary() {
   const percentEl = $("#summaryPercent");
 
   if (session.mode === "advanced") {
-    const elapsed = session.endedAt - session.startedAt;
-    const loggedMs = session.distractions.reduce((sum, d) => sum + d.ms, 0);
-    const distracted = Math.min(elapsed, loggedMs);
-    const percent = elapsed > 0 ? Math.round(((elapsed - distracted) / elapsed) * 100) : 100;
+    const { elapsedMs: elapsed, distractedMs: distracted, focusPercent: percent } = sessionFocus(session);
     const count = session.distractions.length;
 
     $("#summaryTitle").textContent = verdict(percent);

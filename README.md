@@ -29,17 +29,49 @@ Netlify Functions plus a Netlify Database, used only for character popularity st
   Shorter sessions: general messages without the "first 20 minutes" facts → final stretch.
 - A running session survives a page reload (it's saved in `localStorage`, the browser's built-in storage).
 
+## Session history (`history.html`)
+
+Every finished session (timer ran out or **End session** pressed) that ran at least 1 minute is saved
+on the device. Sessions abandoned with **Start over** aren't saved. The page shows:
+
+- **Current and longest streak:** days (local time) with at least one finished session.
+  The current streak stays alive until today is over, even if you haven't finished a session yet today.
+- **Weekly focus trend:** an SVG line chart of the last 12 weeks (weeks start on Monday).
+  Each week is total focused time ÷ total session time, so longer sessions count more.
+  Weeks without Advanced sessions are a gap in the line.
+- **Best time of day:** focus % by start time: Morning 5–12, Afternoon 12–17, Evening 17–22, Night 22–5.
+- **Last 30 sessions** with date, character, mode, length, distractions and focus %.
+
+Simple-mode sessions have no focus % (their buttons aren't time-based). They count for streaks and
+appear in the list as "—", but are left out of the trend and time-of-day numbers.
+
+### Browser storage keys
+
+| Key | What's in it |
+|---|---|
+| `ct_session_v1` | The session that's running right now (removed when it ends) |
+| `ct_history_v1` | Finished sessions, newest first, max. 1000 |
+| `ct_prefs_v1` | Last chosen character, style, mode and duration |
+
+Each history entry: `startedAt`, `endedAt` (timestamps in ms), `endedBy` (`"timer"`/`"manual"`),
+`characterId`, `style`, `mode`, `plannedMs`, `elapsedMs`, `distractedMs`, `focusPercent`
+(`null` in Simple mode) and `distractions` (`[{ at, level, ms }]`).
+History lives only in this browser: clearing site data or switching devices starts it over.
+
 ## Files
 
 | File | What's in it |
 |---|---|
 | `public/index.html` | All screens (setup, session, summary) and dialogs |
+| `public/history.html` | Your finished sessions, streaks and focus trends |
 | `public/stats.html` | Popularity table (reads `/api/stats`) |
 | `public/css/style.css` | Styling, light/dark mode, breathing and reaction animations |
 | `public/js/data/characters.js` | Character list, personality groups, art paths |
 | `public/js/data/messages.js` | Motivation messages and Simple-mode summary messages |
 | `public/js/placeholder-art.js` | Built-in placeholder drawings for characters without real art |
 | `public/js/app.js` | Timer, reaction engine, motivation rotation, summary |
+| `public/js/history-store.js` | Saving/loading history and the focus % calculation (used by both pages) |
+| `public/js/history.js` | Streaks, weekly chart, time of day and session list on `history.html` |
 | `netlify/functions/picks.mjs` | `POST /api/picks`: counts one tap on a character |
 | `netlify/functions/stats.mjs` | `GET /api/stats`: popularity + which characters are paid |
 | `netlify/database/migrations/` | Database tables (SQL), applied automatically on deploy |
