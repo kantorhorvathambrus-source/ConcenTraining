@@ -9,6 +9,15 @@ const GOOD_EVERY_MS = 5 * MIN; // show the "doing well" pose after this much und
 const PICKER_DELAY_MS = 1400; // let the reaction play before asking what caused the distraction
 const PICKER_TIMEOUT_MS = 3000; // the category picker hides itself after this long
 const DURATION_PRESETS = [15, 25, 35, 45, 60, 90];
+const MAX_MINUTES = 240;
+const DEFAULT_MINUTES = 25;
+
+// Summary screen pose for each session result (see sessionResult in history-store.js).
+const SUMMARY_POSES = {
+  kind: { great: "good", okay: "level2", rough: "level4", short: "initial" }, // proud / pleased / gently encouraging
+  strict: { great: "good", okay: "initial", rough: "level2", short: "initial" }, // satisfied / neutral / disappointed
+  ragebait: { great: "good", okay: "level1", rough: "level4", short: "initial" }, // grudging / smirking / mocking
+};
 
 // Simple mode: severity only, no time. Level = which reaction pose to show (1-5).
 const SIMPLE_OPTIONS = [
@@ -76,13 +85,15 @@ function countCharacterPick(id) {
 const prefs = Object.assign({ characterId: null, mode: "simple", minutes: 25 }, load(PREFS_KEY, {}));
 delete prefs.style; // saved before personalities came from the character; dropped on the next save
 // style: the character's personality when the session ran ("kind", "strict" or "ragebait")
-let session = null; // { characterId, style, mode, durationMs, startedAt, distractions: [], endedAt }
+// restartPending: "A whole lot" / "10+ min" was tapped and the continue/restart question
+// hasn't been answered yet. Saved, so a reload still asks it.
+let session = null; // { characterId, style, mode, durationMs, startedAt, distractions: [], endedAt, restartPending }
 let tickTimer = 0;
 let nextGoodAt = 0;
 // distraction: the one the open (or about to open) picker belongs to.
-// restartPending: "A whole lot" / "10+ min" was tapped, so the continue/restart
-// dialog opens as soon as the picker closes. They never show at the same time.
-const picker = { distraction: null, showTimer: 0, hideTimer: 0, restartPending: false };
+// If session.restartPending is set, the continue/restart dialog opens as soon as
+// the picker closes. They never show at the same time.
+const picker = { distraction: null, showTimer: 0, hideTimer: 0 };
 const motivation = { phase: null, index: 0, shown: false };
 
 function characterById(id) {
@@ -188,9 +199,12 @@ function stopStage() {
 
 // ---------- duration picker (used on setup and in the restart dialog) ----------
 
+// Empty becomes 25, anything under 1 becomes 1, anything over 240 becomes 240.
 function clampMinutes(value) {
+  if (String(value).trim() === "") return DEFAULT_MINUTES;
   const n = Math.round(Number(value));
-  return Number.isFinite(n) && n > 0 ? Math.min(240, n) : 25;
+  if (!Number.isFinite(n)) return DEFAULT_MINUTES;
+  return Math.min(MAX_MINUTES, Math.max(1, n));
 }
 
 // Builds preset chips + a custom number field. Returns a function that reads the value.
@@ -202,7 +216,7 @@ function durationPicker(container, initialMinutes) {
 
   const custom = document.createElement("label");
   custom.className = "custom-minutes";
-  custom.innerHTML = `Custom: <input type="number" min="1" max="240" inputmode="numeric"> min`;
+  custom.innerHTML = `Custom: <input type="number" min="1" max="${MAX_MINUTES}" inputmode="numeric"> min`;
   const input = custom.querySelector("input");
 
   const sync = () => {
@@ -226,6 +240,11 @@ function durationPicker(container, initialMinutes) {
 
   input.value = initialMinutes;
   input.addEventListener("input", sync);
+  // When the field is left, show the value that will really be used.
+  input.addEventListener("change", () => {
+    input.value = clampMinutes(input.value);
+    sync();
+  });
   // Inside a dialog form, Enter would press the first button ("Continue") by accident.
   input.addEventListener("keydown", (event) => {
     if (event.key === "Enter") event.preventDefault();
@@ -342,7 +361,7 @@ function enterSession() {
     buttons.append(button);
   }
 
-  resetPicker();
+  closePicker(false);
   motivation.phase = null;
   $("#motivationCard").hidden = true;
   nextGoodAt = Date.now() + GOOD_EVERY_MS;
@@ -380,12 +399,11 @@ function logDistraction(option) {
   if (!session || session.endedAt) return;
   const distraction = { at: Date.now(), level: option.level, ms: option.ms || 0, category: null };
   session.distractions.push(distraction);
+  if (option.askRestart) session.restartPending = true;
   save(SESSION_KEY, session);
 
   nextGoodAt = Date.now() + GOOD_EVERY_MS;
   react(`level${option.level}`, option.level);
-
-  if (option.askRestart) picker.restartPending = true;
   schedulePicker(distraction);
 }
 
@@ -432,14 +450,7 @@ function closePicker(thenAsk) {
 }
 
 function askPendingRestart() {
-  if (!picker.restartPending) return;
-  picker.restartPending = false;
-  askContinueOrRestart();
-}
-
-function resetPicker() {
-  picker.restartPending = false;
-  closePicker(false);
+  if (session && session.restartPending) askContinueOrRestart();
 }
 
 async function askContinueOrRestart() {
@@ -449,8 +460,12 @@ async function askContinueOrRestart() {
 
   const readMinutes = durationPicker($("#restartDuration"), Math.round(session.durationMs / MIN));
   const answer = await ask(dialog);
+  if (!session || session.endedAt) return; // the timer ran out while the question was open
 
-  if (answer === "restart" && session && !session.endedAt) {
+  // Answered (Esc counts as "continue"), so a reload won't ask again.
+  session.restartPending = false;
+  save(SESSION_KEY, session);
+  if (answer === "restart") {
     const { characterId, mode } = session;
     startSession(characterId, mode, readMinutes());
   }
@@ -469,7 +484,7 @@ async function onEndClick() {
 function finishSession(endedAt) {
   clearInterval(tickTimer);
   stopStage();
-  resetPicker();
+  closePicker(false);
   session.endedAt = Math.min(endedAt, session.startedAt + session.durationMs);
   saveFinishedSession(session);
   remove(SESSION_KEY);
@@ -521,29 +536,36 @@ function showMotivation() {
 
 // ---------- summary ----------
 
+// The pose, title and message all follow the session result (great / okay / rough / short).
 function renderSummary() {
   const character = characterById(session.characterId);
+  const result = sessionResult(session);
   const img = $("#summaryImg");
   img.alt = character.name;
-  setPoseImage(img, character, "good");
+  setPoseImage(img, character, (SUMMARY_POSES[personalityOf(character)] || SUMMARY_POSES.kind)[result]);
 
+  $("#summaryTitle").textContent = SUMMARY_TITLES[result];
   const percentEl = $("#summaryPercent");
+  const textEl = $("#summaryText");
+  const noteEl = $("#summaryNote");
+  noteEl.textContent = SUMMARY_SHORT_NOTE;
+  noteEl.hidden = result !== "short";
 
   if (session.mode === "advanced") {
     const { elapsedMs: elapsed, distractedMs: distracted, focusPercent: percent } = sessionFocus(session);
     const count = session.distractions.length;
 
-    $("#summaryTitle").textContent = verdict(percent);
     percentEl.textContent = `${percent}% focused`;
     percentEl.hidden = false;
-    $("#summaryText").textContent =
+    textEl.textContent =
       `You focused for ${formatDuration(elapsed - distracted)} out of ${formatDuration(elapsed)}, ` +
       `with ${count} distraction${count === 1 ? "" : "s"} logged.`;
+    textEl.hidden = false;
   } else {
-    $("#summaryTitle").textContent = "Well done!";
     percentEl.hidden = true;
-    $("#summaryText").textContent =
-      SIMPLE_SUMMARY_MESSAGES[Math.floor(Math.random() * SIMPLE_SUMMARY_MESSAGES.length)];
+    const messages = SIMPLE_SUMMARY_MESSAGES[result];
+    textEl.hidden = !messages; // a short session only shows the note
+    if (messages) textEl.textContent = messages[Math.floor(Math.random() * messages.length)];
   }
 
   // Top 3 picked categories. Hidden if none was picked this session.
@@ -553,13 +575,6 @@ function renderSummary() {
   categoriesEl.textContent =
     `Most common distraction${top.length === 1 ? "" : "s"}: ` +
     top.map((category) => `${category.label} (${category.count})`).join(", ");
-}
-
-function verdict(percent) {
-  if (percent >= 90) return "Outstanding focus!";
-  if (percent >= 75) return "Great session!";
-  if (percent >= 50) return "Good effort!";
-  return "Every session is practice!";
 }
 
 // ---------- formatting ----------
@@ -577,9 +592,14 @@ function formatClock(ms) {
   return h > 0 ? `${h}:${mmss}` : mmss;
 }
 
+// "45 sec", "25 min" or "24 min 30 sec": seconds are shown whenever there are any,
+// so focused time and session time never round to the same number by accident.
 function formatDuration(ms) {
-  if (ms < MIN) return `${Math.round(ms / 1000)} sec`;
-  return `${Math.round(ms / MIN)} min`;
+  const total = Math.round(ms / 1000);
+  const minutes = Math.floor(total / 60);
+  const seconds = total % 60;
+  if (minutes === 0) return `${seconds} sec`;
+  return seconds ? `${minutes} min ${seconds} sec` : `${minutes} min`;
 }
 
 // ---------- start-up ----------
@@ -612,6 +632,7 @@ function init() {
       finishSession(saved.startedAt + saved.durationMs);
     } else {
       enterSession();
+      askPendingRestart(); // the page was reloaded before the continue/restart question was answered
     }
     return;
   }

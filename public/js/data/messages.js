@@ -70,10 +70,35 @@ const MOTIVATION = {
   ],
 };
 
-// End-of-session messages for Simple mode (no stats, just a "well done").
-const SIMPLE_SUMMARY_MESSAGES = [
-  "You showed up and put in the work.",
-  "Every session makes the next one a little easier.",
-  "Give yourself a proper break. You earned it.",
-  "That's one more focus session in the bag.",
-];
+// Summary screen title for each session result (see sessionResult in history-store.js).
+const SUMMARY_TITLES = {
+  great: "Great session!",
+  okay: "Good effort!",
+  rough: "Tough session",
+  short: "That was quick",
+};
+
+// Shown under the title for sessions under 1 minute, in both modes.
+const SUMMARY_SHORT_NOTE = "Sessions shorter than 1 minute aren't saved to your history.";
+
+// End-of-session messages for Simple mode (it has no stats), one is picked at random.
+const SIMPLE_SUMMARY_MESSAGES = {
+  great: [
+    "You showed up and put in the work.",
+    "Every session makes the next one a little easier.",
+    "Give yourself a proper break. You earned it.",
+    "That's one more focus session in the bag.",
+  ],
+  okay: [
+    "Some distractions crept in, but you kept coming back. That's the skill.",
+    "Not perfect, but solid. Every time you came back counted.",
+    "A few bumps along the way. Next time, try putting your phone further away.",
+    "You got real work done. Aim for a few fewer distractions next time.",
+  ],
+  rough: [
+    "Lots of distractions this time. That happens to everyone.",
+    "Tough one. A shorter session next time might be easier to protect.",
+    "Your focus got pulled away a lot today. Tomorrow is a fresh start.",
+    "Hard session. Notice what kept distracting you, and plan around it next time.",
+  ],
+};
