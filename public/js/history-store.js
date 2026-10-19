@@ -7,11 +7,12 @@ const HISTORY_LIMIT = 1000; // newest sessions kept (~300 KB)
 const HISTORY_MIN_MS = 60 * 1000; // shorter sessions count as accidental starts and aren't saved
 
 // Export file format. Bump EXPORT_VERSION if the session fields ever change.
-// Version 2 added a category to each distraction; version 1 files still import.
+// Version 2 added a category to each distraction. Version 3 allows the style
+// "ragebait". Version 1 and 2 files still import.
 const EXPORT_APP = "ConcenTraining";
 const EXPORT_TYPE = "session-history";
-const EXPORT_VERSION = 2;
-const IMPORT_VERSIONS = [1, 2];
+const EXPORT_VERSION = 3;
+const IMPORT_VERSIONS = [1, 2, 3];
 const IMPORT_MAX_BYTES = 5 * 1024 * 1024;
 
 // What caused a distraction. The id is what's saved; the label is what's shown.
@@ -117,7 +118,8 @@ const isTime = (value) => Number.isFinite(value) && value >= 0;
 
 // Checks one session from an import file. Returns a clean copy (only the known
 // fields) or throws an Error saying what's wrong. Version 1 files have no
-// distraction categories, so their distractions get category: null.
+// distraction categories, so their distractions get category: null. Before
+// version 3 the only styles were "kind" and "strict".
 function cleanImportedSession(raw, version) {
   if (!raw || typeof raw !== "object") throw new Error("it isn't a session object");
 
@@ -125,7 +127,8 @@ function cleanImportedSession(raw, version) {
   if (!isTime(startedAt) || !isTime(endedAt) || endedAt < startedAt) throw new Error("its start or end time is invalid");
   if (endedBy !== "timer" && endedBy !== "manual") throw new Error("it doesn't say how it ended");
   if (typeof characterId !== "string" || !/^[a-z0-9-]{1,64}$/.test(characterId)) throw new Error("its character is invalid");
-  if (style !== "kind" && style !== "strict") throw new Error("its style is invalid");
+  const styles = version >= 3 ? ["kind", "strict", "ragebait"] : ["kind", "strict"];
+  if (!styles.includes(style)) throw new Error("its style is invalid");
   if (mode !== "simple" && mode !== "advanced") throw new Error("its mode is invalid");
   if (!isTime(plannedMs) || !isTime(elapsedMs) || !isTime(distractedMs) || distractedMs > elapsedMs) {
     throw new Error("its durations are invalid");
