@@ -6,6 +6,17 @@ const HISTORY_KEY = "ct_history_v1";
 const HISTORY_LIMIT = 1000; // newest sessions kept (~300 KB)
 const HISTORY_MIN_MS = 60 * 1000; // shorter sessions count as accidental starts and aren't saved
 
+// How a finished session went: "great", "okay" or "rough" (see sessionResult).
+// Advanced mode uses the focus %: great from 85%, okay from 60%, rough below.
+const SUMMARY_GREAT_FOCUS = 85;
+const SUMMARY_OKAY_FOCUS = 60;
+// Simple mode has no focus %, so it uses distraction points instead: each logged
+// distraction scores its level (Very briefly = 1 … A whole lot = 5), counted per
+// 25 minutes. Great up to 2 points per 25 min, rough from 8, okay in between.
+const SIMPLE_GREAT_POINTS = 2;
+const SIMPLE_ROUGH_POINTS = 8;
+const SIMPLE_POINTS_PER_MS = 25 * 60 * 1000; // shorter sessions count as 25 min
+
 // Export file format. Bump EXPORT_VERSION if the session fields ever change.
 // Version 2 added a category to each distraction. Version 3 allows the style
 // "ragebait". Version 1 and 2 files still import.
@@ -46,6 +57,7 @@ function countCategories(distractions) {
 
 // Time and focus numbers for a finished session. focusPercent is null in Simple
 // mode, because its buttons say how much you were distracted, not for how long.
+// It's only 100 with no distraction time at all: 99.6% shows as 99, not 100.
 function sessionFocus(session) {
   const elapsedMs = Math.max(0, session.endedAt - session.startedAt);
   const loggedMs = session.distractions.reduce((sum, d) => sum + (d.ms || 0), 0);
@@ -53,8 +65,27 @@ function sessionFocus(session) {
   let focusPercent = null;
   if (session.mode === "advanced") {
     focusPercent = elapsedMs > 0 ? Math.round(((elapsedMs - distractedMs) / elapsedMs) * 100) : 100;
+    if (distractedMs > 0) focusPercent = Math.min(99, focusPercent);
   }
   return { elapsedMs, distractedMs, focusPercent };
+}
+
+// How a finished session went: "short" (under HISTORY_MIN_MS, so not saved),
+// "great", "okay" or "rough". Advanced mode uses the focus %, Simple mode the
+// distraction points (see the constants at the top).
+function sessionResult(session) {
+  const { elapsedMs, focusPercent } = sessionFocus(session);
+  if (elapsedMs < HISTORY_MIN_MS) return "short";
+
+  if (session.mode === "advanced") {
+    if (focusPercent >= SUMMARY_GREAT_FOCUS) return "great";
+    return focusPercent >= SUMMARY_OKAY_FOCUS ? "okay" : "rough";
+  }
+
+  const points = session.distractions.reduce((sum, d) => sum + d.level, 0);
+  const perPeriod = (points * SIMPLE_POINTS_PER_MS) / Math.max(elapsedMs, SIMPLE_POINTS_PER_MS);
+  if (perPeriod <= SIMPLE_GREAT_POINTS) return "great";
+  return perPeriod >= SIMPLE_ROUGH_POINTS ? "rough" : "okay";
 }
 
 function loadHistory() {

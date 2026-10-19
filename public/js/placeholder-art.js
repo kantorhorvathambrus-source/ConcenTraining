@@ -29,8 +29,8 @@ const ART_EXPRESSIONS = {
   ragebait: {
     initial: { eyes: "bored", brows: "flat", mouth: "smirk" },
     blink: { eyes: "closed", brows: "flat", mouth: "smirk" },
-    good: { eyes: "side", brows: "flat", mouth: "meh" }, // unimpressed side-eye
-    level1: { eyes: "bored", brows: ["raised", "flat"], mouth: "smirk" }, // smirk
+    good: { eyes: "side", brows: "flat", mouth: "meh", extras: ["crossedArms"] }, // grudging: looks away, arms crossed
+    level1: { eyes: "sideGlance", brows: ["raised", "flat"], mouth: "smugGrin" }, // side-eye: low lid, pupils pushed to one side
     level2: { eyes: "rolled", brows: "raised", mouth: "flat" }, // eye-roll
     level3: { eyes: ["happy", "open"], brows: ["flat", "raised"], mouth: "tongue" }, // wink + tongue out
     level4: { eyes: "squeezed", brows: "raised", mouth: "laugh", extras: ["tears", "clap"] }, // laughing, slow clap
@@ -101,10 +101,14 @@ function drawEye(cx, type) {
     case "bored": // half-closed lid
       return `<path d="M${cx - 8} ${EYE_Y} A8 8 0 0 0 ${cx + 8} ${EYE_Y}Z" fill="#222"/>
               <path d="M${cx - 11} ${EYE_Y} L${cx + 11} ${EYE_Y}" ${LINE} stroke-width="3.5"/>`;
-    case "side": // half-closed, looking away
+    case "side": // half-closed, looking away (to the left)
       return `<path d="M${cx - 10} ${EYE_Y} A10 9 0 0 0 ${cx + 10} ${EYE_Y}Z" fill="#fff" stroke="#222" stroke-width="2.5"/>
-              <circle cx="${cx + 5}" cy="${EYE_Y + 3.5}" r="4" fill="#222"/>
+              <circle cx="${cx - 5}" cy="${EYE_Y + 3.5}" r="4" fill="#222"/>
               <path d="M${cx - 12} ${EYE_Y} L${cx + 12} ${EYE_Y}" ${LINE} stroke-width="3.5"/>`;
+    case "sideGlance": // mostly open with a low lid, pupils pushed hard to the right
+      return `<path d="M${cx - 11} ${EYE_Y - 4} L${cx + 11} ${EYE_Y - 4} A12 10 0 1 1 ${cx - 11} ${EYE_Y - 4}Z" fill="#fff" stroke="#222" stroke-width="2.5"/>
+              <circle cx="${cx + 6}" cy="${EYE_Y + 1.5}" r="5" fill="#222"/>
+              <path d="M${cx - 13} ${EYE_Y - 4} L${cx + 13} ${EYE_Y - 4}" ${LINE} stroke-width="3.5"/>`;
     case "rolled": // pupils up
       return `<circle cx="${cx}" cy="${EYE_Y}" r="11" fill="#fff" stroke="#222" stroke-width="2.5"/>
               <circle cx="${cx}" cy="${EYE_Y - 6}" r="5" fill="#222"/>`;
@@ -155,6 +159,8 @@ function drawMouth(type) {
     case "yell":
       return `<ellipse cx="100" cy="141" rx="19" ry="16" fill="#5a1414"/>
               <ellipse cx="100" cy="150" rx="10" ry="5" fill="#e05a5a"/>`;
+    case "smugGrin": // wide lopsided grin, higher on one side
+      return `<path d="M82 134 Q104 148 122 124 Q104 140 82 134Z" fill="#6b1f1f" stroke="#222" stroke-width="3" stroke-linejoin="round"/>`;
     case "meh":
       return `<path d="M88 135 L113 139" ${LINE} stroke-width="3.5"/>`;
     case "tongue":
@@ -206,6 +212,11 @@ const ART_EXTRAS = {
                      <path d="M66 192 Q60 204 66 216"/><path d="M134 192 Q140 204 134 216"/>
                      <path d="M54 196 Q50 204 54 212"/><path d="M146 196 Q150 204 146 212"/>
                    </g>`,
+  // Arms folded across the chest.
+  crossedArms: (skin) => `<g fill="${skin}" stroke="#222" stroke-width="2.5">
+                            <rect x="34" y="190" width="112" height="24" rx="12" transform="rotate(-6 90 202)"/>
+                            <rect x="54" y="204" width="112" height="24" rx="12" transform="rotate(6 110 216)"/>
+                          </g>`,
   // A fist with the middle finger raised.
   middleFinger: (skin) => `<g fill="${skin}" stroke="#222" stroke-width="2.5">
                              <rect x="153" y="128" width="14" height="62" rx="7"/>

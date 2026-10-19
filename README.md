@@ -9,7 +9,8 @@ Netlify Functions plus a Netlify Database, used only for character popularity st
 
 - **Setup:** 1. pick a character, 2. a mode (Simple / Advanced), 3. a focus duration.
   The character decides the personality (see below). Ragebait characters show a warning before
-  they can be selected.
+  they can be selected. A custom duration is corrected as soon as you leave the field: empty becomes
+  25 min, anything under 1 becomes 1, anything over 240 becomes 240.
 - **Simple mode:** 5 severity buttons (very briefly … a whole lot), not time-based.
 - **Advanced mode:** 7 duration buttons (30 sec … 10+ min). Ends with the % of the session spent focusing.
   "10+ min" counts as 10 minutes in that %.
@@ -22,7 +23,8 @@ Netlify Functions plus a Netlify Database, used only for character popularity st
 - **"A whole lot" / "10+ min"** asks: continue this session, or start over with a new duration.
   The category picker comes first and the dialog opens as soon as the picker closes (after a tap or
   after 3 s), so the two never show at the same time. If **End session** is pressed while this
-  question is waiting, it's asked after **Keep going**.
+  question is waiting, it's asked after **Keep going**. The question is saved with the running session
+  (`restartPending`), so if the page is reloaded before it's answered, it's asked right after the reload.
 - **Reactions:** each button maps to one of the 5 distraction poses. The character also blinks,
   "breathes", and shows the "doing well" pose after every 5 minutes without a logged distraction.
 
@@ -37,8 +39,36 @@ Netlify Functions plus a Netlify Database, used only for character popularity st
 - **Motivation button:** always visible. Messages rotate in phases (see `js/data/messages.js`).
   Sessions of 35+ min: 0–10 min general → 10–20 min "hardest part" → 20 min–85% middle → 85–100% final stretch.
   Shorter sessions: general messages without the "first 20 minutes" facts → final stretch.
-- **Summary screen:** also shows the session's top 3 picked categories, e.g.
+- **Summary screen:** the character's pose, the title and the message follow how the session went
+  (see "Summary result" below). It also shows the session's top 3 picked categories, e.g.
   "Most common distractions: Phone (2), Thoughts (1)". Hidden if nothing was picked.
+  Times are shown with seconds when there are any ("24 min 30 sec out of 25 min").
+
+### Summary result
+
+Every finished session gets a result. The thresholds are constants at the top of
+`public/js/history-store.js`, so other features can reuse them.
+
+- **Advanced mode** uses the focus %: **great** from 85% (`SUMMARY_GREAT_FOCUS`), **okay** from 60%
+  (`SUMMARY_OKAY_FOCUS`), **rough** below that. The focus % is only 100% when no distraction time was
+  logged at all (99.6% shows as 99%).
+- **Simple mode** has no focus % (it's saved as `null`), so it uses distraction points: each logged
+  distraction scores its level (Very briefly = 1, Briefly = 2, Moderately = 3, A lot = 4,
+  A whole lot = 5). The points are counted per 25 minutes of session time; sessions shorter than
+  25 minutes count as 25 minutes. **great** up to 2 points per 25 min (`SIMPLE_GREAT_POINTS`),
+  **rough** from 8 (`SIMPLE_ROUGH_POINTS`), **okay** in between. Example: two "A lot" in a 25-minute
+  session = 8 points = rough.
+- **short:** a session under 1 minute. It isn't saved to the history, and the summary says so.
+
+| Result | Kind | Strict | Ragebait | Title |
+|---|---|---|---|---|
+| great | `good` (proud) | `good` (satisfied) | `good` (grudging) | Great session! |
+| okay | `level2` (pleased) | `initial` (neutral) | `level1` (side-eye) | Good effort! |
+| rough | `level4` (gently encouraging) | `level2` (disappointed) | `level4` (mocking) | Tough session |
+| short | `initial` | `initial` | `initial` | That was quick |
+
+The poses are in `SUMMARY_POSES` (`public/js/app.js`); titles and Simple-mode messages for each result
+are in `public/js/data/messages.js`.
 - A running session survives a page reload (it's saved in `localStorage`, the browser's built-in storage).
 
 ## Personalities
@@ -56,13 +86,13 @@ Characters react only with poses and facial expressions, never with text. The ra
 
 | Pose | Ragebait reaction |
 |---|---|
-| initial / blink | Bored, smug smirk |
-| level1 | Smirk with one eyebrow raised |
+| initial / blink | Bored half-closed eyes looking straight ahead, small smirk |
+| level1 | Side-eye: white eyes under a low lid, pupils pushed to the side, one eyebrow up, wide smug grin |
 | level2 | Eye-roll |
 | level3 | Wink and tongue out |
 | level4 | Laughing at you with a sarcastic slow clap |
 | level5 | Middle finger |
-| good | Grudging and unimpressed (side-eye, flat mouth, a small shrug), never proud |
+| good | Grudging: arms crossed, half-closed eyes looking away, flat "meh" mouth, a small shrug. Never proud |
 
 ## Session history (`history.html`)
 
@@ -91,7 +121,7 @@ appear in the list as "—", but are left out of the trend and time-of-day numbe
 
 | Key | What's in it |
 |---|---|
-| `ct_session_v1` | The session that's running right now (removed when it ends) |
+| `ct_session_v1` | The session that's running right now (removed when it ends). `restartPending: true` while the continue/restart question is unanswered; older saved sessions don't have it, which means `false` |
 | `ct_history_v1` | Finished sessions, newest first, max. 1000 |
 | `ct_prefs_v1` | Last chosen character, mode and duration. A `style` value saved by older versions is ignored and dropped |
 
@@ -149,10 +179,10 @@ The history page says so, too.
 | `public/stats.html` | Popularity table (reads `/api/stats`) |
 | `public/css/style.css` | Styling, light/dark mode, breathing and reaction animations |
 | `public/js/data/characters.js` | Character list, groups and the personality each group gives (`personalityOf`), art paths |
-| `public/js/data/messages.js` | Motivation messages and Simple-mode summary messages |
+| `public/js/data/messages.js` | Motivation messages, summary titles and Simple-mode summary messages per result |
 | `public/js/placeholder-art.js` | Built-in placeholder drawings (kind, strict and ragebait faces) for characters without real art |
 | `public/js/app.js` | Timer, reaction engine, distraction category picker, motivation rotation, summary |
-| `public/js/history-store.js` | Saving/loading history, focus % calculation, distraction categories, export/import checks (used by both pages) |
+| `public/js/history-store.js` | Saving/loading history, focus % and summary result (with their thresholds), distraction categories, export/import checks (used by both pages) |
 | `public/js/history.js` | Streaks, weekly chart, time of day, distraction categories, session list and backup buttons on `history.html` |
 | `netlify/functions/picks.mjs` | `POST /api/picks`: counts one tap on a character |
 | `netlify/functions/stats.mjs` | `GET /api/stats`: popularity + which characters are paid |
