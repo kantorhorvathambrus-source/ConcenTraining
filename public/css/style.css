@@ -310,7 +310,7 @@ input:focus-visible {
   --mult: 1;
 }
 
-.stage.wild {
+.stage.ragebait {
   --mult: 2.2;
 }
 
@@ -331,12 +331,12 @@ input:focus-visible {
   }
 }
 
-/* Strict style shakes, kind style hops; ragebait (.wild) exaggerates both. */
-.stage.react-1 { --amp: 3px; }
-.stage.react-2 { --amp: 5px; }
-.stage.react-3 { --amp: 8px; }
-.stage.react-4 { --amp: 11px; }
-.stage.react-5 { --amp: 15px; }
+/* Kind hops, strict shakes, ragebait does a cheeky head tilt. Ragebait's --mult makes it bigger. */
+.stage.react-1 { --amp: 3px; --tilt: 1deg; }
+.stage.react-2 { --amp: 5px; --tilt: 2deg; }
+.stage.react-3 { --amp: 8px; --tilt: 3deg; }
+.stage.react-4 { --amp: 11px; --tilt: 4deg; }
+.stage.react-5 { --amp: 15px; --tilt: 5deg; }
 
 .stage.strict.react-1,
 .stage.strict.react-2 {
@@ -357,9 +357,24 @@ input:focus-visible {
   animation: hop 0.6s ease-out 2;
 }
 
+.stage.ragebait.react-1,
+.stage.ragebait.react-2,
+.stage.ragebait.react-3,
+.stage.ragebait.react-4,
+.stage.ragebait.react-5 {
+  transform-origin: 50% 100%;
+  animation: taunt 0.7s ease-in-out 3;
+}
+
 .stage.react-good {
   --amp: 10px;
   animation: hop 0.7s ease-out 2;
+}
+
+/* Ragebait isn't proud when you do well: just a small, unimpressed shrug. */
+.stage.ragebait.react-good {
+  --amp: 3px;
+  animation: shrug 1s ease-in-out 1;
 }
 
 @keyframes shake {
@@ -372,6 +387,30 @@ input:focus-visible {
   }
   75% {
     transform: translateX(calc(var(--amp) * var(--mult))) rotate(calc(var(--mult) * 1deg));
+  }
+}
+
+@keyframes taunt {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  25% {
+    transform: rotate(calc(var(--tilt) * var(--mult) * -1)) translateY(calc(var(--amp) * -0.5));
+  }
+  75% {
+    transform: rotate(calc(var(--tilt) * var(--mult))) translateY(calc(var(--amp) * -0.5));
+  }
+}
+
+@keyframes shrug {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  30%,
+  60% {
+    transform: translateY(calc(var(--amp) * -1));
   }
 }
 

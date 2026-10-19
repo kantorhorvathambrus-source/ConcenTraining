@@ -73,7 +73,9 @@ function countCharacterPick(id) {
 
 // ---------- state ----------
 
-const prefs = Object.assign({ characterId: null, style: "kind", mode: "simple", minutes: 25 }, load(PREFS_KEY, {}));
+const prefs = Object.assign({ characterId: null, mode: "simple", minutes: 25 }, load(PREFS_KEY, {}));
+delete prefs.style; // saved before personalities came from the character; dropped on the next save
+// style: the character's personality when the session ran ("kind", "strict" or "ragebait")
 let session = null; // { characterId, style, mode, durationMs, startedAt, distractions: [], endedAt }
 let tickTimer = 0;
 let nextGoodAt = 0;
@@ -105,8 +107,8 @@ function ask(dialog) {
 
 // ---------- character images ----------
 
-function setPoseImage(img, character, style, pose) {
-  const fallback = placeholderArt(character, style, pose);
+function setPoseImage(img, character, pose) {
+  const fallback = placeholderArt(character, pose);
   if (!character.artPath) {
     img.onerror = null;
     img.src = fallback;
@@ -116,38 +118,36 @@ function setPoseImage(img, character, style, pose) {
     img.onerror = null;
     img.src = fallback;
   };
-  img.src = `${character.artPath}/${style}/${pose}.${character.artExt || "png"}`;
+  img.src = `${character.artPath}/${pose}.${character.artExt || "png"}`;
 }
 
-function preloadArt(character, style) {
+function preloadArt(character) {
   if (!character.artPath) return;
   for (const pose of POSES) {
-    new Image().src = `${character.artPath}/${style}/${pose}.${character.artExt || "png"}`;
+    new Image().src = `${character.artPath}/${pose}.${character.artExt || "png"}`;
   }
 }
 
 // ---------- reaction engine (shared by every character) ----------
 
 const REACTION_CLASSES = ["react-1", "react-2", "react-3", "react-4", "react-5", "react-good"];
-const stage = { wrap: null, img: null, character: null, style: "kind", reacting: false, reactTimer: 0, blinkTimer: 0 };
+const stage = { wrap: null, img: null, character: null, reacting: false, reactTimer: 0, blinkTimer: 0 };
 
-function mountStage(character, style) {
+function mountStage(character) {
   stopStage();
+  const personality = personalityOf(character);
   stage.wrap = $("#sessionStage");
   stage.img = $("#sessionImg");
   stage.character = character;
-  stage.style = style;
-  stage.wrap.classList.toggle("kind", style === "kind");
-  stage.wrap.classList.toggle("strict", style === "strict");
-  stage.wrap.classList.toggle("wild", character.group === "ragebait");
+  for (const name of ["kind", "strict", "ragebait"]) stage.wrap.classList.toggle(name, personality === name);
   stage.img.alt = character.name;
-  preloadArt(character, style);
+  preloadArt(character);
   setPose("initial");
   scheduleBlink();
 }
 
 function setPose(pose) {
-  setPoseImage(stage.img, stage.character, stage.style, pose);
+  setPoseImage(stage.img, stage.character, pose);
 }
 
 // pose: "level1".."level5" or "good"; level: 1-5 for distraction reactions, 0 for "good".
@@ -257,7 +257,7 @@ function renderCharacterList() {
       <span class="char-name">${character.name}</span>
       <span class="badge badge-${character.group}">${GROUPS[character.group].label}</span>
       <span class="char-tagline">${character.tagline}</span>`;
-    setPoseImage(card.querySelector("img"), character, prefs.style, "initial");
+    setPoseImage(card.querySelector("img"), character, "initial");
     card.addEventListener("click", () => onCharacterTap(character));
     list.append(card);
   }
@@ -288,7 +288,6 @@ function bindChoiceGroups() {
         prefs[key] = button.dataset.value;
         savePrefs();
         sync();
-        if (key === "style") renderCharacterList(); // cards show the kind/strict face
       });
     });
     sync();
@@ -303,15 +302,15 @@ function onStartClick() {
   }
   prefs.minutes = readSetupMinutes();
   savePrefs();
-  startSession(prefs.characterId, prefs.style, prefs.mode, prefs.minutes);
+  startSession(prefs.characterId, prefs.mode, prefs.minutes);
 }
 
 // ---------- session ----------
 
-function startSession(characterId, style, mode, minutes) {
+function startSession(characterId, mode, minutes) {
   session = {
     characterId,
-    style,
+    style: personalityOf(characterById(characterId)), // kept in the history
     mode,
     durationMs: minutes * MIN,
     startedAt: Date.now(),
@@ -349,7 +348,7 @@ function enterSession() {
   nextGoodAt = Date.now() + GOOD_EVERY_MS;
 
   showScreen("sessionScreen");
-  mountStage(character, session.style);
+  mountStage(character);
 
   clearInterval(tickTimer);
   tick();
@@ -452,8 +451,8 @@ async function askContinueOrRestart() {
   const answer = await ask(dialog);
 
   if (answer === "restart" && session && !session.endedAt) {
-    const { characterId, style, mode } = session;
-    startSession(characterId, style, mode, readMinutes());
+    const { characterId, mode } = session;
+    startSession(characterId, mode, readMinutes());
   }
 }
 
@@ -526,7 +525,7 @@ function renderSummary() {
   const character = characterById(session.characterId);
   const img = $("#summaryImg");
   img.alt = character.name;
-  setPoseImage(img, character, session.style, "good");
+  setPoseImage(img, character, "good");
 
   const percentEl = $("#summaryPercent");
 
@@ -605,6 +604,10 @@ function init() {
   const saved = load(SESSION_KEY, null);
   if (saved && !saved.endedAt && characterById(saved.characterId)) {
     session = saved;
+    // A session saved before personalities came from the character can hold any
+    // style: it continues (and goes into the history) with the character's own.
+    session.style = personalityOf(characterById(saved.characterId));
+    save(SESSION_KEY, session);
     if (Date.now() >= saved.startedAt + saved.durationMs) {
       finishSession(saved.startedAt + saved.durationMs);
     } else {

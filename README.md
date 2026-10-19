@@ -7,8 +7,9 @@ Netlify Functions plus a Netlify Database, used only for character popularity st
 
 ## How it works
 
-- **Setup:** pick a character, a style (Kind / Strict), a mode (Simple / Advanced) and a focus duration.
-  Ragebait characters show a warning before they can be selected.
+- **Setup:** 1. pick a character, 2. a mode (Simple / Advanced), 3. a focus duration.
+  The character decides the personality (see below). Ragebait characters show a warning before
+  they can be selected.
 - **Simple mode:** 5 severity buttons (very briefly … a whole lot), not time-based.
 - **Advanced mode:** 7 duration buttons (30 sec … 10+ min). Ends with the % of the session spent focusing.
   "10+ min" counts as 10 minutes in that %.
@@ -40,6 +41,29 @@ Netlify Functions plus a Netlify Database, used only for character popularity st
   "Most common distractions: Phone (2), Thoughts (1)". Hidden if nothing was picked.
 - A running session survives a page reload (it's saved in `localStorage`, the browser's built-in storage).
 
+## Personalities
+
+There's no style to choose: each character's `group` in `public/js/data/characters.js` decides its
+personality, in one place (`GROUPS` and `personalityOf()`). A new character only needs a `group`.
+
+| Group | Personality | How it reacts |
+|---|---|---|
+| `relaxed` (e.g. Grandma) | `kind` | Happy you're back, cheers you on. Hops. |
+| `strict` (e.g. Boss, Soldier) | `strict` | Stern when you drift off, angrier each level. Shakes. |
+| `ragebait` (e.g. Bodybuilder) | `ragebait` | Annoying on purpose: mocking, more insulting each level. Cheeky head tilt. |
+
+Characters react only with poses and facial expressions, never with text. The ragebait poses:
+
+| Pose | Ragebait reaction |
+|---|---|
+| initial / blink | Bored, smug smirk |
+| level1 | Smirk with one eyebrow raised |
+| level2 | Eye-roll |
+| level3 | Wink and tongue out |
+| level4 | Laughing at you with a sarcastic slow clap |
+| level5 | Middle finger |
+| good | Grudging and unimpressed (side-eye, flat mouth, a small shrug), never proud |
+
 ## Session history (`history.html`)
 
 Every finished session (timer ran out or **End session** pressed) that ran at least 1 minute is saved
@@ -69,14 +93,18 @@ appear in the list as "—", but are left out of the trend and time-of-day numbe
 |---|---|
 | `ct_session_v1` | The session that's running right now (removed when it ends) |
 | `ct_history_v1` | Finished sessions, newest first, max. 1000 |
-| `ct_prefs_v1` | Last chosen character, style, mode and duration |
+| `ct_prefs_v1` | Last chosen character, mode and duration. A `style` value saved by older versions is ignored and dropped |
 
 Each history entry: `startedAt`, `endedAt` (timestamps in ms), `endedBy` (`"timer"`/`"manual"`),
-`characterId`, `style`, `mode`, `plannedMs`, `elapsedMs`, `distractedMs`, `focusPercent`
+`characterId`, `style` (the character's personality when the session ran: `"kind"`, `"strict"` or
+`"ragebait"`), `mode`, `plannedMs`, `elapsedMs`, `distractedMs`, `focusPercent`
 (`null` in Simple mode) and `distractions` (`[{ at, level, ms, category }]`). `category` is
 `"phone"`, `"thoughts"`, `"noise"`, `"people"`, `"tired"`, `"other"` or `null` (nothing picked).
 Sessions saved before categories existed have no `category` field; everything that reads it treats
 that as `null`.
+Sessions saved before personalities came from the character keep the style that was chosen then
+(for example a strict Grandma). A session that was still running when this changed continues, and
+is saved, with the character's own personality.
 History lives only in this browser: clearing site data or switching devices starts it over.
 The history page says so, too.
 
@@ -88,7 +116,7 @@ The history page says so, too.
   {
     "app": "ConcenTraining",
     "type": "session-history",
-    "version": 2,
+    "version": 3,
     "exportedAt": "2026-10-28T09:00:00.000Z",
     "sessions": [ /* history entries, newest first */ ]
   }
@@ -104,8 +132,11 @@ The history page says so, too.
   wrong, nothing is imported and the page says what's wrong (for example
   "Session 4 in the file can't be imported: its focus % is invalid"). Max. file size: 5 MB.
 - **Versions:** version 2 added `category` to each distraction. Version 1 files (made before that)
-  still import; their distractions get `category: null`. In a version 2 file, every distraction must
+  still import; their distractions get `category: null`. From version 2, every distraction must
   have a known category or `null`. Old sessions without the field are exported with `null`.
+  Version 3 allows `style: "ragebait"`; in version 1 and 2 files the style must be `kind` or `strict`.
+  The fields didn't change, but a version 2 app can't read a ragebait session, so the new number
+  makes an older app say "made by a newer version" instead of "its style is invalid".
 - If the session fields ever change again, raise `EXPORT_VERSION` in `public/js/history-store.js`,
   add the new number to `IMPORT_VERSIONS`, and teach the import how to read the older files.
 
@@ -117,9 +148,9 @@ The history page says so, too.
 | `public/history.html` | Your finished sessions, streaks and focus trends |
 | `public/stats.html` | Popularity table (reads `/api/stats`) |
 | `public/css/style.css` | Styling, light/dark mode, breathing and reaction animations |
-| `public/js/data/characters.js` | Character list, personality groups, art paths |
+| `public/js/data/characters.js` | Character list, groups and the personality each group gives (`personalityOf`), art paths |
 | `public/js/data/messages.js` | Motivation messages and Simple-mode summary messages |
-| `public/js/placeholder-art.js` | Built-in placeholder drawings for characters without real art |
+| `public/js/placeholder-art.js` | Built-in placeholder drawings (kind, strict and ragebait faces) for characters without real art |
 | `public/js/app.js` | Timer, reaction engine, distraction category picker, motivation rotation, summary |
 | `public/js/history-store.js` | Saving/loading history, focus % calculation, distraction categories, export/import checks (used by both pages) |
 | `public/js/history.js` | Streaks, weekly chart, time of day, distraction categories, session list and backup buttons on `history.html` |
@@ -131,14 +162,13 @@ The history page says so, too.
 
 ## Adding real character artwork
 
-Each character needs 8 poses × 2 styles. Put the images in a folder like this:
+Each character needs one set of 8 poses, drawn in its own personality. Put the images in a folder like this:
 
 ```
-public/assets/characters/grandma/kind/initial.png
-public/assets/characters/grandma/kind/level1.png   … level5.png
-public/assets/characters/grandma/kind/good.png
-public/assets/characters/grandma/kind/blink.png
-public/assets/characters/grandma/strict/…          (same 8 file names)
+public/assets/characters/grandma/initial.png
+public/assets/characters/grandma/level1.png   … level5.png
+public/assets/characters/grandma/good.png
+public/assets/characters/grandma/blink.png
 ```
 
 Then set `artPath: "assets/characters/grandma"` (relative to `public/`) for that character in `public/js/data/characters.js`

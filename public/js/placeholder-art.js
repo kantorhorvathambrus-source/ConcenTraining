@@ -1,8 +1,9 @@
 // Draws simple SVG stand-in art for characters that don't have real artwork yet.
-// Every character gets all 8 poses in both styles, so the app is fully usable
-// before the real images are finished.
+// Every character gets all 8 poses in its own personality (see personalityOf in
+// characters.js), so the app is fully usable before the real images are finished.
 
-// Face settings for each style and pose.
+// Face settings for each personality and pose. eyes and brows can be one value
+// for both sides or [left, right].
 const ART_EXPRESSIONS = {
   kind: {
     initial: { eyes: "open", brows: "soft", mouth: "smile" },
@@ -23,6 +24,17 @@ const ART_EXPRESSIONS = {
     level3: { eyes: "narrow", brows: "angry", mouth: "frown", extras: ["vein"] },
     level4: { eyes: "wide", brows: "angry", mouth: "shout", extras: ["vein"] },
     level5: { eyes: "wide", brows: "furious", mouth: "yell", extras: ["vein", "steam", "red"] },
+  },
+  // Annoying on purpose: gets more insulting with the level, and only grudging when you do well.
+  ragebait: {
+    initial: { eyes: "bored", brows: "flat", mouth: "smirk" },
+    blink: { eyes: "closed", brows: "flat", mouth: "smirk" },
+    good: { eyes: "side", brows: "flat", mouth: "meh" }, // unimpressed side-eye
+    level1: { eyes: "bored", brows: ["raised", "flat"], mouth: "smirk" }, // smirk
+    level2: { eyes: "rolled", brows: "raised", mouth: "flat" }, // eye-roll
+    level3: { eyes: ["happy", "open"], brows: ["flat", "raised"], mouth: "tongue" }, // wink + tongue out
+    level4: { eyes: "squeezed", brows: "raised", mouth: "laugh", extras: ["tears", "clap"] }, // laughing, slow clap
+    level5: { eyes: "bored", brows: ["raised", "flat"], mouth: "smirk", extras: ["blush", "middleFinger"] },
   },
 };
 
@@ -86,6 +98,20 @@ const LINE = `fill="none" stroke="#222" stroke-linecap="round"`;
 
 function drawEye(cx, type) {
   switch (type) {
+    case "bored": // half-closed lid
+      return `<path d="M${cx - 8} ${EYE_Y} A8 8 0 0 0 ${cx + 8} ${EYE_Y}Z" fill="#222"/>
+              <path d="M${cx - 11} ${EYE_Y} L${cx + 11} ${EYE_Y}" ${LINE} stroke-width="3.5"/>`;
+    case "side": // half-closed, looking away
+      return `<path d="M${cx - 10} ${EYE_Y} A10 9 0 0 0 ${cx + 10} ${EYE_Y}Z" fill="#fff" stroke="#222" stroke-width="2.5"/>
+              <circle cx="${cx + 5}" cy="${EYE_Y + 3.5}" r="4" fill="#222"/>
+              <path d="M${cx - 12} ${EYE_Y} L${cx + 12} ${EYE_Y}" ${LINE} stroke-width="3.5"/>`;
+    case "rolled": // pupils up
+      return `<circle cx="${cx}" cy="${EYE_Y}" r="11" fill="#fff" stroke="#222" stroke-width="2.5"/>
+              <circle cx="${cx}" cy="${EYE_Y - 6}" r="5" fill="#222"/>`;
+    case "squeezed": { // > < laughing eyes, pointing at the nose
+      const d = cx < 100 ? 1 : -1;
+      return `<path d="M${cx - 8 * d} ${EYE_Y - 7} L${cx + 8 * d} ${EYE_Y} L${cx - 8 * d} ${EYE_Y + 7}" ${LINE} stroke-width="3.5" stroke-linejoin="round"/>`;
+    }
     case "closed":
       return `<path d="M${cx - 9} ${EYE_Y} Q${cx} ${EYE_Y + 6} ${cx + 9} ${EYE_Y}" ${LINE} stroke-width="3.5"/>`;
     case "happy":
@@ -107,9 +133,11 @@ function drawEye(cx, type) {
 }
 
 function drawBrows(type, color) {
-  const [outer, inner] = BROW_SHAPES[type] || BROW_SHAPES.flat;
+  const [left, right] = Array.isArray(type) ? type : [type, type];
+  const [leftOuter, leftInner] = BROW_SHAPES[left] || BROW_SHAPES.flat;
+  const [rightOuter, rightInner] = BROW_SHAPES[right] || BROW_SHAPES.flat;
   const style = `fill="none" stroke="${color}" stroke-width="5" stroke-linecap="round"`;
-  return `<path d="M66 ${outer} L90 ${inner}" ${style}/><path d="M110 ${inner} L134 ${outer}" ${style}/>`;
+  return `<path d="M66 ${leftOuter} L90 ${leftInner}" ${style}/><path d="M110 ${rightInner} L134 ${rightOuter}" ${style}/>`;
 }
 
 function drawMouth(type) {
@@ -127,6 +155,16 @@ function drawMouth(type) {
     case "yell":
       return `<ellipse cx="100" cy="141" rx="19" ry="16" fill="#5a1414"/>
               <ellipse cx="100" cy="150" rx="10" ry="5" fill="#e05a5a"/>`;
+    case "meh":
+      return `<path d="M88 135 L113 139" ${LINE} stroke-width="3.5"/>`;
+    case "tongue":
+      return `<path d="M92 136 Q92 156 101 156 Q110 156 110 136Z" fill="#e8607a" stroke="#222" stroke-width="2.5"/>
+              <path d="M101 140 L101 150" ${LINE} stroke-width="2"/>
+              <path d="M84 131 Q100 144 116 131" ${LINE} stroke-width="3.5"/>`;
+    case "laugh":
+      return `<path d="M76 126 Q100 170 124 126Z" fill="#6b1f1f"/>
+              <path d="M80 127 L120 127 L118 133 L82 133Z" fill="#fff"/>
+              <ellipse cx="100" cy="152" rx="11" ry="5" fill="#e05a5a"/>`;
     case "wobbly":
       return `<path d="M84 136 Q92 129 100 136 Q108 143 116 136" ${LINE} stroke-width="3.5"/>`;
     default:
@@ -143,6 +181,7 @@ function drop(x, y) {
   return `<path d="M${x} ${y} Q${x - 6} ${y + 11} ${x} ${y + 14} Q${x + 6} ${y + 11} ${x} ${y}Z" fill="#7ec8ff"/>`;
 }
 
+// skin is the character's skin colour, for the hands.
 const ART_EXTRAS = {
   sparkle: () => star(28, 56, 11) + star(172, 64, 9) + star(162, 28, 6),
   blush: () => `<ellipse cx="66" cy="122" rx="10" ry="5" fill="#ff7aa2" fill-opacity="0.5"/>
@@ -158,17 +197,36 @@ const ART_EXTRAS = {
                   <circle cx="30" cy="62" r="11"/><circle cx="20" cy="44" r="7"/><circle cx="26" cy="30" r="4"/>
                   <circle cx="170" cy="62" r="11"/><circle cx="180" cy="44" r="7"/><circle cx="174" cy="30" r="4"/>
                 </g>`,
+  // Two palms meeting in front of the chest, with small motion lines.
+  clap: (skin) => `<g fill="${skin}" stroke="#222" stroke-width="2.5">
+                     <ellipse cx="89" cy="206" rx="13" ry="22" transform="rotate(18 89 206)"/>
+                     <ellipse cx="111" cy="206" rx="13" ry="22" transform="rotate(-18 111 206)"/>
+                   </g>
+                   <g fill="none" stroke="#222" stroke-width="3" stroke-linecap="round">
+                     <path d="M66 192 Q60 204 66 216"/><path d="M134 192 Q140 204 134 216"/>
+                     <path d="M54 196 Q50 204 54 212"/><path d="M146 196 Q150 204 146 212"/>
+                   </g>`,
+  // A fist with the middle finger raised.
+  middleFinger: (skin) => `<g fill="${skin}" stroke="#222" stroke-width="2.5">
+                             <rect x="153" y="128" width="14" height="62" rx="7"/>
+                             <rect x="139" y="170" width="14" height="22" rx="7"/>
+                             <rect x="167" y="170" width="14" height="22" rx="7"/>
+                             <rect x="136" y="180" width="48" height="44" rx="14"/>
+                           </g>
+                           <rect x="155" y="131" width="10" height="10" rx="4" fill="#fff" fill-opacity="0.45"/>
+                           <path d="M142 202 Q160 196 178 206" ${LINE} stroke-width="2.5"/>`,
 };
 
 const artCache = new Map();
 
-// Returns a data: URL for the given character, style ("kind"/"strict") and pose.
-function placeholderArt(character, style, pose) {
-  const key = `${character.id}/${style}/${pose}`;
+// Returns a data: URL for the given character and pose, drawn in the character's personality.
+function placeholderArt(character, pose) {
+  const key = `${character.id}/${pose}`;
   if (artCache.has(key)) return artCache.get(key);
 
   const look = ART_LOOKS[character.id] || ART_LOOKS.boss;
-  const face = (ART_EXPRESSIONS[style] || ART_EXPRESSIONS.kind)[pose] || ART_EXPRESSIONS.kind.initial;
+  const face = (ART_EXPRESSIONS[personalityOf(character)] || ART_EXPRESSIONS.kind)[pose] || ART_EXPRESSIONS.kind.initial;
+  const [leftEye, rightEye] = Array.isArray(face.eyes) ? face.eyes : [face.eyes, face.eyes];
   const extras = face.extras || [];
   const neckWidth = look.neckWidth || 32;
 
@@ -180,11 +238,11 @@ function placeholderArt(character, style, pose) {
     ${extras.includes("red") ? `<ellipse cx="100" cy="105" rx="54" ry="60" fill="#ff2d2d" fill-opacity="0.3"/>` : ""}
     ${look.hair}
     ${drawBrows(face.brows, look.brow)}
-    ${drawEye(78, face.eyes)}
-    ${drawEye(122, face.eyes)}
+    ${drawEye(78, leftEye)}
+    ${drawEye(122, rightEye)}
     ${drawMouth(face.mouth)}
     ${look.glasses || ""}
-    ${extras.filter((name) => ART_EXTRAS[name]).map((name) => ART_EXTRAS[name]()).join("")}
+    ${extras.filter((name) => ART_EXTRAS[name]).map((name) => ART_EXTRAS[name](look.skin)).join("")}
   </svg>`;
 
   const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
