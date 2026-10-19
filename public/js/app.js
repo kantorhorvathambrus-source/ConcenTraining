@@ -345,7 +345,7 @@ function enterSession() {
   const options = session.mode === "advanced" ? ADVANCED_OPTIONS : SIMPLE_OPTIONS;
 
   $("#sessionInfo").textContent =
-    `${character.name} · ${capitalize(session.style)} · ${capitalize(session.mode)} mode · ${Math.round(session.durationMs / MIN)} min`;
+    `${character.name} · ${capitalize(session.style)} · ${capitalize(session.mode)} · ${Math.round(session.durationMs / MIN)} min`;
   $("#distractionPrompt").textContent =
     session.mode === "advanced" ? "Got distracted? For how long?" : "Got distracted? How much?";
 
@@ -523,6 +523,14 @@ function onMotivateClick() {
     motivation.index = (motivation.index + 1) % MOTIVATION[motivation.phase].length;
   }
   showMotivation();
+  scrollMotivationIntoView();
+}
+
+// On short screens the card opens under the sticky bottom bar, so scroll it up
+// just far enough to sit 12px above the bar (which is taller while the picker is open).
+function scrollMotivationIntoView() {
+  const overlap = $("#motivationCard").getBoundingClientRect().bottom - ($(".session-bar").getBoundingClientRect().top - 12);
+  if (overlap > 0) window.scrollBy({ top: overlap, behavior: "smooth" });
 }
 
 function showMotivation() {

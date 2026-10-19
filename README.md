@@ -39,6 +39,11 @@ Netlify Functions plus a Netlify Database, used only for character popularity st
 - **Motivation button:** always visible. Messages rotate in phases (see `js/data/messages.js`).
   Sessions of 35+ min: 0–10 min general → 10–20 min "hardest part" → 20 min–85% middle → 85–100% final stretch.
   Shorter sessions: general messages without the "first 20 minutes" facts → final stretch.
+  On short screens, tapping it scrolls the message up so it sits just above the bottom button bar.
+- **Small screens:** the session header is short ("Boss · Strict · Advanced · 25 min") and wraps
+  into two even lines if it has to. On screens up to 740 px tall, the session image shrinks
+  (120–260 px tall) so every distraction button fits above the bottom bar without scrolling; the
+  summary image and taller phones keep the normal size. Advanced labels like "10+ min" stay on one line.
 - **Summary screen:** the character's pose, the title and the message follow how the session went
   (see "Summary result" below). It also shows the session's top 3 picked categories, e.g.
   "Most common distractions: Phone (2), Thoughts (1)". Hidden if nothing was picked.
