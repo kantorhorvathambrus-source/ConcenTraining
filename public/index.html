@@ -85,6 +85,13 @@
       </div>
 
       <div class="session-bar">
+        <!-- In the sticky bottom bar so it's on screen wherever you've scrolled.
+             Shown briefly after each distraction; hides itself after PICKER_TIMEOUT_MS (app.js). -->
+        <div id="categoryPicker" class="category-picker" role="group" aria-labelledby="categoryPrompt" hidden>
+          <p id="categoryPrompt" class="category-prompt">What distracted you? <span class="muted">(optional)</span></p>
+          <div id="categoryButtons" class="category-buttons"></div>
+          <div class="picker-countdown" aria-hidden="true"><div class="picker-countdown-bar"></div></div>
+        </div>
         <button id="motivateButton" type="button" class="btn primary">Motivate me</button>
         <button id="endButton" type="button" class="btn">End session</button>
       </div>
@@ -97,7 +104,10 @@
       </div>
       <h1 id="summaryTitle" class="summary-title"></h1>
       <p id="summaryPercent" class="summary-percent" hidden></p>
-      <p id="summaryText" class="summary-text"></p>
+      <div class="summary-details">
+        <p id="summaryText" class="summary-text"></p>
+        <p id="summaryCategories" class="summary-text" hidden></p>
+      </div>
       <button id="newSessionButton" type="button" class="btn primary big">Start another session</button>
       <a href="history.html" class="btn big link-btn">See your history</a>
     </section>

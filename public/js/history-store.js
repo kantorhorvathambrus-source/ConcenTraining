@@ -7,10 +7,41 @@ const HISTORY_LIMIT = 1000; // newest sessions kept (~300 KB)
 const HISTORY_MIN_MS = 60 * 1000; // shorter sessions count as accidental starts and aren't saved
 
 // Export file format. Bump EXPORT_VERSION if the session fields ever change.
+// Version 2 added a category to each distraction; version 1 files still import.
 const EXPORT_APP = "ConcenTraining";
 const EXPORT_TYPE = "session-history";
-const EXPORT_VERSION = 1;
+const EXPORT_VERSION = 2;
+const IMPORT_VERSIONS = [1, 2];
 const IMPORT_MAX_BYTES = 5 * 1024 * 1024;
+
+// What caused a distraction. The id is what's saved; the label is what's shown.
+// A distraction without a picked category is saved with category: null.
+const DISTRACTION_CATEGORIES = [
+  { id: "phone", label: "Phone" },
+  { id: "thoughts", label: "Thoughts" },
+  { id: "noise", label: "Noise" },
+  { id: "people", label: "People" },
+  { id: "tired", label: "Tired" },
+  { id: "other", label: "Other" },
+];
+
+const isCategory = (value) => DISTRACTION_CATEGORIES.some((category) => category.id === value);
+
+// Distractions saved before categories existed have no category field: they get null.
+const withCategory = (d) => ({ at: d.at, level: d.level, ms: d.ms, category: isCategory(d.category) ? d.category : null });
+
+// Counts the categories in a list of distractions, most common first (a tie keeps
+// the order of DISTRACTION_CATEGORIES). Distractions without a category (null, or
+// saved before categories existed) are left out.
+function countCategories(distractions) {
+  const counts = new Map();
+  for (const d of distractions) {
+    if (isCategory(d.category)) counts.set(d.category, (counts.get(d.category) || 0) + 1);
+  }
+  return DISTRACTION_CATEGORIES.filter((category) => counts.has(category.id))
+    .map((category) => ({ ...category, count: counts.get(category.id) }))
+    .sort((a, b) => b.count - a.count);
+}
 
 // Time and focus numbers for a finished session. focusPercent is null in Simple
 // mode, because its buttons say how much you were distracted, not for how long.
@@ -63,7 +94,8 @@ function saveFinishedSession(session) {
     elapsedMs,
     distractedMs,
     focusPercent,
-    distractions: session.distractions,
+    // A session resumed after a reload can still hold distractions from before categories existed.
+    distractions: session.distractions.map(withCategory),
   });
   history.length = Math.min(history.length, HISTORY_LIMIT);
   writeHistory(history); // if it fails the app keeps working, the session just isn't remembered
@@ -77,15 +109,16 @@ function buildHistoryExport() {
     type: EXPORT_TYPE,
     version: EXPORT_VERSION,
     exportedAt: new Date().toISOString(),
-    sessions: loadHistory(),
+    sessions: loadHistory().map((entry) => ({ ...entry, distractions: entry.distractions.map(withCategory) })),
   };
 }
 
 const isTime = (value) => Number.isFinite(value) && value >= 0;
 
 // Checks one session from an import file. Returns a clean copy (only the known
-// fields) or throws an Error saying what's wrong.
-function cleanImportedSession(raw) {
+// fields) or throws an Error saying what's wrong. Version 1 files have no
+// distraction categories, so their distractions get category: null.
+function cleanImportedSession(raw, version) {
   if (!raw || typeof raw !== "object") throw new Error("it isn't a session object");
 
   const { startedAt, endedAt, endedBy, characterId, style, mode, plannedMs, elapsedMs, distractedMs, focusPercent } = raw;
@@ -108,7 +141,10 @@ function cleanImportedSession(raw) {
     if (!d || !isTime(d.at) || !Number.isInteger(d.level) || d.level < 1 || d.level > 5 || !isTime(d.ms)) {
       throw new Error("one of its distractions is invalid");
     }
-    return { at: d.at, level: d.level, ms: d.ms };
+    if (version >= 2 && d.category !== null && !isCategory(d.category)) {
+      throw new Error("one of its distractions has an unknown category");
+    }
+    return { at: d.at, level: d.level, ms: d.ms, category: version >= 2 ? d.category : null };
   });
 
   return { startedAt, endedAt, endedBy, characterId, style, mode, plannedMs, elapsedMs, distractedMs, focusPercent, distractions };
@@ -126,7 +162,7 @@ function parseHistoryExport(text) {
   if (!data || data.app !== EXPORT_APP || data.type !== EXPORT_TYPE || !Array.isArray(data.sessions)) {
     throw new Error("This file isn't a ConcenTraining history export.");
   }
-  if (data.version !== EXPORT_VERSION) {
+  if (!IMPORT_VERSIONS.includes(data.version)) {
     throw new Error(
       typeof data.version === "number" && data.version > EXPORT_VERSION
         ? "This export was made by a newer version of ConcenTraining. Reload the page and try again."
@@ -136,7 +172,7 @@ function parseHistoryExport(text) {
   // All or nothing: one broken session rejects the whole file, so nothing half-imports.
   return data.sessions.map((raw, i) => {
     try {
-      return cleanImportedSession(raw);
+      return cleanImportedSession(raw, data.version);
     } catch (error) {
       throw new Error(`Session ${i + 1} in the file can't be imported: ${error.message}.`);
     }

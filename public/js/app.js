@@ -6,7 +6,8 @@ const PREFS_KEY = "ct_prefs_v1";
 const BASE_TITLE = "ConcenTraining";
 
 const GOOD_EVERY_MS = 5 * MIN; // show the "doing well" pose after this much undistracted time
-const RESTART_PROMPT_DELAY = 1400; // let the big reaction play before asking continue/restart
+const PICKER_DELAY_MS = 1400; // let the reaction play before asking what caused the distraction
+const PICKER_TIMEOUT_MS = 3000; // the category picker hides itself after this long
 const DURATION_PRESETS = [15, 25, 35, 45, 60, 90];
 
 // Simple mode: severity only, no time. Level = which reaction pose to show (1-5).
@@ -76,6 +77,10 @@ const prefs = Object.assign({ characterId: null, style: "kind", mode: "simple", 
 let session = null; // { characterId, style, mode, durationMs, startedAt, distractions: [], endedAt }
 let tickTimer = 0;
 let nextGoodAt = 0;
+// distraction: the one the open (or about to open) picker belongs to.
+// restartPending: "A whole lot" / "10+ min" was tapped, so the continue/restart
+// dialog opens as soon as the picker closes. They never show at the same time.
+const picker = { distraction: null, showTimer: 0, hideTimer: 0, restartPending: false };
 const motivation = { phase: null, index: 0, shown: false };
 
 function characterById(id) {
@@ -338,6 +343,7 @@ function enterSession() {
     buttons.append(button);
   }
 
+  resetPicker();
   motivation.phase = null;
   $("#motivationCard").hidden = true;
   nextGoodAt = Date.now() + GOOD_EVERY_MS;
@@ -373,13 +379,68 @@ function tick() {
 
 function logDistraction(option) {
   if (!session || session.endedAt) return;
-  session.distractions.push({ at: Date.now(), level: option.level, ms: option.ms || 0 });
+  const distraction = { at: Date.now(), level: option.level, ms: option.ms || 0, category: null };
+  session.distractions.push(distraction);
   save(SESSION_KEY, session);
 
   nextGoodAt = Date.now() + GOOD_EVERY_MS;
   react(`level${option.level}`, option.level);
 
-  if (option.askRestart) setTimeout(askContinueOrRestart, RESTART_PROMPT_DELAY);
+  if (option.askRestart) picker.restartPending = true;
+  schedulePicker(distraction);
+}
+
+// ---------- distraction category picker ----------
+
+function buildCategoryButtons() {
+  const buttons = $("#categoryButtons");
+  for (const category of DISTRACTION_CATEGORIES) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "btn";
+    button.textContent = category.label;
+    button.addEventListener("click", () => pickCategory(category.id));
+    buttons.append(button);
+  }
+  $("#categoryPicker").style.setProperty("--picker-timeout", `${PICKER_TIMEOUT_MS}ms`);
+}
+
+// A newer distraction replaces the picker of the previous one (which keeps category: null).
+function schedulePicker(distraction) {
+  closePicker(false);
+  picker.distraction = distraction;
+  picker.showTimer = setTimeout(() => {
+    $("#categoryPicker").hidden = false; // showing it again also restarts the countdown bar
+    picker.hideTimer = setTimeout(() => closePicker(true), PICKER_TIMEOUT_MS);
+  }, PICKER_DELAY_MS);
+}
+
+function pickCategory(id) {
+  if (picker.distraction && session && !session.endedAt) {
+    picker.distraction.category = id;
+    save(SESSION_KEY, session);
+  }
+  closePicker(true);
+}
+
+// thenAsk: open the continue/restart dialog now if one is waiting for the picker.
+function closePicker(thenAsk) {
+  clearTimeout(picker.showTimer);
+  clearTimeout(picker.hideTimer);
+  $("#categoryPicker").hidden = true;
+  picker.distraction = null;
+  if (thenAsk) askPendingRestart();
+}
+
+function askPendingRestart() {
+  if (!picker.restartPending) return;
+  picker.restartPending = false;
+  askContinueOrRestart();
+}
+
+function resetPicker() {
+  picker.restartPending = false;
+  closePicker(false);
 }
 
 async function askContinueOrRestart() {
@@ -397,14 +458,19 @@ async function askContinueOrRestart() {
 }
 
 async function onEndClick() {
+  // No picker behind this dialog, and a waiting restart question waits until it's answered.
+  closePicker(false);
   if ((await ask($("#endDialog"))) === "end" && session && !session.endedAt) {
     finishSession(Date.now());
+  } else {
+    askPendingRestart();
   }
 }
 
 function finishSession(endedAt) {
   clearInterval(tickTimer);
   stopStage();
+  resetPicker();
   session.endedAt = Math.min(endedAt, session.startedAt + session.durationMs);
   saveFinishedSession(session);
   remove(SESSION_KEY);
@@ -480,6 +546,14 @@ function renderSummary() {
     $("#summaryText").textContent =
       SIMPLE_SUMMARY_MESSAGES[Math.floor(Math.random() * SIMPLE_SUMMARY_MESSAGES.length)];
   }
+
+  // Top 3 picked categories. Hidden if none was picked this session.
+  const top = countCategories(session.distractions).slice(0, 3);
+  const categoriesEl = $("#summaryCategories");
+  categoriesEl.hidden = top.length === 0;
+  categoriesEl.textContent =
+    `Most common distraction${top.length === 1 ? "" : "s"}: ` +
+    top.map((category) => `${category.label} (${category.count})`).join(", ");
 }
 
 function verdict(percent) {
@@ -514,6 +588,7 @@ function formatDuration(ms) {
 function init() {
   renderCharacterList();
   bindChoiceGroups();
+  buildCategoryButtons();
   readSetupMinutes = durationPicker($("#setupDuration"), prefs.minutes);
 
   $("#startButton").addEventListener("click", onStartClick);

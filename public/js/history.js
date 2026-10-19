@@ -1,6 +1,7 @@
 "use strict";
 
-// History page: streaks, weekly focus trend, best time of day, recent sessions.
+// History page: streaks, weekly focus trend, best time of day, distraction
+// categories, recent sessions.
 // All dates use the device's local time.
 
 const TREND_WEEKS = 12;
@@ -248,6 +249,45 @@ function renderDayParts(history) {
   }
 }
 
+// Picked categories across all sessions, as bars (same look as the time-of-day list).
+// Distractions without a category (skipped picker, or logged before categories
+// existed) are only counted in the note.
+function renderCategories(history) {
+  const distractions = history.flatMap((entry) => entry.distractions);
+  const counts = countCategories(distractions);
+  const picked = counts.reduce((sum, category) => sum + category.count, 0);
+  const notPicked = distractions.length - picked;
+
+  const note = document.getElementById("categoryNote");
+  if (distractions.length === 0) {
+    note.textContent = "No distractions logged yet.";
+  } else if (picked === 0) {
+    note.textContent = "No categories yet. After logging a distraction, tap what caused it.";
+  } else {
+    note.textContent =
+      `Based on ${plural(picked, "distraction")} with a category.` +
+      (notPicked > 0 ? ` ${notPicked} had none.` : "");
+  }
+
+  const list = document.getElementById("categoryList");
+  list.innerHTML = "";
+  counts.forEach((category, i) => {
+    const percent = Math.round((category.count / picked) * 100);
+    const item = document.createElement("li");
+    item.className = "day-part" + (i === 0 ? " best" : "");
+    item.innerHTML = `
+      <div class="day-part-head">
+        <strong></strong>
+        <span class="day-part-value"></span>
+      </div>
+      <div class="day-part-track"><div class="day-part-fill"></div></div>`;
+    item.querySelector("strong").textContent = category.label;
+    item.querySelector(".day-part-value").textContent = `${category.count} · ${percent}%`;
+    item.querySelector(".day-part-fill").style.width = `${percent}%`;
+    list.append(item);
+  });
+}
+
 function renderSessionList(history) {
   const recent = history.slice(0, LIST_SIZE);
   document.getElementById("listTitle").textContent =
@@ -296,6 +336,7 @@ function render() {
   renderStreaks(history, now);
   renderTrend(history, now);
   renderDayParts(history);
+  renderCategories(history);
   renderSessionList(history);
 }
 
