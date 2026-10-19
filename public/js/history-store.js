@@ -144,12 +144,15 @@ function parseHistoryExport(text) {
 }
 
 // Adds imported sessions to the history, skipping any with a start time that's
-// already there. Returns counts for the result message; saved is false if the
-// browser refused to store the result.
+// already there. Like saveFinishedSession, only the newest HISTORY_LIMIT sessions
+// are kept, so the cut can drop imported sessions (droppedImported) as well as
+// sessions that were already there (removedExisting). added counts only imported
+// sessions that are really in the saved history. saved is false if the browser
+// refused to store the result.
 function mergeIntoHistory(sessions) {
   const history = loadHistory();
   const known = new Set(history.map((entry) => entry.startedAt));
-  let added = 0;
+  const imported = new Set();
   let skipped = 0;
   for (const session of sessions) {
     if (known.has(session.startedAt)) {
@@ -157,14 +160,17 @@ function mergeIntoHistory(sessions) {
     } else {
       known.add(session.startedAt);
       history.push(session);
-      added++;
+      imported.add(session);
     }
   }
 
   history.sort((a, b) => b.startedAt - a.startedAt);
-  const dropped = Math.max(0, history.length - HISTORY_LIMIT);
-  history.length = Math.min(history.length, HISTORY_LIMIT);
+  const cut = history.splice(HISTORY_LIMIT);
+  const droppedImported = cut.filter((entry) => imported.has(entry)).length;
+  const removedExisting = cut.length - droppedImported;
+  const added = imported.size - droppedImported;
 
-  const saved = added === 0 || writeHistory(history);
-  return { added, skipped, dropped, saved };
+  const changed = added > 0 || removedExisting > 0;
+  const saved = !changed || writeHistory(history);
+  return { added, skipped, droppedImported, removedExisting, saved };
 }

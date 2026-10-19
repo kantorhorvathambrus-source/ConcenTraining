@@ -336,18 +336,30 @@ async function importHistory(file) {
     return;
   }
 
-  const { added, skipped, dropped, saved } = mergeIntoHistory(sessions);
+  const { added, skipped, droppedImported, removedExisting, saved } = mergeIntoHistory(sessions);
   if (!saved) {
     showBackupStatus("Couldn't save the imported sessions: this browser's storage is full or blocked.", true);
     return;
   }
 
-  let message =
-    added === 0
-      ? `Nothing new to import: you already have every session in this file (${sessions.length}).`
-      : `Imported ${plural(added, "session")}.`;
-  if (added > 0 && skipped > 0) message += ` Skipped ${plural(skipped, "session")} you already had.`;
-  if (dropped > 0) message += ` The oldest ${plural(dropped, "session")} didn't fit (max. ${HISTORY_LIMIT}) and were left out.`;
+  let message;
+  if (added > 0) {
+    message = `Imported ${plural(added, "session")}.`;
+    if (skipped > 0) message += ` Skipped ${plural(skipped, "session")} you already had.`;
+    if (droppedImported > 0) {
+      message += ` ${plural(droppedImported, "older session")} from the file didn't fit (max. ${HISTORY_LIMIT}).`;
+    }
+  } else if (droppedImported > 0) {
+    message = `Nothing was imported: all new sessions in this file are older than the ${HISTORY_LIMIT} sessions kept.`;
+  } else {
+    message = `Nothing new to import: you already have every session in this file (${sessions.length}).`;
+  }
+  if (removedExisting > 0) {
+    message +=
+      removedExisting === 1
+        ? ` Your oldest session was removed to stay under ${HISTORY_LIMIT}.`
+        : ` Your ${removedExisting} oldest sessions were removed to stay under ${HISTORY_LIMIT}.`;
+  }
   showBackupStatus(message, false);
   render();
 }

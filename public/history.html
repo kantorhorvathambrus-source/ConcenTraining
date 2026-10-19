@@ -62,7 +62,8 @@
       <h2>Backup</h2>
       <p class="muted small">
         Export saves all your sessions as a .json file. Import adds the sessions from such a file;
-        sessions you already have are skipped, nothing gets deleted.
+        sessions you already have are skipped. Only the newest 1000 sessions are kept: if the total
+        goes over 1000, the oldest sessions are removed.
       </p>
       <div class="backup-actions">
         <button id="exportButton" type="button" class="btn">Export history</button>
