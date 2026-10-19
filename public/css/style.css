@@ -441,6 +441,61 @@ input:focus-visible {
   background: var(--surface-2);
 }
 
+/* ---------- distraction category picker ---------- */
+
+/* Spans both columns of the sticky session bar, above Motivate me / End session. */
+.category-picker {
+  grid-column: 1 / -1;
+  padding: 12px 12px 0;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.category-prompt {
+  margin: 0 0 10px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.category-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+/* Big enough to tap comfortably on a phone. */
+.category-buttons .btn {
+  min-height: 44px;
+  padding: 8px;
+}
+
+.category-buttons .btn:hover {
+  background: var(--surface-2);
+}
+
+/* Shrinks to nothing while the picker is open, so you can see it's about to go away.
+   Its length (--picker-timeout) is set from PICKER_TIMEOUT_MS in app.js. */
+.picker-countdown {
+  height: 4px;
+  margin: 12px -12px 0;
+  background: var(--surface-2);
+}
+
+.picker-countdown-bar {
+  height: 100%;
+  background: var(--primary);
+  transform-origin: left;
+  animation: picker-countdown var(--picker-timeout, 3s) linear forwards;
+}
+
+@keyframes picker-countdown {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
 .motivation-card {
   position: relative;
   margin-top: 20px;
@@ -504,9 +559,13 @@ input:focus-visible {
   margin: 0;
 }
 
+.summary-details {
+  margin-bottom: 28px;
+}
+
 .summary-text {
   color: var(--muted);
-  margin: 8px 0 28px;
+  margin: 8px 0 0;
 }
 
 /* ---------- dialogs ---------- */
@@ -814,5 +873,9 @@ a {
   .char-img,
   .stage {
     animation: none !important;
+  }
+
+  .picker-countdown {
+    display: none;
   }
 }

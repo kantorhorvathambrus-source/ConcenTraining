@@ -12,7 +12,16 @@ Netlify Functions plus a Netlify Database, used only for character popularity st
 - **Simple mode:** 5 severity buttons (very briefly … a whole lot), not time-based.
 - **Advanced mode:** 7 duration buttons (30 sec … 10+ min). Ends with the % of the session spent focusing.
   "10+ min" counts as 10 minutes in that %.
+- **Distraction categories:** after each distraction button, once the reaction has played (1.4 s,
+  `PICKER_DELAY_MS`), a small optional picker appears above the Motivate/End buttons:
+  Phone, Thoughts, Noise, People, Tired, Other. It hides itself after 3 s (`PICKER_TIMEOUT_MS`;
+  both constants are at the top of `public/js/app.js`). A tapped category is saved with the
+  distraction; otherwise it's saved as `category: null`. Tapping another distraction button replaces
+  the picker (the earlier distraction keeps `null`), and **End session** closes it.
 - **"A whole lot" / "10+ min"** asks: continue this session, or start over with a new duration.
+  The category picker comes first and the dialog opens as soon as the picker closes (after a tap or
+  after 3 s), so the two never show at the same time. If **End session** is pressed while this
+  question is waiting, it's asked after **Keep going**.
 - **Reactions:** each button maps to one of the 5 distraction poses. The character also blinks,
   "breathes", and shows the "doing well" pose after every 5 minutes without a logged distraction.
 
@@ -27,6 +36,8 @@ Netlify Functions plus a Netlify Database, used only for character popularity st
 - **Motivation button:** always visible. Messages rotate in phases (see `js/data/messages.js`).
   Sessions of 35+ min: 0–10 min general → 10–20 min "hardest part" → 20 min–85% middle → 85–100% final stretch.
   Shorter sessions: general messages without the "first 20 minutes" facts → final stretch.
+- **Summary screen:** also shows the session's top 3 picked categories, e.g.
+  "Most common distractions: Phone (2), Thoughts (1)". Hidden if nothing was picked.
 - A running session survives a page reload (it's saved in `localStorage`, the browser's built-in storage).
 
 ## Session history (`history.html`)
@@ -43,6 +54,9 @@ on the device. Sessions abandoned with **Start over** aren't saved. The page sho
   A slot can only be "best" once it has at least 3 sessions with a focus %
   (`MIN_SESSIONS_FOR_BEST_TIME` at the top of `public/js/history.js`). Until one does, the page says
   "Not enough data yet".
+- **What distracts you:** the picked categories across all sessions, most common first, with count
+  and share. Distractions without a category (picker skipped, or logged before categories existed)
+  are left out of the bars and only counted in the note above them.
 - **Last 30 sessions** with date, character, mode, length, distractions and focus %.
 - **Backup:** Export and Import buttons (see below).
 
@@ -59,7 +73,10 @@ appear in the list as "—", but are left out of the trend and time-of-day numbe
 
 Each history entry: `startedAt`, `endedAt` (timestamps in ms), `endedBy` (`"timer"`/`"manual"`),
 `characterId`, `style`, `mode`, `plannedMs`, `elapsedMs`, `distractedMs`, `focusPercent`
-(`null` in Simple mode) and `distractions` (`[{ at, level, ms }]`).
+(`null` in Simple mode) and `distractions` (`[{ at, level, ms, category }]`). `category` is
+`"phone"`, `"thoughts"`, `"noise"`, `"people"`, `"tired"`, `"other"` or `null` (nothing picked).
+Sessions saved before categories existed have no `category` field; everything that reads it treats
+that as `null`.
 History lives only in this browser: clearing site data or switching devices starts it over.
 The history page says so, too.
 
@@ -71,7 +88,7 @@ The history page says so, too.
   {
     "app": "ConcenTraining",
     "type": "session-history",
-    "version": 1,
+    "version": 2,
     "exportedAt": "2026-10-28T09:00:00.000Z",
     "sessions": [ /* history entries, newest first */ ]
   }
@@ -86,8 +103,11 @@ The history page says so, too.
   and every session must have valid times, mode, style, focus % and distractions. If anything is
   wrong, nothing is imported and the page says what's wrong (for example
   "Session 4 in the file can't be imported: its focus % is invalid"). Max. file size: 5 MB.
-- If the session fields ever change, raise `EXPORT_VERSION` in `public/js/history-store.js`
-  and teach the import how to read version 1 files.
+- **Versions:** version 2 added `category` to each distraction. Version 1 files (made before that)
+  still import; their distractions get `category: null`. In a version 2 file, every distraction must
+  have a known category or `null`. Old sessions without the field are exported with `null`.
+- If the session fields ever change again, raise `EXPORT_VERSION` in `public/js/history-store.js`,
+  add the new number to `IMPORT_VERSIONS`, and teach the import how to read the older files.
 
 ## Files
 
@@ -100,9 +120,9 @@ The history page says so, too.
 | `public/js/data/characters.js` | Character list, personality groups, art paths |
 | `public/js/data/messages.js` | Motivation messages and Simple-mode summary messages |
 | `public/js/placeholder-art.js` | Built-in placeholder drawings for characters without real art |
-| `public/js/app.js` | Timer, reaction engine, motivation rotation, summary |
-| `public/js/history-store.js` | Saving/loading history, focus % calculation, export/import checks (used by both pages) |
-| `public/js/history.js` | Streaks, weekly chart, time of day, session list and backup buttons on `history.html` |
+| `public/js/app.js` | Timer, reaction engine, distraction category picker, motivation rotation, summary |
+| `public/js/history-store.js` | Saving/loading history, focus % calculation, distraction categories, export/import checks (used by both pages) |
+| `public/js/history.js` | Streaks, weekly chart, time of day, distraction categories, session list and backup buttons on `history.html` |
 | `netlify/functions/picks.mjs` | `POST /api/picks`: counts one tap on a character |
 | `netlify/functions/stats.mjs` | `GET /api/stats`: popularity + which characters are paid |
 | `netlify/database/migrations/` | Database tables (SQL), applied automatically on deploy |
