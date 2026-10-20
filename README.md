@@ -88,12 +88,12 @@ Every finished session gets a result. The thresholds are constants at the top of
   session = 8 points = rough.
 - **short:** a session under 1 minute. It isn't saved to the history, and the summary says so.
 
-| Result | Kind | Strict | Ragebait | Title |
-|---|---|---|---|---|
-| great | `good` (proud) | `good` (satisfied) | `good` (grudging) | Great session! |
-| okay | `level2` (pleased) | `initial` (neutral) | `level1` (side-eye) | Good effort! |
-| rough | `level4` (gently encouraging) | `level2` (disappointed) | `level4` (mocking) | Tough session |
-| short | `initial` | `initial` | `initial` | That was quick |
+| Result | Kind | Firm | Strict | Ragebait | Title |
+|---|---|---|---|---|---|
+| great | `good` (proud) | `good` (approving) | `good` (satisfied) | `good` (grudging) | Great session! |
+| okay | `level2` (pleased) | `level1` (eyebrow raised) | `initial` (neutral) | `level1` (side-eye) | Good effort! |
+| rough | `level4` (gently encouraging) | `level3` (serious) | `level2` (disappointed) | `level4` (mocking) | Tough session |
+| short | `initial` | `initial` | `initial` | `initial` | That was quick |
 
 The poses are in `SUMMARY_POSES` (`public/js/app.js`); titles and Simple-mode messages for each result
 are in `public/js/data/messages.js`.
@@ -148,11 +148,27 @@ personality, in one place (`GROUPS` and `personalityOf()`). A new character only
 
 | Group | Personality | How it reacts |
 |---|---|---|
-| `relaxed` (e.g. Grandma) | `kind` | Happy you're back, cheers you on. Hops. |
-| `strict` (e.g. Boss, Soldier) | `strict` | Stern when you drift off, angrier each level. Shakes. |
-| `ragebait` (e.g. Bodybuilder) | `ragebait` | Annoying on purpose: mocking, more insulting each level. Cheeky head tilt. |
+| `relaxed` (Grandma, Leader, Santa, Study Buddy, Coach) | `kind` | Happy you're back, cheers you on. Hops. |
+| `firm` (Professor), label "Firm but fair" | `firm` | Patient, but expects your best. Never shouts or gets angry: disappointment instead. One slow, calm lean (never shakes); a small nod when you do well. |
+| `strict` (Boss, Soldier, Headmistress, Grandmaster) | `strict` | Stern when you drift off, angrier each level. Shakes. |
+| `ragebait` (Bodybuilder) | `ragebait` | Annoying on purpose: mocking, more insulting each level. Cheeky head tilt. |
 
-Characters react only with poses and facial expressions, never with text. The ragebait poses:
+The picker lists the characters in group order: relaxed, firm, strict, ragebait (the order of
+`CHARACTERS` in `characters.js`).
+
+Characters react only with poses and facial expressions, never with text. The firm poses:
+
+| Pose | Firm reaction |
+|---|---|
+| initial / blink | Calm, level brows, slight smile |
+| level1 | One eyebrow raised |
+| level2 | A long, level look |
+| level3 | Serious: stern brows, flat mouth |
+| level4 | Stern but calm: narrowed eyes, flat mouth (no angry brows) |
+| level5 | A disappointed sigh: eyes closed, worried brows, small frown |
+| good | A small approving smile, more restrained than kind (no sparkles or blush) |
+
+The ragebait poses:
 
 | Pose | Ragebait reaction |
 |---|---|
@@ -198,8 +214,8 @@ appear in the list as "—", but are left out of the trend and time-of-day numbe
 | `ct_prefs_v1` | Last chosen character, mode and duration, plus `endSound` and `keepScreenOn` (the two setup checkboxes, `true`/`false`). Prefs saved before these existed get `true` for both. A `style` value saved by older versions is ignored and dropped |
 
 Each history entry: `startedAt`, `endedAt` (timestamps in ms), `endedBy` (`"timer"`/`"manual"`/`"startOver"`),
-`characterId`, `style` (the character's personality when the session ran: `"kind"`, `"strict"` or
-`"ragebait"`), `mode`, `plannedMs`, `elapsedMs`, `distractedMs`, `focusPercent`
+`characterId`, `style` (the character's personality when the session ran: `"kind"`, `"firm"`,
+`"strict"` or `"ragebait"`), `mode`, `plannedMs`, `elapsedMs`, `distractedMs`, `focusPercent`
 (`null` in Simple mode) and `distractions` (`[{ at, level, ms, category }]`). `category` is
 `"phone"`, `"thoughts"`, `"noise"`, `"people"`, `"tired"`, `"other"` or `null` (nothing picked).
 Sessions saved before categories existed have no `category` field; everything that reads it treats
@@ -218,7 +234,7 @@ The history page says so, too.
   {
     "app": "ConcenTraining",
     "type": "session-history",
-    "version": 4,
+    "version": 5,
     "exportedAt": "2026-10-28T09:00:00.000Z",
     "sessions": [ /* history entries, newest first */ ]
   }
@@ -258,7 +274,8 @@ The history page says so, too.
   The fields didn't change, but a version 2 app can't read a ragebait session, so the new number
   makes an older app say "made by a newer version" instead of skipping every ragebait session.
   Version 4 allows `endedBy: "startOver"` (for the same reason); in version 1–3 files it's an
-  "unknown end reason".
+  "unknown end reason". Version 5 allows `style: "firm"` (again for the same reason); in version
+  1–4 files it's an "unknown style".
 - The future adaptive training program must skip `endedBy: "startOver"` sessions (a note next to
   `ENDED_BY_RULES` says so too): they stopped because of the long distraction, not because of the
   chosen length.
@@ -275,7 +292,7 @@ The history page says so, too.
 | `public/css/style.css` | Styling, light/dark mode, breathing and reaction animations |
 | `public/js/data/characters.js` | Character list, groups and the personality each group gives (`personalityOf`), art paths |
 | `public/js/data/messages.js` | Motivation messages, summary titles and Simple-mode summary messages per result |
-| `public/js/placeholder-art.js` | Built-in placeholder drawings (kind, strict and ragebait faces) for characters without real art |
+| `public/js/placeholder-art.js` | Built-in placeholder drawings (kind, firm, strict and ragebait faces, plus each character's look) for characters without real art |
 | `public/js/app.js` | Timer, reaction engine, distraction category picker, Undo, disabled Advanced lengths, motivation rotation, end chime, screen wake lock, summary |
 | `public/js/history-store.js` | Saving/loading history, focus % and summary result (with their thresholds), distraction categories, export/import checks (used by both pages) |
 | `public/js/history.js` | Streaks, weekly chart, time of day, distraction categories, session list and backup buttons on `history.html` |
@@ -316,6 +333,10 @@ can be measured over the **last 30 days** and the paid selection rotates as tast
   `netlify/database/migrations/20261101120000_add_robot.sql` containing
   `INSERT INTO characters (id, name) VALUES ('robot', 'Robot');`.
   Never edit or delete a migration that has already been deployed: Netlify will refuse the deploy.
+- The first migration created Grandma, Boss, Soldier and Bodybuilder;
+  `20261020120000_add_seven_characters.sql` added Leader, Santa, Study Buddy, Coach, Professor,
+  Headmistress and Grandmaster. With 11 characters the paid selection is now active: the top 1
+  by recent taps is marked "(paid)" on `/stats.html`.
 - Settings (30 days, 10 characters, 10%) are constants at the top of `netlify/functions/stats.mjs`.
 
 ## Deploying
@@ -323,5 +344,11 @@ can be measured over the **last 30 days** and the paid selection rotates as tast
 Connect this GitHub repo to the Netlify site (Site configuration → Build & deploy → Link repository).
 Leave the build command empty; `netlify.toml` already sets the publish directory to `public`.
 On every push Netlify installs `package.json`, deploys the functions, creates the database on the
-first deploy, and applies new migrations. Netlify Database needs a credit-based Netlify plan;
+first deploy, and applies new migrations.
+
+**Deploy Previews have their own database.** Each Deploy Preview gets its own database branch: a
+separate copy of the live database, made when the preview is created. New migrations run on that
+copy, and taps on the preview are counted only there. The live database only changes when a
+pull request is merged and the production deploy runs. Because the copy starts with the live
+numbers, the preview's `/stats.html` shows real data. Netlify Database needs a credit-based Netlify plan;
 if a deploy fails with "database feature not available for this account", the plan is the reason.

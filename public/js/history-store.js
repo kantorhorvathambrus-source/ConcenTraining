@@ -19,11 +19,12 @@ const SIMPLE_POINTS_PER_MS = 25 * 60 * 1000; // shorter sessions count as 25 min
 
 // Export file format. Bump EXPORT_VERSION if the session fields ever change.
 // Version 2 added a category to each distraction. Version 3 allows the style
-// "ragebait". Version 4 allows endedBy "startOver". Version 1-3 files still import.
+// "ragebait". Version 4 allows endedBy "startOver". Version 5 allows the style
+// "firm". Version 1-4 files still import.
 const EXPORT_APP = "ConcenTraining";
 const EXPORT_TYPE = "session-history";
-const EXPORT_VERSION = 4;
-const IMPORT_VERSIONS = [1, 2, 3, 4];
+const EXPORT_VERSION = 5;
+const IMPORT_VERSIONS = [1, 2, 3, 4, 5];
 const IMPORT_MAX_BYTES = 5 * 1024 * 1024;
 
 // How a session can end, and what that says about its times (see saveFinishedSession):
@@ -178,8 +179,8 @@ const isTime = (value) => Number.isFinite(value) && value >= 0;
 // so a hand-edited session can't contradict itself. Unknown character ids are
 // fine (a newer export can have new characters). Version 1 files have no
 // distraction categories, so their distractions get category: null. Before
-// version 3 the only styles were "kind" and "strict". Before version 4 the only
-// end reasons were "timer" and "manual".
+// version 3 the only styles were "kind" and "strict", and "firm" exists from
+// version 5. Before version 4 the only end reasons were "timer" and "manual".
 function cleanImportedSession(raw, version) {
   if (!raw || typeof raw !== "object") throw new Error("not a session");
 
@@ -189,7 +190,9 @@ function cleanImportedSession(raw, version) {
     throw new Error("unknown end reason");
   }
   if (typeof characterId !== "string" || !/^[a-z0-9-]{1,64}$/.test(characterId)) throw new Error("bad character id");
-  const styles = version >= 3 ? ["kind", "strict", "ragebait"] : ["kind", "strict"];
+  const styles = ["kind", "strict"];
+  if (version >= 3) styles.push("ragebait");
+  if (version >= 5) styles.push("firm");
   if (!styles.includes(style)) throw new Error("unknown style");
   if (mode !== "simple" && mode !== "advanced") throw new Error("unknown mode");
   if (!isTime(plannedMs) || !isTime(elapsedMs) || !isTime(distractedMs) || distractedMs > elapsedMs) {

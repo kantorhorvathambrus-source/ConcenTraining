@@ -15,6 +15,17 @@ const ART_EXPRESSIONS = {
     level4: { eyes: "wide", brows: "worried", mouth: "grin", extras: ["sweat"] },
     level5: { eyes: "teary", brows: "worried", mouth: "wobbly", extras: ["tears", "heart"] },
   },
+  // Patient, but expects your best: never angry, disappointed instead.
+  firm: {
+    initial: { eyes: "open", brows: "flat", mouth: "smile" },
+    blink: { eyes: "closed", brows: "flat", mouth: "smile" },
+    good: { eyes: "happy", brows: "soft", mouth: "smile" }, // small approving smile, no sparkles
+    level1: { eyes: "open", brows: ["raised", "flat"], mouth: "flat" }, // one eyebrow raised
+    level2: { eyes: "open", brows: "flat", mouth: "flat" }, // a long, level look
+    level3: { eyes: "open", brows: "stern", mouth: "flat" }, // serious
+    level4: { eyes: "narrow", brows: "stern", mouth: "flat" }, // stern but calm
+    level5: { eyes: "closed", brows: "worried", mouth: "frown" }, // a disappointed sigh
+  },
   strict: {
     initial: { eyes: "open", brows: "flat", mouth: "flat" },
     blink: { eyes: "closed", brows: "flat", mouth: "flat" },
@@ -38,7 +49,9 @@ const ART_EXPRESSIONS = {
   },
 };
 
-// Body, hair and accessories for each character.
+// Body, hair and accessories for each character. Layers, back to front: back, body,
+// neck, front (things worn around the neck), face, hair (beards too, so the
+// eyes and mouth are always drawn on top of them), face parts, glasses.
 const ART_LOOKS = {
   boss: {
     skin: "#f2c9a0",
@@ -79,6 +92,113 @@ const ART_LOOKS = {
            <circle cx="110" cy="228" r="10" fill="#7a8a50"/><circle cx="72" cy="232" r="8" fill="#7a8a50"/>`,
     hair: `<path d="M40 80 Q38 28 100 26 Q162 28 160 80 Q166 82 168 88 L32 88 Q34 82 40 80Z" fill="#556b2f"/>
            <path d="M38 78 L162 78 L164 86 L36 86Z" fill="#3f4f22"/>`,
+  },
+  leader: {
+    skin: "#f0c39b",
+    brow: "#5a3a22",
+    body: `<path d="M18 240 Q22 178 100 172 Q178 178 182 240Z" fill="#7a4a26"/>
+           <path d="M76 176 L100 222 L124 176Z" fill="#fff"/>
+           <path d="M88 176 L100 196 L112 176Z" fill="#f0c39b"/>
+           <path d="M76 176 L90 176 L94 194Z" fill="#fff" stroke="#d6d6d6" stroke-width="1.5"/>
+           <path d="M124 176 L110 176 L106 194Z" fill="#fff" stroke="#d6d6d6" stroke-width="1.5"/>
+           <path d="M70 178 L100 230 L84 240 L60 240 Z" fill="#62391b"/>
+           <path d="M130 178 L100 230 L116 240 L140 240 Z" fill="#62391b"/>`,
+    hair: `<path d="M46 100 Q42 44 100 40 Q158 42 156 98 Q150 70 134 62 Q104 80 62 68 Q52 80 46 100Z" fill="#6b4226"/>
+           <path d="M56 70 Q88 46 152 66 Q118 58 92 76 Q72 80 56 70Z" fill="#7f5130"/>`,
+  },
+  santa: {
+    skin: "#f5cfb4",
+    brow: "#b5b5b5",
+    back: `<ellipse cx="100" cy="112" rx="64" ry="58" fill="#f2f2f2"/>`,
+    body: `<path d="M18 240 Q22 178 100 172 Q178 178 182 240Z" fill="#d42a2a"/>
+           <rect x="91" y="190" width="18" height="50" fill="#fff"/>
+           <path d="M46 190 Q100 166 154 190" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round"/>`,
+    hair: `<path d="M46 112 Q46 150 70 180 Q100 208 130 180 Q154 150 154 112 Q148 142 128 152 Q100 164 72 152 Q52 142 46 112Z" fill="#fafafa" stroke="#dcdcdc" stroke-width="1.5"/>
+           <path d="M76 124 Q88 112 100 120 Q112 112 124 124 Q112 128 100 124 Q88 128 76 124Z" fill="#fafafa" stroke="#dcdcdc" stroke-width="1.5"/>
+           <path d="M44 62 Q58 6 122 10 Q166 16 172 52 L156 58 Q104 34 54 60Z" fill="#d42a2a"/>
+           <rect x="40" y="48" width="120" height="16" rx="8" fill="#fff" stroke="#dcdcdc" stroke-width="1.5"/>
+           <circle cx="170" cy="54" r="11" fill="#fff" stroke="#dcdcdc" stroke-width="1.5"/>`,
+    glasses: `<g fill="#fff" fill-opacity="0.15" stroke="#b8892a" stroke-width="3">
+                <circle cx="78" cy="102" r="15"/><circle cx="122" cy="102" r="15"/>
+              </g>
+              <path d="M93 101 Q100 96 107 101" fill="none" stroke="#b8892a" stroke-width="3"/>`,
+  },
+  "study-buddy": {
+    skin: "#e8b48c",
+    brow: "#2e1f14",
+    body: `<path d="M18 240 Q22 178 100 172 Q178 178 182 240Z" fill="#e0a419"/>
+           <path d="M52 186 Q100 162 148 186 Q140 200 100 198 Q60 200 52 186Z" fill="#c48d0e"/>
+           <path d="M88 198 L86 228 M112 198 L114 228" fill="none" stroke="#fff4d6" stroke-width="3" stroke-linecap="round"/>
+           <path d="M66 224 L134 224 L130 240 L70 240Z" fill="#c48d0e"/>`,
+    front: `<path d="M68 172 Q100 198 132 172" fill="none" stroke="#333" stroke-width="6" stroke-linecap="round"/>
+            <rect x="58" y="164" width="18" height="24" rx="8" fill="#333"/>
+            <rect x="124" y="164" width="18" height="24" rx="8" fill="#333"/>
+            <rect x="62" y="168" width="10" height="16" rx="5" fill="#5a5a5a"/>
+            <rect x="128" y="168" width="10" height="16" rx="5" fill="#5a5a5a"/>`,
+    hair: `<path d="M46 98 Q42 42 100 40 Q158 42 154 98 Q148 72 136 64 Q128 76 116 66 Q104 80 90 68 Q78 80 66 68 Q54 78 46 98Z" fill="#3a2618"/>`,
+  },
+  coach: {
+    skin: "#d9a07a",
+    brow: "#3b2a1e",
+    body: `<path d="M18 240 Q22 178 100 172 Q178 178 182 240Z" fill="#1f74e8"/>
+           <path d="M30 196 L44 240 M38 190 L54 240" fill="none" stroke="#fff" stroke-width="4"/>
+           <path d="M170 196 L156 240 M162 190 L146 240" fill="none" stroke="#fff" stroke-width="4"/>
+           <path d="M80 174 L100 186 L120 174 L120 182 L100 194 L80 182Z" fill="#fff"/>
+           <path d="M100 192 L100 240" stroke="#c9d9f5" stroke-width="2.5"/>`,
+    front: `<path d="M88 168 Q92 196 104 214 M112 168 Q110 196 104 214" fill="none" stroke="#222" stroke-width="2.5"/>
+            <rect x="96" y="212" width="20" height="12" rx="5" fill="#c7cdd4" stroke="#7d858d" stroke-width="2"/>
+            <rect x="112" y="214" width="8" height="6" rx="2" fill="#7d858d"/>`,
+    hair: `<path d="M44 82 Q42 30 100 28 Q158 30 156 82Z" fill="#1f74e8"/>
+           <path d="M44 82 Q100 62 156 82 L156 74 Q100 54 44 74Z" fill="#fff"/>
+           <path d="M40 80 Q100 60 160 80 Q180 84 182 72 Q156 54 100 56 Q48 58 40 80Z" fill="#1659b8"/>
+           <circle cx="100" cy="30" r="5" fill="#1659b8"/>`,
+  },
+  professor: {
+    skin: "#f0c8a8",
+    brow: "#7d7d7d",
+    body: `<path d="M18 240 Q22 178 100 172 Q178 178 182 240Z" fill="#8b8a80"/>
+           <g stroke="#6f6e65" stroke-width="2" stroke-linecap="round">
+             <path d="M34 214 l6 -3 M48 226 l6 -3 M40 236 l6 -3 M150 214 l6 -3 M160 230 l6 -3 M140 234 l6 -3 M30 230 l6 -3 M164 216 l6 -3"/>
+           </g>
+           <path d="M80 176 L100 214 L120 176Z" fill="#fff"/>
+           <path d="M96 182 L104 182 L107 214 L100 224 L93 214Z" fill="#5b4636"/>
+           <path d="M72 178 L100 232 L86 240 L62 240Z" fill="#74736a"/>
+           <path d="M128 178 L100 232 L114 240 L138 240Z" fill="#74736a"/>`,
+    hair: `<path d="M46 104 Q42 66 58 56 Q56 76 62 86 Q54 92 50 104Z" fill="#b0b0b0"/>
+           <path d="M154 104 Q158 66 142 56 Q144 76 138 86 Q146 92 150 104Z" fill="#b0b0b0"/>
+           <path d="M60 60 Q100 30 140 60 Q120 50 100 52 Q80 50 60 60Z" fill="#b0b0b0"/>
+           <path d="M54 136 Q58 170 100 172 Q142 170 146 136 Q138 156 100 158 Q62 156 54 136Z" fill="#a3a3a3"/>
+           <path d="M82 124 Q92 114 100 120 Q108 114 118 124 Q108 126 100 122 Q92 126 82 124Z" fill="#a3a3a3"/>`,
+    glasses: `<g fill="#fff" fill-opacity="0.15" stroke="#5a4636" stroke-width="2.5">
+                <rect x="60" y="88" width="36" height="27" rx="10"/><rect x="104" y="88" width="36" height="27" rx="10"/>
+              </g>
+              <path d="M96 100 Q100 96 104 100" fill="none" stroke="#5a4636" stroke-width="2.5"/>`,
+  },
+  headmistress: {
+    skin: "#f2cdb0",
+    brow: "#2a1d18",
+    back: `<circle cx="100" cy="40" r="20" fill="#2a1d18"/>`,
+    body: `<path d="M18 240 Q22 178 100 172 Q178 178 182 240Z" fill="#6e1f33"/>
+           <path d="M78 176 L100 236 L122 176Z" fill="#f7f1e6"/>
+           <path d="M84 176 L100 190 L116 176 L112 172 L100 182 L88 172Z" fill="#fff" stroke="#d9cfbf" stroke-width="1.5"/>
+           <circle cx="100" cy="204" r="2.5" fill="#d9cfbf"/><circle cx="100" cy="220" r="2.5" fill="#d9cfbf"/>
+           <circle cx="74" cy="212" r="3" fill="#4a1322"/><circle cx="72" cy="228" r="3" fill="#4a1322"/>`,
+    hair: `<path d="M46 100 Q44 48 100 46 Q156 48 154 100 Q150 70 104 62 L100 50 L96 62 Q50 70 46 100Z" fill="#2a1d18"/>`,
+    glasses: `<g fill="#fff" fill-opacity="0.15" stroke="#2a1d18" stroke-width="2.5">
+                <rect x="61" y="90" width="34" height="24" rx="3"/><rect x="105" y="90" width="34" height="24" rx="3"/>
+              </g>
+              <path d="M95 100 L105 100" stroke="#2a1d18" stroke-width="2.5"/>`,
+  },
+  grandmaster: {
+    skin: "#e3b591",
+    brow: "#262626",
+    body: `<path d="M18 240 Q22 178 100 172 Q178 178 182 240Z" fill="#161616"/>
+           <path d="M40 196 Q46 220 44 240 M160 196 Q154 220 156 240" fill="none" stroke="#2c2c2c" stroke-width="3"/>`,
+    front: `<rect x="78" y="146" width="44" height="40" rx="10" fill="#161616"/>
+            <path d="M80 160 L120 160 M80 170 L120 170 M80 180 L120 180" stroke="#2c2c2c" stroke-width="2.5"/>`,
+    hair: `<path d="M46 100 Q42 44 100 42 Q158 44 154 100 Q150 68 120 62 Q100 70 80 62 Q50 68 46 100Z" fill="#262626"/>
+           <path d="M46 100 Q44 80 50 70 Q54 84 56 96Z" fill="#a0a0a0"/>
+           <path d="M154 100 Q156 80 150 70 Q146 84 144 96Z" fill="#a0a0a0"/>`,
   },
 };
 
@@ -245,6 +365,7 @@ function placeholderArt(character, pose) {
     ${look.back || ""}
     ${look.body}
     <rect x="${100 - neckWidth / 2}" y="140" width="${neckWidth}" height="40" fill="${look.skin}"/>
+    ${look.front || ""}
     <ellipse cx="100" cy="105" rx="54" ry="60" fill="${look.skin}"/>
     ${extras.includes("red") ? `<ellipse cx="100" cy="105" rx="54" ry="60" fill="#ff2d2d" fill-opacity="0.3"/>` : ""}
     ${look.hair}

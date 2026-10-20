@@ -28,6 +28,7 @@ const END_VIBRATION = [150, 80, 150]; // ms on, off, on (Android; iOS ignores it
 // Summary screen pose for each session result (see sessionResult in history-store.js).
 const SUMMARY_POSES = {
   kind: { great: "good", okay: "level2", rough: "level4", short: "initial" }, // proud / pleased / gently encouraging
+  firm: { great: "good", okay: "level1", rough: "level3", short: "initial" }, // approving / eyebrow raised / serious
   strict: { great: "good", okay: "initial", rough: "level2", short: "initial" }, // satisfied / neutral / disappointed
   ragebait: { great: "good", okay: "level1", rough: "level4", short: "initial" }, // grudging / smirking / mocking
 };
@@ -103,7 +104,7 @@ const prefs = Object.assign(
   load(PREFS_KEY, {}),
 );
 delete prefs.style; // saved before personalities came from the character; dropped on the next save
-// style: the character's personality when the session ran ("kind", "strict" or "ragebait")
+// style: the character's personality when the session ran ("kind", "firm", "strict" or "ragebait")
 // restartPending: "A whole lot" / "10+ min" was tapped and the continue/restart question
 // hasn't been answered yet. Saved, so a reload still asks it.
 let session = null; // { characterId, style, mode, durationMs, startedAt, distractions: [], endedAt, restartPending }
@@ -173,7 +174,7 @@ function mountStage(character) {
   stage.wrap = $("#sessionStage");
   stage.img = $("#sessionImg");
   stage.character = character;
-  for (const name of ["kind", "strict", "ragebait"]) stage.wrap.classList.toggle(name, personality === name);
+  for (const name of ["kind", "firm", "strict", "ragebait"]) stage.wrap.classList.toggle(name, personality === name);
   stage.img.alt = character.name;
   preloadArt(character);
   setPose("initial");
