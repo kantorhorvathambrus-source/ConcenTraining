@@ -11,6 +11,9 @@ const PICKER_TIMEOUT_MS = 3000; // the category picker hides itself after this l
 const DURATION_PRESETS = [15, 25, 35, 45, 60, 90];
 const MAX_MINUTES = 240;
 const DEFAULT_MINUTES = 25;
+// The timer can run out while the page is closed or the phone is locked. If the app
+// gets control back later than this after the end, it asks before saving the session.
+const REOPEN_ASK_AFTER_MS = 30 * MIN;
 
 // Summary screen pose for each session result (see sessionResult in history-store.js).
 const SUMMARY_POSES = {
@@ -392,7 +395,7 @@ function tick() {
     nextGoodAt = now + GOOD_EVERY_MS;
   }
 
-  if (remaining <= 0) finishSession(session.startedAt + session.durationMs);
+  if (remaining <= 0) onTimerRanOut();
 }
 
 function logDistraction(option) {
@@ -504,6 +507,44 @@ function finishSession(endedAt) {
   document.title = BASE_TITLE;
   renderSummary();
   showScreen("summaryScreen");
+}
+
+// Back soon after the end (or watching it end): saved as a full session, as always.
+// Back much later: the app can't tell whether the user kept focusing, so it asks.
+function onTimerRanOut() {
+  const endedAt = session.startedAt + session.durationMs;
+  if (Date.now() - endedAt > REOPEN_ASK_AFTER_MS) askSaveLateSession(endedAt);
+  else finishSession(endedAt);
+}
+
+async function askSaveLateSession(endedAt) {
+  clearInterval(tickTimer);
+  stopStage();
+  closePicker(false);
+  // Only in memory: stops the session, and a dialog closed below (continue/restart,
+  // End session) sees it as ended. ct_session_v1 stays as it was until the answer,
+  // so closing the page now asks again next time.
+  session.endedAt = endedAt;
+  document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
+  document.title = BASE_TITLE;
+  showScreen("setupScreen");
+
+  const character = characterById(session.characterId);
+  $("#lateText").textContent =
+    `Your ${Math.round(session.durationMs / MIN)} min ${capitalize(session.mode)} session with ` +
+    `${character.name} ended ${formatTimeAgo(Date.now() - endedAt)}.`;
+
+  // Discard deletes the session, so only a tap on a button answers (Esc asks again).
+  let answer = "";
+  while (answer !== "save" && answer !== "discard") answer = await ask($("#lateDialog"));
+
+  if (answer === "save") {
+    finishSession(endedAt);
+  } else {
+    remove(SESSION_KEY);
+    session = null;
+    renderCharacterList();
+  }
 }
 
 // ---------- motivation ----------
@@ -622,6 +663,16 @@ function formatDuration(ms) {
   return seconds ? `${minutes} min ${seconds} sec` : `${minutes} min`;
 }
 
+// "45 min ago", "3 hours ago", "2 days ago"
+function formatTimeAgo(ms) {
+  const minutes = Math.floor(ms / MIN);
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} day${days === 1 ? "" : "s"} ago`;
+}
+
 // ---------- start-up ----------
 
 function init() {
@@ -649,7 +700,7 @@ function init() {
     session.style = personalityOf(characterById(saved.characterId));
     save(SESSION_KEY, session);
     if (Date.now() >= saved.startedAt + saved.durationMs) {
-      finishSession(saved.startedAt + saved.durationMs);
+      onTimerRanOut();
     } else {
       enterSession();
       askPendingRestart(); // the page was reloaded before the continue/restart question was answered
