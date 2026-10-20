@@ -251,11 +251,15 @@ const ART_LOOKS = {
     body: `<path d="M18 240 Q22 178 100 172 Q178 178 182 240Z" fill="#ff2fa0"/>
            <path d="M54 184 Q100 160 146 184 Q138 198 100 196 Q62 198 54 184Z" fill="#d81b84"/>
            <path d="M88 196 L86 222 M112 196 L114 222" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/>`,
-    // Phone in hand. Hidden in poses that need that hand (see HAND_BUSY_EXTRAS).
-    hand: `<rect x="30" y="178" width="26" height="44" rx="5" fill="#222" stroke="#555" stroke-width="2"/>
-           <rect x="34" y="183" width="18" height="32" rx="2" fill="#5ad1ff"/>
-           <circle cx="43" cy="198" r="5" fill="#ff2fa0"/>
-           <rect x="24" y="200" width="38" height="24" rx="11" fill="#e6b593" stroke="#222" stroke-width="2"/>`,
+    // Phone in hand, camera side out like the filming extra (always recording).
+    // Hidden in poses that need that hand (see HAND_BUSY_EXTRAS).
+    hand: `<rect x="30" y="172" width="26" height="46" rx="5" fill="#222" stroke="#555" stroke-width="2"/>
+           <rect x="34" y="176" width="12" height="20" rx="4" fill="#3a3a3a"/>
+           <circle cx="40" cy="181" r="3.6" fill="#111" stroke="#777" stroke-width="1.2"/>
+           <circle cx="40" cy="190.5" r="3.6" fill="#111" stroke="#777" stroke-width="1.2"/>
+           <circle cx="51" cy="178.5" r="2.8" fill="#ff2d2d"/>
+           <rect x="24" y="200" width="38" height="24" rx="11" fill="#e6b593" stroke="#222" stroke-width="2"/>
+           <path d="M29 209 L57 209" fill="none" stroke="#222" stroke-width="2" stroke-linecap="round"/>`,
     hair: `<path d="M48 98 Q44 44 100 40 Q156 44 152 98 Q150 72 140 64 L136 52 L126 64 L118 48 L108 62 L98 46 L88 62 L78 50 L70 64 Q54 72 48 98Z" fill="#f2df9a"/>
            <g fill="#222">
              <path d="M60 52 L94 52 L92 64 Q78 70 62 64Z"/><path d="M106 52 L140 52 L138 64 Q122 70 108 64Z"/>
