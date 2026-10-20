@@ -369,9 +369,9 @@ async function importHistory(file) {
     return;
   }
 
-  let sessions;
+  let sessions, invalidReasons;
   try {
-    sessions = parseHistoryExport(await file.text());
+    ({ sessions, invalidReasons } = parseHistoryExport(await file.text()));
   } catch (error) {
     showBackupStatus(error.message, true);
     return;
@@ -386,23 +386,38 @@ async function importHistory(file) {
   let message;
   if (added > 0) {
     message = `Imported ${plural(added, "session")}.`;
-    if (skipped > 0) message += ` Skipped ${plural(skipped, "session")} you already had.`;
+    if (skipped > 0) {
+      message += ` Skipped ${skipped} ${skipped === 1 ? "duplicate or session" : "duplicates or sessions"} you already had.`;
+    }
     if (droppedImported > 0) {
       message += ` ${plural(droppedImported, "older session")} from the file didn't fit (max. ${HISTORY_LIMIT}).`;
     }
   } else if (droppedImported > 0) {
     message = `Nothing was imported: all new sessions in this file are older than the ${HISTORY_LIMIT} sessions kept.`;
+  } else if (sessions.length === 0 && invalidReasons.length > 0) {
+    message = "Nothing was imported.";
   } else {
-    message = `Nothing new to import: you already have every session in this file (${sessions.length}).`;
+    const valid = invalidReasons.length > 0 ? "valid " : "";
+    message = `Nothing new to import: you already have every ${valid}session in this file (${sessions.length}).`;
   }
+  if (invalidReasons.length > 0) message += ` ${invalidSummary(invalidReasons)}`;
   if (removedExisting > 0) {
     message +=
       removedExisting === 1
         ? ` Your oldest session was removed to stay under ${HISTORY_LIMIT}.`
         : ` Your ${removedExisting} oldest sessions were removed to stay under ${HISTORY_LIMIT}.`;
   }
-  showBackupStatus(message, false);
+  showBackupStatus(message, added === 0 && invalidReasons.length > 0);
   render();
+}
+
+// One line about the sessions skipped as invalid, e.g. "Skipped 3 invalid
+// sessions (2 shorter than 1 minute, 1 bad focus %)." With one reason, no counts.
+function invalidSummary(reasons) {
+  const counts = new Map();
+  for (const reason of reasons) counts.set(reason, (counts.get(reason) || 0) + 1);
+  const why = counts.size === 1 ? reasons[0] : [...counts].map(([reason, count]) => `${count} ${reason}`).join(", ");
+  return `Skipped ${plural(reasons.length, "invalid session")} (${why}).`;
 }
 
 function init() {

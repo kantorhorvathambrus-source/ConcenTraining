@@ -1,0 +1,28 @@
+{
+  "app": "ConcenTraining",
+  "type": "session-history",
+  "version": 3,
+  "exportedAt": "2026-10-20T09:00:00.000Z",
+  "sessions": [
+    {
+      "startedAt": 1789372800000,
+      "endedAt": 1789374600000,
+      "endedBy": "manual",
+      "characterId": "grandma",
+      "style": "strict",
+      "mode": "simple",
+      "plannedMs": 1500000,
+      "elapsedMs": 1800000,
+      "distractedMs": 0,
+      "focusPercent": null,
+      "distractions": [
+        {
+          "at": 1789372980000,
+          "level": 2,
+          "ms": 0,
+          "category": "noise"
+        }
+      ]
+    }
+  ]
+}
