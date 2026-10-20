@@ -43,7 +43,7 @@ const MOTIVATION = {
     { type: "fact", text: "Testing yourself beats rereading. Pulling an answer out of your memory makes it stick much better than just seeing it again." },
     { type: "boost", text: "Getting bored of the material? Change the method, not the task: stop reading, write three questions, then answer them without looking." },
     { type: "fact", text: "Even a buzz you don't check can break your concentration for a moment. Silent mode is doing real work for you." },
-    { type: "boost", text: "Don't measure, just move: the next line, the next problem, the next sentence." },
+    { type: "boost", text: "Forget the clock for a bit. Finish what's in front of you, then look up." },
     { type: "boost", text: "Stuck on one thing for a while? Mark it, skip it, come back at the end. Don't let one problem eat the whole session." },
     { type: "fact", text: "Small wins give your motivation a bigger boost than you'd expect. Finish one small piece now and feel the difference." },
     { type: "boost", text: "Sip of water, sit up, shoulders down. Then straight back in." },
