@@ -9,6 +9,7 @@
   --primary-hover: #f05a22;
   --primary-text: #ffffff;
   --relaxed: #2f9e63;
+  --firm: #7a4fc2;
   --strict: #3567d4;
   --ragebait: #d93a2f;
   --error: #c62828;
@@ -219,6 +220,10 @@ input:focus-visible {
   background: var(--relaxed);
 }
 
+.badge-firm {
+  background: var(--firm);
+}
+
 .badge-strict {
   background: var(--strict);
 }
@@ -332,7 +337,8 @@ input:focus-visible {
   }
 }
 
-/* Kind hops, strict shakes, ragebait does a cheeky head tilt. Ragebait's --mult makes it bigger. */
+/* Kind hops, firm leans in slowly (never shakes), strict shakes, ragebait does a cheeky head tilt.
+   Ragebait's --mult makes it bigger. */
 .stage.react-1 { --amp: 3px; --tilt: 1deg; }
 .stage.react-2 { --amp: 5px; --tilt: 2deg; }
 .stage.react-3 { --amp: 8px; --tilt: 3deg; }
@@ -348,6 +354,18 @@ input:focus-visible {
 .stage.strict.react-4,
 .stage.strict.react-5 {
   animation: shake 0.4s ease-in-out 4;
+}
+
+/* Firm: one slow, calm lean. Higher levels lean a bit further and hold it a bit longer. */
+.stage.firm.react-1,
+.stage.firm.react-2 {
+  animation: lean 1s ease-in-out 1;
+}
+
+.stage.firm.react-3,
+.stage.firm.react-4,
+.stage.firm.react-5 {
+  animation: lean 1.6s ease-in-out 1;
 }
 
 .stage.kind.react-1,
@@ -370,6 +388,12 @@ input:focus-visible {
 .stage.react-good {
   --amp: 10px;
   animation: hop 0.7s ease-out 2;
+}
+
+/* Firm approves with one small nod, more restrained than kind's hop. */
+.stage.firm.react-good {
+  --amp: 4px;
+  animation: nod 0.9s ease-in-out 1;
 }
 
 /* Ragebait isn't proud when you do well: just a small, unimpressed shrug. */
@@ -401,6 +425,27 @@ input:focus-visible {
   }
   75% {
     transform: rotate(calc(var(--tilt) * var(--mult))) translateY(calc(var(--amp) * -0.5));
+  }
+}
+
+@keyframes lean {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  35%,
+  70% {
+    transform: translateY(calc(var(--amp) * 0.6)) scale(1.02);
+  }
+}
+
+@keyframes nod {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(var(--amp));
   }
 }
 
