@@ -50,7 +50,7 @@ const ART_EXPRESSIONS = {
 };
 
 // Body, hair and accessories for each character. Layers, back to front: back, body,
-// neck, front (things worn around the neck), face, hair (beards too, so the
+// hand (something held, left out when a pose uses both hands), neck, front (things worn around the neck), face, hair (beards too, so the
 // eyes and mouth are always drawn on top of them), face parts, glasses.
 const ART_LOOKS = {
   boss: {
@@ -248,8 +248,9 @@ const ART_LOOKS = {
     brow: "#c9a24a",
     body: `<path d="M18 240 Q22 178 100 172 Q178 178 182 240Z" fill="#ff2fa0"/>
            <path d="M54 184 Q100 160 146 184 Q138 198 100 196 Q62 198 54 184Z" fill="#d81b84"/>
-           <path d="M88 196 L86 222 M112 196 L114 222" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
-           <rect x="30" y="178" width="26" height="44" rx="5" fill="#222" stroke="#555" stroke-width="2"/>
+           <path d="M88 196 L86 222 M112 196 L114 222" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/>`,
+    // Phone in hand. Hidden in poses that need both hands (see TWO_HANDED_EXTRAS).
+    hand: `<rect x="30" y="178" width="26" height="44" rx="5" fill="#222" stroke="#555" stroke-width="2"/>
            <rect x="34" y="183" width="18" height="32" rx="2" fill="#5ad1ff"/>
            <circle cx="43" cy="198" r="5" fill="#ff2fa0"/>
            <rect x="24" y="200" width="38" height="24" rx="11" fill="#e6b593" stroke="#222" stroke-width="2"/>`,
@@ -407,6 +408,9 @@ const ART_EXTRAS = {
                            <path d="M142 202 Q160 196 178 206" ${LINE} stroke-width="2.5"/>`,
 };
 
+// Extras that use both hands, so a held item (look.hand) is put away for them.
+const TWO_HANDED_EXTRAS = ["clap", "crossedArms"];
+
 const artCache = new Map();
 
 // Returns a data: URL for the given character and pose, drawn in the character's personality.
@@ -423,6 +427,7 @@ function placeholderArt(character, pose) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 240">
     ${look.back || ""}
     ${look.body}
+    ${look.hand && !extras.some((name) => TWO_HANDED_EXTRAS.includes(name)) ? look.hand : ""}
     <rect x="${100 - neckWidth / 2}" y="140" width="${neckWidth}" height="40" fill="${look.skin}"/>
     ${look.front || ""}
     <ellipse cx="100" cy="105" rx="54" ry="60" fill="${look.skin}"/>
