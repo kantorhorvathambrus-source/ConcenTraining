@@ -80,6 +80,12 @@
         </div>
         <button id="motivateButton" type="button" class="btn primary">Motivate me</button>
         <button id="endButton" type="button" class="btn">End session</button>
+        <!-- Takes End session's place (same cell, same size) for UNDO_WINDOW_MS after each
+             distraction tap (app.js), so nothing on the screen moves. -->
+        <button id="undoButton" type="button" class="btn undo-btn" hidden>
+          Undo
+          <span class="undo-countdown" aria-hidden="true"><span class="undo-countdown-bar"></span></span>
+        </button>
       </div>
     </section>
 

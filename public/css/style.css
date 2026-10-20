@@ -487,6 +487,17 @@ input:focus-visible {
   background: var(--surface-2);
 }
 
+/* Advanced: a length longer than the free time so far (updateLengthButtons in app.js).
+   Greyed out but still readable, and the same size, so nothing moves. */
+.btn.level:disabled {
+  opacity: 1;
+  color: var(--muted);
+  border-color: var(--border);
+  background: var(--surface-2);
+  cursor: not-allowed;
+  transform: none;
+}
+
 /* ---------- distraction category picker ---------- */
 
 /* Spans both columns of the sticky session bar, above Motivate me / End session. */
@@ -540,6 +551,38 @@ input:focus-visible {
 @keyframes picker-countdown {
   from { transform: scaleX(1); }
   to { transform: scaleX(0); }
+}
+
+/* ---------- undo ---------- */
+
+/* Sits in End session's cell while it's shown. The countdown bar along its bottom edge
+   looks like the picker's and empties over UNDO_WINDOW_MS (--undo-timeout, set in app.js);
+   then End session comes back. */
+.undo-btn {
+  position: relative;
+  overflow: hidden;
+  border-color: var(--primary);
+}
+
+.undo-btn:hover {
+  border-color: var(--primary-hover);
+}
+
+.undo-countdown {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: var(--surface-2);
+}
+
+.undo-countdown-bar {
+  display: block;
+  height: 100%;
+  background: var(--primary);
+  transform-origin: left;
+  animation: picker-countdown var(--undo-timeout, 5s) linear forwards;
 }
 
 .motivation-card {
@@ -968,7 +1011,8 @@ a {
     animation: none !important;
   }
 
-  .picker-countdown {
+  .picker-countdown,
+  .undo-countdown {
     display: none;
   }
 }
