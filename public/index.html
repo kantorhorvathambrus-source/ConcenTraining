@@ -43,6 +43,20 @@
         <div id="setupDuration" class="duration-picker"></div>
       </div>
 
+      <div class="step session-settings">
+        <div class="setting-row">
+          <label class="check-row">
+            <input id="endSoundCheck" type="checkbox" data-pref="endSound">
+            <span>Play a sound when time's up</span>
+          </label>
+          <button id="testSoundButton" type="button" class="btn test-sound">Test sound</button>
+        </div>
+        <label class="check-row">
+          <input id="keepScreenOnCheck" type="checkbox" data-pref="keepScreenOn">
+          <span>Keep the screen on during the session</span>
+        </label>
+      </div>
+
       <button id="startButton" type="button" class="btn primary big">Start session</button>
     </section>
 

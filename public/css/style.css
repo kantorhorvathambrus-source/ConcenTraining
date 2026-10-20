@@ -725,6 +725,29 @@ dialog p {
   min-width: 0;
 }
 
+/* Setup screen: sound / screen-on checkboxes, with the Test sound button beside the first one. */
+.session-settings .check-row {
+  margin-bottom: 0;
+}
+
+.session-settings > .check-row,
+.setting-row {
+  min-height: 44px;
+  align-items: center;
+}
+
+.setting-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.btn.test-sound {
+  flex-shrink: 0;
+  padding: 7px 12px;
+  font-size: 0.85rem;
+}
+
 /* ---------- stats page ---------- */
 
 .stats-table {
