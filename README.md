@@ -179,7 +179,7 @@ The ragebait poses:
 | level1 | Side-eye: white eyes under a low lid, pupils pushed to the side, one eyebrow up, wide smug grin |
 | level2 | Eye-roll |
 | level3 | Wink and tongue out |
-| level4 | Laughing at you with a sarcastic slow clap. Influencer instead laughs while filming you: phone held up, camera turned at you, red recording light |
+| level4 | Laughing at you with a sarcastic slow clap. Influencer instead just laughs, with his phone still filming you from his hand |
 | level5 | Middle finger |
 | good | Grudging: arms crossed, half-closed eyes looking away, flat "meh" mouth, a small shrug. Never proud |
 
