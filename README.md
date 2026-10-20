@@ -82,6 +82,17 @@ Every finished session gets a result. The thresholds are constants at the top of
 The poses are in `SUMMARY_POSES` (`public/js/app.js`); titles and Simple-mode messages for each result
 are in `public/js/data/messages.js`.
 - A running session survives a page reload (it's saved in `localStorage`, the browser's built-in storage).
+- **Timer ran out while you were away** (page closed, or phone locked or in another app):
+  - Back within 30 minutes of the end (`REOPEN_ASK_AFTER_MS` at the top of `public/js/app.js`):
+    the session is saved as a full session and the summary is shown, as if you'd watched it end.
+  - Back later than that: the app can't tell whether you kept focusing, so it asks
+    "Your 90 min Advanced session with Boss ended 2 days ago. … Save it to your history?"
+    **Save** saves it exactly as above (full planned length, `endedBy: "timer"`, focus % from the
+    distractions you logged, `null` in Simple mode) and shows the summary. **Discard** saves nothing
+    and goes back to the setup screen. Esc doesn't answer it, and if the page is closed before
+    answering, the question comes back next time.
+  - Both cases work the same in Simple and Advanced mode. A continue/restart question that was
+    still waiting is dropped, as before.
 
 ## Personalities
 
@@ -109,7 +120,7 @@ Characters react only with poses and facial expressions, never with text. The ra
 ## Session history (`history.html`)
 
 Every finished session (timer ran out or **End session** pressed) that ran at least 1 minute is saved
-on the device. A session abandoned with **Start over** is saved too, unless its "Save the first …
+on the device, except one you chose to **Discard** after coming back long after it ended (see above). A session abandoned with **Start over** is saved too, unless its "Save the first …
 to history" checkbox was unticked (see above). The page shows:
 
 - **Current and longest streak:** days (local time) with at least one finished session.
