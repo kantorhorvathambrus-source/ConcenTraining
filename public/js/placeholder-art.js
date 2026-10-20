@@ -200,6 +200,65 @@ const ART_LOOKS = {
            <path d="M46 100 Q44 80 50 70 Q54 84 56 96Z" fill="#a0a0a0"/>
            <path d="M154 100 Q156 80 150 70 Q146 84 144 96Z" fill="#a0a0a0"/>`,
   },
+  "meditation-guide": {
+    skin: "#e2b08a",
+    brow: "#2b1d16",
+    back: `<ellipse cx="100" cy="98" rx="60" ry="62" fill="#2b1d16"/>`,
+    body: `<path d="M18 240 Q22 178 100 172 Q178 178 182 240Z" fill="#efe4cf" stroke="#cbbd9f" stroke-width="2"/>
+           <path d="M84 176 Q100 196 116 176" fill="#e2b08a" stroke="#cbbd9f" stroke-width="2"/>
+           <path d="M60 206 Q64 224 62 240 M140 206 Q136 224 138 240" fill="none" stroke="#d8cbb0" stroke-width="2"/>
+           <g fill="#2b1d16" stroke="#1a110c" stroke-width="1.5">
+             <ellipse cx="146" cy="168" rx="11" ry="13"/><ellipse cx="148" cy="190" rx="10" ry="12"/>
+             <ellipse cx="149" cy="211" rx="9" ry="11"/><ellipse cx="150" cy="229" rx="7" ry="9"/>
+           </g>
+           <rect x="144" y="236" width="12" height="4" fill="#b85c38"/>`,
+    hair: `<path d="M46 104 Q42 44 100 42 Q158 44 154 104 Q150 74 128 64 Q110 56 100 52 Q90 56 72 64 Q50 74 46 104Z" fill="#2b1d16"/>`,
+  },
+  librarian: {
+    skin: "#f1c7a6",
+    brow: "#2c1c14",
+    back: `<path d="M40 110 Q30 60 64 44 Q100 26 136 44 Q170 60 160 110 Q170 140 158 170 Q150 180 140 168 L140 120 L60 120 L60 168 Q50 180 42 170 Q30 140 40 110Z" fill="#3a241a"/>`,
+    body: `<path d="M18 240 Q22 178 100 172 Q178 178 182 240Z" fill="#c4612b"/>
+           <path d="M80 176 L100 228 L120 176Z" fill="#f5ecdc"/>
+           <path d="M84 176 Q100 188 116 176" fill="none" stroke="#e0d3bd" stroke-width="2"/>
+           <circle cx="106" cy="204" r="3" fill="#8a3d16"/><circle cx="104" cy="222" r="3" fill="#8a3d16"/>
+           <path d="M40 200 l8 4 M36 218 l8 4 M160 200 l-8 4 M164 218 l-8 4" stroke="#a84f20" stroke-width="2.5" stroke-linecap="round"/>`,
+    hair: `<path d="M46 102 Q40 46 100 42 Q160 46 154 102 Q152 82 142 74 Q146 86 134 70 Q120 78 112 64 Q102 76 92 64 Q80 78 68 68 Q60 84 56 76 Q48 86 46 102Z" fill="#3a241a"/>
+           <g fill="#fff" fill-opacity="0.25" stroke="#7a3f6a" stroke-width="3">
+             <rect x="64" y="44" width="30" height="16" rx="7"/><rect x="106" y="44" width="30" height="16" rx="7"/>
+           </g>
+           <path d="M94 50 Q100 46 106 50" fill="none" stroke="#7a3f6a" stroke-width="3"/>`,
+  },
+  surgeon: {
+    skin: "#c98d66",
+    brow: "#2b1a12",
+    body: `<path d="M18 240 Q22 178 100 172 Q178 178 182 240Z" fill="#14958b"/>
+           <path d="M80 176 L100 206 L120 176Z" fill="#c98d66"/>
+           <path d="M80 176 L100 206 L120 176" fill="none" stroke="#0e756d" stroke-width="3"/>
+           <rect x="128" y="204" width="24" height="20" rx="3" fill="#0e756d"/>`,
+    front: `<path d="M72 160 Q100 150 128 160 L126 182 Q100 192 74 182Z" fill="#a9d8f0" stroke="#7fb8d6" stroke-width="2"/>
+            <path d="M78 168 Q100 162 122 168 M78 175 Q100 170 122 175" fill="none" stroke="#7fb8d6" stroke-width="1.5"/>`,
+    hair: `<path d="M44 92 Q42 32 100 30 Q158 32 156 92 Q150 66 100 62 Q50 66 44 92Z" fill="#14958b"/>
+           <path d="M44 92 Q50 66 100 62 Q150 66 156 92 L156 86 Q150 58 100 56 Q50 58 44 86Z" fill="#0e756d"/>
+           <circle cx="72" cy="44" r="3" fill="#0e756d"/><circle cx="100" cy="38" r="3" fill="#0e756d"/><circle cx="128" cy="44" r="3" fill="#0e756d"/>
+           <path d="M46 96 Q44 88 50 84 Q50 94 54 100Z M154 96 Q156 88 150 84 Q150 94 146 100Z" fill="#2b1a12"/>`,
+  },
+  influencer: {
+    skin: "#e6b593",
+    brow: "#c9a24a",
+    body: `<path d="M18 240 Q22 178 100 172 Q178 178 182 240Z" fill="#ff2fa0"/>
+           <path d="M54 184 Q100 160 146 184 Q138 198 100 196 Q62 198 54 184Z" fill="#d81b84"/>
+           <path d="M88 196 L86 222 M112 196 L114 222" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+           <rect x="30" y="178" width="26" height="44" rx="5" fill="#222" stroke="#555" stroke-width="2"/>
+           <rect x="34" y="183" width="18" height="32" rx="2" fill="#5ad1ff"/>
+           <circle cx="43" cy="198" r="5" fill="#ff2fa0"/>
+           <rect x="24" y="200" width="38" height="24" rx="11" fill="#e6b593" stroke="#222" stroke-width="2"/>`,
+    hair: `<path d="M48 98 Q44 44 100 40 Q156 44 152 98 Q150 72 140 64 L136 52 L126 64 L118 48 L108 62 L98 46 L88 62 L78 50 L70 64 Q54 72 48 98Z" fill="#f2df9a"/>
+           <g fill="#222">
+             <path d="M60 52 L94 52 L92 64 Q78 70 62 64Z"/><path d="M106 52 L140 52 L138 64 Q122 70 108 64Z"/>
+           </g>
+           <path d="M94 54 L106 54" stroke="#222" stroke-width="3"/>`,
+  },
 };
 
 // [outer end y, inner end y] of each eyebrow.

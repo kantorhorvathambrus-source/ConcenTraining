@@ -148,10 +148,10 @@ personality, in one place (`GROUPS` and `personalityOf()`). A new character only
 
 | Group | Personality | How it reacts |
 |---|---|---|
-| `relaxed` (Grandma, Leader, Santa, Study Buddy, Coach) | `kind` | Happy you're back, cheers you on. Hops. |
-| `firm` (Professor), label "Firm but fair" | `firm` | Patient, but expects your best. Never shouts or gets angry: disappointment instead. One slow, calm lean (never shakes); a small nod when you do well. |
+| `relaxed` (Grandma, Leader, Santa, Study Buddy, Coach, Meditation Guide) | `kind` | Happy you're back, cheers you on. Hops. |
+| `firm` (Professor, Librarian, Surgeon), label "Firm but fair" | `firm` | Patient, but expects your best. Never shouts or gets angry: disappointment instead. One slow, calm lean (never shakes); a small nod when you do well. |
 | `strict` (Boss, Soldier, Headmistress, Grandmaster) | `strict` | Stern when you drift off, angrier each level. Shakes. |
-| `ragebait` (Bodybuilder) | `ragebait` | Annoying on purpose: mocking, more insulting each level. Cheeky head tilt. |
+| `ragebait` (Bodybuilder, Influencer) | `ragebait` | Annoying on purpose: mocking, more insulting each level. Cheeky head tilt. |
 
 The picker lists the characters in group order: relaxed, firm, strict, ragebait (the order of
 `CHARACTERS` in `characters.js`).
@@ -335,8 +335,9 @@ can be measured over the **last 30 days** and the paid selection rotates as tast
   Never edit or delete a migration that has already been deployed: Netlify will refuse the deploy.
 - The first migration created Grandma, Boss, Soldier and Bodybuilder;
   `20261020120000_add_seven_characters.sql` added Leader, Santa, Study Buddy, Coach, Professor,
-  Headmistress and Grandmaster. With 11 characters the paid selection is now active: the top 1
-  by recent taps is marked "(paid)" on `/stats.html`.
+  Headmistress and Grandmaster, and `20261020150000_add_four_characters.sql` added Meditation
+  Guide, Librarian, Surgeon and Influencer. With 15 characters the paid selection is active: the
+  top 2 by recent taps are marked "(paid)" on `/stats.html`.
 - Settings (30 days, 10 characters, 10%) are constants at the top of `netlify/functions/stats.mjs`.
 
 ## Deploying
