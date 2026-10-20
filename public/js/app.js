@@ -459,6 +459,16 @@ async function askContinueOrRestart() {
   if (dialog.open) return;
 
   const readMinutes = durationPicker($("#restartDuration"), Math.round(session.durationMs / MIN));
+
+  // "Save the first X to history": X is the time so far, and if it's kept, the
+  // session is saved as ending right now, so what's shown is what's saved. Only
+  // offered when it could be saved at all (same 1-minute rule as finishing).
+  const cutAt = Date.now();
+  const canSave = cutAt - session.startedAt >= HISTORY_MIN_MS;
+  $("#restartSaveRow").hidden = !canSave;
+  $("#restartSave").checked = true;
+  $("#restartSaveText").textContent = `Save the first ${formatDuration(cutAt - session.startedAt)} to history`;
+
   const answer = await ask(dialog);
   if (!session || session.endedAt) return; // the timer ran out while the question was open
 
@@ -467,6 +477,8 @@ async function askContinueOrRestart() {
   save(SESSION_KEY, session);
   if (answer === "restart") {
     const { characterId, mode } = session;
+    // The checkbox only matters here: "Continue" keeps the session running.
+    if (canSave && $("#restartSave").checked) saveFinishedSession({ ...session, endedAt: cutAt }, "startOver");
     startSession(characterId, mode, readMinutes());
   }
 }
