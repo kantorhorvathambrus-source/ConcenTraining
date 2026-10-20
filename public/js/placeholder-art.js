@@ -21,7 +21,7 @@ const ART_EXPRESSIONS = {
     blink: { eyes: "closed", brows: "flat", mouth: "smile" },
     good: { eyes: "happy", brows: "soft", mouth: "smile" }, // small approving smile, no sparkles
     level1: { eyes: "open", brows: ["raised", "flat"], mouth: "flat" }, // one eyebrow raised
-    level2: { eyes: "open", brows: "flat", mouth: "flat" }, // a long, level look
+    level2: { eyes: "narrow", brows: ["raised", "flat"], mouth: "flat" }, // a long, level look: eyes narrow, brow still up
     level3: { eyes: "open", brows: "stern", mouth: "flat" }, // serious
     level4: { eyes: "narrow", brows: "stern", mouth: "flat" }, // stern but calm
     level5: { eyes: "closed", brows: "worried", mouth: "frown" }, // a disappointed sigh

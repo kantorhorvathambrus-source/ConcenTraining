@@ -162,7 +162,7 @@ Characters react only with poses and facial expressions, never with text. The fi
 |---|---|
 | initial / blink | Calm, level brows, slight smile |
 | level1 | One eyebrow raised |
-| level2 | A long, level look |
+| level2 | A long, level look: one eyebrow still raised, eyes narrowed |
 | level3 | Serious: stern brows, flat mouth |
 | level4 | Stern but calm: narrowed eyes, flat mouth (no angry brows) |
 | level5 | A disappointed sigh: eyes closed, worried brows, small frown |
