@@ -11,6 +11,9 @@ Netlify Functions plus a Netlify Database, used only for character popularity st
   The character decides the personality (see below). Ragebait characters show a warning before
   they can be selected. A custom duration is corrected as soon as you leave the field: empty becomes
   25 min, anything under 1 becomes 1, anything over 240 becomes 240.
+  Under step 3 there are two checkboxes, both on by default: **Play a sound when time's up** (with a
+  small **Test sound** button that plays the chime once) and **Keep the screen on during the session**.
+  See "Sound and screen" below.
 - **Simple mode:** 5 severity buttons (very briefly … a whole lot), not time-based.
 - **Advanced mode:** 7 duration buttons (30 sec … 10+ min). Ends with the % of the session spent focusing.
   "10+ min" counts as 10 minutes in that %. A length that can't have happened yet is disabled (greyed
@@ -106,6 +109,37 @@ are in `public/js/data/messages.js`.
     answering, the question comes back next time.
   - Both cases work the same in Simple and Advanced mode. A continue/restart question that was
     still waiting is dropped, as before.
+  - Neither case plays the end chime (see below).
+
+### Sound and screen
+
+- **End chime:** when the timer runs out on its own, a short, soft chime plays: three rising notes,
+  about 1 second, generated with the Web Audio API (the browser's built-in sound generator, so there's
+  no audio file). On Android the phone also vibrates briefly (iOS ignores vibration). The chime and
+  the vibration only happen when the end is seen as it happens: within 5 s of the end time
+  (`END_SOUND_VISIBLE_MS`), or within 75 s if the tab is in the background (`END_SOUND_HIDDEN_MS`),
+  because browsers run background timers late. Never on **End session**, **Start over**, a page
+  reopened or reloaded after the end, a phone unlocked after the end, or the "Welcome back" question.
+  The notes, volume and vibration pattern are constants at the top of `public/js/app.js`.
+- **Why there's a tap first:** browsers only allow sound after a tap. The sound is unlocked by the
+  **Start session** tap, and every tap or key press during a session unlocks it again if the browser
+  has paused it (after a reload, a phone call, or another app taking over the audio). The chime itself
+  also tries to resume paused audio; if that doesn't work within a moment, it's skipped rather than
+  played late.
+- **iPhone silent mode:** the Ring/Silent switch (or the Action button set to silent) mutes the chime.
+  This is how iPhones treat web page sounds, and the app doesn't try to get around it.
+- **Background tab on a computer:** browsers slow down timers in hidden tabs, so the chime can come
+  late: in Chrome and Edge up to about 1 minute (once the tab has been hidden for 5+ minutes), in
+  Firefox and Safari usually about 1 second. While the computer is asleep nothing runs; waking it
+  after the end counts as coming back later, so there's no chime.
+- **Keep the screen on:** while a session is on screen, the app asks the browser to keep the screen
+  on (the Screen Wake Lock API), so the phone doesn't lock and pause the page. A locked phone pauses
+  the page, so without this the chime would rarely play on a phone. The lock is released when the
+  session ends or is stopped, and on the setup and summary screens. The browser drops it whenever the
+  page is hidden (another tab or app), so it's asked for again when the page is visible. After a reload
+  the browser may refuse it until the first tap, so taps during a session ask again. Browsers without
+  support (or a refused request, e.g. in battery saver mode) just carry on without it. Needs HTTPS,
+  so it doesn't work when `index.html` is opened as a local file.
 
 ## Personalities
 
@@ -161,7 +195,7 @@ appear in the list as "—", but are left out of the trend and time-of-day numbe
 |---|---|
 | `ct_session_v1` | The session that's running right now (removed when it ends). `restartPending: true` while the continue/restart question is unanswered; older saved sessions don't have it, which means `false` |
 | `ct_history_v1` | Finished sessions, newest first, max. 1000 |
-| `ct_prefs_v1` | Last chosen character, mode and duration. A `style` value saved by older versions is ignored and dropped |
+| `ct_prefs_v1` | Last chosen character, mode and duration, plus `endSound` and `keepScreenOn` (the two setup checkboxes, `true`/`false`). Prefs saved before these existed get `true` for both. A `style` value saved by older versions is ignored and dropped |
 
 Each history entry: `startedAt`, `endedAt` (timestamps in ms), `endedBy` (`"timer"`/`"manual"`/`"startOver"`),
 `characterId`, `style` (the character's personality when the session ran: `"kind"`, `"strict"` or
@@ -242,7 +276,7 @@ The history page says so, too.
 | `public/js/data/characters.js` | Character list, groups and the personality each group gives (`personalityOf`), art paths |
 | `public/js/data/messages.js` | Motivation messages, summary titles and Simple-mode summary messages per result |
 | `public/js/placeholder-art.js` | Built-in placeholder drawings (kind, strict and ragebait faces) for characters without real art |
-| `public/js/app.js` | Timer, reaction engine, distraction category picker, Undo, disabled Advanced lengths, motivation rotation, summary |
+| `public/js/app.js` | Timer, reaction engine, distraction category picker, Undo, disabled Advanced lengths, motivation rotation, end chime, screen wake lock, summary |
 | `public/js/history-store.js` | Saving/loading history, focus % and summary result (with their thresholds), distraction categories, export/import checks (used by both pages) |
 | `public/js/history.js` | Streaks, weekly chart, time of day, distraction categories, session list and backup buttons on `history.html` |
 | `netlify/functions/picks.mjs` | `POST /api/picks`: counts one tap on a character |

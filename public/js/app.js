@@ -15,6 +15,15 @@ const DEFAULT_MINUTES = 25;
 // The timer can run out while the page is closed or the phone is locked. If the app
 // gets control back later than this after the end, it asks before saving the session.
 const REOPEN_ASK_AFTER_MS = 30 * MIN;
+// The chime plays only if the end is seen as it happens: within this long of the end time.
+// A hidden tab gets longer, because browsers run its timers late (Chrome: up to 1 minute).
+const END_SOUND_VISIBLE_MS = 5 * 1000;
+const END_SOUND_HIDDEN_MS = 75 * 1000;
+const CHIME_NOTES = [659.25, 783.99, 1046.5]; // E5, G5, C6, rising
+const CHIME_GAP_S = 0.18; // between note starts
+const CHIME_NOTE_S = 0.75; // each note fades out over this long
+const CHIME_VOLUME = 0.25; // 1 = full scale
+const END_VIBRATION = [150, 80, 150]; // ms on, off, on (Android; iOS ignores it)
 
 // Summary screen pose for each session result (see sessionResult in history-store.js).
 const SUMMARY_POSES = {
@@ -88,7 +97,11 @@ function countCharacterPick(id) {
 
 // ---------- state ----------
 
-const prefs = Object.assign({ characterId: null, mode: "simple", minutes: 25 }, load(PREFS_KEY, {}));
+// endSound / keepScreenOn: the setup checkboxes. Prefs saved before they existed get these defaults.
+const prefs = Object.assign(
+  { characterId: null, mode: "simple", minutes: 25, endSound: true, keepScreenOn: true },
+  load(PREFS_KEY, {}),
+);
 delete prefs.style; // saved before personalities came from the character; dropped on the next save
 // style: the character's personality when the session ran ("kind", "strict" or "ragebait")
 // restartPending: "A whole lot" / "10+ min" was tapped and the continue/restart question
@@ -114,6 +127,7 @@ function showScreen(id) {
     screen.hidden = screen.id !== id;
   });
   window.scrollTo(0, 0);
+  updateWakeLock();
 }
 
 // Opens a <dialog> and resolves with the value of the button that closed it ("" for Esc).
@@ -209,6 +223,128 @@ function stopReaction() {
 function stopStage() {
   stopReaction();
   clearTimeout(stage.blinkTimer);
+}
+
+// ---------- end-of-session chime ----------
+
+let audioContext = null;
+
+// Browsers only allow sound after a tap, so this runs on the Start tap and on every tap
+// during a session. It only does something while the audio isn't running (first tap, or
+// after a phone call or another app took the audio over). Returns the context, or null.
+function unlockAudio() {
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtx) return null;
+  try {
+    if (!audioContext || audioContext.state === "closed") audioContext = new AudioCtx();
+    if (audioContext.state !== "running") {
+      audioContext.resume().catch(() => {});
+      // iOS also wants something played inside the tap: one silent sample.
+      const source = audioContext.createBufferSource();
+      source.buffer = audioContext.createBuffer(1, 1, 22050);
+      source.connect(audioContext.destination);
+      source.start(0);
+    }
+  } catch {
+    return null; // no sound, the app works the same
+  }
+  return audioContext;
+}
+
+// Three soft rising notes, about 1 second. Generated, no audio file.
+// If the audio was taken over since the last tap, it's resumed first. If that takes
+// more than a moment (or never happens), the chime is skipped rather than played late.
+function playChime() {
+  const ctx = unlockAudio();
+  if (!ctx) return;
+  const askedAt = Date.now();
+  const play = () => {
+    if (Date.now() - askedAt > 3000) return;
+    const master = ctx.createGain();
+    master.gain.value = CHIME_VOLUME;
+    master.connect(ctx.destination);
+    const t0 = ctx.currentTime + 0.03;
+    CHIME_NOTES.forEach((frequency, i) => {
+      const start = t0 + i * CHIME_GAP_S;
+      const osc = ctx.createOscillator();
+      osc.type = "sine";
+      osc.frequency.value = frequency;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(1, start + 0.012); // short fade-in, so no click
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + CHIME_NOTE_S);
+      osc.connect(gain).connect(master);
+      osc.start(start);
+      osc.stop(start + CHIME_NOTE_S + 0.05);
+    });
+  };
+  if (ctx.state === "running") play();
+  else Promise.resolve(ctx.resume()).then(play, () => {}); // old Safari's resume() returns nothing
+}
+
+// Time's up, seen as it happens: chime and a short vibration, if the setting is on.
+// Nothing here may stop the session from finishing, so errors are swallowed.
+function announceEnd() {
+  if (!prefs.endSound) return;
+  try {
+    playChime();
+  } catch {
+    // no sound: fine
+  }
+  try {
+    if (navigator.vibrate) navigator.vibrate(END_VIBRATION);
+  } catch {
+    // not supported: fine
+  }
+}
+
+// ---------- keep the screen on (Screen Wake Lock API) ----------
+
+const wakeLock = { sentinel: null, pending: false };
+
+function wakeLockWanted() {
+  return Boolean(
+    prefs.keepScreenOn && session && !session.endedAt &&
+    !$("#sessionScreen").hidden && document.visibilityState === "visible",
+  );
+}
+
+// Holds the lock while a session is on screen, releases it everywhere else. Called on every
+// screen change, when the page becomes visible again (the browser drops the lock while it's
+// hidden) and on taps during a session (a reload may be refused until the first tap).
+// Unsupported or refused: nothing happens.
+async function updateWakeLock() {
+  if (!("wakeLock" in navigator)) return;
+  if (!wakeLockWanted()) {
+    releaseWakeLock();
+    return;
+  }
+  if (wakeLock.sentinel || wakeLock.pending) return;
+  wakeLock.pending = true;
+  try {
+    const sentinel = await navigator.wakeLock.request("screen");
+    sentinel.addEventListener("release", () => {
+      if (wakeLock.sentinel === sentinel) wakeLock.sentinel = null;
+    });
+    wakeLock.sentinel = sentinel;
+  } catch {
+    // refused (no tap yet, battery saver, ...): carry on without it
+  }
+  wakeLock.pending = false;
+  if (!wakeLockWanted()) releaseWakeLock(); // the session ended while the request was out
+}
+
+function releaseWakeLock() {
+  const sentinel = wakeLock.sentinel;
+  wakeLock.sentinel = null;
+  if (sentinel) sentinel.release().catch(() => {});
+}
+
+// Every tap or key press while a session is running.
+function onSessionInput() {
+  if (!session || session.endedAt || $("#sessionScreen").hidden) return;
+  if (prefs.endSound) unlockAudio();
+  updateWakeLock();
 }
 
 // ---------- duration picker (used on setup and in the restart dialog) ----------
@@ -327,6 +463,18 @@ function bindChoiceGroups() {
   });
 }
 
+function bindSettingChecks() {
+  document.querySelectorAll(".session-settings input[data-pref]").forEach((check) => {
+    const key = check.dataset.pref;
+    check.checked = Boolean(prefs[key]);
+    check.addEventListener("change", () => {
+      prefs[key] = check.checked;
+      savePrefs();
+    });
+  });
+  $("#testSoundButton").addEventListener("click", playChime);
+}
+
 function onStartClick() {
   if (!characterById(prefs.characterId)) {
     $("#characterError").hidden = false;
@@ -335,6 +483,7 @@ function onStartClick() {
   }
   prefs.minutes = readSetupMinutes();
   savePrefs();
+  if (prefs.endSound) unlockAudio(); // this tap is what allows the chime later
   startSession(prefs.characterId, prefs.mode, prefs.minutes);
 }
 
@@ -408,7 +557,7 @@ function tick() {
     nextGoodAt = now + GOOD_EVERY_MS;
   }
 
-  if (remaining <= 0) onTimerRanOut();
+  if (remaining <= 0) onTimerRanOut(true);
 }
 
 function logDistraction(option) {
@@ -587,10 +736,17 @@ function finishSession(endedAt) {
 
 // Back soon after the end (or watching it end): saved as a full session, as always.
 // Back much later: the app can't tell whether the user kept focusing, so it asks.
-function onTimerRanOut() {
+// running: called by the running timer (not on start-up after a reload or reopen).
+// The chime only plays if the end is happening right now, not when someone comes back later.
+function onTimerRanOut(running) {
   const endedAt = session.startedAt + session.durationMs;
-  if (Date.now() - endedAt > REOPEN_ASK_AFTER_MS) askSaveLateSession(endedAt);
-  else finishSession(endedAt);
+  const late = Date.now() - endedAt;
+  if (late > REOPEN_ASK_AFTER_MS) {
+    askSaveLateSession(endedAt);
+    return;
+  }
+  if (running && late <= (document.hidden ? END_SOUND_HIDDEN_MS : END_SOUND_VISIBLE_MS)) announceEnd();
+  finishSession(endedAt);
 }
 
 async function askSaveLateSession(endedAt) {
@@ -755,6 +911,7 @@ function formatTimeAgo(ms) {
 function init() {
   renderCharacterList();
   bindChoiceGroups();
+  bindSettingChecks();
   buildCategoryButtons();
   readSetupMinutes = durationPicker($("#setupDuration"), prefs.minutes);
 
@@ -769,6 +926,10 @@ function init() {
     renderCharacterList();
     showScreen("setupScreen");
   });
+  // Capture phase, so every tap counts, wherever it lands (dialogs too).
+  // touchend for iPhones, which don't always send click for taps on plain areas.
+  for (const type of ["touchend", "click", "keydown"]) document.addEventListener(type, onSessionInput, true);
+  document.addEventListener("visibilitychange", updateWakeLock);
 
   // Resume a session that was running when the page was closed or reloaded.
   const saved = load(SESSION_KEY, null);
@@ -779,7 +940,7 @@ function init() {
     session.style = personalityOf(characterById(saved.characterId));
     save(SESSION_KEY, session);
     if (Date.now() >= saved.startedAt + saved.durationMs) {
-      onTimerRanOut();
+      onTimerRanOut(false);
     } else {
       enterSession();
       askPendingRestart(); // the page was reloaded before the continue/restart question was answered
