@@ -6,6 +6,14 @@
   <title>Your History · ConcenTraining</title>
   <meta name="description" content="Your finished focus sessions, streaks and focus trends.">
   <link rel="stylesheet" href="css/style.css">
+  <!-- Home Screen / install support. Colors: --bg of the light and dark theme (css/style.css). -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#f6f3ee" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#17161b" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48">
+  <link rel="icon" href="icons/icon-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-title" content="ConcenTraining">
 </head>
 <body>
   <main class="app">
@@ -17,6 +25,10 @@
     <p class="storage-note">
       Your history is stored only in this browser. Clearing site data, using private mode or
       switching devices starts it over. Use <strong>Export</strong> below to keep a backup.
+      <span id="iosStorageNote" hidden>
+        On iPhone and iPad, Safari may also erase it if you don't visit for 7 days. Adding ConcenTraining
+        to your Home Screen (tap Share, or ••• → Share, then Add to Home Screen) keeps it.
+      </span>
     </p>
 
     <p id="historyEmpty" class="empty-state" hidden>
@@ -64,7 +76,7 @@
       </section>
     </div>
 
-    <section class="history-section">
+    <section id="backup" class="history-section">
       <h2>Backup</h2>
       <p class="muted small">
         Export saves all your sessions as a .json file. Import adds the sessions from such a file;

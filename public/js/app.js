@@ -98,9 +98,14 @@ function countCharacterPick(id) {
 
 // ---------- state ----------
 
-// endSound / keepScreenOn: the setup checkboxes. Prefs saved before they existed get these defaults.
+// endSound / keepScreenOn: the setup checkboxes. homeScreenTipDismissed: "Got it" was tapped on the
+// iPhone Home Screen tip. persistRequested: persistent storage was asked for (or skipped, in Firefox).
+// Prefs saved before any of these existed get these defaults.
 const prefs = Object.assign(
-  { characterId: null, mode: "simple", minutes: 25, endSound: true, keepScreenOn: true },
+  {
+    characterId: null, mode: "simple", minutes: 25, endSound: true, keepScreenOn: true,
+    homeScreenTipDismissed: false, persistRequested: false,
+  },
   load(PREFS_KEY, {}),
 );
 delete prefs.style; // saved before personalities came from the character; dropped on the next save
@@ -124,6 +129,7 @@ function characterById(id) {
 }
 
 function showScreen(id) {
+  if (id === "setupScreen") updateHomeScreenTip();
   document.querySelectorAll(".screen").forEach((screen) => {
     screen.hidden = screen.id !== id;
   });
@@ -412,6 +418,19 @@ let readSetupMinutes = () => prefs.minutes;
 
 function savePrefs() {
   save(PREFS_KEY, prefs);
+}
+
+// iPhone/iPad Safari only (see iosSafariNotInstalled in history-store.js), and only once
+// there's at least one finished session to lose. "Got it" hides it for good.
+function updateHomeScreenTip() {
+  $("#homeScreenTip").hidden =
+    prefs.homeScreenTipDismissed || !iosSafariNotInstalled() || loadHistory().length === 0;
+}
+
+function dismissHomeScreenTip() {
+  prefs.homeScreenTipDismissed = true;
+  savePrefs();
+  $("#homeScreenTip").hidden = true;
 }
 
 function renderCharacterList() {
@@ -706,7 +725,9 @@ async function askContinueOrRestart() {
   if (answer === "restart") {
     const { characterId, mode } = session;
     // The checkbox only matters here: "Continue" keeps the session running.
-    if (canSave && $("#restartSave").checked) saveFinishedSession({ ...session, endedAt: cutAt }, "startOver");
+    if (canSave && $("#restartSave").checked && saveFinishedSession({ ...session, endedAt: cutAt }, "startOver")) {
+      requestPersistentStorage();
+    }
     startSession(characterId, mode, readMinutes());
   }
 }
@@ -721,13 +742,29 @@ async function onEndClick() {
   }
 }
 
+// Once per device, after a session is saved: asks the browser to mark this site's storage as
+// persistent, so it isn't cleared on its own (e.g. when the device runs low on space). The
+// browser decides; nothing is shown either way. Skipped in Firefox, which would show a
+// permission bar right after the session (persistRequested is still set, so it's not tried again).
+function requestPersistentStorage() {
+  if (prefs.persistRequested) return;
+  prefs.persistRequested = true;
+  savePrefs();
+  if (/Firefox\/|FxiOS/.test(navigator.userAgent)) return;
+  try {
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+  } catch {
+    // not supported: fine
+  }
+}
+
 function finishSession(endedAt) {
   clearInterval(tickTimer);
   stopStage();
   closePicker(false);
   closeUndo(false);
   session.endedAt = Math.min(endedAt, session.startedAt + session.durationMs);
-  saveFinishedSession(session);
+  if (saveFinishedSession(session)) requestPersistentStorage();
   remove(SESSION_KEY);
   document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
   document.title = BASE_TITLE;
@@ -917,6 +954,7 @@ function init() {
   readSetupMinutes = durationPicker($("#setupDuration"), prefs.minutes);
 
   $("#startButton").addEventListener("click", onStartClick);
+  $("#homeScreenTipButton").addEventListener("click", dismissHomeScreenTip);
   $("#motivateButton").addEventListener("click", onMotivateClick);
   $("#motivationClose").addEventListener("click", () => ($("#motivationCard").hidden = true));
   $("#endButton").addEventListener("click", onEndClick);

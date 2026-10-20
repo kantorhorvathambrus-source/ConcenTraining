@@ -831,6 +831,23 @@ a {
   font-weight: 600;
 }
 
+.tip-card {
+  margin-bottom: 28px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.tip-card p {
+  margin: 0 0 10px;
+}
+
+.tip-card .btn {
+  margin-top: 4px;
+}
+
 .link-btn {
   margin-top: 10px;
   text-align: center;

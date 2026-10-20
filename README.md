@@ -214,7 +214,7 @@ appear in the list as "—", but are left out of the trend and time-of-day numbe
 |---|---|
 | `ct_session_v1` | The session that's running right now (removed when it ends). `restartPending: true` while the continue/restart question is unanswered; older saved sessions don't have it, which means `false` |
 | `ct_history_v1` | Finished sessions, newest first, max. 1000 |
-| `ct_prefs_v1` | Last chosen character, mode and duration, plus `endSound` and `keepScreenOn` (the two setup checkboxes, `true`/`false`). Prefs saved before these existed get `true` for both. A `style` value saved by older versions is ignored and dropped |
+| `ct_prefs_v1` | Last chosen character, mode and duration, plus `endSound` and `keepScreenOn` (the two setup checkboxes, `true`/`false`). Prefs saved before these existed get `true` for both. `homeScreenTipDismissed`: `true` once **Got it** was tapped on the iPhone Home Screen tip. `persistRequested`: `true` once persistent storage was asked for (or skipped in Firefox), see [iPhone storage and the Home Screen app](#iphone-storage-and-the-home-screen-app). Prefs saved before these two existed get `false` for both. A `style` value saved by older versions is ignored and dropped |
 
 Each history entry: `startedAt`, `endedAt` (timestamps in ms), `endedBy` (`"timer"`/`"manual"`/`"startOver"`),
 `characterId`, `style` (the character's personality when the session ran: `"kind"`, `"firm"`,
@@ -228,6 +228,63 @@ Sessions saved before personalities came from the character keep the style that 
 is saved, with the character's own personality.
 History lives only in this browser: clearing site data or switching devices starts it over.
 The history page says so, too.
+
+### iPhone storage and the Home Screen app
+
+Safari on iPhone and iPad can erase a site's saved data (history, streak, prefs) after 7 days of
+using Safari without visiting the site. Web apps added to the Home Screen are exempt. Android Chrome
+doesn't do this.
+
+- **Web app manifest** (`public/manifest.webmanifest`, a small file that tells the phone the app's
+  name, icon and colors): makes "Add to Home Screen" on iPhone and "Install app" on Android open the
+  app full screen, without the address bar, with the ConcenTraining name and icon. Start page and
+  scope are the site root. Background and theme color are the light theme's `--bg` (`#f6f3ee`). Each
+  page also has two `theme-color` metas (light `#f6f3ee`, dark `#17161b`, each with its own
+  `prefers-color-scheme` media query), so the browser bar matches the page in both modes.
+- **Home Screen tip** (setup screen): a small card with why (the 7-day rule), how ("tap Share (or
+  ••• → Share), then Add to Home Screen") and the catch: **the Home Screen app has its own separate
+  storage on iPhone**, so the current history doesn't move over by itself. Export it in Safari first,
+  then Import it in the Home Screen app (the card links to the Backup section of the history page).
+  It's only shown when all of these are true:
+  - iPhone or iPad (an iPad in desktop mode, which says it's a Mac, counts if it has a touch screen),
+  - Safari, not Chrome, Firefox, Edge, Opera or the Google app on iOS, and not an in-app browser,
+  - not already opened from the Home Screen (`navigator.standalone` isn't `true` and the page isn't
+    in `display-mode: standalone`),
+  - at least 1 finished session in the history, so first-time visitors don't see it,
+  - **Got it** hasn't been tapped (saved as `homeScreenTipDismissed` in `ct_prefs_v1`).
+
+  It's never shown during a session or on the summary screen. The check is `iosSafariNotInstalled()`
+  in `public/js/history-store.js`.
+- **History page:** under the same conditions (except the history and Got it rules), the storage note
+  gets one more sentence about the 7-day rule and the Home Screen app.
+- **Persistent storage:** once per device, right after a session is saved to the history, the app
+  calls `navigator.storage.persist()`, which asks the browser to mark this site's storage as
+  persistent so it isn't cleared on its own (for example when the device runs low on space). The
+  browser decides, and nothing is shown either way. It isn't guaranteed to override Safari's 7-day
+  rule; the Home Screen app is the reliable fix. Skipped in Firefox, because Firefox would show a
+  permission bar right after the session. Either way `persistRequested` is set in `ct_prefs_v1`, so
+  it's only tried once.
+- **Icons** (`public/icons/`, `public/favicon.ico`): placeholders (white "CT" on orange) until the
+  real character art. `apple-touch-icon.png` (180, full square, iOS rounds the corners),
+  `icon-192.png` and `icon-512.png` (rounded), `icon-maskable-512.png` (full square, "CT" inside the
+  middle safe zone, so Android can crop it to any shape) and a 16/32/48 px `favicon.ico`. They were
+  made once with a throwaway script; only the image files are in the repo. To replace them, keep the
+  same file names and sizes.
+
+**In the Home Screen app** (standalone mode: no address bar and no browser Back button):
+
+- Every page can be reached and left with links in the page: setup → "Your history →", summary →
+  "See your history" / "Start another session", history → "← Back to the timer". `stats.html` isn't
+  linked from the app (it's for the site owner) but has its own back link.
+- The end chime, vibration and Screen Wake Lock work as in the browser (see
+  [Sound and screen](#sound-and-screen)), with these known differences:
+  - Screen Wake Lock didn't work in iPhone Home Screen apps on iOS 16.4–18.3 (a WebKit bug, fixed in
+    iOS 18.4). On those versions the screen can lock during a session, as in browsers without support.
+  - iOS closes Home Screen apps more readily in the background, so the page may reload when you come
+    back. A running session survives that, like any reload.
+  - Exporting (a file download) from inside a Home Screen app has been unreliable on some iOS
+    versions. The tip's order avoids it: Export in Safari, Import in the app (Import uses the file
+    picker, which works).
 
 ### Export and import
 
@@ -296,13 +353,16 @@ The history page says so, too.
 | `public/js/data/characters.js` | Character list, groups and the personality each group gives (`personalityOf`), art paths |
 | `public/js/data/messages.js` | Motivation messages, summary titles and Simple-mode summary messages per result |
 | `public/js/placeholder-art.js` | Built-in placeholder drawings (kind, firm, strict and ragebait faces, plus each character's look) for characters without real art |
-| `public/js/app.js` | Timer, reaction engine, distraction category picker, Undo, disabled Advanced lengths, motivation rotation, end chime, screen wake lock, summary |
-| `public/js/history-store.js` | Saving/loading history, focus % and summary result (with their thresholds), distraction categories, export/import checks (used by both pages) |
+| `public/js/app.js` | Timer, reaction engine, distraction category picker, Undo, disabled Advanced lengths, motivation rotation, end chime, screen wake lock, summary, iPhone Home Screen tip, persistent storage request |
+| `public/js/history-store.js` | Saving/loading history, focus % and summary result (with their thresholds), distraction categories, export/import checks, iPhone Safari check (used by both pages) |
 | `public/js/history.js` | Streaks, weekly chart, time of day, distraction categories, session list and backup buttons on `history.html` |
 | `netlify/functions/picks.mjs` | `POST /api/picks`: counts one tap on a character |
 | `netlify/functions/stats.mjs` | `GET /api/stats`: popularity + which characters are paid |
 | `netlify/database/migrations/` | Database tables (SQL), applied automatically on deploy |
 | `test-data/` | Small export files for testing Import (not deployed, see `test-data/README.md`) |
+| `public/manifest.webmanifest` | Web app manifest: name, colors and icons for Add to Home Screen / Install |
+| `public/icons/` | Placeholder app icons (Home Screen, Android, maskable) |
+| `public/favicon.ico` | Browser tab icon (placeholder) |
 | `netlify.toml` | Tells Netlify the site is in `public/` |
 | `package.json` | The one dependency the functions need (`@netlify/database`) |
 

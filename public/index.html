@@ -6,6 +6,14 @@
   <title>ConcenTraining</title>
   <meta name="description" content="A focus timer with characters that react when you get distracted.">
   <link rel="stylesheet" href="css/style.css">
+  <!-- Home Screen / install support. Colors: --bg of the light and dark theme (css/style.css). -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#f6f3ee" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#17161b" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48">
+  <link rel="icon" href="icons/icon-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-title" content="ConcenTraining">
 </head>
 <body>
   <main class="app">
@@ -17,6 +25,19 @@
         <p class="muted">Pick a buddy, set a timer, and get focused.</p>
         <p class="header-link"><a href="history.html">Your history →</a></p>
       </header>
+
+      <!-- iPhone/iPad Safari only, once there's history to lose (updateHomeScreenTip in app.js). -->
+      <aside id="homeScreenTip" class="tip-card" aria-labelledby="homeScreenTipTitle" hidden>
+        <h2 id="homeScreenTipTitle">Keep your history safe on iPhone</h2>
+        <p>Safari may erase your history and streak if you don't open ConcenTraining for 7 days. Apps on your Home Screen keep it.</p>
+        <p><strong>How:</strong> tap Share (or ••• → Share), then Add to Home Screen.</p>
+        <p>
+          <strong>Important:</strong> the Home Screen app has its own separate storage, so your current
+          history won't move over by itself. Export your history first, then Import it in the Home Screen app.
+          <a href="history.html#backup">Go to Export →</a>
+        </p>
+        <button id="homeScreenTipButton" type="button" class="btn">Got it</button>
+      </aside>
 
       <div class="step">
         <h2>1. Choose your character</h2>

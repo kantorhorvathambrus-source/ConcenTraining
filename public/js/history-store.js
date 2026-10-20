@@ -133,12 +133,13 @@ function writeHistory(history) {
 
 // Adds a finished session to the front of the history (newest first).
 // endedBy is worked out from the times ("timer" or "manual") unless it's given.
+// Returns true if the session is now in the saved history.
 function saveFinishedSession(session, endedBy) {
   const { elapsedMs, distractedMs, focusPercent } = sessionFocus(session);
-  if (elapsedMs < HISTORY_MIN_MS) return;
+  if (elapsedMs < HISTORY_MIN_MS) return false;
 
   const history = loadHistory();
-  if (history.some((entry) => entry.startedAt === session.startedAt)) return; // already saved
+  if (history.some((entry) => entry.startedAt === session.startedAt)) return true; // already saved
 
   history.unshift({
     startedAt: session.startedAt,
@@ -155,7 +156,22 @@ function saveFinishedSession(session, endedBy) {
     distractions: session.distractions.map(withCategory),
   });
   history.length = Math.min(history.length, HISTORY_LIMIT);
-  writeHistory(history); // if it fails the app keeps working, the session just isn't remembered
+  return writeHistory(history); // if it fails the app keeps working, the session just isn't remembered
+}
+
+// ---------- iPhone storage ----------
+
+// True in Safari on an iPhone or iPad, but not in the Home Screen app. Safari can
+// erase a site's storage (history included) after 7 days without a visit; Home
+// Screen apps are exempt. iPads in desktop mode say they're a Mac, so a "Mac"
+// with a touch screen counts as an iPad. Chrome, Firefox, Edge, Opera and the
+// Google app on iOS add their own token; in-app browsers leave out "Safari".
+function iosSafariNotInstalled() {
+  const ua = navigator.userAgent;
+  const ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  const safari = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS|GSA\//.test(ua);
+  const standalone = navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
+  return ios && safari && !standalone;
 }
 
 // ---------- export / import ----------
