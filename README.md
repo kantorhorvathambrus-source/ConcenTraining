@@ -264,12 +264,16 @@ doesn't do this.
   rule; the Home Screen app is the reliable fix. Skipped in Firefox, because Firefox would show a
   permission bar right after the session. Either way `persistRequested` is set in `ct_prefs_v1`, so
   it's only tried once.
-- **Icons** (`public/icons/`, `public/favicon.ico`): placeholders (white "CT" on orange) until the
-  real character art. `apple-touch-icon.png` (180, full square, iOS rounds the corners),
-  `icon-192.png` and `icon-512.png` (rounded), `icon-maskable-512.png` (full square, "CT" inside the
-  middle safe zone, so Android can crop it to any shape) and a 16/32/48 px `favicon.ico`. They were
-  made once with a throwaway script; only the image files are in the repo. To replace them, keep the
-  same file names and sizes.
+- **Icons** (`public/icons/`, `public/favicon.ico`): placeholders until the real character art, a
+  white crosshair with a brain in the middle on the app's orange. The source is
+  `public/icons/icon.svg` (edit this one). The PNGs are rendered from it: `apple-touch-icon.png`
+  (180, full square without transparency, iOS rounds the corners), `icon-192.png` and
+  `icon-512.png` (rounded corners), and `icon-maskable-512.png` (full square, the picture shrunk to
+  80% so it stays inside the middle safe zone and Android can crop it to any shape). At favicon
+  size the brain would be a blob, so `favicon.ico` (16/32/48 px) is rendered from a simplified
+  `public/icons/icon-small.svg` (crosshair with a filled dot). The PNGs and the favicon were made
+  once with a throwaway script (headless Chromium + Python), which isn't in the repo. After editing an
+  SVG, render the files again at the same names and sizes.
 
 **In the Home Screen app** (standalone mode: no address bar and no browser Back button):
 
@@ -336,9 +340,6 @@ doesn't do this.
   Version 4 allows `endedBy: "startOver"` (for the same reason); in version 1–3 files it's an
   "unknown end reason". Version 5 allows `style: "firm"` (again for the same reason); in version
   1–4 files it's an "unknown style".
-- The future adaptive training program must skip `endedBy: "startOver"` sessions (a note next to
-  `ENDED_BY_RULES` says so too): they stopped because of the long distraction, not because of the
-  chosen length.
 - If the session fields ever change again, raise `EXPORT_VERSION` in `public/js/history-store.js`,
   add the new number to `IMPORT_VERSIONS`, and teach the import how to read the older files.
 
@@ -361,7 +362,7 @@ doesn't do this.
 | `netlify/database/migrations/` | Database tables (SQL), applied automatically on deploy |
 | `test-data/` | Small export files for testing Import (not deployed, see `test-data/README.md`) |
 | `public/manifest.webmanifest` | Web app manifest: name, colors and icons for Add to Home Screen / Install |
-| `public/icons/` | Placeholder app icons (Home Screen, Android, maskable) |
+| `public/icons/` | Placeholder app icons: `icon.svg` and `icon-small.svg` (sources) and the PNGs rendered from them (Home Screen, Android, maskable) |
 | `public/favicon.ico` | Browser tab icon (placeholder) |
 | `netlify.toml` | Tells Netlify the site is in `public/` |
 | `package.json` | The one dependency the functions need (`@netlify/database`) |
