@@ -19,20 +19,25 @@ const SIMPLE_POINTS_PER_MS = 25 * 60 * 1000; // shorter sessions count as 25 min
 
 // Export file format. Bump EXPORT_VERSION if the session fields ever change.
 // Version 2 added a category to each distraction. Version 3 allows the style
-// "ragebait". Version 1 and 2 files still import.
+// "ragebait". Version 4 allows endedBy "startOver". Version 1-3 files still import.
 const EXPORT_APP = "ConcenTraining";
 const EXPORT_TYPE = "session-history";
-const EXPORT_VERSION = 3;
-const IMPORT_VERSIONS = [1, 2, 3];
+const EXPORT_VERSION = 4;
+const IMPORT_VERSIONS = [1, 2, 3, 4];
 const IMPORT_MAX_BYTES = 5 * 1024 * 1024;
 
 // How a session can end, and what that says about its times (see saveFinishedSession):
-// "timer" ran the full planned time, "manual" was ended early. Only these values
-// import. A new endedBy value needs one line here; give it null to import it
-// without checking its times.
+// "timer" ran the full planned time, "manual" was ended early, "startOver" was
+// abandoned with Start over after a long distraction (and the user chose to keep
+// it). Only these values import. A new endedBy value needs one line here (give it
+// null to import it without checking its times), plus a version check in
+// cleanImportedSession like the one for "startOver".
+// The future adaptive training program must skip endedBy "startOver" sessions:
+// they stopped because of the long distraction, not because the user chose that length.
 const ENDED_BY_RULES = {
   timer: (elapsedMs, plannedMs) => elapsedMs === plannedMs,
   manual: (elapsedMs, plannedMs) => elapsedMs < plannedMs,
+  startOver: (elapsedMs, plannedMs) => elapsedMs < plannedMs,
 };
 
 // Planned lengths are whole minutes, at least 1.
@@ -126,7 +131,8 @@ function writeHistory(history) {
 }
 
 // Adds a finished session to the front of the history (newest first).
-function saveFinishedSession(session) {
+// endedBy is worked out from the times ("timer" or "manual") unless it's given.
+function saveFinishedSession(session, endedBy) {
   const { elapsedMs, distractedMs, focusPercent } = sessionFocus(session);
   if (elapsedMs < HISTORY_MIN_MS) return;
 
@@ -136,7 +142,7 @@ function saveFinishedSession(session) {
   history.unshift({
     startedAt: session.startedAt,
     endedAt: session.endedAt,
-    endedBy: session.endedAt >= session.startedAt + session.durationMs ? "timer" : "manual",
+    endedBy: endedBy || (session.endedAt >= session.startedAt + session.durationMs ? "timer" : "manual"),
     characterId: session.characterId,
     style: session.style,
     mode: session.mode,
@@ -172,13 +178,16 @@ const isTime = (value) => Number.isFinite(value) && value >= 0;
 // so a hand-edited session can't contradict itself. Unknown character ids are
 // fine (a newer export can have new characters). Version 1 files have no
 // distraction categories, so their distractions get category: null. Before
-// version 3 the only styles were "kind" and "strict".
+// version 3 the only styles were "kind" and "strict". Before version 4 the only
+// end reasons were "timer" and "manual".
 function cleanImportedSession(raw, version) {
   if (!raw || typeof raw !== "object") throw new Error("not a session");
 
   const { startedAt, endedAt, endedBy, characterId, style, mode, plannedMs, elapsedMs, distractedMs, focusPercent } = raw;
   if (!isTime(startedAt) || !isTime(endedAt) || endedAt < startedAt) throw new Error("bad start or end time");
-  if (!Object.hasOwn(ENDED_BY_RULES, endedBy)) throw new Error("unknown end reason");
+  if (!Object.hasOwn(ENDED_BY_RULES, endedBy) || (endedBy === "startOver" && version < 4)) {
+    throw new Error("unknown end reason");
+  }
   if (typeof characterId !== "string" || !/^[a-z0-9-]{1,64}$/.test(characterId)) throw new Error("bad character id");
   const styles = version >= 3 ? ["kind", "strict", "ragebait"] : ["kind", "strict"];
   if (!styles.includes(style)) throw new Error("unknown style");

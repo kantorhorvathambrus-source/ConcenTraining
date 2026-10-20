@@ -661,6 +661,27 @@ dialog p {
   margin-bottom: 14px;
 }
 
+/* Checkbox with its label: long text wraps under itself, never under the box (fits 360px). */
+.check-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 14px;
+  cursor: pointer;
+}
+
+.check-row input {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin: 1px 0 0;
+  accent-color: var(--primary);
+}
+
+.check-row span {
+  min-width: 0;
+}
+
 /* ---------- stats page ---------- */
 
 .stats-table {
@@ -898,6 +919,19 @@ a {
   background: var(--surface);
   border: 1.5px solid var(--border);
   border-radius: var(--radius);
+}
+
+/* "restarted": a session kept when Start over was chosen (endedBy "startOver"). */
+.session-tag {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 1px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  white-space: nowrap;
+  vertical-align: 1px;
 }
 
 .session-item-focus {

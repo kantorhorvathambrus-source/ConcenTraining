@@ -25,6 +25,13 @@ Netlify Functions plus a Netlify Database, used only for character popularity st
   after 3 s), so the two never show at the same time. If **End session** is pressed while this
   question is waiting, it's asked after **Keep going**. The question is saved with the running session
   (`restartPending`), so if the page is reloaded before it's answered, it's asked right after the reload.
+  If the session has run at least 1 minute, the dialog also has a checkbox above **Start over**:
+  "Save the first 12 min 30 sec to history" (the time so far, measured when the dialog opens), ticked
+  by default. With it ticked, **Start over** saves the abandoned part to the history first, as ending
+  at that moment, with `endedBy: "startOver"`. Its focus % and stats are calculated the normal way
+  (including the long distraction that triggered the question), and it counts for the streak and all
+  history stats like any other session. Unticked, the abandoned part is thrown away. **Continue**
+  ignores the checkbox. Under 1 minute there's no checkbox and nothing is saved, as before.
 - **Reactions:** each button maps to one of the 5 distraction poses. The character also blinks,
   "breathes", and shows the "doing well" pose after every 5 minutes without a logged distraction.
 
@@ -102,7 +109,8 @@ Characters react only with poses and facial expressions, never with text. The ra
 ## Session history (`history.html`)
 
 Every finished session (timer ran out or **End session** pressed) that ran at least 1 minute is saved
-on the device. Sessions abandoned with **Start over** aren't saved. The page shows:
+on the device. A session abandoned with **Start over** is saved too, unless its "Save the first …
+to history" checkbox was unticked (see above). The page shows:
 
 - **Current and longest streak:** days (local time) with at least one finished session.
   The current streak stays alive until today is over, even if you haven't finished a session yet today.
@@ -116,7 +124,8 @@ on the device. Sessions abandoned with **Start over** aren't saved. The page sho
 - **What distracts you:** the picked categories across all sessions, most common first, with count
   and share. Distractions without a category (picker skipped, or logged before categories existed)
   are left out of the bars and only counted in the note above them.
-- **Last 30 sessions** with date, character, mode, length, distractions and focus %.
+- **Last 30 sessions** with date, character, mode, length, distractions and focus %. Sessions saved
+  by **Start over** have a small "restarted" label.
 - **Backup:** Export and Import buttons (see below).
 
 Simple-mode sessions have no focus % (their buttons aren't time-based). They count for streaks and
@@ -130,7 +139,7 @@ appear in the list as "—", but are left out of the trend and time-of-day numbe
 | `ct_history_v1` | Finished sessions, newest first, max. 1000 |
 | `ct_prefs_v1` | Last chosen character, mode and duration. A `style` value saved by older versions is ignored and dropped |
 
-Each history entry: `startedAt`, `endedAt` (timestamps in ms), `endedBy` (`"timer"`/`"manual"`),
+Each history entry: `startedAt`, `endedAt` (timestamps in ms), `endedBy` (`"timer"`/`"manual"`/`"startOver"`),
 `characterId`, `style` (the character's personality when the session ran: `"kind"`, `"strict"` or
 `"ragebait"`), `mode`, `plannedMs`, `elapsedMs`, `distractedMs`, `focusPercent`
 (`null` in Simple mode) and `distractions` (`[{ at, level, ms, category }]`). `category` is
@@ -151,7 +160,7 @@ The history page says so, too.
   {
     "app": "ConcenTraining",
     "type": "session-history",
-    "version": 3,
+    "version": 4,
     "exportedAt": "2026-10-28T09:00:00.000Z",
     "sessions": [ /* history entries, newest first */ ]
   }
@@ -173,9 +182,10 @@ The history page says so, too.
   its numbers must agree with each other** the way the app saves them:
   - at least 1 minute long (same rule as saving), and `elapsedMs` = `endedAt − startedAt`
   - `plannedMs` is a whole number of minutes (at least 1), and `elapsedMs` isn't more than it
-  - `endedBy` fits the times: `"timer"` ran the full planned time, `"manual"` less. The allowed
-    values and their rules are in `ENDED_BY_RULES` in `public/js/history-store.js`: a new value
-    needs one line there.
+  - `endedBy` fits the times: `"timer"` ran the full planned time, `"manual"` and `"startOver"`
+    less. The allowed values and their rules are in `ENDED_BY_RULES` in
+    `public/js/history-store.js`: a new value needs one line there, plus a version check in
+    `cleanImportedSession` (like the one for `"startOver"`).
   - every distraction is inside the session (up to 1 minute after the end is allowed, for a tap
     just as the timer runs out); Simple-mode distractions have `ms: 0`, Advanced ones are
     30 sec to 10 min long
@@ -189,6 +199,11 @@ The history page says so, too.
   Version 3 allows `style: "ragebait"`; in version 1 and 2 files the style must be `kind` or `strict`.
   The fields didn't change, but a version 2 app can't read a ragebait session, so the new number
   makes an older app say "made by a newer version" instead of skipping every ragebait session.
+  Version 4 allows `endedBy: "startOver"` (for the same reason); in version 1–3 files it's an
+  "unknown end reason".
+- The future adaptive training program must skip `endedBy: "startOver"` sessions (a note next to
+  `ENDED_BY_RULES` says so too): they stopped because of the long distraction, not because of the
+  chosen length.
 - If the session fields ever change again, raise `EXPORT_VERSION` in `public/js/history-store.js`,
   add the new number to `IMPORT_VERSIONS`, and teach the import how to read the older files.
 

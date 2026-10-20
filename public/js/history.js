@@ -306,6 +306,13 @@ function renderSessionList(history) {
       <div class="session-item-focus"></div>`;
     item.querySelector("strong").textContent = characterName(entry.characterId);
     item.querySelector(".session-item-mode").textContent = `${capitalize(entry.mode)} · ${capitalize(entry.style)}`;
+    if (entry.endedBy === "startOver") {
+      const tag = document.createElement("span");
+      tag.className = "session-tag";
+      tag.textContent = "restarted";
+      tag.title = "Saved when you chose Start over";
+      item.querySelector(".session-item-mode").after(" ", tag);
+    }
     item.querySelector(".session-item-meta").textContent = [
       formatSessionDate(entry.startedAt),
       formatSessionLength(entry),
