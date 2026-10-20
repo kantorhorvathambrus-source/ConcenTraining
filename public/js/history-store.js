@@ -26,6 +26,24 @@ const EXPORT_VERSION = 3;
 const IMPORT_VERSIONS = [1, 2, 3];
 const IMPORT_MAX_BYTES = 5 * 1024 * 1024;
 
+// How a session can end, and what that says about its times (see saveFinishedSession):
+// "timer" ran the full planned time, "manual" was ended early. Only these values
+// import. A new endedBy value needs one line here; give it null to import it
+// without checking its times.
+const ENDED_BY_RULES = {
+  timer: (elapsedMs, plannedMs) => elapsedMs === plannedMs,
+  manual: (elapsedMs, plannedMs) => elapsedMs < plannedMs,
+};
+
+// Planned lengths are whole minutes, at least 1.
+const MIN_PLANNED_MS = 60 * 1000;
+// Imported Advanced-mode distractions must be as long as one of its buttons:
+// 30 sec (shortest) to 10 min (longest). Simple-mode distractions have no length.
+const IMPORT_MIN_DISTRACTION_MS = 30 * 1000;
+const IMPORT_MAX_DISTRACTION_MS = 10 * 60 * 1000;
+// A tap in the last moment can be timestamped just after the timer ran out.
+const IMPORT_LATE_DISTRACTION_MS = 60 * 1000;
+
 // What caused a distraction. The id is what's saved; the label is what's shown.
 // A distraction without a picked category is saved with category: null.
 const DISTRACTION_CATEGORIES = [
@@ -148,44 +166,72 @@ function buildHistoryExport() {
 const isTime = (value) => Number.isFinite(value) && value >= 0;
 
 // Checks one session from an import file. Returns a clean copy (only the known
-// fields) or throws an Error saying what's wrong. Version 1 files have no
+// fields) or throws an Error whose message is a short reason, shown in the
+// import result (e.g. "shorter than 1 minute"). Besides each field on its own,
+// it checks that the numbers agree with each other the way the app saves them,
+// so a hand-edited session can't contradict itself. Unknown character ids are
+// fine (a newer export can have new characters). Version 1 files have no
 // distraction categories, so their distractions get category: null. Before
 // version 3 the only styles were "kind" and "strict".
 function cleanImportedSession(raw, version) {
-  if (!raw || typeof raw !== "object") throw new Error("it isn't a session object");
+  if (!raw || typeof raw !== "object") throw new Error("not a session");
 
   const { startedAt, endedAt, endedBy, characterId, style, mode, plannedMs, elapsedMs, distractedMs, focusPercent } = raw;
-  if (!isTime(startedAt) || !isTime(endedAt) || endedAt < startedAt) throw new Error("its start or end time is invalid");
-  if (endedBy !== "timer" && endedBy !== "manual") throw new Error("it doesn't say how it ended");
-  if (typeof characterId !== "string" || !/^[a-z0-9-]{1,64}$/.test(characterId)) throw new Error("its character is invalid");
+  if (!isTime(startedAt) || !isTime(endedAt) || endedAt < startedAt) throw new Error("bad start or end time");
+  if (!Object.hasOwn(ENDED_BY_RULES, endedBy)) throw new Error("unknown end reason");
+  if (typeof characterId !== "string" || !/^[a-z0-9-]{1,64}$/.test(characterId)) throw new Error("bad character id");
   const styles = version >= 3 ? ["kind", "strict", "ragebait"] : ["kind", "strict"];
-  if (!styles.includes(style)) throw new Error("its style is invalid");
-  if (mode !== "simple" && mode !== "advanced") throw new Error("its mode is invalid");
+  if (!styles.includes(style)) throw new Error("unknown style");
+  if (mode !== "simple" && mode !== "advanced") throw new Error("unknown mode");
   if (!isTime(plannedMs) || !isTime(elapsedMs) || !isTime(distractedMs) || distractedMs > elapsedMs) {
-    throw new Error("its durations are invalid");
+    throw new Error("bad duration fields");
   }
-  const focusOk =
-    mode === "simple"
-      ? focusPercent === null
-      : Number.isInteger(focusPercent) && focusPercent >= 0 && focusPercent <= 100;
-  if (!focusOk) throw new Error("its focus % is invalid");
-  if (!Array.isArray(raw.distractions)) throw new Error("its distraction list is missing");
+  if (mode === "simple" && focusPercent !== null) throw new Error("focus % in Simple mode");
+  if (mode === "advanced" && !(Number.isInteger(focusPercent) && focusPercent >= 0 && focusPercent <= 100)) {
+    throw new Error("bad focus %");
+  }
+  if (!Array.isArray(raw.distractions)) throw new Error("no distraction list");
 
   const distractions = raw.distractions.map((d) => {
     if (!d || !isTime(d.at) || !Number.isInteger(d.level) || d.level < 1 || d.level > 5 || !isTime(d.ms)) {
-      throw new Error("one of its distractions is invalid");
+      throw new Error("bad distraction");
     }
     if (version >= 2 && d.category !== null && !isCategory(d.category)) {
-      throw new Error("one of its distractions has an unknown category");
+      throw new Error("unknown distraction category");
     }
     return { at: d.at, level: d.level, ms: d.ms, category: version >= 2 ? d.category : null };
   });
 
+  // Do the numbers agree? The app's own calculation is the reference.
+  const expected = sessionFocus({ startedAt, endedAt, mode, distractions });
+  if (elapsedMs !== expected.elapsedMs) throw new Error("elapsed time doesn't match start and end");
+  if (elapsedMs < HISTORY_MIN_MS) throw new Error("shorter than 1 minute");
+  if (plannedMs < MIN_PLANNED_MS || plannedMs % MIN_PLANNED_MS !== 0) throw new Error("bad planned length");
+  if (elapsedMs > plannedMs) throw new Error("longer than planned");
+  const endedByRule = ENDED_BY_RULES[endedBy];
+  if (endedByRule && !endedByRule(elapsedMs, plannedMs)) throw new Error("end reason doesn't match the times");
+  for (const d of distractions) {
+    if (d.at < startedAt || d.at > endedAt + IMPORT_LATE_DISTRACTION_MS) throw new Error("distraction outside the session");
+    if (mode === "simple" && d.ms !== 0) throw new Error("Simple distraction with a length");
+    if (mode === "advanced" && (d.ms < IMPORT_MIN_DISTRACTION_MS || d.ms > IMPORT_MAX_DISTRACTION_MS)) {
+      throw new Error("Advanced distraction length out of range");
+    }
+  }
+  if (distractedMs !== expected.distractedMs) throw new Error("distraction total doesn't add up");
+  // Before 19 Oct 2026 the app rounded a tiny distraction (under 0.5% of the
+  // session) up to 100%, so that old value is accepted too.
+  const oldRoundedTo100 = Math.round(((elapsedMs - distractedMs) / elapsedMs) * 100) === 100;
+  if (mode === "advanced" && focusPercent !== expected.focusPercent && !(focusPercent === 100 && oldRoundedTo100)) {
+    throw new Error("focus % doesn't match distraction time");
+  }
+
   return { startedAt, endedAt, endedBy, characterId, style, mode, plannedMs, elapsedMs, distractedMs, focusPercent, distractions };
 }
 
-// Reads the text of an import file. Returns the cleaned sessions, or throws an
-// Error whose message can be shown to the user as-is.
+// Reads the text of an import file. Returns { sessions, invalidReasons }: the
+// cleaned sessions, and one short reason per session that was skipped because
+// it's invalid. A problem with the file itself throws an Error whose message
+// can be shown to the user as-is.
 function parseHistoryExport(text) {
   let data;
   try {
@@ -203,14 +249,17 @@ function parseHistoryExport(text) {
         : "This export has an unknown version number."
     );
   }
-  // All or nothing: one broken session rejects the whole file, so nothing half-imports.
-  return data.sessions.map((raw, i) => {
+  // A broken session is skipped; the rest of the file still imports.
+  const sessions = [];
+  const invalidReasons = [];
+  for (const raw of data.sessions) {
     try {
-      return cleanImportedSession(raw, data.version);
+      sessions.push(cleanImportedSession(raw, data.version));
     } catch (error) {
-      throw new Error(`Session ${i + 1} in the file can't be imported: ${error.message}.`);
+      invalidReasons.push(error.message);
     }
-  });
+  }
+  return { sessions, invalidReasons };
 }
 
 // Adds imported sessions to the history, skipping any with a start time that's

@@ -158,20 +158,37 @@ The history page says so, too.
   ```
 
 - **Import** reads such a file and **adds** its sessions to the history. A session whose start time
-  is already in the history is skipped. Like when a new session is saved, only the newest 1000
+  is already in the history, or appears twice in the file, is skipped ("Skipped 2 duplicates or
+  sessions you already had"). Like when a new session is saved, only the newest 1000
   sessions are kept: if the total goes over 1000, the oldest sessions are removed, whether they
   came from the file or were already in the history. The result message says how many were
   imported, how many from the file didn't fit, and how many existing sessions were removed.
-- The whole file is checked before anything is saved: `app`, `type` and `version` must match,
-  and every session must have valid times, mode, style, focus % and distractions. If anything is
-  wrong, nothing is imported and the page says what's wrong (for example
-  "Session 4 in the file can't be imported: its focus % is invalid"). Max. file size: 5 MB.
+- The file itself must have the right `app`, `type` and `version`, otherwise nothing is imported
+  and the page says what's wrong. Max. file size: 5 MB.
+- Each session is checked on its own. An invalid session is skipped and the rest still import;
+  one line says how many were skipped and why, for example
+  "Skipped 3 invalid sessions (2 shorter than 1 minute, 1 focus % doesn't match distraction time)".
+  A session must have valid times, `endedBy`, character id, mode, style, focus % and distractions
+  (unknown character ids are fine, so a newer export with new characters still imports), **and
+  its numbers must agree with each other** the way the app saves them:
+  - at least 1 minute long (same rule as saving), and `elapsedMs` = `endedAt − startedAt`
+  - `plannedMs` is a whole number of minutes (at least 1), and `elapsedMs` isn't more than it
+  - `endedBy` fits the times: `"timer"` ran the full planned time, `"manual"` less. The allowed
+    values and their rules are in `ENDED_BY_RULES` in `public/js/history-store.js`: a new value
+    needs one line there.
+  - every distraction is inside the session (up to 1 minute after the end is allowed, for a tap
+    just as the timer runs out); Simple-mode distractions have `ms: 0`, Advanced ones are
+    30 sec to 10 min long
+  - `distractedMs` and the Advanced `focusPercent` are what the app calculates from the
+    distractions. Simple mode's `focusPercent` must be `null`. Before 19 Oct 2026 the app
+    rounded a distraction under 0.5% of the session up to 100%, so that old value is accepted too.
+- `test-data/` has small files for testing these checks (see `test-data/README.md`).
 - **Versions:** version 2 added `category` to each distraction. Version 1 files (made before that)
   still import; their distractions get `category: null`. From version 2, every distraction must
   have a known category or `null`. Old sessions without the field are exported with `null`.
   Version 3 allows `style: "ragebait"`; in version 1 and 2 files the style must be `kind` or `strict`.
   The fields didn't change, but a version 2 app can't read a ragebait session, so the new number
-  makes an older app say "made by a newer version" instead of "its style is invalid".
+  makes an older app say "made by a newer version" instead of skipping every ragebait session.
 - If the session fields ever change again, raise `EXPORT_VERSION` in `public/js/history-store.js`,
   add the new number to `IMPORT_VERSIONS`, and teach the import how to read the older files.
 
@@ -192,6 +209,7 @@ The history page says so, too.
 | `netlify/functions/picks.mjs` | `POST /api/picks`: counts one tap on a character |
 | `netlify/functions/stats.mjs` | `GET /api/stats`: popularity + which characters are paid |
 | `netlify/database/migrations/` | Database tables (SQL), applied automatically on deploy |
+| `test-data/` | Small export files for testing Import (not deployed, see `test-data/README.md`) |
 | `netlify.toml` | Tells Netlify the site is in `public/` |
 | `package.json` | The one dependency the functions need (`@netlify/database`) |
 

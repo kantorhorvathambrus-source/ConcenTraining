@@ -1,0 +1,121 @@
+{
+  "app": "ConcenTraining",
+  "type": "session-history",
+  "version": 3,
+  "exportedAt": "2026-10-20T09:00:00.000Z",
+  "sessions": [
+    {
+      "startedAt": 1790409600000,
+      "endedAt": 1790410800000,
+      "endedBy": "manual",
+      "characterId": "grandma",
+      "style": "strict",
+      "mode": "simple",
+      "plannedMs": 1500000,
+      "elapsedMs": 1200000,
+      "distractedMs": 0,
+      "focusPercent": 80,
+      "distractions": [
+        {
+          "at": 1790409780000,
+          "level": 2,
+          "ms": 0,
+          "category": "noise"
+        }
+      ]
+    },
+    {
+      "startedAt": 1790323200000,
+      "endedAt": 1790324700000,
+      "endedBy": "timer",
+      "characterId": "grandma",
+      "style": "kind",
+      "mode": "advanced",
+      "plannedMs": 1500000,
+      "elapsedMs": 1500000,
+      "distractedMs": 600000,
+      "focusPercent": 100,
+      "distractions": [
+        {
+          "at": 1790323500000,
+          "level": 3,
+          "ms": 600000,
+          "category": "phone"
+        }
+      ]
+    },
+    {
+      "startedAt": 1790236800000,
+      "endedAt": 1790236845000,
+      "endedBy": "manual",
+      "characterId": "grandma",
+      "style": "strict",
+      "mode": "simple",
+      "plannedMs": 1500000,
+      "elapsedMs": 45000,
+      "distractedMs": 0,
+      "focusPercent": null,
+      "distractions": []
+    },
+    {
+      "startedAt": 1790150400000,
+      "endedAt": 1790151600000,
+      "endedBy": "manual",
+      "characterId": "grandma",
+      "style": "strict",
+      "mode": "simple",
+      "plannedMs": 1500000,
+      "elapsedMs": 1200000,
+      "distractedMs": 0,
+      "focusPercent": null,
+      "distractions": [
+        {
+          "at": 1790150580000,
+          "level": 2,
+          "ms": 0,
+          "category": "noise"
+        }
+      ]
+    },
+    {
+      "startedAt": 1790064000000,
+      "endedAt": 1790065500000,
+      "endedBy": "timer",
+      "characterId": "grandma",
+      "style": "kind",
+      "mode": "advanced",
+      "plannedMs": 1500000,
+      "elapsedMs": 1500000,
+      "distractedMs": 120000,
+      "focusPercent": 92,
+      "distractions": [
+        {
+          "at": 1790064300000,
+          "level": 3,
+          "ms": 120000,
+          "category": "phone"
+        }
+      ]
+    },
+    {
+      "startedAt": 1790064000000,
+      "endedAt": 1790065500000,
+      "endedBy": "timer",
+      "characterId": "grandma",
+      "style": "kind",
+      "mode": "advanced",
+      "plannedMs": 1500000,
+      "elapsedMs": 1500000,
+      "distractedMs": 120000,
+      "focusPercent": 92,
+      "distractions": [
+        {
+          "at": 1790064300000,
+          "level": 3,
+          "ms": 120000,
+          "category": "phone"
+        }
+      ]
+    }
+  ]
+}
