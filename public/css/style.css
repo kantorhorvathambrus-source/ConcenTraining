@@ -302,6 +302,7 @@ input:focus-visible {
   text-align: center;
   font-size: 0.9rem;
   margin: 0 0 8px;
+  text-wrap: balance; /* if it wraps, two even lines instead of "min" alone */
 }
 
 .stage {
@@ -468,6 +469,12 @@ input:focus-visible {
 .btn.level {
   border-width: 2px;
   padding: 12px 8px;
+}
+
+/* Advanced labels are short: keep "10+ min" on one line in a 4-column row on 360px phones. */
+.distraction-buttons.advanced .btn.level {
+  padding: 12px 4px;
+  white-space: nowrap;
 }
 
 .btn.level-1 { border-color: var(--level-1); }
@@ -905,6 +912,19 @@ a {
 @media (max-width: 380px) {
   .choice-group {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Short screens: the session image takes only the height that's left, so every
+   distraction button fits above the sticky bottom bar without scrolling. 460px is the
+   rest of the session screen (header, timer, two rows of buttons, bar) plus a little room.
+   svh = the height while the browser's address bar is showing (vh is the fallback).
+   The summary image and taller phones keep the normal size. */
+@media (max-height: 740px) {
+  #sessionImg {
+    height: clamp(120px, calc(100vh - 460px), 260px);
+    height: clamp(120px, calc(100svh - 460px), 260px);
+    object-fit: contain;
   }
 }
 
