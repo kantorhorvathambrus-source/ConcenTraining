@@ -23,7 +23,7 @@ const MOTIVATION = {
     { type: "boost", text: "First milestone: 10 minutes. That's the only one you have to beat right now." },
   ],
   hardest: [
-    { type: "fact", text: "For a lot of people this stretch is the hardest one. Get through it and it usually gets easier." },
+    { type: "boost", text: "If this part feels slow and sticky, that's normal. It isn't a sign you should stop." },
     { type: "boost", text: "Restless? That's the entry fee for deep focus. You're paying it right now, so don't walk out before you get in." },
     { type: "fact", text: "An urge works like a wave: it builds, peaks and fades, often within a minute or two, as long as you don't feed it." },
     { type: "boost", text: "Itching to check something? Notice it, name it (\"that's just the urge\"), and go back to the exact line you were on." },
@@ -43,7 +43,7 @@ const MOTIVATION = {
     { type: "fact", text: "Testing yourself beats rereading. Pulling an answer out of your memory makes it stick much better than just seeing it again." },
     { type: "boost", text: "Getting bored of the material? Change the method, not the task: stop reading, write three questions, then answer them without looking." },
     { type: "fact", text: "Even a buzz you don't check can break your concentration for a moment. Silent mode is doing real work for you." },
-    { type: "boost", text: "Stop checking the timer. It'll tell you when you're done. Your only job is the next step." },
+    { type: "boost", text: "Don't measure, just move: the next line, the next problem, the next sentence." },
     { type: "boost", text: "Stuck on one thing for a while? Mark it, skip it, come back at the end. Don't let one problem eat the whole session." },
     { type: "fact", text: "Small wins give your motivation a bigger boost than you'd expect. Finish one small piece now and feel the difference." },
     { type: "boost", text: "Sip of water, sit up, shoulders down. Then straight back in." },
