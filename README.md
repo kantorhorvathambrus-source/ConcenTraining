@@ -13,18 +13,31 @@ Netlify Functions plus a Netlify Database, used only for character popularity st
   25 min, anything under 1 becomes 1, anything over 240 becomes 240.
 - **Simple mode:** 5 severity buttons (very briefly … a whole lot), not time-based.
 - **Advanced mode:** 7 duration buttons (30 sec … 10+ min). Ends with the % of the session spent focusing.
-  "10+ min" counts as 10 minutes in that %.
+  "10+ min" counts as 10 minutes in that %. A length that can't have happened yet is disabled (greyed
+  out but readable): one longer than the free time, which is the time so far minus the distraction time
+  already logged in this session ("10+ min" counts as 10 min here too). E.g. with 5 min logged at
+  minute 6, only "30 sec" and "1 min" work, and "5 min" works again from minute 10. "30 sec" is never
+  disabled, so the row isn't all grey at the start. Checked every half second and after every
+  distraction or Undo.
+- **Undo:** after any distraction button (both modes), **End session** turns into **Undo** for 5 s
+  (`UNDO_WINDOW_MS` in `public/js/app.js`): same place, same size, so nothing on the screen moves.
+  A thin bar along its bottom edge counts down the 5 s, then End session comes back. Undo takes back
+  only the latest distraction: it's removed from the session, the reaction stops and the character goes
+  back to its normal pose, the category picker closes, the "doing well" timer is set back to what it
+  was before the tap, and the session is saved. A new tap inside the 5 s moves Undo to the new
+  distraction and starts the 5 s again. After a reload there's no Undo.
 - **Distraction categories:** after each distraction button, once the reaction has played (1.4 s,
-  `PICKER_DELAY_MS`), a small optional picker appears above the Motivate/End buttons:
+  `PICKER_DELAY_MS`), a small optional picker appears above the bottom buttons:
   Phone, Thoughts, Noise, People, Tired, Other. It hides itself after 3 s (`PICKER_TIMEOUT_MS`;
   both constants are at the top of `public/js/app.js`). A tapped category is saved with the
   distraction; otherwise it's saved as `category: null`. Tapping another distraction button replaces
-  the picker (the earlier distraction keeps `null`), and **End session** closes it.
+  the picker (the earlier distraction keeps `null`), and **Undo** closes it.
 - **"A whole lot" / "10+ min"** asks: continue this session, or start over with a new duration.
-  The category picker comes first and the dialog opens as soon as the picker closes (after a tap or
-  after 3 s), so the two never show at the same time. If **End session** is pressed while this
-  question is waiting, it's asked after **Keep going**. The question is saved with the running session
-  (`restartPending`), so if the page is reloaded before it's answered, it's asked right after the reload.
+  The category picker and the Undo window come first: the dialog opens once the picker has closed and
+  the 5 s Undo window is over, so they never show at the same time. Undoing the tap means no question
+  (an earlier "10+ min" / "A whole lot" that wasn't undone still asks, right after the Undo). The
+  question is saved with the running session (`restartPending`) as soon as the button is tapped, so if
+  the page is reloaded before it's answered, it's asked right after the reload.
   If the session has run at least 1 minute, the dialog also has a checkbox above **Start over**:
   "Save the first 12 min 30 sec to history" (the time so far, measured when the dialog opens), ticked
   by default. With it ticked, **Start over** saves the abandoned part to the history first, as ending
@@ -229,7 +242,7 @@ The history page says so, too.
 | `public/js/data/characters.js` | Character list, groups and the personality each group gives (`personalityOf`), art paths |
 | `public/js/data/messages.js` | Motivation messages, summary titles and Simple-mode summary messages per result |
 | `public/js/placeholder-art.js` | Built-in placeholder drawings (kind, strict and ragebait faces) for characters without real art |
-| `public/js/app.js` | Timer, reaction engine, distraction category picker, motivation rotation, summary |
+| `public/js/app.js` | Timer, reaction engine, distraction category picker, Undo, disabled Advanced lengths, motivation rotation, summary |
 | `public/js/history-store.js` | Saving/loading history, focus % and summary result (with their thresholds), distraction categories, export/import checks (used by both pages) |
 | `public/js/history.js` | Streaks, weekly chart, time of day, distraction categories, session list and backup buttons on `history.html` |
 | `netlify/functions/picks.mjs` | `POST /api/picks`: counts one tap on a character |

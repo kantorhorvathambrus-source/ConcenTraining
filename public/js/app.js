@@ -8,6 +8,7 @@ const BASE_TITLE = "ConcenTraining";
 const GOOD_EVERY_MS = 5 * MIN; // show the "doing well" pose after this much undistracted time
 const PICKER_DELAY_MS = 1400; // let the reaction play before asking what caused the distraction
 const PICKER_TIMEOUT_MS = 3000; // the category picker hides itself after this long
+const UNDO_WINDOW_MS = 5000; // after a distraction tap, Undo takes End session's place for this long
 const DURATION_PRESETS = [15, 25, 35, 45, 60, 90];
 const MAX_MINUTES = 240;
 const DEFAULT_MINUTES = 25;
@@ -32,8 +33,10 @@ const SIMPLE_OPTIONS = [
 ];
 
 // Advanced mode: distraction length. "10+ min" counts as 10 minutes in the focus %.
+// A length longer than the free time so far is disabled (see updateLengthButtons),
+// except "30 sec" (alwaysEnabled), so the row isn't all grey at the start.
 const ADVANCED_OPTIONS = [
-  { label: "30 sec", ms: 30 * 1000, level: 1 },
+  { label: "30 sec", ms: 30 * 1000, level: 1, alwaysEnabled: true },
   { label: "1 min", ms: 1 * MIN, level: 2 },
   { label: "2 min", ms: 2 * MIN, level: 3 },
   { label: "3 min", ms: 3 * MIN, level: 3 },
@@ -95,8 +98,11 @@ let tickTimer = 0;
 let nextGoodAt = 0;
 // distraction: the one the open (or about to open) picker belongs to.
 // If session.restartPending is set, the continue/restart dialog opens as soon as
-// the picker closes. They never show at the same time.
+// the picker is closed and the Undo window is over. They never show at the same time.
 const picker = { distraction: null, showTimer: 0, hideTimer: 0 };
+// distraction: the latest one, while its Undo window is open. prevNextGoodAt: nextGoodAt
+// before that tap. setRestart: that tap set session.restartPending (it wasn't set before).
+const undo = { distraction: null, prevNextGoodAt: 0, setRestart: false, timer: 0 };
 const motivation = { phase: null, index: 0, shown: false };
 
 function characterById(id) {
@@ -193,11 +199,16 @@ function scheduleBlink() {
   }, 2500 + Math.random() * 3500);
 }
 
-function stopStage() {
+// Ends the reaction that's playing now (the pose is left as it is).
+function stopReaction() {
   clearTimeout(stage.reactTimer);
-  clearTimeout(stage.blinkTimer);
   stage.reacting = false;
   if (stage.wrap) stage.wrap.classList.remove(...REACTION_CLASSES);
+}
+
+function stopStage() {
+  stopReaction();
+  clearTimeout(stage.blinkTimer);
 }
 
 // ---------- duration picker (used on setup and in the restart dialog) ----------
@@ -365,6 +376,7 @@ function enterSession() {
   }
 
   closePicker(false);
+  closeUndo(false);
   motivation.phase = null;
   $("#motivationCard").hidden = true;
   nextGoodAt = Date.now() + GOOD_EVERY_MS;
@@ -389,6 +401,7 @@ function tick() {
   document.title = `${clock} · ${BASE_TITLE}`;
 
   updateMotivationPhase(elapsed);
+  updateLengthButtons();
 
   if (now >= nextGoodAt) {
     if (!stage.reacting) react("good", 0);
@@ -401,13 +414,73 @@ function tick() {
 function logDistraction(option) {
   if (!session || session.endedAt) return;
   const distraction = { at: Date.now(), level: option.level, ms: option.ms || 0, category: null };
+  const setRestart = Boolean(option.askRestart && !session.restartPending);
   session.distractions.push(distraction);
   if (option.askRestart) session.restartPending = true;
   save(SESSION_KEY, session);
 
+  openUndo(distraction, nextGoodAt, setRestart);
   nextGoodAt = Date.now() + GOOD_EVERY_MS;
   react(`level${option.level}`, option.level);
   schedulePicker(distraction);
+  updateLengthButtons();
+}
+
+// Advanced mode: a length longer than the free time (time so far minus the distraction
+// time already logged) can't have happened, so its button is disabled. Simple mode has
+// no lengths, so nothing changes there.
+function updateLengthButtons() {
+  if (!session || session.mode !== "advanced") return;
+  const elapsed = Math.min(Date.now() - session.startedAt, session.durationMs);
+  const logged = session.distractions.reduce((sum, d) => sum + (d.ms || 0), 0);
+  const free = elapsed - logged;
+  $("#distractionButtons").querySelectorAll("button").forEach((button, i) => {
+    const option = ADVANCED_OPTIONS[i];
+    button.disabled = !option.alwaysEnabled && option.ms > free;
+  });
+}
+
+// ---------- undo ----------
+
+// Undo only applies to the latest distraction: a newer tap moves it there and restarts the window.
+function openUndo(distraction, prevNextGoodAt, setRestart) {
+  closeUndo(false);
+  Object.assign(undo, { distraction, prevNextGoodAt, setRestart });
+  const button = $("#undoButton");
+  void button.offsetWidth; // so showing it again restarts the countdown bar
+  $("#endButton").hidden = true;
+  button.hidden = false;
+  undo.timer = setTimeout(() => closeUndo(true), UNDO_WINDOW_MS);
+}
+
+// thenAsk: open the continue/restart dialog now if one is waiting for the Undo window.
+function closeUndo(thenAsk) {
+  clearTimeout(undo.timer);
+  undo.distraction = null;
+  const button = $("#undoButton");
+  const hadFocus = document.activeElement === button;
+  button.hidden = true;
+  $("#endButton").hidden = false;
+  if (hadFocus) $("#endButton").focus(); // keyboard focus stays in the same spot
+  if (thenAsk) askPendingRestart();
+}
+
+// Takes the latest distraction back as if it had never been tapped.
+function onUndoClick() {
+  const distraction = undo.distraction;
+  if (!distraction || !session || session.endedAt) return;
+  const index = session.distractions.indexOf(distraction);
+  if (index !== -1) session.distractions.splice(index, 1);
+  if (undo.setRestart) session.restartPending = false;
+  save(SESSION_KEY, session);
+
+  nextGoodAt = undo.prevNextGoodAt;
+  stopReaction();
+  setPose("initial");
+  closePicker(false);
+  updateLengthButtons();
+  // An earlier "10+ min" / "A whole lot" that wasn't undone still asks, now.
+  closeUndo(true);
 }
 
 // ---------- distraction category picker ----------
@@ -452,8 +525,10 @@ function closePicker(thenAsk) {
   if (thenAsk) askPendingRestart();
 }
 
+// Waits while the category picker is open (or about to open) or the Undo window is open:
+// closing either one calls this again.
 function askPendingRestart() {
-  if (session && session.restartPending) askContinueOrRestart();
+  if (session && session.restartPending && !picker.distraction && !undo.distraction) askContinueOrRestart();
 }
 
 async function askContinueOrRestart() {
@@ -500,6 +575,7 @@ function finishSession(endedAt) {
   clearInterval(tickTimer);
   stopStage();
   closePicker(false);
+  closeUndo(false);
   session.endedAt = Math.min(endedAt, session.startedAt + session.durationMs);
   saveFinishedSession(session);
   remove(SESSION_KEY);
@@ -521,6 +597,7 @@ async function askSaveLateSession(endedAt) {
   clearInterval(tickTimer);
   stopStage();
   closePicker(false);
+  closeUndo(false);
   // Only in memory: stops the session, and a dialog closed below (continue/restart,
   // End session) sees it as ended. ct_session_v1 stays as it was until the answer,
   // so closing the page now asks again next time.
@@ -685,6 +762,8 @@ function init() {
   $("#motivateButton").addEventListener("click", onMotivateClick);
   $("#motivationClose").addEventListener("click", () => ($("#motivationCard").hidden = true));
   $("#endButton").addEventListener("click", onEndClick);
+  $("#undoButton").addEventListener("click", onUndoClick);
+  $("#undoButton").style.setProperty("--undo-timeout", `${UNDO_WINDOW_MS}ms`);
   $("#newSessionButton").addEventListener("click", () => {
     session = null;
     renderCharacterList();
