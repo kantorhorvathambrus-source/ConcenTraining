@@ -33,8 +33,6 @@ const IMPORT_MAX_BYTES = 5 * 1024 * 1024;
 // it). Only these values import. A new endedBy value needs one line here (give it
 // null to import it without checking its times), plus a version check in
 // cleanImportedSession like the one for "startOver".
-// The future adaptive training program must skip endedBy "startOver" sessions:
-// they stopped because of the long distraction, not because the user chose that length.
 const ENDED_BY_RULES = {
   timer: (elapsedMs, plannedMs) => elapsedMs === plannedMs,
   manual: (elapsedMs, plannedMs) => elapsedMs < plannedMs,
