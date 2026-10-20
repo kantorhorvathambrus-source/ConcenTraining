@@ -50,8 +50,10 @@ const ART_EXPRESSIONS = {
 };
 
 // Body, hair and accessories for each character. Layers, back to front: back, body,
-// hand (something held, left out when a pose uses both hands), neck, front (things worn around the neck), face, hair (beards too, so the
-// eyes and mouth are always drawn on top of them), face parts, glasses.
+// hand (something held, left out when a pose needs that hand, see HAND_BUSY_EXTRAS), neck,
+// front (things worn around the neck), face, hair (beards too, so the eyes and mouth
+// are always drawn on top of them), face parts, glasses.
+// poses (optional) replaces some of the personality's poses for this one character.
 const ART_LOOKS = {
   boss: {
     skin: "#f2c9a0",
@@ -249,7 +251,7 @@ const ART_LOOKS = {
     body: `<path d="M18 240 Q22 178 100 172 Q178 178 182 240Z" fill="#ff2fa0"/>
            <path d="M54 184 Q100 160 146 184 Q138 198 100 196 Q62 198 54 184Z" fill="#d81b84"/>
            <path d="M88 196 L86 222 M112 196 L114 222" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/>`,
-    // Phone in hand. Hidden in poses that need both hands (see TWO_HANDED_EXTRAS).
+    // Phone in hand. Hidden in poses that need that hand (see HAND_BUSY_EXTRAS).
     hand: `<rect x="30" y="178" width="26" height="44" rx="5" fill="#222" stroke="#555" stroke-width="2"/>
            <rect x="34" y="183" width="18" height="32" rx="2" fill="#5ad1ff"/>
            <circle cx="43" cy="198" r="5" fill="#ff2fa0"/>
@@ -259,6 +261,10 @@ const ART_LOOKS = {
              <path d="M60 52 L94 52 L92 64 Q78 70 62 64Z"/><path d="M106 52 L140 52 L138 64 Q122 70 108 64Z"/>
            </g>
            <path d="M94 54 L106 54" stroke="#222" stroke-width="3"/>`,
+    // Instead of the slow clap: laughing at you while filming it.
+    poses: {
+      level4: { eyes: "squeezed", brows: "raised", mouth: "laugh", extras: ["tears", "filming"] },
+    },
   },
 };
 
@@ -397,6 +403,16 @@ const ART_EXTRAS = {
                             <rect x="34" y="190" width="112" height="24" rx="12" transform="rotate(-6 90 202)"/>
                             <rect x="54" y="204" width="112" height="24" rx="12" transform="rotate(6 110 216)"/>
                           </g>`,
+  // The phone held up next to the face, camera turned at you, recording.
+  filming: (skin) => `<rect x="156" y="88" width="32" height="56" rx="6" fill="#222" stroke="#555" stroke-width="2"/>
+                      <rect x="161" y="93" width="15" height="24" rx="5" fill="#3a3a3a"/>
+                      <circle cx="168.5" cy="99" r="4.5" fill="#111" stroke="#777" stroke-width="1.5"/>
+                      <circle cx="168.5" cy="111" r="4.5" fill="#111" stroke="#777" stroke-width="1.5"/>
+                      <circle cx="182" cy="96" r="3.5" fill="#ff2d2d"/>
+                      <g fill="${skin}" stroke="#222" stroke-width="2.5">
+                        <rect x="150" y="128" width="44" height="30" rx="12"/>
+                      </g>
+                      <path d="M156 138 L188 138 M156 147 L188 147" ${LINE} stroke-width="2"/>`,
   // A fist with the middle finger raised.
   middleFinger: (skin) => `<g fill="${skin}" stroke="#222" stroke-width="2.5">
                              <rect x="153" y="128" width="14" height="62" rx="7"/>
@@ -408,8 +424,9 @@ const ART_EXTRAS = {
                            <path d="M142 202 Q160 196 178 206" ${LINE} stroke-width="2.5"/>`,
 };
 
-// Extras that use both hands, so a held item (look.hand) is put away for them.
-const TWO_HANDED_EXTRAS = ["clap", "crossedArms"];
+// Extras that need the hand holding look.hand, so it isn't drawn for them: clap and
+// crossedArms use both hands, filming raises the held phone itself.
+const HAND_BUSY_EXTRAS = ["clap", "crossedArms", "filming"];
 
 const artCache = new Map();
 
@@ -419,7 +436,10 @@ function placeholderArt(character, pose) {
   if (artCache.has(key)) return artCache.get(key);
 
   const look = ART_LOOKS[character.id] || ART_LOOKS.boss;
-  const face = (ART_EXPRESSIONS[personalityOf(character)] || ART_EXPRESSIONS.kind)[pose] || ART_EXPRESSIONS.kind.initial;
+  const face =
+    (look.poses && look.poses[pose]) ||
+    (ART_EXPRESSIONS[personalityOf(character)] || ART_EXPRESSIONS.kind)[pose] ||
+    ART_EXPRESSIONS.kind.initial;
   const [leftEye, rightEye] = Array.isArray(face.eyes) ? face.eyes : [face.eyes, face.eyes];
   const extras = face.extras || [];
   const neckWidth = look.neckWidth || 32;
@@ -427,7 +447,7 @@ function placeholderArt(character, pose) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 240">
     ${look.back || ""}
     ${look.body}
-    ${look.hand && !extras.some((name) => TWO_HANDED_EXTRAS.includes(name)) ? look.hand : ""}
+    ${look.hand && !extras.some((name) => HAND_BUSY_EXTRAS.includes(name)) ? look.hand : ""}
     <rect x="${100 - neckWidth / 2}" y="140" width="${neckWidth}" height="40" fill="${look.skin}"/>
     ${look.front || ""}
     <ellipse cx="100" cy="105" rx="54" ry="60" fill="${look.skin}"/>

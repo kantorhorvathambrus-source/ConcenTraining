@@ -168,6 +168,9 @@ Characters react only with poses and facial expressions, never with text. The fi
 | level5 | A disappointed sigh: eyes closed, worried brows, small frown |
 | good | A small approving smile, more restrained than kind (no sparkles or blush) |
 
+A character can replace some of its personality's poses with its own (`poses` in its entry in
+`ART_LOOKS`, `public/js/placeholder-art.js`). Influencer does this for level4.
+
 The ragebait poses:
 
 | Pose | Ragebait reaction |
@@ -176,7 +179,7 @@ The ragebait poses:
 | level1 | Side-eye: white eyes under a low lid, pupils pushed to the side, one eyebrow up, wide smug grin |
 | level2 | Eye-roll |
 | level3 | Wink and tongue out |
-| level4 | Laughing at you with a sarcastic slow clap |
+| level4 | Laughing at you with a sarcastic slow clap. Influencer instead laughs while filming you: phone held up, camera turned at you, red recording light |
 | level5 | Middle finger |
 | good | Grudging: arms crossed, half-closed eyes looking away, flat "meh" mouth, a small shrug. Never proud |
 
