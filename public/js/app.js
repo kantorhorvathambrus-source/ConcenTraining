@@ -767,8 +767,9 @@ function requestPersistentStorage() {
   }
 }
 
-// keep: false when "Save this session to your history" was unticked: the summary is
-// still shown, but nothing goes into the history.
+// keep: false when "Save this session to your history" was unticked: the session
+// doesn't count, so nothing is saved and there's no summary to judge it. Straight back
+// to the setup screen instead, like Discard in the "Welcome back" dialog.
 function finishSession(endedAt, keep = true) {
   clearInterval(tickTimer);
   stopStage();
@@ -779,7 +780,13 @@ function finishSession(endedAt, keep = true) {
   remove(SESSION_KEY);
   document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
   document.title = BASE_TITLE;
-  renderSummary(keep);
+  if (!keep) {
+    session = null;
+    renderCharacterList();
+    showScreen("setupScreen");
+    return;
+  }
+  renderSummary();
   showScreen("summaryScreen");
 }
 
@@ -881,8 +888,7 @@ function showMotivation() {
 
 // The pose, title and message all follow the session result (great / okay / rough / early / short).
 // A short session only shows the title and the "not saved" note, in both modes.
-// kept: false when the user chose not to save it (End session dialog).
-function renderSummary(kept) {
+function renderSummary() {
   const character = characterById(session.characterId);
   const result = sessionResult(session);
   const short = result === "short";
@@ -894,8 +900,8 @@ function renderSummary(kept) {
   const percentEl = $("#summaryPercent");
   const textEl = $("#summaryText");
   const noteEl = $("#summaryNote");
-  noteEl.textContent = short ? SUMMARY_SHORT_NOTE : SUMMARY_NOT_SAVED_NOTE;
-  noteEl.hidden = !short && kept;
+  noteEl.textContent = SUMMARY_SHORT_NOTE;
+  noteEl.hidden = !short;
 
   if (session.mode === "advanced") {
     const { elapsedMs: elapsed, distractedMs: distracted, focusPercent: percent } = sessionFocus(session);

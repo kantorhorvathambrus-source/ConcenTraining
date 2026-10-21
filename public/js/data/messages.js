@@ -92,9 +92,6 @@ const SUMMARY_TITLES = {
 // Shown under the title for sessions under 1 minute, in both modes.
 const SUMMARY_SHORT_NOTE = "Sessions shorter than 1 minute aren't saved to your history.";
 
-// Shown under the title when "Save this session to your history" was unticked in the End session dialog.
-const SUMMARY_NOT_SAVED_NOTE = "Not saved to your history.";
-
 // End-of-session messages for Simple mode (it has no stats), one is picked at random.
 const SIMPLE_SUMMARY_MESSAGES = {
   great: [

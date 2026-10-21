@@ -56,10 +56,12 @@ Netlify Functions plus a Netlify Database, used only for character popularity st
   ignores the checkbox. Under 1 minute there's no checkbox and nothing is saved, as before.
 - **End session** asks "End this session now?". If the session has run at least 1 minute (measured
   when the dialog opens), the dialog also has a checkbox: "Save this session to your history",
-  ticked every time the dialog opens (it isn't remembered). Unticked, the session still ends and the
-  summary is shown, but nothing goes into the history (and persistent storage isn't requested); the
-  summary then says "Not saved to your history." Under 1 minute there's no checkbox (nothing is saved
-  anyway). If the timer runs out while the dialog is open, the session is saved as a full session.
+  ticked every time the dialog opens (it isn't remembered). Unticked means "this session doesn't
+  count": **End session** ends it, saves nothing (and doesn't request persistent storage), and goes
+  straight back to the setup screen with no summary, like **Discard** in the "Welcome back" dialog.
+  The setup keeps the last character, mode and length. Under 1 minute there's no checkbox (nothing is
+  saved anyway, and the summary is shown as before). If the timer runs out while the dialog is open,
+  the session is saved as a full session.
 - **Reactions:** each button maps to one of the 5 distraction poses. The character also blinks,
   "breathes", and shows the "doing well" pose after every 5 minutes without a logged distraction.
 
