@@ -91,7 +91,8 @@ function remove(key) {
   }
 }
 
-// Popularity stats: every tap on a character card counts, finished session or not.
+// Popularity stats: one count per session started with Start session, finished or not.
+// Browsing the cards, a cancelled ragebait warning, Start over and a restored session don't count.
 // Sent to the Netlify Function in netlify/functions/picks.mjs. Fire-and-forget:
 // if it fails (offline, or index.html opened as a local file) the app works the same.
 function countCharacterPick(id) {
@@ -472,8 +473,6 @@ function renderCharacterList() {
 }
 
 async function onCharacterTap(character) {
-  countCharacterPick(character.id);
-
   if (character.group === "ragebait" && prefs.characterId !== character.id) {
     $("#ragebaitText").textContent = `${character.name}: ${GROUPS.ragebait.warning}`;
     if ((await ask($("#ragebaitDialog"))) !== "ok") return;
@@ -523,6 +522,7 @@ function onStartClick() {
   prefs.minutes = readSetupMinutes();
   savePrefs();
   if (prefs.endSound) unlockAudio(); // this tap is what allows the chime later
+  countCharacterPick(prefs.characterId); // here, not in startSession(): Start over is not a new choice
   startSession(prefs.characterId, prefs.mode, prefs.minutes);
 }
 

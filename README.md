@@ -405,7 +405,7 @@ doesn't do this.
 | `public/js/app.js` | Timer, reaction engine, distraction category picker, Undo, disabled Advanced lengths, motivation rotation, end chime, screen wake lock, summary, iPhone Home Screen tip, persistent storage request |
 | `public/js/history-store.js` | Saving/loading history, focus % and summary result (with their thresholds), distraction categories, export/import checks, iPhone Safari check (used by both pages) |
 | `public/js/history.js` | Streaks, weekly chart, time of day, distraction categories, session list and backup buttons on `history.html` |
-| `netlify/functions/picks.mjs` | `POST /api/picks`: counts one tap on a character |
+| `netlify/functions/picks.mjs` | `POST /api/picks`: counts one session started with a character |
 | `netlify/functions/stats.mjs` | `GET /api/stats`: popularity + which characters are paid |
 | `netlify/database/migrations/` | Database tables (SQL), applied automatically on deploy |
 | `test-data/` | Small export files for testing Import (not deployed, see `test-data/README.md`) |
@@ -433,15 +433,22 @@ so you can add them one by one. Use the same canvas size for all poses so blinki
 
 ## Popularity stats (backend)
 
-Every tap on a character card sends `POST /api/picks`, whether or not the session gets finished.
+Every press of **Start session** sends `POST /api/picks` once for the chosen character, whether or
+not the session gets finished. Browsing the cards, tapping the same card again, a cancelled ragebait
+warning, **Start over** (same character, not a new choice) and a reload that restores a running
+session don't count.
 Counts are stored per character per day in Netlify Database (managed Postgres), so popularity
 can be measured over the **last 30 days** and the paid selection rotates as tastes change.
 
-- `GET /api/stats` returns every character's recent and all-time taps, plus `paidCharacterIds`:
-  empty until there are at least 10 characters, then the top ~10% by recent taps.
+- `GET /api/stats` returns every character's recent and all-time picks, plus `paidCharacterIds`:
+  empty until there are at least 10 characters, then the top ~10% by recent picks.
   The numbers are at `/stats.html` on the live site.
+- **Meaning changed on 2026-10-21:** before that date every tap on a character card counted.
+  Those old counts were not deleted or migrated (the database can't tell them apart). They drop
+  out of the 30-day recent numbers by late November 2026; the all-time totals keep them, so a
+  character's all-time number can look high next to its recent one. `/stats.html` notes this too.
 - Only characters listed in the `characters` table are counted, and each IP address can send
-  at most 30 taps per minute, so the numbers are hard to fake.
+  at most 30 picks per minute, so the numbers are hard to fake.
 - **Adding a character:** besides `characters.js`, add a **new** migration file, e.g.
   `netlify/database/migrations/20261101120000_add_robot.sql` containing
   `INSERT INTO characters (id, name) VALUES ('robot', 'Robot');`.

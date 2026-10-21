@@ -5,7 +5,7 @@ import { getDatabase } from "@netlify/database";
 
 const db = getDatabase();
 
-const RECENT_DAYS = 30; // popularity = taps in the last 30 days, so the paid set rotates
+const RECENT_DAYS = 30; // popularity = picks in the last 30 days, so the paid set rotates
 const MIN_CHARACTERS_FOR_PAID = 10; // monetization starts at 10 characters
 const PAID_SHARE = 0.1; // the most popular ~10% become paid
 
