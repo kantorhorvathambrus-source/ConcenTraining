@@ -6,6 +6,9 @@ const PREFS_KEY = "ct_prefs_v1";
 const BASE_TITLE = "ConcenTraining";
 
 const GOOD_EVERY_MS = 5 * MIN; // show the "doing well" pose after this much undistracted time
+// How long the "doing well" pose plays. It isn't started when less than this is left of the
+// session, so it never lands on the end (e.g. at 5:00 of a 5 min session) or gets cut off by it.
+const GOOD_REACTION_MS = 3000;
 const PICKER_DELAY_MS = 1400; // let the reaction play before asking what caused the distraction
 // After every distraction reaction, the "refocus" pose ("OK, back to work") shows for this
 // long before the normal pose, so admitting a distraction ends with a push back to work.
@@ -15,7 +18,7 @@ const REFOCUS_MS = 2500;
 // for the rest of the session or hold back the continue/restart question forever.
 const PICKER_AUTO_CLOSE_MS = 60 * 1000;
 const UNDO_WINDOW_MS = 5000; // after a distraction tap, Undo takes End session's place for this long
-const DURATION_PRESETS = [15, 25, 35, 45, 60, 90];
+const DURATION_PRESETS = [5, 10, 15, 25, 35, 45, 60, 90];
 const MAX_MINUTES = 240;
 const DEFAULT_MINUTES = 25;
 // The timer can run out while the page is closed or the phone is locked. If the app
@@ -211,7 +214,7 @@ function react(pose, level) {
   void stage.wrap.offsetWidth; // restarts the CSS animation if the same class is added again
   stage.wrap.classList.add(level ? `react-${level}` : "react-good");
 
-  stage.reactTimer = setTimeout(level ? refocus : endReaction, level ? 2500 + level * 500 : 3000);
+  stage.reactTimer = setTimeout(level ? refocus : endReaction, level ? 2500 + level * 500 : GOOD_REACTION_MS);
 }
 
 // Still counts as reacting: no blinks, and the "doing well" pose waits.
@@ -592,7 +595,7 @@ function tick() {
   updateLengthButtons();
 
   if (now >= nextGoodAt) {
-    if (!stage.reacting) react("good", 0);
+    if (!stage.reacting && remaining >= GOOD_REACTION_MS) react("good", 0);
     nextGoodAt = now + GOOD_EVERY_MS;
   }
 

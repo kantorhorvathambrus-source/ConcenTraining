@@ -9,8 +9,12 @@ Netlify Functions plus a Netlify Database, used only for character popularity st
 
 - **Setup:** 1. pick a character, 2. a mode (Simple / Advanced), 3. a focus duration.
   The character decides the personality (see below). Ragebait characters show a warning before
-  they can be selected. A custom duration is corrected as soon as you leave the field: empty becomes
-  25 min, anything under 1 becomes 1, anything over 240 becomes 240.
+  they can be selected. Duration presets: 5, 10, 15, 25, 35, 45, 60 and 90 min (`DURATION_PRESETS`
+  in `public/js/app.js`, default 25), plus a custom field. The 5 and 10 min presets make a session
+  easy to start for beginners and on hard days. The presets always sit in 2 rows of 4, both on the
+  setup screen and in the Start over dialog, and each one is at least 44 px tall. A custom duration
+  is corrected as soon as you leave the field: empty becomes 25 min, anything under 1 becomes 1,
+  anything over 240 becomes 240.
   Under step 3 there are two checkboxes, both on by default: **Play a sound when time's up** (with a
   small **Test sound** button that plays the chime once) and **Keep the screen on during the session**.
   See "Sound and screen" below.
@@ -21,7 +25,9 @@ Netlify Functions plus a Netlify Database, used only for character popularity st
   already logged in this session ("10+ min" counts as 10 min here too). E.g. with 5 min logged at
   minute 6, only "30 sec" and "1 min" work, and "5 min" works again from minute 10. "30 sec" is never
   disabled, so the row isn't all grey at the start. Checked every half second and after every
-  distraction or Undo.
+  distraction or Undo. In a 5 min session "5 min", "10 min" and "10+ min" stay disabled the whole
+  time, and in a 10 min session "10 min" and "10+ min" do, so the continue/restart question can't
+  come up there in Advanced mode.
 - **Undo:** after any distraction button (both modes), **End session** turns into **Undo** for 5 s
   (`UNDO_WINDOW_MS` in `public/js/app.js`): same place, same size, so nothing on the screen moves.
   A thin bar along its bottom edge counts down the 5 s, then End session comes back. Undo takes back
@@ -64,6 +70,9 @@ Netlify Functions plus a Netlify Database, used only for character popularity st
   the session is saved as a full session.
 - **Reactions:** each button maps to one of the 5 distraction poses. The character also blinks,
   "breathes", and shows the "doing well" pose after every 5 minutes without a logged distraction.
+  It plays for 3 s (`GOOD_REACTION_MS` in `public/js/app.js`) and isn't started when less than that
+  is left of the session, so it never lands on the end (e.g. at 5:00 of a 5 min session) or gets
+  cut off by it.
 - **Two-step reaction:** after every distraction reaction (all levels, all personalities) the character
   shows the `refocus` pose ("OK, back to work") for 2.5 s (`REFOCUS_MS` in `public/js/app.js`), then
   goes back to its normal pose. So admitting a distraction always ends with a push back to work, not
@@ -84,6 +93,7 @@ Netlify Functions plus a Netlify Database, used only for character popularity st
 - **Motivation button:** always visible. Messages rotate in phases (see `js/data/messages.js`).
   Sessions of 35+ min: 0–10 min general → 10–20 min "hardest part" → 20 min–85% middle → 85–100% final stretch.
   Shorter sessions: general messages without the "first 20 minutes" facts → final stretch.
+  E.g. the final stretch starts at 4:15 in a 5 min session and at 8:30 in a 10 min session.
   On short screens, tapping it scrolls the message up so it sits just above the bottom button bar.
 - **Small screens:** the session header is short ("Boss · Strict · Advanced · 25 min") and wraps
   into two even lines if it has to. On screens up to 740 px tall, the session image shrinks
@@ -110,7 +120,8 @@ Every finished session gets a result. The thresholds are constants at the top of
   A whole lot = 5). The points are counted per 25 minutes of session time; sessions shorter than
   25 minutes count as 25 minutes. **great** up to 2 points per 25 min (`SIMPLE_GREAT_POINTS`),
   **rough** from 8 (`SIMPLE_ROUGH_POINTS`), **okay** in between. Example: two "A lot" in a 25-minute
-  session = 8 points = rough.
+  session = 8 points = rough. Short sessions are judged like a 25-minute one on purpose, so they
+  aren't harsher: one "Moderately" in a 5-minute session = 3 points = okay (one "Briefly" = great).
 - **early:** the session ran less than half of its planned time (`EARLY_END_RATIO` = 0.5), whatever
   the focus % or distraction points. Ending early isn't judged as good or bad: the title is
   "Ended early", the pose is neutral, and Simple mode shows a short neutral message. Advanced mode
@@ -118,7 +129,9 @@ Every finished session gets a result. The thresholds are constants at the top of
   never "early". Only the times count, so a part saved with **Start over** would be "early" too,
   though Start over doesn't show a summary.
 - **short:** a session under 1 minute. It isn't saved to the history, and the summary says so. This
-  is checked first: under 1 minute is always "short", never "early".
+  is checked first: under 1 minute is always "short", never "early". Example, 5-minute session:
+  under 1:00 is short, 1:00–2:29 is early, from 2:30 it gets great / okay / rough. 10-minute
+  session: early from 1:00 to 4:59.
 
 The result is only used on the summary screen. It isn't saved, and the history page and stats
 don't use it.
