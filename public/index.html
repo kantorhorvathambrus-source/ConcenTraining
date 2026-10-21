@@ -107,11 +107,14 @@
 
       <div class="session-bar">
         <!-- In the sticky bottom bar so it's on screen wherever you've scrolled.
-             Shown briefly after each distraction; hides itself after PICKER_TIMEOUT_MS (app.js). -->
+             Shown after each distraction until a category or Skip is tapped; closes silently
+             after PICKER_AUTO_CLOSE_MS if neither happens (app.js). -->
         <div id="categoryPicker" class="category-picker" role="group" aria-labelledby="categoryPrompt" hidden>
-          <p id="categoryPrompt" class="category-prompt">What distracted you? <span class="muted">(optional)</span></p>
+          <div class="category-head">
+            <p id="categoryPrompt" class="category-prompt">What distracted you?</p>
+            <button id="skipCategoryButton" type="button" class="skip-btn">Skip</button>
+          </div>
           <div id="categoryButtons" class="category-buttons"></div>
-          <div class="picker-countdown" aria-hidden="true"><div class="picker-countdown-bar"></div></div>
         </div>
         <button id="motivateButton" type="button" class="btn primary">Motivate me</button>
         <button id="endButton" type="button" class="btn">End session</button>

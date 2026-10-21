@@ -30,14 +30,20 @@ Netlify Functions plus a Netlify Database, used only for character popularity st
   was before the tap, and the session is saved. A new tap inside the 5 s moves Undo to the new
   distraction and starts the 5 s again. After a reload there's no Undo.
 - **Distraction categories:** after each distraction button, once the reaction has played (1.4 s,
-  `PICKER_DELAY_MS`), a small optional picker appears above the bottom buttons:
-  Phone, Thoughts, Noise, People, Tired, Other. It hides itself after 3 s (`PICKER_TIMEOUT_MS`;
-  both constants are at the top of `public/js/app.js`). A tapped category is saved with the
-  distraction; otherwise it's saved as `category: null`. Tapping another distraction button replaces
-  the picker (the earlier distraction keeps `null`), and **Undo** closes it.
+  `PICKER_DELAY_MS`), a small picker appears above the bottom buttons: "What distracted you?" with
+  Phone, Thoughts, Noise, People, Tired, Other, and a grey **Skip** button on the right. There's no
+  countdown: it stays open until a category or Skip is tapped. A tapped category is saved with the
+  distraction; Skip saves `category: null` (a category is never guessed). As a safety net, if
+  nothing is tapped (e.g. the phone was put down), it closes silently after 60 s
+  (`PICKER_AUTO_CLOSE_MS`), also with `null`, so it doesn't stay up for the rest of the session
+  (both constants are at the top of `public/js/app.js`). Tapping another distraction button replaces
+  the picker (the earlier distraction keeps `null`); **Undo**, **End session** and the timer running
+  out close it. On small phones the open picker covers some of the distraction buttons (never the
+  character or the timer); tap a category or Skip first, or scroll down, to log another one.
 - **"A whole lot" / "10+ min"** asks: continue this session, or start over with a new duration.
-  The category picker and the Undo window come first: the dialog opens once the picker has closed and
-  the 5 s Undo window is over, so they never show at the same time. Undoing the tap means no question
+  The category picker and the Undo window come first: the dialog opens once the picker has closed
+  (category picked, Skip, or the 60 s safety close) and the 5 s Undo window is over, so they never
+  show at the same time. Undoing the tap means no question
   (an earlier "10+ min" / "A whole lot" that wasn't undone still asks, right after the Undo). The
   question is saved with the running session (`restartPending`) as soon as the button is tapped, so if
   the page is reloaded before it's answered, it's asked right after the reload.

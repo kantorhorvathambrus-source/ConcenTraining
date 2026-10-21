@@ -7,7 +7,10 @@ const BASE_TITLE = "ConcenTraining";
 
 const GOOD_EVERY_MS = 5 * MIN; // show the "doing well" pose after this much undistracted time
 const PICKER_DELAY_MS = 1400; // let the reaction play before asking what caused the distraction
-const PICKER_TIMEOUT_MS = 3000; // the category picker hides itself after this long
+// The category picker stays open until a category or Skip is tapped. If neither happens
+// (e.g. the phone was put down), it closes silently after this long, so it doesn't stay up
+// for the rest of the session or hold back the continue/restart question forever.
+const PICKER_AUTO_CLOSE_MS = 60 * 1000;
 const UNDO_WINDOW_MS = 5000; // after a distraction tap, Undo takes End session's place for this long
 const DURATION_PRESETS = [15, 25, 35, 45, 60, 90];
 const MAX_MINUTES = 240;
@@ -664,7 +667,6 @@ function buildCategoryButtons() {
     button.addEventListener("click", () => pickCategory(category.id));
     buttons.append(button);
   }
-  $("#categoryPicker").style.setProperty("--picker-timeout", `${PICKER_TIMEOUT_MS}ms`);
 }
 
 // A newer distraction replaces the picker of the previous one (which keeps category: null).
@@ -672,8 +674,8 @@ function schedulePicker(distraction) {
   closePicker(false);
   picker.distraction = distraction;
   picker.showTimer = setTimeout(() => {
-    $("#categoryPicker").hidden = false; // showing it again also restarts the countdown bar
-    picker.hideTimer = setTimeout(() => closePicker(true), PICKER_TIMEOUT_MS);
+    $("#categoryPicker").hidden = false;
+    picker.hideTimer = setTimeout(() => closePicker(true), PICKER_AUTO_CLOSE_MS);
   }, PICKER_DELAY_MS);
 }
 
@@ -685,6 +687,7 @@ function pickCategory(id) {
   closePicker(true);
 }
 
+// Skip, and the silent auto-close, also end up here: the category stays null (never guessed).
 // thenAsk: open the continue/restart dialog now if one is waiting for the picker.
 function closePicker(thenAsk) {
   clearTimeout(picker.showTimer);
@@ -960,6 +963,7 @@ function init() {
   $("#endButton").addEventListener("click", onEndClick);
   $("#undoButton").addEventListener("click", onUndoClick);
   $("#undoButton").style.setProperty("--undo-timeout", `${UNDO_WINDOW_MS}ms`);
+  $("#skipCategoryButton").addEventListener("click", () => closePicker(true));
   $("#newSessionButton").addEventListener("click", () => {
     session = null;
     renderCharacterList();
