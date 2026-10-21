@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- ConcenTraining app icon (placeholder until the real character art): a crosshair with a
+       brain in the middle, white on the app's orange (--primary). Source for the PNGs and
+       favicon in this folder; see the README section "iPhone storage and the Home Screen app". -->
+  <rect width="512" height="512" fill="#ff6b35"/>
+  <g id="art">
+    <!-- crosshair: ring + four ticks pointing at the centre -->
+    <g fill="none" stroke="#fff" stroke-width="26" stroke-linecap="round">
+      <circle cx="256" cy="256" r="164"/>
+      <path d="M256 44V122M256 390V468M44 256H122M390 256H468"/>
+    </g>
+    <!-- brain: two rounded hemispheres (union of circles), orange folds cut into the white -->
+    <g transform="translate(256 256) scale(1.12) translate(-256 -256)">
+    <g fill="#fff">
+      <circle cx="214" cy="214" r="38"/>
+      <circle cx="244" cy="200" r="34"/>
+      <circle cx="194" cy="252" r="36"/>
+      <circle cx="214" cy="292" r="34"/>
+      <circle cx="244" cy="300" r="30"/>
+      <circle cx="232" cy="252" r="40"/>
+      <circle cx="298" cy="214" r="38"/>
+      <circle cx="268" cy="200" r="34"/>
+      <circle cx="318" cy="252" r="36"/>
+      <circle cx="298" cy="292" r="34"/>
+      <circle cx="268" cy="300" r="30"/>
+      <circle cx="280" cy="252" r="40"/>
+    </g>
+    <g fill="none" stroke="#ff6b35" stroke-width="13" stroke-linecap="round">
+      <path d="M256 176V326"/>
+      <path d="M180 240Q206 232 222 250M206 290Q224 274 236 286M214 206Q232 214 228 232"/>
+      <path d="M332 240Q306 232 290 250M306 290Q288 274 276 286M298 206Q280 214 284 232"/>
+    </g>
+    </g>
+  </g>
+</svg>

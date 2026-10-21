@@ -428,6 +428,8 @@ function invalidSummary(reasons) {
 }
 
 function init() {
+  // The 7-day rule only applies in Safari on iPhone/iPad (see iosSafariNotInstalled in history-store.js).
+  document.getElementById("iosStorageNote").hidden = !iosSafariNotInstalled();
   const fileInput = document.getElementById("importFile");
   document.getElementById("exportButton").addEventListener("click", exportHistory);
   document.getElementById("importButton").addEventListener("click", () => fileInput.click());
