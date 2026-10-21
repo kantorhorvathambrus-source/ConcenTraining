@@ -263,19 +263,22 @@ input:focus-visible {
 
 /* ---------- duration picker ---------- */
 
+/* 8 presets: always 2 even rows of 4, on setup and in the Start over dialog. */
 .chips {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 12px;
 }
 
 .chip {
+  min-height: 44px;
   border: 1.5px solid var(--border);
   background: var(--surface);
   border-radius: 999px;
-  padding: 8px 14px;
+  padding: 6px 4px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .chip[aria-pressed="true"] {
@@ -1098,6 +1101,33 @@ a {
 @media (max-width: 380px) {
   .choice-group {
     grid-template-columns: 1fr;
+  }
+
+  /* Narrow dialogs: less padding, so "90 min" fits in a quarter of the Start over dialog
+     at 320px, and that dialog fits a 320x568 screen without scrolling. */
+  dialog {
+    padding: 16px;
+  }
+
+  dialog .chips {
+    gap: 6px;
+  }
+
+  dialog .chip {
+    font-size: 0.9375rem;
+    padding: 6px 2px;
+  }
+
+  #restartDialog h2 {
+    margin-bottom: 8px;
+  }
+
+  #restartDialog p {
+    margin-bottom: 12px;
+  }
+
+  #restartDialog .divider {
+    margin: 14px 0 10px !important;
   }
 }
 
