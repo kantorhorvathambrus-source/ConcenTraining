@@ -518,8 +518,12 @@ function bindSettingChecks() {
 
 function onStartClick() {
   if (!characterById(prefs.characterId)) {
-    $("#characterError").hidden = false;
-    $("#characterList").scrollIntoView({ behavior: "smooth", block: "center" });
+    const error = $("#characterError");
+    error.hidden = false;
+    error.textContent = "";
+    error.textContent = "Pick a character first."; // re-set so screen readers announce it again on every tap
+    const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    $("#characterStep").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
     return;
   }
   prefs.minutes = readSetupMinutes();
