@@ -7,6 +7,9 @@ const BASE_TITLE = "ConcenTraining";
 
 const GOOD_EVERY_MS = 5 * MIN; // show the "doing well" pose after this much undistracted time
 const PICKER_DELAY_MS = 1400; // let the reaction play before asking what caused the distraction
+// After every distraction reaction, the "refocus" pose ("OK, back to work") shows for this
+// long before the normal pose, so admitting a distraction ends with a push back to work.
+const REFOCUS_MS = 2500;
 // The category picker stays open until a category or Skip is tapped. If neither happens
 // (e.g. the phone was put down), it closes silently after this long, so it doesn't stay up
 // for the rest of the session or hold back the continue/restart question forever.
@@ -175,7 +178,7 @@ function preloadArt(character) {
 
 // ---------- reaction engine (shared by every character) ----------
 
-const REACTION_CLASSES = ["react-1", "react-2", "react-3", "react-4", "react-5", "react-good"];
+const REACTION_CLASSES = ["react-1", "react-2", "react-3", "react-4", "react-5", "react-good", "react-refocus"];
 const stage = { wrap: null, img: null, character: null, reacting: false, reactTimer: 0, blinkTimer: 0 };
 
 function mountStage(character) {
@@ -196,6 +199,8 @@ function setPose(pose) {
 }
 
 // pose: "level1".."level5" or "good"; level: 1-5 for distraction reactions, 0 for "good".
+// A distraction reaction has two steps: the reaction, then the refocus pose for REFOCUS_MS.
+// Both run on stage.reactTimer, so a new reaction, Undo or the end of the session stops either.
 function react(pose, level) {
   clearTimeout(stage.reactTimer);
   stage.reacting = true;
@@ -205,11 +210,21 @@ function react(pose, level) {
   void stage.wrap.offsetWidth; // restarts the CSS animation if the same class is added again
   stage.wrap.classList.add(level ? `react-${level}` : "react-good");
 
-  stage.reactTimer = setTimeout(() => {
-    stage.reacting = false;
-    stage.wrap.classList.remove(...REACTION_CLASSES);
-    setPose("initial");
-  }, level ? 2500 + level * 500 : 3000);
+  stage.reactTimer = setTimeout(level ? refocus : endReaction, level ? 2500 + level * 500 : 3000);
+}
+
+// Still counts as reacting: no blinks, and the "doing well" pose waits.
+function refocus() {
+  setPose("refocus");
+  stage.wrap.classList.remove(...REACTION_CLASSES);
+  stage.wrap.classList.add("react-refocus");
+  stage.reactTimer = setTimeout(endReaction, REFOCUS_MS);
+}
+
+function endReaction() {
+  stage.reacting = false;
+  stage.wrap.classList.remove(...REACTION_CLASSES);
+  setPose("initial");
 }
 
 function scheduleBlink() {

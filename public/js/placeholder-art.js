@@ -1,5 +1,5 @@
 // Draws simple SVG stand-in art for characters that don't have real artwork yet.
-// Every character gets all 8 poses in its own personality (see personalityOf in
+// Every character gets all 9 poses in its own personality (see personalityOf in
 // characters.js), so the app is fully usable before the real images are finished.
 
 // Face settings for each personality and pose. eyes and brows can be one value
@@ -14,6 +14,7 @@ const ART_EXPRESSIONS = {
     level3: { eyes: "happy", brows: "raised", mouth: "grin", extras: ["sweat"] },
     level4: { eyes: "wide", brows: "worried", mouth: "grin", extras: ["sweat"] },
     level5: { eyes: "teary", brows: "worried", mouth: "wobbly", extras: ["tears", "heart"] },
+    refocus: { eyes: "happy", brows: "soft", mouth: "smile" }, // warm "you've got this", no pointing
   },
   // Patient, but expects your best: never angry, disappointed instead.
   firm: {
@@ -25,6 +26,7 @@ const ART_EXPRESSIONS = {
     level3: { eyes: "open", brows: "stern", mouth: "flat" }, // serious
     level4: { eyes: "narrow", brows: "stern", mouth: "flat" }, // stern but calm
     level5: { eyes: "closed", brows: "worried", mouth: "frown" }, // a disappointed sigh
+    refocus: { eyes: "open", brows: "raised", mouth: "smile", extras: ["point"] }, // calm, expectant "go on then"
   },
   strict: {
     initial: { eyes: "open", brows: "flat", mouth: "flat" },
@@ -35,6 +37,7 @@ const ART_EXPRESSIONS = {
     level3: { eyes: "narrow", brows: "angry", mouth: "frown", extras: ["vein"] },
     level4: { eyes: "wide", brows: "angry", mouth: "shout", extras: ["vein"] },
     level5: { eyes: "wide", brows: "furious", mouth: "yell", extras: ["vein", "steam", "red"] },
+    refocus: { eyes: "narrow", brows: "flat", mouth: "flat", extras: ["point"] }, // neutral "get on with it", no anger
   },
   // Annoying on purpose: gets more insulting with the level, and only grudging when you do well.
   ragebait: {
@@ -46,6 +49,7 @@ const ART_EXPRESSIONS = {
     level3: { eyes: ["happy", "open"], brows: ["flat", "raised"], mouth: "tongue" }, // wink + tongue out
     level4: { eyes: "squeezed", brows: "raised", mouth: "laugh", extras: ["tears", "clap"] }, // laughing, slow clap
     level5: { eyes: "bored", brows: ["raised", "flat"], mouth: "smirk", extras: ["blush", "middleFinger"] },
+    refocus: { eyes: "bored", brows: ["flat", "raised"], mouth: "meh", extras: ["point"] }, // "whatever, go on"
   },
 };
 
@@ -407,6 +411,16 @@ const ART_EXTRAS = {
                             <rect x="34" y="190" width="112" height="24" rx="12" transform="rotate(-6 90 202)"/>
                             <rect x="54" y="204" width="112" height="24" rx="12" transform="rotate(6 110 216)"/>
                           </g>`,
+  // "Back to work": a fist with the index finger pointing down, towards the timer below.
+  point: (skin) => `<g fill="${skin}" stroke="#222" stroke-width="2.5">
+                      <g transform="rotate(40 156 188)">
+                        <rect x="150" y="182" width="12" height="54" rx="6"/>
+                        <rect x="152" y="224" width="8" height="8" rx="3" fill="#fff" fill-opacity="0.45" stroke="none"/>
+                      </g>
+                      <rect x="142" y="158" width="42" height="38" rx="13"/>
+                      <rect x="138" y="164" width="34" height="13" rx="6.5"/>
+                    </g>
+                    <path d="M160 184 L160 195 M172 184 L172 195" ${LINE} stroke-width="2.5"/>`,
   // A fist with the middle finger raised.
   middleFinger: (skin) => `<g fill="${skin}" stroke="#222" stroke-width="2.5">
                              <rect x="153" y="128" width="14" height="62" rx="7"/>

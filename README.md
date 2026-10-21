@@ -25,8 +25,8 @@ Netlify Functions plus a Netlify Database, used only for character popularity st
 - **Undo:** after any distraction button (both modes), **End session** turns into **Undo** for 5 s
   (`UNDO_WINDOW_MS` in `public/js/app.js`): same place, same size, so nothing on the screen moves.
   A thin bar along its bottom edge counts down the 5 s, then End session comes back. Undo takes back
-  only the latest distraction: it's removed from the session, the reaction stops and the character goes
-  back to its normal pose, the category picker closes, the "doing well" timer is set back to what it
+  only the latest distraction: it's removed from the session, the reaction (or the refocus step after
+  it) stops and the character goes back to its normal pose, the category picker closes, the "doing well" timer is set back to what it
   was before the tap, and the session is saved. A new tap inside the 5 s moves Undo to the new
   distraction and starts the 5 s again. After a reload there's no Undo.
 - **Distraction categories:** after each distraction button, once the reaction has played (1.4 s,
@@ -64,6 +64,14 @@ Netlify Functions plus a Netlify Database, used only for character popularity st
   the session is saved as a full session.
 - **Reactions:** each button maps to one of the 5 distraction poses. The character also blinks,
   "breathes", and shows the "doing well" pose after every 5 minutes without a logged distraction.
+- **Two-step reaction:** after every distraction reaction (all levels, all personalities) the character
+  shows the `refocus` pose ("OK, back to work") for 2.5 s (`REFOCUS_MS` in `public/js/app.js`), then
+  goes back to its normal pose. So admitting a distraction always ends with a push back to work, not
+  with the scolding or the mockery. The "doing well" pose has no refocus step. During refocus the
+  character still counts as reacting (no blinking, the "doing well" pose waits) and makes one gentle
+  nod, never a shake (with "reduce motion" on, just the pose). A new distraction tap during refocus
+  starts its reaction straight away; Undo and the end of the session stop both steps. The category
+  picker's timing doesn't change.
 
 | Button (Simple) | Button (Advanced) | Pose |
 |---|---|---|
@@ -195,6 +203,7 @@ Characters react only with poses and facial expressions, never with text. The fi
 | level4 | Stern but calm: narrowed eyes, flat mouth (no angry brows) |
 | level5 | A disappointed sigh: eyes closed, worried brows, small frown |
 | good | A small approving smile, more restrained than kind (no sparkles or blush) |
+| refocus | Calm and expectant: both brows slightly up, small smile, pointing down at the work |
 
 A character can replace some of its personality's poses with its own (`poses` in its entry in
 `ART_LOOKS`, `public/js/placeholder-art.js`). Influencer does this for level4.
@@ -210,6 +219,17 @@ The ragebait poses:
 | level4 | Laughing at you with a sarcastic slow clap. Influencer instead just laughs, with his phone still filming you from his hand |
 | level5 | Middle finger |
 | good | Grudging: arms crossed, half-closed eyes looking away, flat "meh" mouth, a small shrug. Never proud |
+| refocus | "Whatever, go on": bored half-closed eyes, one eyebrow up, flat "meh" mouth, a lazy point at the work. No insult |
+
+The refocus pose ("OK, back to work"), shown for a moment after every distraction reaction. It's not
+praise (that's `good`) and not a reaction to the distraction:
+
+| Personality | Refocus pose |
+|---|---|
+| kind | Warm and encouraging: happy closed-arc eyes, soft brows, smile. No pointing hand |
+| firm | Calm and expectant: both brows slightly up, small smile, pointing down at the work. Never angry |
+| strict | Firm and neutral, "get on with it": narrowed eyes, level brows, flat mouth, pointing down at the work. No anger, vein or steam |
+| ragebait | Bored "whatever, go on": half-closed eyes, one eyebrow up, "meh" mouth, pointing down at the work. No middle finger, no insult |
 
 ## Session history (`history.html`)
 
@@ -397,13 +417,14 @@ doesn't do this.
 
 ## Adding real character artwork
 
-Each character needs one set of 8 poses, drawn in its own personality. Put the images in a folder like this:
+Each character needs one set of 9 poses, drawn in its own personality. Put the images in a folder like this:
 
 ```
 public/assets/characters/grandma/initial.png
 public/assets/characters/grandma/level1.png   … level5.png
 public/assets/characters/grandma/good.png
 public/assets/characters/grandma/blink.png
+public/assets/characters/grandma/refocus.png
 ```
 
 Then set `artPath: "assets/characters/grandma"` (relative to `public/`) for that character in `public/js/data/characters.js`
