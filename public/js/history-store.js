@@ -6,7 +6,10 @@ const HISTORY_KEY = "ct_history_v1";
 const HISTORY_LIMIT = 1000; // newest sessions kept (~300 KB)
 const HISTORY_MIN_MS = 60 * 1000; // shorter sessions count as accidental starts and aren't saved
 
-// How a finished session went: "great", "okay" or "rough" (see sessionResult).
+// How a finished session went: "short", "early", "great", "okay" or "rough" (see sessionResult).
+// A session that ran less than this share of its planned time is "early", whatever the
+// focus: ending early isn't judged as good or bad. A full session can never be "early".
+const EARLY_END_RATIO = 0.5;
 // Advanced mode uses the focus %: great from 85%, okay from 60%, rough below.
 const SUMMARY_GREAT_FOCUS = 85;
 const SUMMARY_OKAY_FOCUS = 60;
@@ -93,11 +96,14 @@ function sessionFocus(session) {
 }
 
 // How a finished session went: "short" (under HISTORY_MIN_MS, so not saved),
-// "great", "okay" or "rough". Advanced mode uses the focus %, Simple mode the
-// distraction points (see the constants at the top).
+// "early" (ended before EARLY_END_RATIO of the planned time), "great", "okay" or
+// "rough". Advanced mode uses the focus %, Simple mode the distraction points
+// (see the constants at the top). Only the times count, not how it ended, so a
+// session cut short by Start over is "early" too.
 function sessionResult(session) {
   const { elapsedMs, focusPercent } = sessionFocus(session);
   if (elapsedMs < HISTORY_MIN_MS) return "short";
+  if (elapsedMs < session.durationMs * EARLY_END_RATIO) return "early";
 
   if (session.mode === "advanced") {
     if (focusPercent >= SUMMARY_GREAT_FOCUS) return "great";

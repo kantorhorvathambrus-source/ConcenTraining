@@ -85,11 +85,15 @@ const SUMMARY_TITLES = {
   great: "Great session!",
   okay: "Good effort!",
   rough: "Tough session",
+  early: "Ended early",
   short: "That was quick",
 };
 
 // Shown under the title for sessions under 1 minute, in both modes.
 const SUMMARY_SHORT_NOTE = "Sessions shorter than 1 minute aren't saved to your history.";
+
+// Shown under the title when "Save this session to your history" was unticked in the End session dialog.
+const SUMMARY_NOT_SAVED_NOTE = "Not saved to your history.";
 
 // End-of-session messages for Simple mode (it has no stats), one is picked at random.
 const SIMPLE_SUMMARY_MESSAGES = {
@@ -110,5 +114,12 @@ const SIMPLE_SUMMARY_MESSAGES = {
     "Tough one. A shorter session next time might be easier to protect.",
     "Your focus got pulled away a lot today. Tomorrow is a fresh start.",
     "Hard session. Notice what kept distracting you, and plan around it next time.",
+  ],
+  // Ended before half the planned time: neutral, no praise and no guilt.
+  early: [
+    "You stopped early. That's fine if you finished what you came for.",
+    "Ended before the timer. If the job's done, that counts.",
+    "You called it early. Next time, pick a length that fits the task.",
+    "Shorter than planned. What matters is what you got done.",
   ],
 };

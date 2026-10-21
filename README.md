@@ -54,6 +54,12 @@ Netlify Functions plus a Netlify Database, used only for character popularity st
   (including the long distraction that triggered the question), and it counts for the streak and all
   history stats like any other session. Unticked, the abandoned part is thrown away. **Continue**
   ignores the checkbox. Under 1 minute there's no checkbox and nothing is saved, as before.
+- **End session** asks "End this session now?". If the session has run at least 1 minute (measured
+  when the dialog opens), the dialog also has a checkbox: "Save this session to your history",
+  ticked every time the dialog opens (it isn't remembered). Unticked, the session still ends and the
+  summary is shown, but nothing goes into the history (and persistent storage isn't requested); the
+  summary then says "Not saved to your history." Under 1 minute there's no checkbox (nothing is saved
+  anyway). If the timer runs out while the dialog is open, the session is saved as a full session.
 - **Reactions:** each button maps to one of the 5 distraction poses. The character also blinks,
   "breathes", and shows the "doing well" pose after every 5 minutes without a logged distraction.
 
@@ -77,6 +83,9 @@ Netlify Functions plus a Netlify Database, used only for character popularity st
   (see "Summary result" below). It also shows the session's top 3 picked categories, e.g.
   "Most common distractions: Phone (2), Thoughts (1)". Hidden if nothing was picked.
   Times are shown with seconds when there are any ("24 min 30 sec out of 25 min").
+  In Advanced mode, a session ended before the timer ran out also shows its planned length:
+  "You focused for 28 min out of 30 min (60 min planned), with 2 distractions logged." A session
+  under 1 minute only shows the title and the "not saved" note (no focus %, sentence or categories).
 
 ### Summary result
 
@@ -92,13 +101,24 @@ Every finished session gets a result. The thresholds are constants at the top of
   25 minutes count as 25 minutes. **great** up to 2 points per 25 min (`SIMPLE_GREAT_POINTS`),
   **rough** from 8 (`SIMPLE_ROUGH_POINTS`), **okay** in between. Example: two "A lot" in a 25-minute
   session = 8 points = rough.
-- **short:** a session under 1 minute. It isn't saved to the history, and the summary says so.
+- **early:** the session ran less than half of its planned time (`EARLY_END_RATIO` = 0.5), whatever
+  the focus % or distraction points. Ending early isn't judged as good or bad: the title is
+  "Ended early", the pose is neutral, and Simple mode shows a short neutral message. Advanced mode
+  still shows the focus % and the sentence (they were measured). A session that ran the full time is
+  never "early". Only the times count, so a part saved with **Start over** would be "early" too,
+  though Start over doesn't show a summary.
+- **short:** a session under 1 minute. It isn't saved to the history, and the summary says so. This
+  is checked first: under 1 minute is always "short", never "early".
+
+The result is only used on the summary screen. It isn't saved, and the history page and stats
+don't use it.
 
 | Result | Kind | Firm | Strict | Ragebait | Title |
 |---|---|---|---|---|---|
 | great | `good` (proud) | `good` (approving) | `good` (satisfied) | `good` (grudging) | Great session! |
 | okay | `level2` (pleased) | `level1` (eyebrow raised) | `initial` (neutral) | `level1` (side-eye) | Good effort! |
 | rough | `level4` (gently encouraging) | `level3` (serious) | `level2` (disappointed) | `level4` (mocking) | Tough session |
+| early | `initial` (calm) | `level1` (eyebrow raised) | `level1` (stern, no frown) | `level1` (side-eye) | Ended early |
 | short | `initial` | `initial` | `initial` | `initial` | That was quick |
 
 The poses are in `SUMMARY_POSES` (`public/js/app.js`); titles and Simple-mode messages for each result
@@ -192,7 +212,7 @@ The ragebait poses:
 ## Session history (`history.html`)
 
 Every finished session (timer ran out or **End session** pressed) that ran at least 1 minute is saved
-on the device, except one you chose to **Discard** after coming back long after it ended (see above). A session abandoned with **Start over** is saved too, unless its "Save the first …
+on the device, except one ended with "Save this session to your history" unticked, and one you chose to **Discard** after coming back long after it ended (see above). A session abandoned with **Start over** is saved too, unless its "Save the first …
 to history" checkbox was unticked (see above). The page shows:
 
 - **Current and longest streak:** days (local time) with at least one finished session.
