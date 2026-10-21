@@ -1,5 +1,6 @@
 // POST /api/picks  { "characterId": "grandma" }
-// Counts one tap on a character card (popularity statistics).
+// Counts one session started with this character (popularity statistics).
+// Sent once per Start session press; Start over and a restored session don't send it.
 
 import { getDatabase } from "@netlify/database";
 
@@ -19,7 +20,7 @@ export default async (req) => {
     return new Response("Missing characterId", { status: 400 });
   }
 
-  // Adds 1 to today's count. The database does the "+ 1" itself, so taps that
+  // Adds 1 to today's count. The database does the "+ 1" itself, so picks that
   // arrive at the same moment are never lost. Unknown ids insert nothing.
   const rows = await db.sql`
     INSERT INTO character_daily_picks (character_id, day, picks)
@@ -37,7 +38,7 @@ export default async (req) => {
 export const config = {
   path: "/api/picks",
   method: "POST",
-  // Stops one visitor from inflating the numbers: max 30 taps per minute per IP.
+  // Stops one visitor from inflating the numbers: max 30 picks per minute per IP.
   rateLimit: {
     windowLimit: 30,
     windowSize: 60,
