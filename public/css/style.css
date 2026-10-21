@@ -781,6 +781,12 @@ dialog p {
   min-width: 0;
 }
 
+/* Dialogs: the "save to history" checkboxes in the Start over and End session dialogs. */
+dialog .check-row {
+  min-height: 44px;
+  align-items: center;
+}
+
 /* Setup screen: sound / screen-on checkboxes, with the Test sound button beside the first one. */
 .session-settings .check-row {
   margin-bottom: 0;

@@ -29,11 +29,12 @@ const CHIME_VOLUME = 0.25; // 1 = full scale
 const END_VIBRATION = [150, 80, 150]; // ms on, off, on (Android; iOS ignores it)
 
 // Summary screen pose for each session result (see sessionResult in history-store.js).
+// early: neutral, never the proud "good" pose and never the "rough" one.
 const SUMMARY_POSES = {
-  kind: { great: "good", okay: "level2", rough: "level4", short: "initial" }, // proud / pleased / gently encouraging
-  firm: { great: "good", okay: "level1", rough: "level3", short: "initial" }, // approving / eyebrow raised / serious
-  strict: { great: "good", okay: "initial", rough: "level2", short: "initial" }, // satisfied / neutral / disappointed
-  ragebait: { great: "good", okay: "level1", rough: "level4", short: "initial" }, // grudging / smirking / mocking
+  kind: { great: "good", okay: "level2", rough: "level4", early: "initial", short: "initial" }, // proud / pleased / gently encouraging / calm
+  firm: { great: "good", okay: "level1", rough: "level3", early: "level1", short: "initial" }, // approving / eyebrow raised / serious / eyebrow raised
+  strict: { great: "good", okay: "initial", rough: "level2", early: "level1", short: "initial" }, // satisfied / neutral / disappointed / stern
+  ragebait: { great: "good", okay: "level1", rough: "level4", early: "level1", short: "initial" }, // grudging / smirking / mocking / side-eye
 };
 
 // Simple mode: severity only, no time. Level = which reaction pose to show (1-5).
@@ -738,8 +739,13 @@ async function askContinueOrRestart() {
 async function onEndClick() {
   // No picker behind this dialog, and a waiting restart question waits until it's answered.
   closePicker(false);
+  // "Save this session to your history": only offered when it could be saved at all
+  // (same 1-minute rule as saving). Ticked every time the dialog opens, never remembered.
+  const canSave = Date.now() - session.startedAt >= HISTORY_MIN_MS;
+  $("#endSaveRow").hidden = !canSave;
+  $("#endSave").checked = true;
   if ((await ask($("#endDialog"))) === "end" && session && !session.endedAt) {
-    finishSession(Date.now());
+    finishSession(Date.now(), !canSave || $("#endSave").checked);
   } else {
     askPendingRestart();
   }
@@ -761,16 +767,25 @@ function requestPersistentStorage() {
   }
 }
 
-function finishSession(endedAt) {
+// keep: false when "Save this session to your history" was unticked: the session
+// doesn't count, so nothing is saved and there's no summary to judge it. Straight back
+// to the setup screen instead, like Discard in the "Welcome back" dialog.
+function finishSession(endedAt, keep = true) {
   clearInterval(tickTimer);
   stopStage();
   closePicker(false);
   closeUndo(false);
   session.endedAt = Math.min(endedAt, session.startedAt + session.durationMs);
-  if (saveFinishedSession(session)) requestPersistentStorage();
+  if (keep && saveFinishedSession(session)) requestPersistentStorage();
   remove(SESSION_KEY);
   document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
   document.title = BASE_TITLE;
+  if (!keep) {
+    session = null;
+    renderCharacterList();
+    showScreen("setupScreen");
+    return;
+  }
   renderSummary();
   showScreen("summaryScreen");
 }
@@ -871,10 +886,12 @@ function showMotivation() {
 
 // ---------- summary ----------
 
-// The pose, title and message all follow the session result (great / okay / rough / short).
+// The pose, title and message all follow the session result (great / okay / rough / early / short).
+// A short session only shows the title and the "not saved" note, in both modes.
 function renderSummary() {
   const character = characterById(session.characterId);
   const result = sessionResult(session);
+  const short = result === "short";
   const img = $("#summaryImg");
   img.alt = character.name;
   setPoseImage(img, character, (SUMMARY_POSES[personalityOf(character)] || SUMMARY_POSES.kind)[result]);
@@ -884,18 +901,20 @@ function renderSummary() {
   const textEl = $("#summaryText");
   const noteEl = $("#summaryNote");
   noteEl.textContent = SUMMARY_SHORT_NOTE;
-  noteEl.hidden = result !== "short";
+  noteEl.hidden = !short;
 
   if (session.mode === "advanced") {
     const { elapsedMs: elapsed, distractedMs: distracted, focusPercent: percent } = sessionFocus(session);
     const count = session.distractions.length;
+    // Ended before the timer ran out: also say how long it was meant to be.
+    const planned = elapsed < session.durationMs ? ` (${formatDuration(session.durationMs)} planned)` : "";
 
     percentEl.textContent = `${percent}% focused`;
-    percentEl.hidden = false;
+    percentEl.hidden = short; // means nothing after a few seconds
     textEl.textContent =
-      `You focused for ${formatDuration(elapsed - distracted)} out of ${formatDuration(elapsed)}, ` +
+      `You focused for ${formatDuration(elapsed - distracted)} out of ${formatDuration(elapsed)}${planned}, ` +
       `with ${count} distraction${count === 1 ? "" : "s"} logged.`;
-    textEl.hidden = false;
+    textEl.hidden = short;
   } else {
     percentEl.hidden = true;
     const messages = SIMPLE_SUMMARY_MESSAGES[result];
@@ -903,10 +922,10 @@ function renderSummary() {
     if (messages) textEl.textContent = messages[Math.floor(Math.random() * messages.length)];
   }
 
-  // Top 3 picked categories. Hidden if none was picked this session.
+  // Top 3 picked categories. Hidden if none was picked this session, or if it was short.
   const top = countCategories(session.distractions).slice(0, 3);
   const categoriesEl = $("#summaryCategories");
-  categoriesEl.hidden = top.length === 0;
+  categoriesEl.hidden = short || top.length === 0;
   categoriesEl.textContent =
     `Most common distraction${top.length === 1 ? "" : "s"}: ` +
     top.map((category) => `${category.label} (${category.count})`).join(", ");
