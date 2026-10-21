@@ -11,6 +11,7 @@
 - One feature per session and per pull request.
 - When the work is done: commit, push, and open a pull request into main. Never merge it yourself; I test it on the Netlify Deploy Preview and merge it.
 - Never create a branch called main, and never change the default branch.
+- Never commit screenshots, test scripts or other temporary files; keep them outside the repo.
 
 ## Product rules
 - Characters react only with poses and facial expressions, never with text.
