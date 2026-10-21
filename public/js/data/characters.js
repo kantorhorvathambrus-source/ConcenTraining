@@ -1,10 +1,11 @@
 // Character roster and the poses every character needs.
 //
 // Real artwork: set `artPath` to a folder holding one image per pose, named after POSES:
-//   assets/characters/grandma/initial.png, .../level1.png, ... .../blink.png
+//   assets/characters/grandma/initial.png, .../level1.png, ... .../blink.png, .../refocus.png
 // Any image that is missing falls back to the built-in placeholder drawing.
 
-const POSES = ["initial", "level1", "level2", "level3", "level4", "level5", "good", "blink"];
+// refocus: "OK, back to work", shown for a moment after every distraction reaction.
+const POSES = ["initial", "level1", "level2", "level3", "level4", "level5", "good", "blink", "refocus"];
 
 // A character's personality comes from its group (see personalityOf below):
 //   kind     = happy you're back, cheers you on

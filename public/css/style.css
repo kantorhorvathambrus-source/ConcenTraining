@@ -402,6 +402,13 @@ input:focus-visible {
   animation: shrug 1s ease-in-out 1;
 }
 
+/* After every distraction reaction: "OK, back to work". One gentle nod for every
+   personality, never a shake. */
+.stage.react-refocus {
+  --amp: 4px;
+  animation: nod 0.9s ease-in-out 1;
+}
+
 @keyframes shake {
   0%,
   100% {
