@@ -5,17 +5,19 @@
 // newest version) and a copy is saved in the cache. Offline, or when the network hasn't answered
 // within NETWORK_TIMEOUT_MS, the saved copy is used instead.
 // Never touched: /api/* and /.netlify/* (backend), non-GET requests, other sites, Range requests.
+//
+// Netlify's Pretty URLs can serve history.html as /history (redirecting /history.html there and
+// rewriting links to it), so every copy is saved and looked up under one address: see cacheKey.
 
 // Bump CACHE_VERSION whenever PRECACHE changes (a startup file added, removed or renamed).
 // On activate every older "concentraining-" cache is deleted.
-const CACHE_VERSION = 1;
+const CACHE_VERSION = 2;
 const CACHE_PREFIX = "concentraining-";
 const CACHE_NAME = `${CACHE_PREFIX}v${CACHE_VERSION}`;
 
 // Everything needed to open index.html, run a session to the summary and open history.html offline.
-// stats.html stays online-only (it needs /api/stats anyway).
+// stats.html stays online-only (it needs /api/stats anyway). index.html is saved as "/" (cacheKey).
 const PRECACHE = [
-  "./",
   "index.html",
   "history.html",
   "css/style.css",
@@ -63,7 +65,7 @@ self.addEventListener("install", (event) => {
         })
       );
       const cache = await caches.open(CACHE_NAME);
-      await Promise.all(PRECACHE.map((url, i) => cache.put(url, responses[i])));
+      await Promise.all(PRECACHE.map((url, i) => cache.put(cacheKey(url), responses[i])));
       // Take over right away instead of waiting until every tab of the app is closed. This
       // never reloads or interrupts an open page: it keeps running the code it already loaded.
       await self.skipWaiting();
@@ -86,7 +88,8 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// Chrome refuses to show a page from a response that was redirected, so save a plain copy.
+// Chrome refuses to show a page from a response that was redirected (e.g. history.html → /history),
+// so save a plain copy.
 async function withoutRedirect(response) {
   if (!response.redirected) return response;
   return new Response(await response.blob(), {
@@ -94,6 +97,22 @@ async function withoutRedirect(response) {
     statusText: response.statusText,
     headers: response.headers,
   });
+}
+
+// The one address a file is saved and looked up under, whichever address was asked for:
+//   /index.html (and /index) → /     /history → /history.html     the ?query is dropped.
+// A path ending in "/" (other than the root) is left alone: relative links on it would break.
+function cacheKey(url) {
+  const { origin, pathname } = new URL(url, self.location.href);
+  if (pathname === "/index.html" || pathname === "/index") return `${origin}/`;
+  const lastPart = pathname.slice(pathname.lastIndexOf("/") + 1);
+  if (lastPart && !lastPart.includes(".")) return `${origin}${pathname}.html`;
+  return `${origin}${pathname}`;
+}
+
+// The saved copy of a request, or undefined. ignoreVary: the copies are keyed by address only.
+function fromCache(request) {
+  return caches.match(cacheKey(request.url), { ignoreVary: true });
 }
 
 // ---------- fetch ----------
@@ -111,10 +130,9 @@ self.addEventListener("fetch", (event) => {
 
 // A page (index.html, history.html, ...). Remembers where it came from for its files.
 async function handlePage(event) {
-  // ignoreSearch: "/?anything" still opens offline from the cached "/".
-  const { response, fromCache } = await networkFirst(event, NETWORK_TIMEOUT_MS, { ignoreSearch: true });
+  const { response, cached } = await networkFirst(event, NETWORK_TIMEOUT_MS);
   if (event.resultingClientId) {
-    pageSources.set(event.resultingClientId, fromCache ? "cache" : "network");
+    pageSources.set(event.resultingClientId, cached ? "cache" : "network");
     if (pageSources.size > MAX_PAGE_SOURCES) pageSources.delete(pageSources.keys().next().value);
   }
   return response;
@@ -124,7 +142,7 @@ async function handlePage(event) {
 async function handleFile(event) {
   const source = pageSources.get(event.clientId);
   if (source === "cache") {
-    const cached = await caches.match(event.request);
+    const cached = await fromCache(event.request);
     if (cached) {
       // Still refresh the cache in the background, like the page itself, so the next start is up to date.
       refreshInBackground(event);
@@ -135,17 +153,21 @@ async function handleFile(event) {
   return (await networkFirst(event, timeout)).response;
 }
 
-// Fetches from the network and saves a good same-origin answer in the cache. The service worker
-// is kept alive until the copy is saved, even if the page was already answered from the cache.
+// Fetches from the network and saves a good same-origin answer in the cache, under cacheKey and
+// never as a redirected response. A redirect itself (a page navigation gets it unfollowed, e.g.
+// history.html → /history) isn't saved: the browser follows it and the page at the new address is.
+// The service worker is kept alive until the copy is saved, even if the page was already answered
+// from the cache.
 function fetchAndSave(event) {
   const request = event.request;
   const network = fetch(request);
   event.waitUntil(
     network
-      .then((response) => {
+      .then(async (response) => {
         if (!response.ok || response.type !== "basic") return;
         const copy = response.clone(); // before the page reads the body
-        return caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+        const cache = await caches.open(CACHE_NAME);
+        await cache.put(cacheKey(request.url), await withoutRedirect(copy));
       })
       .catch(() => {})
   );
@@ -156,26 +178,25 @@ function refreshInBackground(event) {
   fetchAndSave(event).catch(() => {});
 }
 
-// Network first, cache as the fallback. Resolves to { response, fromCache }.
+// Network first, cache as the fallback. Resolves to { response, cached }.
 // After timeoutMs without an answer the cached copy is used if there is one; the network request
 // keeps going and still refreshes the cache. With nothing cached it keeps waiting for the network.
 // A network error with nothing cached fails the request, just like without a service worker.
-function networkFirst(event, timeoutMs, matchOptions) {
+function networkFirst(event, timeoutMs) {
   const request = event.request;
   const network = fetchAndSave(event);
 
   return new Promise((resolve, reject) => {
     let done = false;
     let timer;
-    const finish = (response, fromCache) => {
+    const finish = (response, cached) => {
       if (done) return;
       done = true;
       clearTimeout(timer);
-      resolve({ response, fromCache });
+      resolve({ response, cached });
     };
     const tryCache = () =>
-      caches
-        .match(request, matchOptions)
+      fromCache(request)
         .then((cached) => {
           if (cached) finish(cached, true);
           return cached;

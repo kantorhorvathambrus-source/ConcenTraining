@@ -427,6 +427,12 @@ works online exactly as before.
   answered within **3 seconds** (a very weak signal), so the page doesn't hang. The network request
   keeps going in the background and still refreshes the saved copy. A file that was never saved
   keeps waiting for the network.
+- **One address per page:** Netlify's Pretty URLs can serve `history.html` as `/history` (redirecting
+  `/history.html` there and rewriting links to it). The service worker saves and looks up every copy
+  under one address (`cacheKey` in `sw.js`): `/index.html` → `/`, `/history` → `/history.html`, and the
+  `?query` is ignored. So the history page opens offline whichever address is used, even if it was
+  never opened online. Redirect responses themselves are never saved; a page reached through one is
+  saved without the redirect, because Chrome won't show a redirected response as a page.
 - **Never handled by the service worker:** `/api/*` and `/.netlify/*`, anything that isn't `GET`
   (so `POST /api/picks` goes straight to the network: a pick sent offline is simply lost, as
   before), other sites, and `Range` requests.
