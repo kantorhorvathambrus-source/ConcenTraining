@@ -489,11 +489,14 @@ first deploy, and applies new migrations.
 - Pull requests into `main` get a Deploy Preview for testing.
 - Each push to `main` (for example a merged pull request) updates the branch deploy at
   https://main--concentraining.netlify.app. This does **not** change the live site.
-- To release, open a pull request from `main` into `live` and merge it; that runs the production deploy.
+- To release, open a pull request from `main` into `live` and merge it with **Create a merge commit**,
+  never **Squash and merge**; that runs the production deploy. Squashing gives `live` a new commit that
+  `main` doesn't have, so the next `main` → `live` pull request shows the old changes again and can
+  conflict.
 
 **Deploy Previews have their own database.** Each Deploy Preview gets its own database branch: a
 separate copy of the live database, made when the preview is created. New migrations run on that
-copy, and taps on the preview are counted only there. The live database only changes when the
+copy, and **Start session** presses on the preview are counted only there. The live database only changes when the
 production deploy runs, i.e. when a `main` → `live` pull request is merged; merging into `main`
 doesn't touch it. Because the copy starts with the live numbers, the preview's `/stats.html`
 shows real data. Netlify Database needs a credit-based Netlify plan;
