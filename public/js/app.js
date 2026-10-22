@@ -18,6 +18,10 @@ const REFOCUS_MS = 2500;
 // for the rest of the session or hold back the continue/restart question forever.
 const PICKER_AUTO_CLOSE_MS = 60 * 1000;
 const UNDO_WINDOW_MS = 5000; // after a distraction tap, Undo takes End session's place for this long
+// Page hidden (another app, another tab, locked screen) for at least this long during a session:
+// on return the app asks whether it was a distraction. Shorter absences are ignored.
+// AWAY_MIN_MS is in history-store.js, because imports check away distractions against it.
+const AWAY_ASK_AFTER_MS = AWAY_MIN_MS;
 const DURATION_PRESETS = [5, 10, 15, 25, 35, 45, 60, 90];
 const MAX_MINUTES = 240;
 const DEFAULT_MINUTES = 25;
@@ -123,7 +127,9 @@ delete prefs.style; // saved before personalities came from the character; dropp
 // style: the character's personality when the session ran ("kind", "firm", "strict" or "ragebait")
 // restartPending: "A whole lot" / "10+ min" was tapped and the continue/restart question
 // hasn't been answered yet. Saved, so a reload still asks it.
-let session = null; // { characterId, style, mode, durationMs, startedAt, distractions: [], endedAt, restartPending }
+// leftAt: set while the page is hidden, cleared on return (see "time away"). Saved, so a page the
+// browser discarded in the background still asks after the reload. Never goes into the history.
+let session = null; // { characterId, style, mode, durationMs, startedAt, distractions: [], endedAt, restartPending, leftAt }
 let tickTimer = 0;
 let nextGoodAt = 0;
 // distraction: the one the open (or about to open) picker belongs to.
@@ -134,6 +140,11 @@ const picker = { distraction: null, showTimer: 0, hideTimer: 0 };
 // before that tap. setRestart: that tap set session.restartPending (it wasn't set before).
 const undo = { distraction: null, prevNextGoodAt: 0, setRestart: false, timer: 0 };
 const motivation = { phase: null, index: 0, shown: false };
+// from / ms: when the page was left and for how long (whole seconds) the card asks about, also
+// while it waits for another dialog to close (ms 0: none). open: the card is on screen.
+// yes: "Yes" was tapped, logged once the card has closed. hiddenAt: the latest time the page
+// was hidden (in memory only).
+const away = { from: 0, ms: 0, open: false, yes: false, hiddenAt: 0 };
 
 function characterById(id) {
   return CHARACTERS.find((c) => c.id === id) || null;
@@ -572,6 +583,7 @@ function enterSession() {
 
   closePicker(false);
   closeUndo(false);
+  Object.assign(away, { from: 0, ms: 0, open: false, yes: false, hiddenAt: 0 });
   motivation.phase = null;
   $("#motivationCard").hidden = true;
   nextGoodAt = Date.now() + GOOD_EVERY_MS;
@@ -609,15 +621,21 @@ function tick() {
 function logDistraction(option) {
   if (!session || session.endedAt) return;
   const distraction = { at: Date.now(), level: option.level, ms: option.ms || 0, category: null };
-  const setRestart = Boolean(option.askRestart && !session.restartPending);
+  addDistraction(distraction, Boolean(option.askRestart));
+  schedulePicker(distraction);
+}
+
+// Saves a distraction and plays its reaction, with Undo. askRestart: level 5, which asks
+// continue or restart once the picker (if any) and the Undo window are over.
+function addDistraction(distraction, askRestart) {
+  const setRestart = askRestart && !session.restartPending;
   session.distractions.push(distraction);
-  if (option.askRestart) session.restartPending = true;
+  if (askRestart) session.restartPending = true;
   save(SESSION_KEY, session);
 
   openUndo(distraction, nextGoodAt, setRestart);
   nextGoodAt = Date.now() + GOOD_EVERY_MS;
-  react(`level${option.level}`, option.level);
-  schedulePicker(distraction);
+  react(`level${distraction.level}`, distraction.level);
   updateLengthButtons();
 }
 
@@ -720,10 +738,12 @@ function closePicker(thenAsk) {
   if (thenAsk) askPendingRestart();
 }
 
-// Waits while the category picker is open (or about to open) or the Undo window is open:
-// closing either one calls this again.
+// Waits while the category picker is open (or about to open), the Undo window is open, or
+// the time away card is open or waiting: closing any of them calls this again.
 function askPendingRestart() {
-  if (session && session.restartPending && !picker.distraction && !undo.distraction) askContinueOrRestart();
+  if (session && session.restartPending && !picker.distraction && !undo.distraction && !away.ms) {
+    askContinueOrRestart();
+  }
 }
 
 async function askContinueOrRestart() {
@@ -754,7 +774,9 @@ async function askContinueOrRestart() {
     if (canSave && $("#restartSave").checked && saveFinishedSession({ ...session, endedAt: cutAt }, "startOver")) {
       requestPersistentStorage();
     }
-    startSession(characterId, mode, readMinutes());
+    startSession(characterId, mode, readMinutes()); // a waiting time away card is dropped with the old session
+  } else {
+    askPendingAway();
   }
 }
 
@@ -769,8 +791,89 @@ async function onEndClick() {
   if ((await ask($("#endDialog"))) === "end" && session && !session.endedAt) {
     finishSession(Date.now(), !canSave || $("#endSave").checked);
   } else {
+    askPendingAway();
     askPendingRestart();
   }
+}
+
+// ---------- time away ----------
+
+// The page was hidden or shown again. The browser can't tell another app or tab from a locked
+// screen, so the card only says "away". Nothing is ever logged without a tap.
+function onVisibilityChange() {
+  if (!session || session.endedAt) return;
+  if (document.hidden) noteLeave();
+  else noteReturn();
+}
+
+// Saved at once: on Android a background tab is often discarded and reloaded on return.
+// If a card is already open or waiting, leftAt keeps its start: the time away then runs from
+// the first leave to the last return, so after such a reload the card still covers all of it.
+function noteLeave() {
+  away.hiddenAt = Date.now();
+  if (session.leftAt) return;
+  session.leftAt = away.ms ? away.from : away.hiddenAt;
+  save(SESSION_KEY, session);
+}
+
+// Also runs right after a reload, with the leftAt saved before it.
+function noteReturn() {
+  if (!session.leftAt) return;
+  tick(); // the timer check comes first: if the session ran out while away, the end logic wins
+  if (!session || session.endedAt) return;
+  const now = Date.now();
+  const from = session.leftAt;
+  // With a card open or waiting, only this latest absence decides whether anything changes.
+  const absence = away.ms ? now - away.hiddenAt : now - from;
+  delete session.leftAt;
+  save(SESSION_KEY, session);
+  if (absence < AWAY_ASK_AFTER_MS) return; // short: nothing happens
+  away.from = from;
+  away.ms = Math.floor((now - from) / 1000) * 1000; // whole seconds, as shown and saved
+  closeUndo(false); // its 5 s are long over, but timers in a hidden page can run late
+  if (away.open) showAwayQuestion(); // left again while the card was open: the new total
+  else askPendingAway();
+}
+
+// An open question (End session, continue/restart) comes first: closing it calls this again.
+function askPendingAway() {
+  if (!away.ms || away.open || !session || session.endedAt) return;
+  if (document.querySelector("dialog[open]")) return;
+  away.open = true;
+  away.yes = false;
+  // The level1 pose, held still: no blinking and no "doing well" pose while the card is open.
+  stopReaction();
+  stage.reacting = true;
+  setPose("level1");
+  showAwayQuestion();
+  $("#awayDialog").showModal();
+}
+
+function showAwayQuestion() {
+  $("#awayTitle").textContent = `You were away for ${formatDuration(away.ms)}.`;
+}
+
+// Every way the card closes ends up here: "Yes", "No", Esc, the session ending.
+function onAwayClosed() {
+  const { yes, from, ms } = away;
+  Object.assign(away, { from: 0, ms: 0, open: false, yes: false });
+  if (!session || session.endedAt) return; // the timer ran out while it was open: nothing is logged
+  if (yes) logAwayDistraction(from, ms); // its reaction takes over the pose
+  else endReaction();
+  askPendingRestart();
+}
+
+// "Yes" logs the measured time away: at is the moment the page was left, the level comes
+// from the length (awayLevel in history-store.js), and Advanced mode saves the length itself
+// (Simple mode has no lengths: ms 0). The category is "phone" (shown as "Screen") and there's no
+// picker. Reaction, Undo and the level 5 continue/restart question work as for a tap. If only
+// part of it was a distraction, Undo it and log that part by hand.
+function logAwayDistraction(from, ms) {
+  const level = awayLevel(ms);
+  const distraction = {
+    at: from, level, ms: session.mode === "advanced" ? ms : 0, category: "phone", source: "away",
+  };
+  addDistraction(distraction, level === 5);
 }
 
 // Once per device, after a session is saved: asks the browser to mark this site's storage as
@@ -1014,6 +1117,13 @@ function init() {
   // touchend for iPhones, which don't always send click for taps on plain areas.
   for (const type of ["touchend", "click", "keydown"]) document.addEventListener(type, onSessionInput, true);
   document.addEventListener("visibilitychange", updateWakeLock);
+  document.addEventListener("visibilitychange", onVisibilityChange);
+  $("#awayNoButton").addEventListener("click", () => $("#awayDialog").close());
+  $("#awayYesButton").addEventListener("click", () => {
+    away.yes = true;
+    $("#awayDialog").close();
+  });
+  $("#awayDialog").addEventListener("close", onAwayClosed);
 
   // Resume a session that was running when the page was closed or reloaded.
   const saved = load(SESSION_KEY, null);
@@ -1027,6 +1137,7 @@ function init() {
       onTimerRanOut(false);
     } else {
       enterSession();
+      onVisibilityChange(); // a leave time saved before the reload counts like a normal return
       askPendingRestart(); // the page was reloaded before the continue/restart question was answered
     }
     return;

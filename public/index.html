@@ -186,6 +186,17 @@
     </form>
   </dialog>
 
+  <!-- Opens when the page was hidden for 15 s or more during a session (time away in app.js).
+       "Yes" logs the measured time away at once. -->
+  <dialog id="awayDialog" class="away-dialog" aria-labelledby="awayTitle">
+    <h2 id="awayTitle"></h2>
+    <p>Were you distracted?</p>
+    <div class="dialog-actions">
+      <button id="awayNoButton" type="button" class="btn">No, it was for the task</button>
+      <button id="awayYesButton" type="button" class="btn primary">Yes</button>
+    </div>
+  </dialog>
+
   <dialog id="lateDialog">
     <form method="dialog">
       <h2>Welcome back!</h2>

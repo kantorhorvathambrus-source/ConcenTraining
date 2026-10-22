@@ -40,7 +40,7 @@ Netlify Functions plus a Netlify Database, used only for character popularity st
   distraction and starts the 5 s again. After a reload there's no Undo.
 - **Distraction categories:** after each distraction button, once the reaction has played (1.4 s,
   `PICKER_DELAY_MS`), a small picker appears above the bottom buttons: "What distracted you?" with
-  Phone, Thoughts, Noise, People, Tired, Other, and a grey **Skip** button on the right. There's no
+  Screen, Thoughts, Noise, People, Tired, Other, and a grey **Skip** button on the right. There's no
   countdown: it stays open until a category or Skip is tapped. A tapped category is saved with the
   distraction; Skip saves `category: null` (a category is never guessed). As a safety net, if
   nothing is tapped (e.g. the phone was put down), it closes silently after 60 s
@@ -50,9 +50,9 @@ Netlify Functions plus a Netlify Database, used only for character popularity st
   out close it. On small phones the open picker covers some of the distraction buttons (never the
   character or the timer); tap a category or Skip first, or scroll down, to log another one.
 - **"A whole lot" / "10+ min"** asks: continue this session, or start over with a new duration.
-  The category picker and the Undo window come first: the dialog opens once the picker has closed
-  (category picked, Skip, or the 60 s safety close) and the 5 s Undo window is over, so they never
-  show at the same time. Undoing the tap means no question
+  The category picker, the Undo window and the time away card come first: the dialog opens once the
+  picker has closed (category picked, Skip, or the 60 s safety close), the 5 s Undo window is over and
+  the time away card (see below) has been answered, so they never show at the same time. Undoing the tap means no question
   (an earlier "10+ min" / "A whole lot" that wasn't undone still asks, right after the Undo). The
   question is saved with the running session (`restartPending`) as soon as the button is tapped, so if
   the page is reloaded before it's answered, it's asked right after the reload.
@@ -71,6 +71,52 @@ Netlify Functions plus a Netlify Database, used only for character popularity st
   The setup keeps the last character, mode and length. Under 1 minute there's no checkbox (nothing is
   saved anyway, and the summary is shown as before). If the timer runs out while the dialog is open,
   the session is saved as a full session.
+- **Time away:** if the page is hidden during a running session (another app, another tab, or a
+  locked screen; the browser can't tell these apart, so the wording stays neutral) and you come back
+  after at least 15 s (`AWAY_MIN_MS` in `public/js/history-store.js`), a card at the bottom of the
+  screen asks "You were away for 2 min 15 sec. Were you distracted?" (measured to the second). Under
+  15 s nothing happens. Nothing is ever logged without a tap.
+  - While the card is open, the character holds its `level1` pose (no blinking, no "doing well"
+    pose) and shows no text.
+  - **No, it was for the task** (or Esc) closes it and logs nothing.
+  - **Yes** logs the time away at once, with no buttons to pick:
+    - `at` is the moment you left (measured, like everything else here).
+    - Advanced mode: `ms` is the measured time away in whole seconds (the X on the card), so it can
+      be any length, e.g. 2 min 15 sec or 14 min. Simple mode: `ms` stays `0`, as always.
+    - The level, and so the reaction, comes from the time away, with the lengths of the Advanced
+      buttons as thresholds (`awayLevel` in `public/js/history-store.js`):
+
+      | Time away | Level | Like the button |
+      |---|---|---|
+      | under 1 min | 1 | 30 sec |
+      | 1 min to under 2 min | 2 | 1 min |
+      | 2 min to under 5 min | 3 | 2 min, 3 min |
+      | 5 min to 10 min (exactly 10:00 included) | 4 | 5 min, 10 min |
+      | over 10 min | 5, plus the continue/restart question | 10+ min |
+
+    - The category is set to `"phone"` (shown as "Screen": the phone, other apps or other tabs,
+      online or offline), with no category picker.
+    - It's marked `source: "away"`, so it can be told apart from a tapped one (those have no
+      `source` field).
+    - Everything else works like a tap: reaction, refocus pose, Undo for 5 s, and for level 5 the
+      continue/restart question once the Undo window is over. If only part of the time was a
+      distraction, Undo it and log that part with the buttons.
+    - In Advanced mode it counts as logged time for the disabled lengths, like any distraction.
+  - The timer check comes first: if the session ran out while you were away, the end (summary, or the
+    "Welcome back" question) happens as before and there's no card. If it runs out while the card is
+    open, the card closes and nothing is logged.
+  - If End session's question or the continue/restart question was open when you left, it stays and
+    comes first; the card follows after **Keep going** / **Continue** (and is dropped after **End
+    session** or **Start over**). An open category picker stays as it was (it still belongs to the
+    earlier distraction). An open Undo window is closed on return (its 5 s are long over).
+  - Leaving again while the card is open: if the new absence is 15 s or more, the time away now runs
+    from the first leave to this return (including the few seconds the card was on screen in
+    between), and the card shows the new total. A shorter absence changes nothing.
+  - The time you left is saved with the running session (`leftAt` in `ct_session_v1`) and cleared on
+    return, so the card still comes after a reload, e.g. when Android discarded the tab in the
+    background. If the card was open or waiting when you left, `leftAt` keeps the first leave, so the
+    card still covers the whole time. A reload while the card is on screen (without leaving again)
+    drops it. `leftAt` itself never goes into the history or the export file.
 - **Reactions:** each button maps to one of the 5 distraction poses. The character also blinks,
   "breathes", and shows the "doing well" pose after every 5 minutes without a logged distraction.
   It plays for 3 s (`GOOD_REACTION_MS` in `public/js/app.js`) and isn't started when less than that
@@ -104,7 +150,7 @@ Netlify Functions plus a Netlify Database, used only for character popularity st
   summary image and taller phones keep the normal size. Advanced labels like "10+ min" stay on one line.
 - **Summary screen:** the character's pose, the title and the message follow how the session went
   (see "Summary result" below). It also shows the session's top 3 picked categories, e.g.
-  "Most common distractions: Phone (2), Thoughts (1)". Hidden if nothing was picked.
+  "Most common distractions: Screen (2), Thoughts (1)". Hidden if nothing was picked.
   Times are shown with seconds when there are any ("24 min 30 sec out of 25 min").
   In Advanced mode, a session ended before the timer ran out also shows its planned length:
   "You focused for 28 min out of 30 min (60 min planned), with 2 distractions logged." A session
@@ -160,7 +206,7 @@ are in `public/js/data/messages.js`.
     and goes back to the setup screen. Esc doesn't answer it, and if the page is closed before
     answering, the question comes back next time.
   - Both cases work the same in Simple and Advanced mode. A continue/restart question that was
-    still waiting is dropped, as before.
+    still waiting is dropped, as before, and so is the time away card.
   - Neither case plays the end chime (see below).
 
 ### Sound and screen
@@ -276,7 +322,7 @@ appear in the list as "—", but are left out of the trend and time-of-day numbe
 
 | Key | What's in it |
 |---|---|
-| `ct_session_v1` | The session that's running right now (removed when it ends). `restartPending: true` while the continue/restart question is unanswered; older saved sessions don't have it, which means `false` |
+| `ct_session_v1` | The session that's running right now (removed when it ends). `restartPending: true` while the continue/restart question is unanswered; older saved sessions don't have it, which means `false`. `leftAt` (timestamp in ms): only while the page is hidden, for the time away card; missing means the page wasn't left. Never copied into the history |
 | `ct_history_v1` | Finished sessions, newest first, max. 1000 |
 | `ct_prefs_v1` | Last chosen character, mode and duration, plus `endSound` and `keepScreenOn` (the two setup checkboxes, `true`/`false`). Prefs saved before these existed get `true` for both. `homeScreenTipDismissed`: `true` once **Got it** was tapped on the iPhone Home Screen tip. `persistRequested`: `true` once persistent storage was asked for (or skipped in Firefox), see [iPhone storage and the Home Screen app](#iphone-storage-and-the-home-screen-app). Prefs saved before these two existed get `false` for both. A `style` value saved by older versions is ignored and dropped |
 
@@ -284,7 +330,9 @@ Each history entry: `startedAt`, `endedAt` (timestamps in ms), `endedBy` (`"time
 `characterId`, `style` (the character's personality when the session ran: `"kind"`, `"firm"`,
 `"strict"` or `"ragebait"`), `mode`, `plannedMs`, `elapsedMs`, `distractedMs`, `focusPercent`
 (`null` in Simple mode) and `distractions` (`[{ at, level, ms, category }]`). `category` is
-`"phone"`, `"thoughts"`, `"noise"`, `"people"`, `"tired"`, `"other"` or `null` (nothing picked).
+`"phone"` (shown as "Screen": the phone, other apps or tabs; also what the time away card sets), `"thoughts"`, `"noise"`,
+`"people"`, `"tired"`, `"other"` or `null` (nothing picked). A distraction logged from the time away
+card also has `source: "away"`; tapped ones have no `source` field.
 Sessions saved before categories existed have no `category` field; everything that reads it treats
 that as `null`.
 Sessions saved before personalities came from the character keep the style that was chosen then
@@ -362,7 +410,7 @@ doesn't do this.
   {
     "app": "ConcenTraining",
     "type": "session-history",
-    "version": 5,
+    "version": 6,
     "exportedAt": "2026-10-28T09:00:00.000Z",
     "sessions": [ /* history entries, newest first */ ]
   }
@@ -389,8 +437,15 @@ doesn't do this.
     `public/js/history-store.js`: a new value needs one line there, plus a version check in
     `cleanImportedSession` (like the one for `"startOver"`).
   - every distraction is inside the session (up to 1 minute after the end is allowed, for a tap
-    just as the timer runs out); Simple-mode distractions have `ms: 0`, Advanced ones are
+    just as the timer runs out; a time away distraction's `at` is the moment the page was left,
+    which is always inside); Simple-mode distractions have `ms: 0`, tapped Advanced ones are
     30 sec to 10 min long
+  - from version 6, `source` is missing (a tap) or `"away"`, anything else is an "unknown
+    distraction source". An Advanced away distraction is a measured length: whole seconds, at
+    least 15 s and not longer than the session ("away distraction length out of range"), and its
+    level must match its length by the thresholds above ("away distraction level doesn't match
+    its length"). So changing those thresholds later needs a new version, or older version 6
+    exports would be rejected. A Simple away distraction has `ms: 0` like any Simple one.
   - `distractedMs` and the Advanced `focusPercent` are what the app calculates from the
     distractions. Simple mode's `focusPercent` must be `null`. Before 19 Oct 2026 the app
     rounded a distraction under 0.5% of the session up to 100%, so that old value is accepted too.
@@ -403,7 +458,9 @@ doesn't do this.
   makes an older app say "made by a newer version" instead of skipping every ragebait session.
   Version 4 allows `endedBy: "startOver"` (for the same reason); in version 1–3 files it's an
   "unknown end reason". Version 5 allows `style: "firm"` (again for the same reason); in version
-  1–4 files it's an "unknown style".
+  1–4 files it's an "unknown style". Version 6 allows time away distractions (`source: "away"` and
+  a measured length). Version 1–5 files import exactly as before: a `source` field in them is
+  dropped, and every Advanced distraction must still be 30 sec to 10 min.
 - If the session fields ever change again, raise `EXPORT_VERSION` in `public/js/history-store.js`,
   add the new number to `IMPORT_VERSIONS`, and teach the import how to read the older files.
 
@@ -486,7 +543,7 @@ once with a decent connection fixes it, because every online start refreshes all
 | `public/js/data/characters.js` | Character list, groups and the personality each group gives (`personalityOf`), art paths |
 | `public/js/data/messages.js` | Motivation messages, summary titles and Simple-mode summary messages per result |
 | `public/js/placeholder-art.js` | Built-in placeholder drawings (kind, firm, strict and ragebait faces, plus each character's look) for characters without real art |
-| `public/js/app.js` | Timer, reaction engine, distraction category picker, Undo, disabled Advanced lengths, motivation rotation, end chime, screen wake lock, summary, iPhone Home Screen tip, persistent storage request |
+| `public/js/app.js` | Timer, reaction engine, distraction category picker, Undo, disabled Advanced lengths, time away card, motivation rotation, end chime, screen wake lock, summary, iPhone Home Screen tip, persistent storage request |
 | `public/js/history-store.js` | Saving/loading history, focus % and summary result (with their thresholds), distraction categories, export/import checks, iPhone Safari check (used by both pages) |
 | `public/js/history.js` | Streaks, weekly chart, time of day, distraction categories, session list and backup buttons on `history.html` |
 | `netlify/functions/picks.mjs` | `POST /api/picks`: counts one session started with a character |
