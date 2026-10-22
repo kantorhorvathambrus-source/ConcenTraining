@@ -768,16 +768,6 @@ dialog p {
   margin-top: 0;
 }
 
-/* Advanced: the length closest to the time away. A tap on it confirms it. */
-.away-dialog .btn.level.closest {
-  border-width: 3px;
-  background: color-mix(in srgb, var(--primary) 14%, var(--surface));
-}
-
-.away-cancel {
-  margin-top: 16px;
-}
-
 .dialog-actions {
   display: flex;
   justify-content: flex-end;

@@ -39,6 +39,11 @@ Each holds one session that breaks one rule.
 | `bad-11-simple-with-focus.json` | Simple mode with `focusPercent: 80` | Nothing was imported. Skipped 1 invalid session (focus % in Simple mode). |
 | `bad-12-start-over-in-v3.json` | `endedBy: "startOver"` in a version 3 file (only allowed from version 4) | Nothing was imported. Skipped 1 invalid session (unknown end reason). |
 | `bad-13-firm-in-v4.json` | `style: "firm"` in a version 4 file (only allowed from version 5) | Nothing was imported. Skipped 1 invalid session (unknown style). |
+| `bad-14-away-too-short.json` | Version 6, an Advanced time away distraction of 10 sec (at least 15 sec) | Nothing was imported. Skipped 1 invalid session (away distraction length out of range). |
+| `bad-15-away-longer-than-session.json` | Version 6, a 12-min time away distraction in a session that ran 10 min | Nothing was imported. Skipped 1 invalid session (away distraction length out of range). |
+| `bad-16-away-level-mismatch.json` | Version 6, a 2 min 15 sec time away distraction at level 5 (should be 3) | Nothing was imported. Skipped 1 invalid session (away distraction level doesn't match its length). |
+| `bad-17-unknown-source.json` | Version 6, a distraction with `source: "timer"` | Nothing was imported. Skipped 1 invalid session (unknown distraction source). |
+| `bad-18-away-in-v5.json` | A 20-sec time away distraction in a version 5 file: before version 6 every Advanced distraction must be 30 sec to 10 min, as always | Nothing was imported. Skipped 1 invalid session (Advanced distraction length out of range). |
 
 ## Good files: everything imports
 
@@ -49,6 +54,7 @@ Each holds one session that breaks one rule.
 | `good-v3-new-character.json` | Version 3, ragebait style, a character id this app doesn't know | Imported 2 sessions. |
 | `good-v4-start-over.json` | Version 4, two sessions saved with **Start over** (`endedBy: "startOver"`): Advanced 12 of 25 min at 8% (with a 10+ min distraction), Simple 8 of 25 min. Both show "restarted" in the list | Imported 2 sessions. |
 | `good-v5-firm.json` | Version 5, two Professor sessions with the firm style: Advanced 25 of 25 min at 94%, Simple 20 of 30 min. Both show "… · Firm" in the list | Imported 2 sessions. |
+| `good-v6-away.json` | Version 6, time away distractions (`source: "away"`, category Phone / apps): Advanced 25 of 25 min at 87% with a 2 min 15 sec one and a tapped 1 min; Simple 20 of 25 min with one at level 4; Advanced **Start over** after 15 min at 54% with an 11 min 30 sec one (level 5, longer than any button) | Imported 3 sessions. |
 | `good-edge-cases.json` | 100% with one 30-sec distraction in 2 hours (how the app rounded before 19 Oct 2026), and a distraction tapped 0.4 sec after the timer ran out | Imported 2 sessions. |
 
 ## Mixed

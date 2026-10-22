@@ -23,11 +23,12 @@ const SIMPLE_POINTS_PER_MS = 25 * 60 * 1000; // shorter sessions count as 25 min
 // Export file format. Bump EXPORT_VERSION if the session fields ever change.
 // Version 2 added a category to each distraction. Version 3 allows the style
 // "ragebait". Version 4 allows endedBy "startOver". Version 5 allows the style
-// "firm". Version 1-4 files still import.
+// "firm". Version 6 allows distractions logged from the time away card
+// (source: "away", with a measured length). Version 1-5 files still import.
 const EXPORT_APP = "ConcenTraining";
 const EXPORT_TYPE = "session-history";
-const EXPORT_VERSION = 5;
-const IMPORT_VERSIONS = [1, 2, 3, 4, 5];
+const EXPORT_VERSION = 6;
+const IMPORT_VERSIONS = [1, 2, 3, 4, 5, 6];
 const IMPORT_MAX_BYTES = 5 * 1024 * 1024;
 
 // How a session can end, and what that says about its times (see saveFinishedSession):
@@ -51,10 +52,29 @@ const IMPORT_MAX_DISTRACTION_MS = 10 * 60 * 1000;
 // A tap in the last moment can be timestamped just after the timer ran out.
 const IMPORT_LATE_DISTRACTION_MS = 60 * 1000;
 
+// Time away (the card in app.js): an absence this long or longer is asked about, and
+// "Yes" logs it with source: "away", at: the moment the page was left, and (Advanced
+// mode) ms: the measured time in whole seconds. v6 imports check the length against it.
+const AWAY_MIN_MS = 15 * 1000;
+
+// The level (and so the reaction) of a time away distraction, from the lengths of the
+// Advanced buttons: a level starts at its button's length. Exactly 10 min is still 4,
+// more than 10 min is 5 (like "10+ min", which also asks continue or restart).
+// v6 imports check that an away distraction's level matches its length, so changing
+// these thresholds later needs a new EXPORT_VERSION (otherwise older v6 exports would
+// be rejected).
+function awayLevel(ms) {
+  if (ms > 10 * 60 * 1000) return 5;
+  if (ms >= 5 * 60 * 1000) return 4;
+  if (ms >= 2 * 60 * 1000) return 3;
+  if (ms >= 60 * 1000) return 2;
+  return 1;
+}
+
 // What caused a distraction. The id is what's saved; the label is what's shown.
 // A distraction without a picked category is saved with category: null.
 const DISTRACTION_CATEGORIES = [
-  { id: "phone", label: "Phone" },
+  { id: "phone", label: "Phone / apps" }, // also set by the time away card
   { id: "thoughts", label: "Thoughts" },
   { id: "noise", label: "Noise" },
   { id: "people", label: "People" },
@@ -65,7 +85,11 @@ const DISTRACTION_CATEGORIES = [
 const isCategory = (value) => DISTRACTION_CATEGORIES.some((category) => category.id === value);
 
 // Distractions saved before categories existed have no category field: they get null.
-const withCategory = (d) => ({ at: d.at, level: d.level, ms: d.ms, category: isCategory(d.category) ? d.category : null });
+// source is only kept when it's "away" (time away card); a manual tap has no source.
+const withCategory = (d) => ({
+  at: d.at, level: d.level, ms: d.ms, category: isCategory(d.category) ? d.category : null,
+  ...(d.source === "away" && { source: "away" }),
+});
 
 // Counts the categories in a list of distractions, most common first (a tie keeps
 // the order of DISTRACTION_CATEGORIES). Distractions without a category (null, or
@@ -201,6 +225,8 @@ const isTime = (value) => Number.isFinite(value) && value >= 0;
 // distraction categories, so their distractions get category: null. Before
 // version 3 the only styles were "kind" and "strict", and "firm" exists from
 // version 5. Before version 4 the only end reasons were "timer" and "manual".
+// Before version 6 there are no away distractions: a source field is dropped and
+// every Advanced distraction needs a button length, exactly as those versions did.
 function cleanImportedSession(raw, version) {
   if (!raw || typeof raw !== "object") throw new Error("not a session");
 
@@ -231,7 +257,12 @@ function cleanImportedSession(raw, version) {
     if (version >= 2 && d.category !== null && !isCategory(d.category)) {
       throw new Error("unknown distraction category");
     }
-    return { at: d.at, level: d.level, ms: d.ms, category: version >= 2 ? d.category : null };
+    if (version >= 6 && Object.hasOwn(d, "source") && d.source !== "away") {
+      throw new Error("unknown distraction source");
+    }
+    const clean = { at: d.at, level: d.level, ms: d.ms, category: version >= 2 ? d.category : null };
+    if (version >= 6 && d.source === "away") clean.source = "away";
+    return clean;
   });
 
   // Do the numbers agree? The app's own calculation is the reference.
@@ -245,7 +276,14 @@ function cleanImportedSession(raw, version) {
   for (const d of distractions) {
     if (d.at < startedAt || d.at > endedAt + IMPORT_LATE_DISTRACTION_MS) throw new Error("distraction outside the session");
     if (mode === "simple" && d.ms !== 0) throw new Error("Simple distraction with a length");
-    if (mode === "advanced" && (d.ms < IMPORT_MIN_DISTRACTION_MS || d.ms > IMPORT_MAX_DISTRACTION_MS)) {
+    // Away: measured in whole seconds, at least AWAY_MIN_MS, never longer than the session.
+    // Its at (the moment the page was left) is inside the session like any other.
+    if (mode === "advanced" && d.source === "away") {
+      if (d.ms % 1000 !== 0 || d.ms < AWAY_MIN_MS || d.ms > elapsedMs) {
+        throw new Error("away distraction length out of range");
+      }
+      if (d.level !== awayLevel(d.ms)) throw new Error("away distraction level doesn't match its length");
+    } else if (mode === "advanced" && (d.ms < IMPORT_MIN_DISTRACTION_MS || d.ms > IMPORT_MAX_DISTRACTION_MS)) {
       throw new Error("Advanced distraction length out of range");
     }
   }

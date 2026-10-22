@@ -1,0 +1,83 @@
+{
+  "app": "ConcenTraining",
+  "type": "session-history",
+  "version": 6,
+  "exportedAt": "2026-10-22T09:00:00.000Z",
+  "sessions": [
+    {
+      "startedAt": 1790235000000,
+      "endedAt": 1790236500000,
+      "endedBy": "timer",
+      "characterId": "grandma",
+      "style": "kind",
+      "mode": "advanced",
+      "plannedMs": 1500000,
+      "elapsedMs": 1500000,
+      "distractedMs": 195000,
+      "focusPercent": 87,
+      "distractions": [
+        {
+          "at": 1790235300000,
+          "level": 2,
+          "ms": 60000,
+          "category": "thoughts"
+        },
+        {
+          "at": 1790235720000,
+          "level": 3,
+          "ms": 135000,
+          "category": "phone",
+          "source": "away"
+        }
+      ]
+    },
+    {
+      "startedAt": 1790258400000,
+      "endedAt": 1790259600000,
+      "endedBy": "manual",
+      "characterId": "grandma",
+      "style": "kind",
+      "mode": "simple",
+      "plannedMs": 1500000,
+      "elapsedMs": 1200000,
+      "distractedMs": 0,
+      "focusPercent": null,
+      "distractions": [
+        {
+          "at": 1790258880000,
+          "level": 4,
+          "ms": 0,
+          "category": "phone",
+          "source": "away"
+        },
+        {
+          "at": 1790259360000,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        }
+      ]
+    },
+    {
+      "startedAt": 1790362800000,
+      "endedAt": 1790363700000,
+      "endedBy": "startOver",
+      "characterId": "grandma",
+      "style": "kind",
+      "mode": "advanced",
+      "plannedMs": 1500000,
+      "elapsedMs": 900000,
+      "distractedMs": 690000,
+      "focusPercent": 23,
+      "distractions": [
+        {
+          "at": 1790362920000,
+          "level": 5,
+          "ms": 690000,
+          "category": "phone",
+          "source": "away"
+        }
+      ]
+    }
+  ]
+}
