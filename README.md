@@ -9,7 +9,10 @@ Netlify Functions plus a Netlify Database, used only for character popularity st
 
 - **Setup:** 1. pick a character, 2. a mode (Simple / Advanced), 3. a focus duration.
   The character decides the personality (see below). Ragebait characters show a warning before
-  they can be selected. Duration presets: 5, 10, 15, 25, 35, 45, 60 and 90 min (`DURATION_PRESETS`
+  they can be selected. Tapping Start session without a character shows "Pick a character first."
+  under the step 1 heading and scrolls back to the top of step 1 (an instant jump instead of a smooth
+  scroll with reduced motion); there is no default character, so picks are only counted on Start.
+  Duration presets: 5, 10, 15, 25, 35, 45, 60 and 90 min (`DURATION_PRESETS`
   in `public/js/app.js`, default 25), plus a custom field. The 5 and 10 min presets make a session
   easy to start for beginners and on hard days. The presets always sit in 2 rows of 4, both on the
   setup screen and in the Start over dialog, and each one is at least 44 px tall. A custom duration

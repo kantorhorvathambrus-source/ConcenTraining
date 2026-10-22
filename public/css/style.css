@@ -99,6 +99,15 @@ h2 {
   margin-bottom: 28px;
 }
 
+/* Start without a character scrolls here (onStartClick); keep a little space above the heading. */
+#characterStep {
+  scroll-margin-top: 16px;
+}
+
+#characterError {
+  margin: 0 0 12px;
+}
+
 /* ---------- buttons ---------- */
 
 button {
