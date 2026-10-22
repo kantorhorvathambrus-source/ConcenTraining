@@ -473,7 +473,7 @@ can be measured over the **last 30 days** and the paid selection rotates as tast
   `20261020120000_add_seven_characters.sql` added Leader, Santa, Study Buddy, Coach, Professor,
   Headmistress and Grandmaster, and `20261020150000_add_four_characters.sql` added Meditation
   Guide, Librarian, Surgeon and Influencer. With 15 characters the paid selection is active: the
-  top 2 by recent taps are marked "(paid)" on `/stats.html`.
+  top 2 by recent picks (**Start session** presses) are marked "(paid)" on `/stats.html`.
 - Settings (30 days, 10 characters, 10%) are constants at the top of `netlify/functions/stats.mjs`.
 
 ## Deploying
@@ -483,9 +483,21 @@ Leave the build command empty; `netlify.toml` already sets the publish directory
 On every push Netlify installs `package.json`, deploys the functions, creates the database on the
 first deploy, and applies new migrations.
 
+**Branches.** The live site deploys only from the `live` branch (Netlify's production branch).
+`main` is the development branch and the target of every pull request:
+
+- Pull requests into `main` get a Deploy Preview for testing.
+- Each push to `main` (for example a merged pull request) updates the branch deploy at
+  https://main--concentraining.netlify.app. This does **not** change the live site.
+- To release, open a pull request from `main` into `live` and merge it with **Create a merge commit**,
+  never **Squash and merge**; that runs the production deploy. Squashing gives `live` a new commit that
+  `main` doesn't have, so the next `main` → `live` pull request shows the old changes again and can
+  conflict.
+
 **Deploy Previews have their own database.** Each Deploy Preview gets its own database branch: a
 separate copy of the live database, made when the preview is created. New migrations run on that
-copy, and taps on the preview are counted only there. The live database only changes when a
-pull request is merged and the production deploy runs. Because the copy starts with the live
-numbers, the preview's `/stats.html` shows real data. Netlify Database needs a credit-based Netlify plan;
+copy, and **Start session** presses on the preview are counted only there. The live database only changes when the
+production deploy runs, i.e. when a `main` → `live` pull request is merged; merging into `main`
+doesn't touch it. Because the copy starts with the live numbers, the preview's `/stats.html`
+shows real data. Netlify Database needs a credit-based Netlify plan;
 if a deploy fails with "database feature not available for this account", the plan is the reason.
