@@ -473,7 +473,7 @@ can be measured over the **last 30 days** and the paid selection rotates as tast
   `20261020120000_add_seven_characters.sql` added Leader, Santa, Study Buddy, Coach, Professor,
   Headmistress and Grandmaster, and `20261020150000_add_four_characters.sql` added Meditation
   Guide, Librarian, Surgeon and Influencer. With 15 characters the paid selection is active: the
-  top 2 by recent taps are marked "(paid)" on `/stats.html`.
+  top 2 by recent picks (**Start session** presses) are marked "(paid)" on `/stats.html`.
 - Settings (30 days, 10 characters, 10%) are constants at the top of `netlify/functions/stats.mjs`.
 
 ## Deploying
