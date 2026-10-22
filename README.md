@@ -483,9 +483,18 @@ Leave the build command empty; `netlify.toml` already sets the publish directory
 On every push Netlify installs `package.json`, deploys the functions, creates the database on the
 first deploy, and applies new migrations.
 
+**Branches.** The live site deploys only from the `live` branch (Netlify's production branch).
+`main` is the development branch and the target of every pull request:
+
+- Pull requests into `main` get a Deploy Preview for testing.
+- Each push to `main` (for example a merged pull request) updates the branch deploy at
+  https://main--concentraining.netlify.app. This does **not** change the live site.
+- To release, open a pull request from `main` into `live` and merge it; that runs the production deploy.
+
 **Deploy Previews have their own database.** Each Deploy Preview gets its own database branch: a
 separate copy of the live database, made when the preview is created. New migrations run on that
-copy, and taps on the preview are counted only there. The live database only changes when a
-pull request is merged and the production deploy runs. Because the copy starts with the live
-numbers, the preview's `/stats.html` shows real data. Netlify Database needs a credit-based Netlify plan;
+copy, and taps on the preview are counted only there. The live database only changes when the
+production deploy runs, i.e. when a `main` → `live` pull request is merged; merging into `main`
+doesn't touch it. Because the copy starts with the live numbers, the preview's `/stats.html`
+shows real data. Netlify Database needs a credit-based Netlify plan;
 if a deploy fails with "database feature not available for this account", the plan is the reason.
