@@ -115,11 +115,12 @@ function countCharacterPick(id) {
 
 // endSound / keepScreenOn: the setup checkboxes. homeScreenTipDismissed: "Got it" was tapped on the
 // iPhone Home Screen tip. persistRequested: persistent storage was asked for (or skipped, in Firefox).
+// howItWorksDismissed: "Got it" was tapped on the How it works card.
 // Prefs saved before any of these existed get these defaults.
 const prefs = Object.assign(
   {
     characterId: null, mode: "simple", minutes: 25, endSound: true, keepScreenOn: true,
-    homeScreenTipDismissed: false, persistRequested: false,
+    homeScreenTipDismissed: false, persistRequested: false, howItWorksDismissed: false,
   },
   load(PREFS_KEY, {}),
 );
@@ -152,7 +153,10 @@ function characterById(id) {
 }
 
 function showScreen(id) {
-  if (id === "setupScreen") updateHomeScreenTip();
+  if (id === "setupScreen") {
+    updateHowItWorks();
+    updateHomeScreenTip();
+  }
   document.querySelectorAll(".screen").forEach((screen) => {
     screen.hidden = screen.id !== id;
   });
@@ -475,6 +479,28 @@ let readSetupMinutes = () => prefs.minutes;
 
 function savePrefs() {
   save(PREFS_KEY, prefs);
+}
+
+// Shown on the setup screen until "Got it" is tapped. The header button brings it back without
+// changing the pref, so after that it only shows again when asked for.
+function updateHowItWorks() {
+  $("#howItWorks").hidden = prefs.howItWorksDismissed;
+}
+
+// Header button: show the card and move focus to its heading, so a screen reader reads it out.
+function openHowItWorks() {
+  $("#howItWorks").hidden = false;
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  $("#howItWorks").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+  $("#howItWorksTitle").focus({ preventScroll: true });
+}
+
+// Focus goes to the header button: the "Got it" button disappears, and that's where the card comes back from.
+function dismissHowItWorks() {
+  prefs.howItWorksDismissed = true;
+  savePrefs();
+  $("#howItWorks").hidden = true;
+  $("#howItWorksLink").focus();
 }
 
 // iPhone/iPad Safari only (see iosSafariNotInstalled in history-store.js), and only once
@@ -1155,6 +1181,8 @@ function init() {
   readSetupMinutes = durationPicker($("#setupDuration"), prefs.minutes);
 
   $("#startButton").addEventListener("click", onStartClick);
+  $("#howItWorksLink").addEventListener("click", openHowItWorks);
+  $("#howItWorksButton").addEventListener("click", dismissHowItWorks);
   $("#homeScreenTipButton").addEventListener("click", dismissHomeScreenTip);
   $("#motivateButton").addEventListener("click", onMotivateClick);
   $("#motivationClose").addEventListener("click", () => ($("#motivationCard").hidden = true));

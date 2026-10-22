@@ -23,8 +23,25 @@
       <header class="app-header">
         <h1>ConcenTraining</h1>
         <p class="muted">Pick a buddy, set a timer, and get focused.</p>
-        <p class="header-link"><a href="history.html">Your history →</a></p>
+        <p class="header-link">
+          <button id="howItWorksLink" type="button" class="text-btn" aria-controls="howItWorks">How it works</button>
+          <span class="header-sep" aria-hidden="true">·</span>
+          <a href="history.html">Your history →</a>
+        </p>
       </header>
+
+      <!-- Shown until "Got it" is tapped, and again from the header button (updateHowItWorks in app.js).
+           Above the Home Screen tip: it's what a first visit needs, the tip only comes once there's history. -->
+      <aside id="howItWorks" class="tip-card how-it-works" aria-labelledby="howItWorksTitle" hidden>
+        <h2 id="howItWorksTitle" tabindex="-1">How it works</h2>
+        <ul>
+          <li>Pick a character and a timer, then start focusing.</li>
+          <li>When you notice your mind has wandered, tap how much (Simple) or how long (Advanced). Your character reacts with a pose, never with words. Noticing and coming back is the skill you're training.</li>
+          <li>If you leave the app during a session, it asks when you're back whether you were distracted.</li>
+          <li>Your history is saved on this device only. To keep a backup, use <a href="history.html#backup">Export on the history page →</a></li>
+        </ul>
+        <button id="howItWorksButton" type="button" class="btn">Got it</button>
+      </aside>
 
       <!-- iPhone/iPad Safari only, once there's history to lose (updateHomeScreenTip in app.js). -->
       <aside id="homeScreenTip" class="tip-card" aria-labelledby="homeScreenTipTitle" hidden>
