@@ -353,11 +353,15 @@ function wakeLockWanted() {
 // Holds the lock while a session is on screen, releases it everywhere else. Called on every
 // screen change, when the page becomes visible again (the browser drops the lock while it's
 // hidden) and on taps during a session (a reload may be refused until the first tap).
-// Unsupported or refused: nothing happens.
+// Unsupported or refused: the session carries on without it (and the note below shows).
 async function updateWakeLock() {
-  if (!("wakeLock" in navigator)) return;
+  if (!("wakeLock" in navigator)) {
+    updateScreenNote();
+    return;
+  }
   if (!wakeLockWanted()) {
     releaseWakeLock();
+    updateScreenNote();
     return;
   }
   if (wakeLock.sentinel || wakeLock.pending) return;
@@ -366,6 +370,7 @@ async function updateWakeLock() {
     const sentinel = await navigator.wakeLock.request("screen");
     sentinel.addEventListener("release", () => {
       if (wakeLock.sentinel === sentinel) wakeLock.sentinel = null;
+      updateScreenNote();
     });
     wakeLock.sentinel = sentinel;
   } catch {
@@ -373,6 +378,23 @@ async function updateWakeLock() {
   }
   wakeLock.pending = false;
   if (!wakeLockWanted()) releaseWakeLock(); // the session ended while the request was out
+  updateScreenNote();
+}
+
+// "Your screen may turn off" note: a turned-off screen pauses the page, so the chime can't play.
+// Shown while a session is on screen with the chime on and the screen lock not held (setting
+// off, unsupported, refused, or released and not taken back). While a request is out, or the
+// page is hidden (the browser drops the lock then), it stays as it is, so it doesn't blink
+// (and move the page) on every tap or return to the page.
+function updateScreenNote() {
+  const note = $("#screenNote");
+  const running = Boolean(session && !session.endedAt && !$("#sessionScreen").hidden);
+  if (!running || !prefs.endSound) {
+    note.hidden = true;
+    return;
+  }
+  if (wakeLock.pending || document.visibilityState !== "visible") return;
+  note.hidden = Boolean(wakeLock.sentinel);
 }
 
 function releaseWakeLock() {

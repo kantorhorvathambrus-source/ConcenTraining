@@ -19,7 +19,8 @@ Netlify Functions plus a Netlify Database, used only for character popularity st
   is corrected as soon as you leave the field: empty becomes 25 min, anything under 1 becomes 1,
   anything over 240 becomes 240.
   Under step 3 there are two checkboxes, both on by default: **Play a sound when time's up** (with a
-  small **Test sound** button that plays the chime once) and **Keep the screen on during the session**.
+  small **Test sound** button that plays the chime once, and a hint under it: "Uses your media volume.
+  On iPhone, silent mode can mute it.") and **Keep the screen on during the session**.
   See "Sound and screen" below.
 - **Simple mode:** 5 severity buttons (very briefly … a whole lot), not time-based.
 - **Advanced mode:** 7 duration buttons (30 sec … 10+ min). Ends with the % of the session spent focusing.
@@ -224,8 +225,15 @@ are in `public/js/data/messages.js`.
   has paused it (after a reload, a phone call, or another app taking over the audio). The chime itself
   also tries to resume paused audio; if that doesn't work within a moment, it's skipped rather than
   played late.
-- **iPhone silent mode:** the Ring/Silent switch (or the Action button set to silent) mutes the chime.
-  This is how iPhones treat web page sounds, and the app doesn't try to get around it.
+- **iPhone silent mode:** silent mode (the Ring/Silent switch, the Action button or Control Center)
+  mutes the chime. This is how iPhones treat web page sounds, and the app doesn't try to get around it.
+  The setup hint under **Test sound** says so. Safari's `navigator.audioSession.type = "playback"`
+  (Safari 16.4+, tells iOS what kind of sound the page makes) would let the chime play in silent
+  mode, but it was left out on purpose: `"playback"` is an exclusive type, so when the page plays a
+  sound iOS pauses other audio (music, podcasts) and doesn't resume it. The silent sample played on
+  the Start tap would stop the user's music, and switching only for the chime would stop it at the
+  end. The mixing types (`"ambient"`, `"transient"`) don't reliably play in silent mode, and none of
+  it helps when the screen is locked.
 - **Background tab on a computer:** browsers slow down timers in hidden tabs, so the chime can come
   late: in Chrome and Edge up to about 1 minute (once the tab has been hidden for 5+ minutes), in
   Firefox and Safari usually about 1 second. While the computer is asleep nothing runs; waking it
@@ -238,6 +246,15 @@ are in `public/js/data/messages.js`.
   the browser may refuse it until the first tap, so taps during a session ask again. Browsers without
   support (or a refused request, e.g. in battery saver mode) just carry on without it. Needs HTTPS,
   so it doesn't work when `index.html` is opened as a local file.
+- **"Your screen may turn off" note:** while a session is on screen with **Play a sound when time's
+  up** on, but the screen isn't being kept on (the setting is off, the browser doesn't support Screen
+  Wake Lock, the request was refused, or the browser released the lock and getting it again failed),
+  a small muted line under the session info says: "Your screen may turn off. If it does, you won't
+  hear the chime." It's in the page flow, so it never covers the character, the timer or the buttons.
+  It disappears as soon as the lock is held (e.g. after the first tap following a reload). It's never
+  shown with the sound off, or on the setup and summary screens. While a lock request is out, or the
+  page is hidden, it stays as it is, so it doesn't blink on every tap or return (`updateScreenNote()`
+  in `public/js/app.js`).
 
 ## Personalities
 
@@ -543,7 +560,7 @@ once with a decent connection fixes it, because every online start refreshes all
 | `public/js/data/characters.js` | Character list, groups and the personality each group gives (`personalityOf`), art paths |
 | `public/js/data/messages.js` | Motivation messages, summary titles and Simple-mode summary messages per result |
 | `public/js/placeholder-art.js` | Built-in placeholder drawings (kind, firm, strict and ragebait faces, plus each character's look) for characters without real art |
-| `public/js/app.js` | Timer, reaction engine, distraction category picker, Undo, disabled Advanced lengths, time away card, motivation rotation, end chime, screen wake lock, summary, iPhone Home Screen tip, persistent storage request |
+| `public/js/app.js` | Timer, reaction engine, distraction category picker, Undo, disabled Advanced lengths, time away card, motivation rotation, end chime, screen wake lock and the "screen may turn off" note, summary, iPhone Home Screen tip, persistent storage request |
 | `public/js/history-store.js` | Saving/loading history, focus % and summary result (with their thresholds), distraction categories, export/import checks, iPhone Safari check (used by both pages) |
 | `public/js/history.js` | Streaks, weekly chart, time of day, distraction categories, session list and backup buttons on `history.html` |
 | `netlify/functions/picks.mjs` | `POST /api/picks`: counts one session started with a character |
