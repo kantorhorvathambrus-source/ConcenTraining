@@ -9,7 +9,9 @@ Netlify Functions plus a Netlify Database, used only for character popularity st
 
 - **Setup:** 1. pick a character, 2. a mode (Simple / Advanced), 3. a focus duration.
   The character decides the personality (see below). Ragebait characters show a warning before
-  they can be selected. Tapping Start session without a character shows "Pick a character first."
+  they can be selected. Selecting a card only updates which card is pressed (`aria-pressed`), so
+  keyboard and screen reader focus stays on it, also after the ragebait warning (**Bring it on** or
+  **Pick someone else**). Tapping Start session without a character shows "Pick a character first."
   under the step 1 heading and scrolls back to the top of step 1 (an instant jump instead of a smooth
   scroll with reduced motion); there is no default character, so picks are only counted on Start.
   Duration presets: 5, 10, 15, 25, 35, 45, 60 and 90 min (`DURATION_PRESETS`
@@ -47,8 +49,10 @@ Netlify Functions plus a Netlify Database, used only for character popularity st
   nothing is tapped (e.g. the phone was put down), it closes silently after 60 s
   (`PICKER_AUTO_CLOSE_MS`), also with `null`, so it doesn't stay up for the rest of the session
   (both constants are at the top of `public/js/app.js`). Tapping another distraction button replaces
-  the picker (the earlier distraction keeps `null`); **Undo**, **End session** and the timer running
-  out close it. On small phones the open picker covers some of the distraction buttons (never the
+  the picker (the earlier distraction keeps `null`); **Undo**, ending the session and the timer running
+  out close it. Tapping **End session** only pauses it: it waits behind the question with its 60 s
+  stopped, so its safety close can't open the continue/restart question on top of it. After **Keep
+  going** it's back with the time it had left, or closes then if its 60 s would have run out meanwhile. On small phones the open picker covers some of the distraction buttons (never the
   character or the timer); tap a category or Skip first, or scroll down, to log another one.
 - **"A whole lot" / "10+ min"** asks: continue this session, or start over with a new duration.
   The category picker, the Undo window and the time away card come first: the dialog opens once the
@@ -263,10 +267,15 @@ personality, in one place (`GROUPS` and `personalityOf()`). A new character only
 
 | Group | Personality | How it reacts |
 |---|---|---|
-| `relaxed` (Grandma, Leader, Santa, Study Buddy, Coach, Meditation Guide) | `kind` | Happy you're back, cheers you on. Hops. |
+| `relaxed` (Grandma, Leader, Santa, Study Buddy, Coach, Meditation Guide), label "Relaxed" | `kind` | Happy you're back, cheers you on. Hops. |
 | `firm` (Professor, Librarian, Surgeon), label "Firm but fair" | `firm` | Patient, but expects your best. Never shouts or gets angry: disappointment instead. One slow, calm lean (never shakes); a small nod when you do well. |
 | `strict` (Boss, Soldier, Headmistress, Grandmaster) | `strict` | Stern when you drift off, angrier each level. Shakes. |
 | `ragebait` (Bodybuilder, Influencer) | `ragebait` | Annoying on purpose: mocking, more insulting each level. Cheeky head tilt. |
+
+The app always shows the group's label ("Relaxed", "Firm but fair", "Strict", "Ragebait"): on the
+character cards, in the session info line and in the history list. The personality (`kind`, `firm`, ...)
+is only what's saved. The history list finds the label from the saved `style` (`styleLabel()` in
+`characters.js`), so an old entry shows the personality it actually ran with (a strict Grandma: "Strict").
 
 The picker lists the characters in group order: relaxed, firm, strict, ragebait (the order of
 `CHARACTERS` in `characters.js`).
@@ -345,7 +354,7 @@ appear in the list as "—", but are left out of the trend and time-of-day numbe
 
 Each history entry: `startedAt`, `endedAt` (timestamps in ms), `endedBy` (`"timer"`/`"manual"`/`"startOver"`),
 `characterId`, `style` (the character's personality when the session ran: `"kind"`, `"firm"`,
-`"strict"` or `"ragebait"`), `mode`, `plannedMs`, `elapsedMs`, `distractedMs`, `focusPercent`
+`"strict"` or `"ragebait"`; shown as its group label, e.g. "Relaxed" for `"kind"`), `mode`, `plannedMs`, `elapsedMs`, `distractedMs`, `focusPercent`
 (`null` in Simple mode) and `distractions` (`[{ at, level, ms, category }]`). `category` is
 `"phone"` (shown as "Screen": the phone, other apps or tabs; also what the time away card sets), `"thoughts"`, `"noise"`,
 `"people"`, `"tired"`, `"other"` or `null` (nothing picked). A distraction logged from the time away

@@ -305,7 +305,7 @@ function renderSessionList(history) {
       </div>
       <div class="session-item-focus"></div>`;
     item.querySelector("strong").textContent = characterName(entry.characterId);
-    item.querySelector(".session-item-mode").textContent = `${capitalize(entry.mode)} · ${capitalize(entry.style)}`;
+    item.querySelector(".session-item-mode").textContent = `${capitalize(entry.mode)} · ${styleLabel(entry.style)}`;
     if (entry.endedBy === "startOver") {
       const tag = document.createElement("span");
       tag.className = "session-tag";
