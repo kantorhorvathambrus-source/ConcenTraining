@@ -32,6 +32,13 @@ function personalityOf(character) {
   return group ? group.personality : "kind";
 }
 
+// What the user sees for a saved style: its group's label ("kind" -> "Relaxed"). Old history
+// entries keep the style they ran with, so this goes by the style, not the character's group.
+function styleLabel(style) {
+  const group = Object.values(GROUPS).find((g) => g.personality === style);
+  return group ? group.label : style;
+}
+
 // Ordered by group: relaxed, firm, strict, ragebait (the picker shows them in this order).
 const CHARACTERS = [
   {

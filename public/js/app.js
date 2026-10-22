@@ -135,7 +135,8 @@ let nextGoodAt = 0;
 // distraction: the one the open (or about to open) picker belongs to.
 // If session.restartPending is set, the continue/restart dialog opens as soon as
 // the picker is closed and the Undo window is over. They never show at the same time.
-const picker = { distraction: null, showTimer: 0, hideTimer: 0 };
+// closesAt: when the open picker's safety close (PICKER_AUTO_CLOSE_MS) is due.
+const picker = { distraction: null, showTimer: 0, hideTimer: 0, closesAt: 0 };
 // distraction: the latest one, while its Undo window is open. prevNextGoodAt: nextGoodAt
 // before that tap. setRestart: that tap set session.restartPending (it wasn't set before).
 const undo = { distraction: null, prevNextGoodAt: 0, setRestart: false, timer: 0 };
@@ -496,6 +497,7 @@ function renderCharacterList() {
     const card = document.createElement("button");
     card.type = "button";
     card.className = "char-card";
+    card.dataset.id = character.id;
     card.setAttribute("aria-pressed", String(prefs.characterId === character.id));
     card.innerHTML = `
       <img alt="">
@@ -508,6 +510,14 @@ function renderCharacterList() {
   }
 }
 
+// Updates the selection in place: rebuilding the cards would move keyboard and screen reader
+// focus away from the card that was just tapped.
+function updateCharacterCards() {
+  $("#characterList").querySelectorAll(".char-card").forEach((card) => {
+    card.setAttribute("aria-pressed", String(card.dataset.id === prefs.characterId));
+  });
+}
+
 async function onCharacterTap(character) {
   if (character.group === "ragebait" && prefs.characterId !== character.id) {
     $("#ragebaitText").textContent = `${character.name}: ${GROUPS.ragebait.warning}`;
@@ -517,7 +527,7 @@ async function onCharacterTap(character) {
   prefs.characterId = character.id;
   savePrefs();
   $("#characterError").hidden = true;
-  renderCharacterList();
+  updateCharacterCards();
 }
 
 function bindChoiceGroups() {
@@ -587,7 +597,7 @@ function enterSession() {
   const options = session.mode === "advanced" ? ADVANCED_OPTIONS : SIMPLE_OPTIONS;
 
   $("#sessionInfo").textContent =
-    `${character.name} · ${capitalize(session.style)} · ${capitalize(session.mode)} · ${Math.round(session.durationMs / MIN)} min`;
+    `${character.name} · ${styleLabel(session.style)} · ${capitalize(session.mode)} · ${Math.round(session.durationMs / MIN)} min`;
   $("#distractionPrompt").textContent =
     session.mode === "advanced" ? "Got distracted? For how long?" : "Got distracted? How much?";
 
@@ -736,10 +746,31 @@ function buildCategoryButtons() {
 function schedulePicker(distraction) {
   closePicker(false);
   picker.distraction = distraction;
-  picker.showTimer = setTimeout(() => {
-    $("#categoryPicker").hidden = false;
-    picker.hideTimer = setTimeout(() => closePicker(true), PICKER_AUTO_CLOSE_MS);
-  }, PICKER_DELAY_MS);
+  picker.showTimer = setTimeout(() => showPicker(PICKER_AUTO_CLOSE_MS), PICKER_DELAY_MS);
+}
+
+function showPicker(closeInMs) {
+  $("#categoryPicker").hidden = false;
+  picker.closesAt = Date.now() + closeInMs;
+  picker.hideTimer = setTimeout(() => closePicker(true), closeInMs);
+}
+
+// While End session's question is open, the picker's timers are stopped: its safety close
+// would ask a waiting continue/restart question, which must not open on top of that dialog.
+// The picker stays (behind the dialog, where it can't be tapped) and keeps its distraction,
+// so a waiting continue/restart question keeps waiting for it, as before.
+function pausePicker() {
+  clearTimeout(picker.showTimer);
+  clearTimeout(picker.hideTimer);
+}
+
+// After Keep going: the picker is back as it was, with the time it had left. If its safety
+// close would have happened in the meantime, it closes now instead (category stays null).
+function resumePicker() {
+  if (!picker.distraction || !session || session.endedAt) return;
+  if ($("#categoryPicker").hidden) showPicker(PICKER_AUTO_CLOSE_MS); // End was tapped before it appeared
+  else if (Date.now() >= picker.closesAt) closePicker(false);
+  else showPicker(picker.closesAt - Date.now());
 }
 
 function pickCategory(id) {
@@ -803,8 +834,8 @@ async function askContinueOrRestart() {
 }
 
 async function onEndClick() {
-  // No picker behind this dialog, and a waiting restart question waits until it's answered.
-  closePicker(false);
+  // The picker waits behind this dialog, and a waiting restart question waits until it's answered.
+  pausePicker();
   // "Save this session to your history": only offered when it could be saved at all
   // (same 1-minute rule as saving). Ticked every time the dialog opens, never remembered.
   const canSave = Date.now() - session.startedAt >= HISTORY_MIN_MS;
@@ -813,6 +844,7 @@ async function onEndClick() {
   if ((await ask($("#endDialog"))) === "end" && session && !session.endedAt) {
     finishSession(Date.now(), !canSave || $("#endSave").checked);
   } else {
+    resumePicker();
     askPendingAway();
     askPendingRestart();
   }
