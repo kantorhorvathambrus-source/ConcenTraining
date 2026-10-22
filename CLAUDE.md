@@ -21,6 +21,7 @@
 - UI text is in English.
 - Don't break existing localStorage keys (ct_session_v1, ct_prefs_v1, the history key). Old saved data must keep working.
 - Never invent data: if a value can't be measured (e.g. focus % in Simple mode), store null instead of estimating.
+- Offline: whenever a file in public/ that the app needs at startup (a page, CSS, JS, manifest, icon, favicon) is added, removed or renamed, update the PRECACHE list in public/sw.js and raise CACHE_VERSION in the same change.
 
 ## Communication
 - I'm not a professional developer. When you use a technical term or tool, explain it in one sentence.

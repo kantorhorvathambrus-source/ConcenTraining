@@ -3,3 +3,10 @@
 # and applies database migrations from netlify/database/migrations/.
 [build]
   publish = "public"
+
+# The service worker (public/sw.js) must never be kept in a cache: the browser checks it with the
+# server on every visit, so a new version of the app's offline support is picked up right away.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
