@@ -72,6 +72,7 @@
           </label>
           <button id="testSoundButton" type="button" class="btn test-sound">Test sound</button>
         </div>
+        <p class="setting-hint muted">Uses your media volume. On iPhone, silent mode can mute it.</p>
         <label class="check-row">
           <input id="keepScreenOnCheck" type="checkbox" data-pref="keepScreenOn">
           <span>Keep the screen on during the session</span>
@@ -84,6 +85,8 @@
     <!-- ========== SESSION ========== -->
     <section id="sessionScreen" class="screen" hidden>
       <p id="sessionInfo" class="session-info muted"></p>
+      <!-- Shown while the chime is on but the screen isn't being kept on (updateScreenNote in app.js). -->
+      <p id="screenNote" class="screen-note muted" role="status" hidden>Your screen may turn off. If it does, you won't hear the chime.</p>
 
       <div id="sessionStage" class="stage">
         <img id="sessionImg" class="char-img" alt="">

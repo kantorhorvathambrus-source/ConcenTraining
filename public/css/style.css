@@ -322,6 +322,14 @@ input:focus-visible {
   text-wrap: balance; /* if it wraps, two even lines instead of "min" alone */
 }
 
+/* In the page flow (not on top), so it never covers the character, timer or buttons. */
+.screen-note {
+  text-align: center;
+  font-size: 0.85rem;
+  margin: -4px 0 8px;
+  text-wrap: balance;
+}
+
 .stage {
   display: flex;
   justify-content: center;
@@ -842,6 +850,12 @@ dialog .check-row {
 .btn.test-sound {
   flex-shrink: 0;
   padding: 7px 12px;
+  font-size: 0.85rem;
+}
+
+/* Lined up with the checkbox text: checkbox width + gap. */
+.setting-hint {
+  margin: 0 0 6px 30px;
   font-size: 0.85rem;
 }
 
