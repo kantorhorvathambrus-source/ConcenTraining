@@ -40,7 +40,7 @@ Netlify Functions plus a Netlify Database, used only for character popularity st
   distraction and starts the 5 s again. After a reload there's no Undo.
 - **Distraction categories:** after each distraction button, once the reaction has played (1.4 s,
   `PICKER_DELAY_MS`), a small picker appears above the bottom buttons: "What distracted you?" with
-  Phone / apps, Thoughts, Noise, People, Tired, Other, and a grey **Skip** button on the right. There's no
+  Screen, Thoughts, Noise, People, Tired, Other, and a grey **Skip** button on the right. There's no
   countdown: it stays open until a category or Skip is tapped. A tapped category is saved with the
   distraction; Skip saves `category: null` (a category is never guessed). As a safety net, if
   nothing is tapped (e.g. the phone was put down), it closes silently after 60 s
@@ -94,7 +94,8 @@ Netlify Functions plus a Netlify Database, used only for character popularity st
       | 5 min to 10 min (exactly 10:00 included) | 4 | 5 min, 10 min |
       | over 10 min | 5, plus the continue/restart question | 10+ min |
 
-    - The category is set to `"phone"` (shown as "Phone / apps"), with no category picker.
+    - The category is set to `"phone"` (shown as "Screen": the phone, other apps or other tabs,
+      online or offline), with no category picker.
     - It's marked `source: "away"`, so it can be told apart from a tapped one (those have no
       `source` field).
     - Everything else works like a tap: reaction, refocus pose, Undo for 5 s, and for level 5 the
@@ -149,7 +150,7 @@ Netlify Functions plus a Netlify Database, used only for character popularity st
   summary image and taller phones keep the normal size. Advanced labels like "10+ min" stay on one line.
 - **Summary screen:** the character's pose, the title and the message follow how the session went
   (see "Summary result" below). It also shows the session's top 3 picked categories, e.g.
-  "Most common distractions: Phone / apps (2), Thoughts (1)". Hidden if nothing was picked.
+  "Most common distractions: Screen (2), Thoughts (1)". Hidden if nothing was picked.
   Times are shown with seconds when there are any ("24 min 30 sec out of 25 min").
   In Advanced mode, a session ended before the timer ran out also shows its planned length:
   "You focused for 28 min out of 30 min (60 min planned), with 2 distractions logged." A session
@@ -329,7 +330,7 @@ Each history entry: `startedAt`, `endedAt` (timestamps in ms), `endedBy` (`"time
 `characterId`, `style` (the character's personality when the session ran: `"kind"`, `"firm"`,
 `"strict"` or `"ragebait"`), `mode`, `plannedMs`, `elapsedMs`, `distractedMs`, `focusPercent`
 (`null` in Simple mode) and `distractions` (`[{ at, level, ms, category }]`). `category` is
-`"phone"` (shown as "Phone / apps"; also what the time away card sets), `"thoughts"`, `"noise"`,
+`"phone"` (shown as "Screen": the phone, other apps or tabs; also what the time away card sets), `"thoughts"`, `"noise"`,
 `"people"`, `"tired"`, `"other"` or `null` (nothing picked). A distraction logged from the time away
 card also has `source: "away"`; tapped ones have no `source` field.
 Sessions saved before categories existed have no `category` field; everything that reads it treats

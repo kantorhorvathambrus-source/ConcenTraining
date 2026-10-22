@@ -74,7 +74,7 @@ function awayLevel(ms) {
 // What caused a distraction. The id is what's saved; the label is what's shown.
 // A distraction without a picked category is saved with category: null.
 const DISTRACTION_CATEGORIES = [
-  { id: "phone", label: "Phone / apps" }, // also set by the time away card
+  { id: "phone", label: "Screen" }, // phone, other apps or tabs; also set by the time away card
   { id: "thoughts", label: "Thoughts" },
   { id: "noise", label: "Noise" },
   { id: "people", label: "People" },

@@ -865,7 +865,7 @@ function onAwayClosed() {
 
 // "Yes" logs the measured time away: at is the moment the page was left, the level comes
 // from the length (awayLevel in history-store.js), and Advanced mode saves the length itself
-// (Simple mode has no lengths: ms 0). The category is "phone" ("Phone / apps") and there's no
+// (Simple mode has no lengths: ms 0). The category is "phone" (shown as "Screen") and there's no
 // picker. Reaction, Undo and the level 5 continue/restart question work as for a tap. If only
 // part of it was a distraction, Undo it and log that part by hand.
 function logAwayDistraction(from, ms) {
