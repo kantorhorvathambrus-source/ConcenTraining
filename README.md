@@ -407,6 +407,72 @@ doesn't do this.
 - If the session fields ever change again, raise `EXPORT_VERSION` in `public/js/history-store.js`,
   add the new number to `IMPORT_VERSIONS`, and teach the import how to read the older files.
 
+## Offline use
+
+Once the app has been opened online, it also opens and works **without internet**: the setup
+screen, a full session, the summary and `history.html`. This is done by a **service worker**
+(`public/sw.js`): a small script the browser installs for the site, which sits between the pages
+and the network and can answer from saved copies when the network is down. It's registered by
+`public/js/sw-register.js`, loaded at the end of `index.html` and `history.html`. In a browser
+without service workers, or if registering fails (e.g. `index.html` opened as a local file), the app
+works online exactly as before.
+
+- **First online visit (install):** the service worker downloads every file needed to start a
+  session (the `PRECACHE` list in `sw.js`: both pages, CSS, all JS, manifest, icons, favicon) into a
+  cache named `concentraining-v<CACHE_VERSION>`. If any file fails, nothing is saved and it tries
+  again on a later visit. `stats.html` is left out: it needs `/api/stats` anyway.
+- **Network first:** every same-origin `GET` first tries the network. A good answer is used and its
+  copy saved, so **online you always get the newest version**. A forgotten version bump can't
+  leave anyone on an old app. The saved copy is used when the network fails (offline) or hasn't
+  answered within **3 seconds** (a very weak signal), so the page doesn't hang. The network request
+  keeps going in the background and still refreshes the saved copy. A file that was never saved
+  keeps waiting for the network.
+- **One address per page:** Netlify's Pretty URLs can serve `history.html` as `/history` (redirecting
+  `/history.html` there and rewriting links to it). The service worker saves and looks up every copy
+  under one address (`cacheKey` in `sw.js`): `/index.html` → `/`, `/history` → `/history.html`, and the
+  `?query` is ignored. So the history page opens offline whichever address is used, even if it was
+  never opened online. Redirect responses themselves are never saved; a page reached through one is
+  saved without the redirect, because Chrome won't show a redirected response as a page.
+- **Never handled by the service worker:** `/api/*` and `/.netlify/*`, anything that isn't `GET`
+  (so `POST /api/picks` goes straight to the network: a pick sent offline is simply lost, as
+  before), other sites, and `Range` requests.
+- **Updates:** the browser checks `sw.js` on every visit (`netlify.toml` sends it with
+  `Cache-Control: no-cache`). A changed `sw.js` installs in the background, then takes over at once
+  (`skipWaiting` + `clients.claim`) and deletes the older `concentraining-` caches. **It never
+  reloads or interrupts an open page:** a running session keeps the code it started with, and the
+  new version shows up the next time the app is opened or reloaded. A reload during a session
+  still resumes it from `ct_session_v1`. No localStorage key changed for offline use.
+- **Real character artwork** (`public/assets/...`) isn't in the precache list. Each image is saved
+  the first time it loads online and is available offline after that.
+- **When you add, remove or rename a file the app needs at startup** (a page, CSS, a JS file, an
+  icon), update `PRECACHE` in `public/sw.js` and raise `CACHE_VERSION`. Forgetting doesn't break
+  the online app, but a new file wouldn't work offline until it has been loaded online once, and a
+  removed one would make the install fail (no offline support at all) until the list is fixed.
+- **Deploy Previews** are separate sites (own address), so they have their own service worker and
+  cache, apart from `main` and the live site. Netlify's preview toolbar doesn't load offline; that's
+  expected.
+
+### Mixed versions (old and new files together)
+
+Because each file is fetched on its own, a weak signal right after a new deploy could in theory
+give a page a new `app.js` from the network but an old `history-store.js` from the cache. The
+service worker guards against the common cases:
+
+- **The page came from the cache** (offline, or no answer within 3 seconds): all of that page's
+  files come from the cache too, even if the network would answer them quickly. So an old page
+  always runs with its old files.
+- **The page came from the network:** the connection works, so its files get **10 seconds**
+  (instead of 3) before the saved copy is used.
+
+What's left is rare: the page arrives over the network, then the connection drops completely (or
+a file takes over 10 seconds) in the second or two the other files load, **and** there was a new
+deploy since this phone last opened the app online. A similar case: the connection drops in the
+middle of an online start, so only some saved copies get refreshed, and a later offline start
+combines them. If it happens, it depends on what changed: usually nothing visible; at worst a
+JavaScript error, so the app doesn't start properly or a button doesn't work. Saved data is safe
+(the localStorage keys never change, and older code ignores fields it doesn't know). Reloading
+once with a decent connection fixes it, because every online start refreshes all the files.
+
 ## Files
 
 | File | What's in it |
@@ -414,6 +480,8 @@ doesn't do this.
 | `public/index.html` | All screens (setup, session, summary) and dialogs |
 | `public/history.html` | Your finished sessions, streaks and focus trends |
 | `public/stats.html` | Popularity table (reads `/api/stats`) |
+| `public/sw.js` | Service worker: offline start, network first with a 3-second fallback to the cache, precache list and cache version (see [Offline use](#offline-use)) |
+| `public/js/sw-register.js` | Registers `sw.js` from `index.html` and `history.html`; does nothing without service worker support |
 | `public/css/style.css` | Styling, light/dark mode, breathing and reaction animations |
 | `public/js/data/characters.js` | Character list, groups and the personality each group gives (`personalityOf`), art paths |
 | `public/js/data/messages.js` | Motivation messages, summary titles and Simple-mode summary messages per result |
@@ -428,7 +496,7 @@ doesn't do this.
 | `public/manifest.webmanifest` | Web app manifest: name, colors and icons for Add to Home Screen / Install |
 | `public/icons/` | Placeholder app icons: `icon.svg` and `icon-small.svg` (sources) and the PNGs rendered from them (Home Screen, Android, maskable) |
 | `public/favicon.ico` | Browser tab icon (placeholder) |
-| `netlify.toml` | Tells Netlify the site is in `public/` |
+| `netlify.toml` | Tells Netlify the site is in `public/`, and sends `sw.js` with `Cache-Control: no-cache` |
 | `package.json` | The one dependency the functions need (`@netlify/database`) |
 
 ## Adding real character artwork
