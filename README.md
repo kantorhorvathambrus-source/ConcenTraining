@@ -50,9 +50,9 @@ Netlify Functions plus a Netlify Database, used only for character popularity st
   out close it. On small phones the open picker covers some of the distraction buttons (never the
   character or the timer); tap a category or Skip first, or scroll down, to log another one.
 - **"A whole lot" / "10+ min"** asks: continue this session, or start over with a new duration.
-  The category picker and the Undo window come first: the dialog opens once the picker has closed
-  (category picked, Skip, or the 60 s safety close) and the 5 s Undo window is over, so they never
-  show at the same time. Undoing the tap means no question
+  The category picker, the Undo window and the time away card come first: the dialog opens once the
+  picker has closed (category picked, Skip, or the 60 s safety close), the 5 s Undo window is over and
+  the time away card (see below) has been answered, so they never show at the same time. Undoing the tap means no question
   (an earlier "10+ min" / "A whole lot" that wasn't undone still asks, right after the Undo). The
   question is saved with the running session (`restartPending`) as soon as the button is tapped, so if
   the page is reloaded before it's answered, it's asked right after the reload.
@@ -71,6 +71,36 @@ Netlify Functions plus a Netlify Database, used only for character popularity st
   The setup keeps the last character, mode and length. Under 1 minute there's no checkbox (nothing is
   saved anyway, and the summary is shown as before). If the timer runs out while the dialog is open,
   the session is saved as a full session.
+- **Time away:** if the page is hidden during a running session (another app, another tab, or a
+  locked screen; the browser can't tell these apart, so the wording stays neutral) and you come back
+  after at least 15 s (`AWAY_ASK_AFTER_MS` in `public/js/app.js`), a card at the bottom of the screen
+  asks "You were away for 2 min 15 sec. Were you distracted?" (measured to the second). Under 15 s
+  nothing happens. Nothing is ever logged without a tap.
+  - While the card is open, the character holds its `level1` pose (no blinking, no "doing well"
+    pose) and shows no text.
+  - **No, it was for the task** (or Esc) closes it and logs nothing.
+  - **Yes**, Advanced mode: "For how long?" with the 7 length buttons, the same ones disabled as on
+    the session screen. The allowed length closest to the time away is highlighted and focused (a tie
+    goes to the shorter one; more than 10 min away means "10+ min" when it's allowed). Tap it to
+    confirm, or tap another length.
+  - **Yes**, Simple mode: "How much?" with the 5 usual buttons, nothing preselected.
+  - One tap logs it exactly like a tap on the session screen: same saved distraction, reaction,
+    refocus pose, category picker, Undo, and the continue/restart question after "10+ min" /
+    "A whole lot". **Cancel** closes the card and logs nothing.
+  - The timer check comes first: if the session ran out while you were away, the end (summary, or the
+    "Welcome back" question) happens as before and there's no card. If it runs out while the card is
+    open, the card closes and nothing is logged.
+  - If End session's question or the continue/restart question was open when you left, it stays and
+    comes first; the card follows after **Keep going** / **Continue** (and is dropped after **End
+    session** or **Start over**). An open category picker stays as it was. An open Undo window is
+    closed on return (its 5 s are long over).
+  - Leaving again while the card is open: an absence of 15 s or more is added to the time, and the
+    card goes back to its first question with the new total; a shorter one changes nothing.
+  - The time you left is saved with the running session (`leftAt` in `ct_session_v1`) and cleared on
+    return, so the card still comes after a reload, e.g. when Android discarded the tab in the
+    background. If the card was open or waiting when you left, its time is counted in. A reload while
+    the card is on screen (without leaving again) drops it. `leftAt` never goes into the history or the
+    export file.
 - **Reactions:** each button maps to one of the 5 distraction poses. The character also blinks,
   "breathes", and shows the "doing well" pose after every 5 minutes without a logged distraction.
   It plays for 3 s (`GOOD_REACTION_MS` in `public/js/app.js`) and isn't started when less than that
@@ -160,7 +190,7 @@ are in `public/js/data/messages.js`.
     and goes back to the setup screen. Esc doesn't answer it, and if the page is closed before
     answering, the question comes back next time.
   - Both cases work the same in Simple and Advanced mode. A continue/restart question that was
-    still waiting is dropped, as before.
+    still waiting is dropped, as before, and so is the time away card.
   - Neither case plays the end chime (see below).
 
 ### Sound and screen
@@ -276,7 +306,7 @@ appear in the list as "—", but are left out of the trend and time-of-day numbe
 
 | Key | What's in it |
 |---|---|
-| `ct_session_v1` | The session that's running right now (removed when it ends). `restartPending: true` while the continue/restart question is unanswered; older saved sessions don't have it, which means `false` |
+| `ct_session_v1` | The session that's running right now (removed when it ends). `restartPending: true` while the continue/restart question is unanswered; older saved sessions don't have it, which means `false`. `leftAt` (timestamp in ms): only while the page is hidden, for the time away card; missing means the page wasn't left. Never copied into the history |
 | `ct_history_v1` | Finished sessions, newest first, max. 1000 |
 | `ct_prefs_v1` | Last chosen character, mode and duration, plus `endSound` and `keepScreenOn` (the two setup checkboxes, `true`/`false`). Prefs saved before these existed get `true` for both. `homeScreenTipDismissed`: `true` once **Got it** was tapped on the iPhone Home Screen tip. `persistRequested`: `true` once persistent storage was asked for (or skipped in Firefox), see [iPhone storage and the Home Screen app](#iphone-storage-and-the-home-screen-app). Prefs saved before these two existed get `false` for both. A `style` value saved by older versions is ignored and dropped |
 
@@ -486,7 +516,7 @@ once with a decent connection fixes it, because every online start refreshes all
 | `public/js/data/characters.js` | Character list, groups and the personality each group gives (`personalityOf`), art paths |
 | `public/js/data/messages.js` | Motivation messages, summary titles and Simple-mode summary messages per result |
 | `public/js/placeholder-art.js` | Built-in placeholder drawings (kind, firm, strict and ragebait faces, plus each character's look) for characters without real art |
-| `public/js/app.js` | Timer, reaction engine, distraction category picker, Undo, disabled Advanced lengths, motivation rotation, end chime, screen wake lock, summary, iPhone Home Screen tip, persistent storage request |
+| `public/js/app.js` | Timer, reaction engine, distraction category picker, Undo, disabled Advanced lengths, time away card, motivation rotation, end chime, screen wake lock, summary, iPhone Home Screen tip, persistent storage request |
 | `public/js/history-store.js` | Saving/loading history, focus % and summary result (with their thresholds), distraction categories, export/import checks, iPhone Safari check (used by both pages) |
 | `public/js/history.js` | Streaks, weekly chart, time of day, distraction categories, session list and backup buttons on `history.html` |
 | `netlify/functions/picks.mjs` | `POST /api/picks`: counts one session started with a character |
