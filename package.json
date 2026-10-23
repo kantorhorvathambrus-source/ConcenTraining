@@ -3,6 +3,6 @@
   "private": true,
   "description": "Focus timer with reacting characters. Static site in public/, Netlify Functions in netlify/functions/.",
   "dependencies": {
-    "@netlify/database": "^2.0.1"
+    "@netlify/blobs": "^11.1.6"
   }
 }

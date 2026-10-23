@@ -2,7 +2,7 @@
 
 ## Stack
 - Plain HTML, CSS and vanilla JS. No frameworks, no build step, no npm toolchain for the frontend.
-- The website is the public/ folder. Backend: Netlify Functions in netlify/functions/ and Netlify Database migrations in netlify/database/migrations/.
+- The website is the public/ folder. Backend: Netlify Functions in netlify/functions/ (shared code in netlify/lib/). They store the character pick counts in Netlify Blobs: picks-live for the production deploy, picks-test for Deploy Previews, the main branch deploy and netlify dev.
 - Hosted on Netlify (project "concentraining"). The production branch is `live`: Netlify deploys the live site only from `live`.
 - main is the development branch. Pushes to main create a free branch deploy at https://main--concentraining.netlify.app, and pull requests into main get free Deploy Previews.
 - The owner moves changes from main to live with a main → live pull request.
@@ -28,9 +28,11 @@
 - UI text is in English.
 - Don't break existing localStorage keys (ct_session_v1, ct_prefs_v1, the history key). Old saved data must keep working.
 - Never invent data: if a value can't be measured (e.g. focus % in Simple mode), store null instead of estimating.
+- New character: besides public/js/data/characters.js, add it with the same id and name to CHARACTERS in netlify/lib/characters.mjs. Only ids listed there are counted and shown on stats.html.
 - Offline: whenever a file in public/ that the app needs at startup (a page, CSS, JS, manifest, icon, favicon) is added, removed or renamed, update the PRECACHE list in public/sw.js and raise CACHE_VERSION in the same change.
 
 ## Communication
 - I'm not a professional developer. When you use a technical term or tool, explain it in one sentence.
 - Show me the plan first for any feature, and wait for my "go".
 - Update the README when behaviour changes.
+- Reply in English. Code, comments, commit messages, PR descriptions and the README stay in English.

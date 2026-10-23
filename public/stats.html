@@ -20,8 +20,10 @@
     <header class="app-header">
       <h1>Character stats</h1>
       <p class="muted">How many sessions were started with each character.</p>
-      <p class="muted">Counts before 21 October 2026 were taps on the character cards.</p>
+      <p class="muted">Counts start from the switch to the new storage in November 2026.</p>
     </header>
+
+    <p id="storeNote" class="muted" hidden></p>
 
     <p id="statsStatus" class="muted">Loading…</p>
 
@@ -49,6 +51,15 @@
         const response = await fetch("api/stats");
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const stats = await response.json();
+
+        // Which counts these are: the live site's, or the separate test counts of Deploy Previews
+        // and the main branch deploy.
+        const storeNote = document.getElementById("storeNote");
+        storeNote.textContent =
+          stats.store === "live"
+            ? "Reading the live counts (the production site)."
+            : "Reading the test counts (Deploy Previews and the main branch deploy), not the live numbers.";
+        storeNote.hidden = false;
 
         document.getElementById("recentHeader").textContent = `Last ${stats.recentDays} days`;
         const body = document.querySelector("#statsTable tbody");

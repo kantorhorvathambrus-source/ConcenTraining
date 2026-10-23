@@ -3,7 +3,7 @@
 A focus/study timer where a character reacts when you log a distraction.
 Plain HTML, CSS and vanilla JS: no build step, no framework. The website is the
 `public/` folder (open `public/index.html` in a browser to try it). The backend is two
-Netlify Functions plus a Netlify Database, used only for character popularity stats.
+Netlify Functions that store counts in Netlify Blobs, used only for character popularity stats.
 
 ## How it works
 
@@ -594,14 +594,15 @@ once with a decent connection fixes it, because every online start refreshes all
 | `public/js/history.js` | Streaks, weekly chart, time of day, distraction categories, session list and backup buttons on `history.html` |
 | `netlify/functions/picks.mjs` | `POST /api/picks`: counts one session started with a character |
 | `netlify/functions/stats.mjs` | `GET /api/stats`: popularity + which characters are paid |
-| `netlify/database/migrations/` | Database tables (SQL), applied automatically on deploy |
+| `netlify/lib/characters.mjs` | The characters whose picks are counted (id + name); a new character must be added here |
+| `netlify/lib/picks-store.mjs` | Which Blobs store the counts are in (live or test) and the UTC day helper |
 | `test-data/` | Small export files for testing Import (not deployed, see `test-data/README.md`) |
 | `public/manifest.webmanifest` | Web app manifest: name, colors and icons for Add to Home Screen / Install |
 | `public/icons/` | Placeholder app icons: `icon.svg` and `icon-small.svg` (sources) and the PNGs rendered from them (Home Screen, Android, maskable) |
 | `public/favicon.ico` | Browser tab icon (placeholder) |
 | `netlify.toml` | Tells Netlify the site is in `public/`, and sends `sw.js` with `Cache-Control: no-cache` |
 | `.github/workflows/pages.yml` | Temporary: publishes `public/` to the GitHub Pages test site on every push to `main` (see [GitHub Pages test site](#github-pages-test-site-while-netlify-is-paused)) |
-| `package.json` | The one dependency the functions need (`@netlify/database`) |
+| `package.json` | The one dependency the functions need (`@netlify/blobs`) |
 
 ## Adding real character artwork
 
@@ -625,35 +626,61 @@ Every press of **Start session** sends `POST /api/picks` once for the chosen cha
 not the session gets finished. Browsing the cards, tapping the same card again, a cancelled ragebait
 warning, **Start over** (same character, not a new choice) and a reload that restores a running
 session don't count.
-Counts are stored per character per day in Netlify Database (managed Postgres), so popularity
-can be measured over the **last 30 days** and the paid selection rotates as tastes change.
+Counts are stored per character per day (UTC) in **Netlify Blobs** (a simple key–value storage
+on Netlify: the functions save and read named pieces of data, with no database server running), so
+popularity can be measured over the **last 30 days** and the paid selection rotates as tastes change.
 
 - `GET /api/stats` returns every character's recent and all-time picks, plus `paidCharacterIds`:
   empty until there are at least 10 characters, then the top ~10% by recent picks.
-  The numbers are at `/stats.html` on the live site.
-- **Meaning changed on 2026-10-21:** before that date every tap on a character card counted.
-  Those old counts were not deleted or migrated (the database can't tell them apart). They drop
-  out of the 30-day recent numbers by late November 2026; the all-time totals keep them, so a
-  character's all-time number can look high next to its recent one. `/stats.html` notes this too.
-- Only characters listed in the `characters` table are counted, and each IP address can send
-  at most 30 picks per minute, so the numbers are hard to fake.
-- **Adding a character:** besides `characters.js`, add a **new** migration file, e.g.
-  `netlify/database/migrations/20261101120000_add_robot.sql` containing
-  `INSERT INTO characters (id, name) VALUES ('robot', 'Robot');`.
-  Never edit or delete a migration that has already been deployed: Netlify will refuse the deploy.
-- The first migration created Grandma, Boss, Soldier and Bodybuilder;
-  `20261020120000_add_seven_characters.sql` added Leader, Santa, Study Buddy, Coach, Professor,
-  Headmistress and Grandmaster, and `20261020150000_add_four_characters.sql` added Meditation
-  Guide, Librarian, Surgeon and Influencer. With 15 characters the paid selection is active: the
-  top 2 by recent picks (**Start session** presses) are marked "(paid)" on `/stats.html`.
+  It also returns `store`: `"live"` or `"test"` (see below). The numbers are at `/stats.html`,
+  which says which store it's reading.
+- **One blob per character:** the key is the character id (`grandma`), the value is the picks per
+  day, e.g. `{ "days": { "2026-11-03": 5, "2026-11-04": 2 } }`. `/api/stats` reads the 15 blobs.
+- **Picks at the same moment aren't lost:** `POST /api/picks` reads the character's blob together
+  with its `etag` (an id of that exact version), adds 1 to today, and saves only if the blob is
+  still that version (a conditional write: `onlyIfMatch`, or `onlyIfNew` for the very first pick).
+  If another pick for the same character was saved in between, Blobs refuses the write and the
+  function reads again and retries, up to 8 times, with a random wait that doubles each time
+  (so a burst of picks spreads out instead of colliding again). Only picks for the
+  **same** character at the **same** moment can collide. If all 8 attempts collide (only under a
+  big burst of simultaneous picks) it answers `503` and logs an error; the app ignores that, so
+  that one pick isn't counted. Reads use `strong` consistency, so they always see the latest write.
+- **Live and test counts are separate:** the production deploy (the `live` branch) uses the
+  `picks-live` store; Deploy Previews, the `main` branch deploy and `netlify dev` use `picks-test`.
+  So **Start session** on https://main--concentraining.netlify.app or a Deploy Preview never changes
+  the live numbers. Both stores are visible in the Netlify UI under **Data & Storage → Blobs**.
+- **Counting restarted from zero** with the move from Netlify Database to Blobs (November 2026). The
+  old database counts (mostly test taps; before 2026-10-21 every tap on a character card counted)
+  were not copied over. `/stats.html` notes this.
+- Only characters listed in `netlify/lib/characters.mjs` are counted (others get `404`), and each
+  IP address can send at most 30 picks per minute, so the numbers are hard to fake.
+- **Adding a character:** besides `public/js/data/characters.js`, add it with the same id to
+  `CHARACTERS` in `netlify/lib/characters.mjs`, e.g. `{ id: "robot", name: "Robot" }`. Without that
+  its picks are refused and it doesn't appear on `/stats.html`.
+- With 15 characters the paid selection is active: the top 2 by recent picks (**Start session**
+  presses) are marked "(paid)" on `/stats.html`.
 - Settings (30 days, 10 characters, 10%) are constants at the top of `netlify/functions/stats.mjs`.
+- **Cost:** every pick and every stats load is one function call (web request + a short compute
+  time, billed in Netlify credits). Blobs has no server that wakes up and no separate copy per
+  Deploy Preview. Netlify's credit table doesn't list Blobs as its own meter; check the **Usage**
+  page after the first days to be sure.
+
+**Checking that counting works** (on https://main--concentraining.netlify.app or a Deploy Preview):
+open `/stats.html` and check it says "Reading the test counts"; start two sessions with the **same**
+character and one with another; wait a minute (the stats are cached for 60 seconds) and reload
+`/stats.html`: the first character has gone up by 2 and the other by 1, in both columns. The live
+site's `/stats.html` still says "Reading the live counts" and its numbers haven't changed.
+
+**`netlify dev` (local):** its local Blobs server doesn't send etags when reading, so only the first
+pick per character is saved there; later ones fail with an error on purpose (a write without an etag
+could overwrite another pick). The deployed sites aren't affected.
 
 ## Deploying
 
 Connect this GitHub repo to the Netlify site (Site configuration → Build & deploy → Link repository).
 Leave the build command empty; `netlify.toml` already sets the publish directory to `public`.
-On every push Netlify installs `package.json`, deploys the functions, creates the database on the
-first deploy, and applies new migrations.
+On every push Netlify installs `package.json` and deploys the functions. The Blobs stores are
+created automatically by the first pick.
 
 **Branches.** The live site deploys only from the `live` branch (Netlify's production branch).
 `main` is the development branch and the target of every pull request:
@@ -666,13 +693,11 @@ first deploy, and applies new migrations.
   `main` doesn't have, so the next `main` → `live` pull request shows the old changes again and can
   conflict.
 
-**Deploy Previews have their own database.** Each Deploy Preview gets its own database branch: a
-separate copy of the live database, made when the preview is created. New migrations run on that
-copy, and **Start session** presses on the preview are counted only there. The live database only changes when the
-production deploy runs, i.e. when a `main` → `live` pull request is merged; merging into `main`
-doesn't touch it. Because the copy starts with the live numbers, the preview's `/stats.html`
-shows real data. Netlify Database needs a credit-based Netlify plan;
-if a deploy fails with "database feature not available for this account", the plan is the reason.
+**Deploy Previews and the main branch deploy count separately.** They all share one test store
+(`picks-test`), so **Start session** presses there never change the live numbers, and their
+`/stats.html` says "Reading the test counts". Only the production deploy (`live`) uses
+`picks-live`. The test counts are shared by every preview and `main`, so they mix test runs; that's
+fine for checking that counting works.
 
 ### GitHub Pages test site (while Netlify is paused)
 
