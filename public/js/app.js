@@ -1247,6 +1247,7 @@ function showMotivation() {
 // ---------- summary ----------
 
 // The pose, title and message all follow the session result (great / okay / rough / early / short).
+// Both modes show a factual line (time and distractions); Simple mode also shows a sentence above it.
 // A short session only shows the title and the "not saved" note, in both modes.
 function renderSummary() {
   const character = characterById(session.characterId);
@@ -1258,28 +1259,33 @@ function renderSummary() {
 
   $("#summaryTitle").textContent = SUMMARY_TITLES[result];
   const percentEl = $("#summaryPercent");
+  const messageEl = $("#summaryMessage");
   const textEl = $("#summaryText");
   const noteEl = $("#summaryNote");
   noteEl.textContent = SUMMARY_SHORT_NOTE;
   noteEl.hidden = !short;
 
-  if (session.mode === "advanced") {
-    const { elapsedMs: elapsed, distractedMs: distracted, focusPercent: percent } = sessionFocus(session);
-    const count = session.distractions.length;
-    // Ended before the timer ran out: also say how long it was meant to be.
-    const planned = elapsed < session.durationMs ? ` (${formatDuration(session.durationMs)} planned)` : "";
+  const { elapsedMs: elapsed, distractedMs: distracted, focusPercent: percent } = sessionFocus(session);
+  const count = session.distractions.length;
+  const logged = `with ${count} distraction${count === 1 ? "" : "s"} logged.`;
+  // Ended before the timer ran out: also say how long it was meant to be.
+  const planned = elapsed < session.durationMs ? ` (${formatDuration(session.durationMs)} planned)` : "";
+  textEl.hidden = short; // means nothing after a few seconds
 
+  if (session.mode === "advanced") {
+    messageEl.hidden = true;
     percentEl.textContent = `${percent}% focused`;
-    percentEl.hidden = short; // means nothing after a few seconds
+    percentEl.hidden = short;
     textEl.textContent =
-      `You focused for ${formatDuration(elapsed - distracted)} out of ${formatDuration(elapsed)}${planned}, ` +
-      `with ${count} distraction${count === 1 ? "" : "s"} logged.`;
-    textEl.hidden = short;
+      `You focused for ${formatDuration(elapsed - distracted)} out of ${formatDuration(elapsed)}${planned}, ${logged}`;
   } else {
+    // Simple mode has no lengths, so the elapsed time includes the distractions:
+    // it's the session's length, not focused time. The character's sentence comes first.
     percentEl.hidden = true;
     const messages = SIMPLE_SUMMARY_MESSAGES[result];
-    textEl.hidden = !messages; // a short session only shows the note
-    if (messages) textEl.textContent = messages[Math.floor(Math.random() * messages.length)];
+    messageEl.hidden = !messages; // a short session only shows the note
+    if (messages) messageEl.textContent = messages[Math.floor(Math.random() * messages.length)];
+    textEl.textContent = `Your session ran ${formatDuration(elapsed)}${planned}, ${logged}`;
   }
 
   // Top 3 picked categories. Hidden if none was picked this session, or if it was short.

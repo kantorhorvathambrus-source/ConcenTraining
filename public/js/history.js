@@ -1,7 +1,7 @@
 "use strict";
 
-// History page: streaks, weekly focus trend, best time of day, distraction
-// categories, recent sessions.
+// History page: streaks, time per week, weekly focus trend, best time of day,
+// distraction categories, recent sessions.
 // All dates use the device's local time.
 
 const TREND_WEEKS = 12;
@@ -98,6 +98,20 @@ function calcWeeklyTrend(history, now) {
   return weeks;
 }
 
+// Session time per week, all modes: the sum of elapsedMs, so in Simple mode it
+// includes the distractions. Same weeks as the focus trend (by start time).
+function calcWeeklyTime(history, now) {
+  const thisWeek = startOfWeek(now);
+  const weeks = [];
+  for (let i = TREND_WEEKS - 1; i >= 0; i--) {
+    const start = addDays(thisWeek, -7 * i);
+    const end = addDays(start, 7);
+    const entries = history.filter((entry) => entry.startedAt >= start.getTime() && entry.startedAt < end.getTime());
+    weeks.push({ start, ms: entries.reduce((sum, entry) => sum + entry.elapsedMs, 0), count: entries.length });
+  }
+  return weeks;
+}
+
 function calcDayParts(history) {
   return DAY_PARTS.map((part) => {
     const focus = combinedFocus(history.filter((entry) => part.matches(new Date(entry.startedAt).getHours())));
@@ -122,6 +136,15 @@ function formatSessionDate(time) {
   return `${day} · ${clock}`;
 }
 
+// Rounded to whole minutes: "45 min", "1 h", "2 h 15 min".
+function formatTotalTime(ms) {
+  const total = Math.round(ms / 60000);
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  if (h === 0) return `${m} min`;
+  return m ? `${h} h ${m} min` : `${h} h`;
+}
+
 function formatSessionLength(entry) {
   const planned = Math.round(entry.plannedMs / 60000);
   if (entry.endedBy === "timer") return `${planned} min`;
@@ -138,7 +161,7 @@ function capitalize(text) {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-// ---------- chart ----------
+// ---------- charts ----------
 
 // Line chart of weekly focus %. Weeks without data leave a gap in the line.
 // Colors come from CSS classes, so the chart follows light/dark mode.
@@ -188,12 +211,97 @@ function trendChartSvg(weeks) {
   </svg>`;
 }
 
+// The y-axis of the time chart: minutes while the busiest week is under 2 hours, hours
+// above that. The step is picked so there are at most 4 steps, and at least 2.
+function timeScale(maxMs) {
+  const maxMinutes = maxMs / 60000;
+  const [unit, unitMinutes, steps] =
+    maxMinutes < 120 ? ["min", 1, [5, 10, 15, 30]] : ["h", 60, [1, 2, 5, 10, 20, 50, 100]];
+  const max = maxMinutes / unitMinutes;
+  const step = steps.find((s) => Math.ceil(max / s) <= 4) || steps[steps.length - 1];
+  const stepCount = Math.max(2, Math.ceil(max / step));
+  const ticks = [];
+  for (let i = 0; i <= stepCount; i++) ticks.push({ ms: i * step * unitMinutes * 60000, label: `${i * step} ${unit}` });
+  return { topMs: stepCount * step * unitMinutes * 60000, ticks };
+}
+
+// Bar chart of session time per week. The current week is full color, earlier weeks lighter.
+// Weeks without sessions have no bar. Same size, labels and CSS classes as trendChartSvg.
+function timeChartSvg(weeks) {
+  const width = 400;
+  const height = 210;
+  const left = 52; // room for "120 min"
+  const right = 26;
+  const top = 12;
+  const bottom = 30;
+  const slot = (width - left - right) / weeks.length;
+  const barWidth = slot * 0.6;
+  const { topMs, ticks } = timeScale(Math.max(...weeks.map((week) => week.ms)));
+  const y = (ms) => top + (height - top - bottom) * (1 - ms / topMs);
+  const center = (i) => left + slot * (i + 0.5);
+
+  let grid = "";
+  for (const tick of ticks) {
+    grid += `<line class="chart-grid" x1="${left}" x2="${width - right}" y1="${y(tick.ms)}" y2="${y(tick.ms)}"/>`;
+    grid += `<text class="chart-label" x="${left - 6}" y="${y(tick.ms) + 4}" text-anchor="end">${tick.label}</text>`;
+  }
+
+  // Label every third week, ending with the current week.
+  let labels = "";
+  weeks.forEach((week, i) => {
+    if ((weeks.length - 1 - i) % 3 === 0) {
+      labels += `<text class="chart-label" x="${center(i)}" y="${height - 8}" text-anchor="middle">${formatShortDate(week.start)}</text>`;
+    }
+  });
+
+  let bars = "";
+  weeks.forEach((week, i) => {
+    if (week.ms === 0) return;
+    // At least 2 px tall, so a single short session still shows up next to a long week.
+    const h = Math.max(2, y(0) - y(week.ms));
+    const x0 = center(i) - barWidth / 2;
+    const y0 = y(0) - h;
+    const r = Math.min(3, h / 2); // rounded top corners only
+    const d =
+      `M${x0} ${y(0)} V${y0 + r} Q${x0} ${y0} ${x0 + r} ${y0} H${x0 + barWidth - r} ` +
+      `Q${x0 + barWidth} ${y0} ${x0 + barWidth} ${y0 + r} V${y(0)} Z`;
+    const current = i === weeks.length - 1 ? " current" : "";
+    bars +=
+      `<path class="chart-bar${current}" d="${d}">` +
+      `<title>Week of ${formatShortDate(week.start)}: ${formatTotalTime(week.ms)} (${plural(week.count, "session")})</title></path>`;
+  });
+
+  return `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Time spent in sessions per week for the last ${weeks.length} weeks">
+    ${grid}${labels}
+    ${bars}
+  </svg>`;
+}
+
 // ---------- rendering ----------
 
 function renderStreaks(history, now) {
   const { current, longest } = calcStreaks(history, now);
   document.getElementById("currentStreak").textContent = plural(current, "day");
   document.getElementById("longestStreak").textContent = plural(longest, "day");
+}
+
+function renderWeeklyTime(history, now) {
+  const weeks = calcWeeklyTime(history, now);
+  const chart = document.getElementById("timeChart");
+  const note = document.getElementById("timeNote");
+
+  if (weeks.every((week) => week.count === 0)) {
+    chart.innerHTML = "";
+    note.textContent = "No sessions in the last 12 weeks.";
+    return;
+  }
+
+  chart.innerHTML = timeChartSvg(weeks);
+  const thisWeek = weeks[weeks.length - 1];
+  note.textContent =
+    thisWeek.count === 0
+      ? "No sessions this week yet."
+      : `This week: ${formatTotalTime(thisWeek.ms)} across ${plural(thisWeek.count, "session")}.`;
 }
 
 function renderTrend(history, now) {
@@ -341,6 +449,7 @@ function render() {
 
   const now = Date.now();
   renderStreaks(history, now);
+  renderWeeklyTime(history, now);
   renderTrend(history, now);
   renderDayParts(history);
   renderCategories(history);
