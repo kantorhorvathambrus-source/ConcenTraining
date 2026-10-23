@@ -478,8 +478,15 @@ function durationPicker(container, initialMinutes) {
 
 let readSetupMinutes = () => prefs.minutes;
 
-function savePrefs() {
-  save(PREFS_KEY, prefs);
+// Saves only the given fields on top of what's saved now, so a field another tab changed since
+// this page loaded isn't undone. This page's copy fills in fields that were never saved, so the
+// saved prefs stay complete. Only the given fields change in this page's copy: the others stay
+// as this page shows them.
+function savePrefs(changes) {
+  Object.assign(prefs, changes);
+  const next = Object.assign({}, prefs, load(PREFS_KEY, {}), changes);
+  delete next.style; // see prefs above
+  save(PREFS_KEY, next);
 }
 
 // Shown on the setup screen until "Got it" is tapped. The header button brings it back without
@@ -498,8 +505,7 @@ function openHowItWorks() {
 
 // Focus goes to the header button: the "Got it" button disappears, and that's where the card comes back from.
 function dismissHowItWorks() {
-  prefs.howItWorksDismissed = true;
-  savePrefs();
+  savePrefs({ howItWorksDismissed: true });
   $("#howItWorks").hidden = true;
   $("#howItWorksLink").focus();
 }
@@ -512,8 +518,7 @@ function updateHomeScreenTip() {
 }
 
 function dismissHomeScreenTip() {
-  prefs.homeScreenTipDismissed = true;
-  savePrefs();
+  savePrefs({ homeScreenTipDismissed: true });
   $("#homeScreenTip").hidden = true;
 }
 
@@ -551,8 +556,7 @@ async function onCharacterTap(character) {
     if ((await ask($("#ragebaitDialog"))) !== "ok") return;
   }
 
-  prefs.characterId = character.id;
-  savePrefs();
+  savePrefs({ characterId: character.id });
   $("#characterError").hidden = true;
   updateCharacterCards();
 }
@@ -565,8 +569,7 @@ function bindChoiceGroups() {
 
     buttons.forEach((button) => {
       button.addEventListener("click", () => {
-        prefs[key] = button.dataset.value;
-        savePrefs();
+        savePrefs({ [key]: button.dataset.value });
         sync();
       });
     });
@@ -579,14 +582,13 @@ function bindSettingChecks() {
     const key = check.dataset.pref;
     check.checked = Boolean(prefs[key]);
     check.addEventListener("change", () => {
-      prefs[key] = check.checked;
-      savePrefs();
+      savePrefs({ [key]: check.checked });
     });
   });
   $("#testSoundButton").addEventListener("click", playChime);
 }
 
-function onStartClick() {
+async function onStartClick() {
   if (!characterById(prefs.characterId)) {
     const error = $("#characterError");
     error.hidden = false;
@@ -596,9 +598,20 @@ function onStartClick() {
     $("#characterStep").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
     return;
   }
-  prefs.minutes = readSetupMinutes();
-  savePrefs();
+  savePrefs({ minutes: readSetupMinutes() });
   if (prefs.endSound) unlockAudio(); // this tap is what allows the chime later
+  // A session saved by another tab is never replaced (see "one tab at a time"): it carries on here
+  // if its tab was closed, or the notice shows if that tab still runs it. Without Web Locks the
+  // tabs can't tell, so Start works as it always has.
+  if (locks && savedRunningSession()) {
+    continueSavedSession(false);
+    return;
+  }
+  if (!(await takeControl(false))) {
+    showScreen("elsewhereScreen");
+    return;
+  }
+  if (session) return; // a quick second tap: already started
   countCharacterPick(prefs.characterId); // here, not in startSession(): Start over is not a new choice
   startSession(prefs.characterId, prefs.mode, prefs.minutes);
 }
@@ -842,8 +855,10 @@ async function askContinueOrRestart() {
   $("#restartSave").checked = true;
   $("#restartSaveText").textContent = `Save the first ${formatDuration(cutAt - session.startedAt)} to history`;
 
+  const asked = session;
   const answer = await ask(dialog);
   if (!session || session.endedAt) return; // the timer ran out while the question was open
+  if (session !== asked) return; // another tab took the session over meanwhile (loseControl)
 
   // Answered (Esc counts as "continue"), so a reload won't ask again.
   session.restartPending = false;
@@ -868,13 +883,146 @@ async function onEndClick() {
   const canSave = Date.now() - session.startedAt >= HISTORY_MIN_MS;
   $("#endSaveRow").hidden = !canSave;
   $("#endSave").checked = true;
-  if ((await ask($("#endDialog"))) === "end" && session && !session.endedAt) {
+  const asked = session;
+  const answer = await ask($("#endDialog"));
+  if (session !== asked) return; // another tab took the session over meanwhile (loseControl)
+  if (answer === "end" && session && !session.endedAt) {
     finishSession(Date.now(), !canSave || $("#endSave").checked);
   } else {
     resumePicker();
     askPendingAway();
     askPendingRestart();
   }
+}
+
+// ---------- one tab at a time (Web Locks API) ----------
+
+// With the app open in several tabs (or a tab and the installed app), only the tab holding the
+// browser lock SESSION_LOCK runs the running session: timers, reactions, sounds, the time away
+// card and every save. The others show "This session is open in another tab." (elsewhereScreen).
+// The browser frees the lock by itself when its tab is closed, reloaded or crashes. "Continue
+// here" takes it from the other tab, which then stops at once without saving anything more.
+// The lock is held from the start (or resume) of a session until it's finished or discarded.
+// The setup screen, the summary, history.html and stats.html need no lock.
+// Without Web Locks (old browsers, or index.html opened as a file: locks need HTTPS) every tab
+// runs the session on its own, as before this existed.
+const SESSION_LOCK = "ct_session"; // a lock name, not a storage key: nothing is saved under it
+const locks = (() => {
+  try {
+    return navigator.locks && typeof navigator.locks.request === "function" ? navigator.locks : null;
+  } catch {
+    return null;
+  }
+})();
+// hold: { release } while this tab holds the lock. pending: an unanswered request (see takeControl).
+const control = { hold: null, pending: null };
+
+// The session saved in ct_session_v1, if one is running (or ran out without being saved yet).
+function savedRunningSession() {
+  const saved = load(SESSION_KEY, null);
+  return saved && !saved.endedAt && characterById(saved.characterId) ? saved : null;
+}
+
+// Resolves true once this tab holds the lock, false if another tab holds it. steal: take it from
+// that tab ("Continue here"). Without Web Locks, or if the browser refuses the request, always true.
+function takeControl(steal) {
+  if (!locks || control.hold) return Promise.resolve(true);
+  if (control.pending) return control.pending; // e.g. a quick second tap on Start
+  const mine = { release: null };
+  control.pending = new Promise((resolve) => {
+    locks
+      .request(SESSION_LOCK, steal ? { steal: true } : { ifAvailable: true }, (lock) => {
+        control.pending = null;
+        if (!lock) {
+          resolve(false);
+          return undefined;
+        }
+        control.hold = mine;
+        resolve(true);
+        return new Promise((release) => (mine.release = release)); // held until releaseControl()
+      })
+      .catch(() => {
+        control.pending = null;
+        if (control.hold === mine) {
+          control.hold = null;
+          loseControl(); // another tab took it ("Continue here" there)
+        } else {
+          resolve(true); // refused before it was granted: carry on as without Web Locks
+        }
+      });
+  });
+  return control.pending;
+}
+
+function releaseControl() {
+  const hold = control.hold;
+  control.hold = null;
+  if (hold) hold.release();
+}
+
+// Another tab took the session over. Everything here stops, and session is dropped before the
+// dialogs close, so nothing that waits on them (or on a timer) saves anything more.
+function loseControl() {
+  clearInterval(tickTimer);
+  stopStage();
+  closePicker(false);
+  closeUndo(false);
+  Object.assign(away, { from: 0, ms: 0, open: false, yes: false, hiddenAt: 0 });
+  session = null;
+  document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
+  document.title = BASE_TITLE;
+  showScreen("elsewhereScreen");
+}
+
+// Picks up the session saved in ct_session_v1: after a reload, or when this tab takes it over.
+// It's read only now, after the lock, so whatever the other tab logged is in it. Taking over
+// works exactly like a reload: a leftAt the other tab saved when it was hidden (the switch to
+// this tab) counts like a normal return, so 15 s or more away asks the time away card, here only.
+// Returns false if there's no running session any more (it ended in the meantime).
+function resumeSavedSession() {
+  const saved = savedRunningSession();
+  if (!saved) return false;
+  session = saved;
+  // A session saved before personalities came from the character can hold any
+  // style: it continues (and goes into the history) with the character's own.
+  session.style = personalityOf(characterById(saved.characterId));
+  save(SESSION_KEY, session);
+  if (Date.now() >= saved.startedAt + saved.durationMs) {
+    onTimerRanOut(false);
+  } else {
+    enterSession();
+    onVisibilityChange(); // a leave time saved before the reload counts like a normal return
+    askPendingRestart(); // the page was reloaded before the continue/restart question was answered
+  }
+  return true;
+}
+
+// Start-up with a running session saved, Start while one is saved, and "Continue here".
+// Another tab holds the lock (and steal isn't set): the notice. The session ended meanwhile: setup.
+async function continueSavedSession(steal) {
+  if (!(await takeControl(steal))) {
+    showScreen("elsewhereScreen");
+    return;
+  }
+  if (session) return; // a quick second tap: it's already running here
+  if (resumeSavedSession()) return;
+  releaseControl();
+  renderCharacterList();
+  showScreen("setupScreen");
+}
+
+function onContinueHereClick() {
+  if (prefs.endSound) unlockAudio(); // this tap is what allows the chime later, as on Start
+  continueSavedSession(true);
+}
+
+// The notice goes when the session ends in the other tab (finished or discarded there).
+// "storage" only fires in the other tabs of the site, never in the one that saved.
+function onStorage(event) {
+  if (event.key !== SESSION_KEY && event.key !== null) return; // null: all storage was cleared
+  if ($("#elsewhereScreen").hidden || savedRunningSession()) return;
+  renderCharacterList();
+  showScreen("setupScreen");
 }
 
 // ---------- time away ----------
@@ -963,8 +1111,7 @@ function logAwayDistraction(from, ms) {
 // permission bar right after the session (persistRequested is still set, so it's not tried again).
 function requestPersistentStorage() {
   if (prefs.persistRequested) return;
-  prefs.persistRequested = true;
-  savePrefs();
+  savePrefs({ persistRequested: true });
   if (/Firefox\/|FxiOS/.test(navigator.userAgent)) return;
   try {
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
@@ -984,6 +1131,7 @@ function finishSession(endedAt, keep = true) {
   session.endedAt = Math.min(endedAt, session.startedAt + session.durationMs);
   if (keep && saveFinishedSession(session)) requestPersistentStorage();
   remove(SESSION_KEY);
+  releaseControl();
   document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
   document.title = BASE_TITLE;
   if (!keep) {
@@ -1030,13 +1178,19 @@ async function askSaveLateSession(endedAt) {
     `${character.name} ended ${formatTimeAgo(Date.now() - endedAt)}.`;
 
   // Discard deletes the session, so only a tap on a button answers (Esc asks again).
+  // Another tab taking the session over closes the dialog: then this one stops asking.
+  const late = session;
   let answer = "";
-  while (answer !== "save" && answer !== "discard") answer = await ask($("#lateDialog"));
+  while (answer !== "save" && answer !== "discard") {
+    answer = await ask($("#lateDialog"));
+    if (session !== late) return;
+  }
 
   if (answer === "save") {
     finishSession(endedAt);
   } else {
     remove(SESSION_KEY);
+    releaseControl();
     session = null;
     renderCharacterList();
   }
@@ -1207,22 +1361,13 @@ function init() {
     $("#awayDialog").close();
   });
   $("#awayDialog").addEventListener("close", onAwayClosed);
+  $("#continueHereButton").addEventListener("click", onContinueHereClick);
+  window.addEventListener("storage", onStorage);
 
-  // Resume a session that was running when the page was closed or reloaded.
-  const saved = load(SESSION_KEY, null);
-  if (saved && !saved.endedAt && characterById(saved.characterId)) {
-    session = saved;
-    // A session saved before personalities came from the character can hold any
-    // style: it continues (and goes into the history) with the character's own.
-    session.style = personalityOf(characterById(saved.characterId));
-    save(SESSION_KEY, session);
-    if (Date.now() >= saved.startedAt + saved.durationMs) {
-      onTimerRanOut(false);
-    } else {
-      enterSession();
-      onVisibilityChange(); // a leave time saved before the reload counts like a normal return
-      askPendingRestart(); // the page was reloaded before the continue/restart question was answered
-    }
+  // Resume a session that was running when the page was closed or reloaded,
+  // unless another tab runs it (see "one tab at a time").
+  if (savedRunningSession()) {
+    continueSavedSession(false);
     return;
   }
   showScreen("setupScreen");

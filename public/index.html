@@ -162,6 +162,15 @@
       <button id="newSessionButton" type="button" class="btn primary big">Start another session</button>
       <a href="history.html" class="btn big link-btn">See your history</a>
     </section>
+
+    <!-- ========== OPEN IN ANOTHER TAB ========== -->
+    <!-- Shown instead of the session while another tab (or the installed app) runs it:
+         "one tab at a time" in app.js. "Continue here" moves the session to this tab. -->
+    <section id="elsewhereScreen" class="screen" hidden>
+      <h1 class="elsewhere-title">This session is open in another tab.</h1>
+      <p class="muted">Only one tab can run a session at a time.</p>
+      <button id="continueHereButton" type="button" class="btn primary big">Continue here</button>
+    </section>
   </main>
 
   <!-- ========== DIALOGS ========== -->

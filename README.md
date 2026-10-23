@@ -274,6 +274,47 @@ are in `public/js/data/messages.js`.
   page is hidden, it stays as it is, so it doesn't blink on every tap or return (`updateScreenNote()`
   in `public/js/app.js`).
 
+### Several tabs (one tab at a time)
+
+The app can be open in several tabs at once, or in a tab and the installed app (on Android they
+share their saved data; on iPhone the Home Screen app has its own, see
+[iPhone storage and the Home Screen app](#iphone-storage-and-the-home-screen-app)). Only one tab runs
+a session at a time, so two tabs never overwrite each other's distractions or both end the session.
+
+- **How:** the Web Locks API (`navigator.locks`, a browser feature that gives a named lock to one
+  tab at a time and frees it by itself when that tab is closed, reloaded or crashes). The tab holding
+  the lock `ct_session` runs the session; it's held from **Start session** (or a resume) until the
+  session is finished or discarded. The lock lives only in the browser's memory: nothing is saved
+  under it, and no saved data or storage key changed.
+- **The other tabs** show a calm notice instead of the session: "This session is open in another tab."
+  with a **Continue here** button. They run no timers, reactions, sounds, wake lock or time away card,
+  and save nothing.
+- **Continue here** takes the lock from the other tab first, then reads the latest saved session, so
+  everything logged in the other tab is there. From then on it works like a reload of that tab: the
+  timer carries on, a waiting continue/restart question is asked, and a session whose time ran out
+  long ago gets the "Welcome back" question. The other tab stops at once (open dialogs close without
+  an answer) and shows the notice. If the session ended in the meantime, the setup screen shows.
+- **Time away across the switch:** on purpose, switching tabs counts as being away from the session.
+  The tab you leave is hidden, so it saves `leftAt` as usual; Continue here reads it. 15 s or more
+  between leaving that tab and tapping Continue here asks the time away card, in the tab that now runs
+  the session only (the tab that lost the lock never shows it). A shorter switch asks nothing.
+- **Closing or reloading** the tab that runs the session frees the lock: a reload picks the session up
+  directly, and another tab can take it with Continue here. No tab takes over by itself, so a tab in
+  the background never suddenly starts the timer or the chime.
+- **Session ended in the other tab:** a tab showing the notice goes back to the setup screen by itself
+  (the `storage` event, which the browser sends to the other tabs whenever saved data changes).
+- **Start session while another tab runs a session:** there's only one saved running session, so it's
+  never replaced. If its tab is still open, the notice shows. If its tab was closed, Start continues
+  that session instead of starting a new one (like a reload would).
+- **No Web Locks** (very old browsers, or `index.html` opened as a local file, because locks need
+  HTTPS): every tab runs the session on its own, as before this existed.
+- **Prefs and history in several tabs:** the setup screen, `history.html` and `stats.html` can be open
+  in any number of tabs. Prefs are saved field by field (only what was just changed, on top of what's
+  saved), so a choice made in one tab isn't undone by another tab saving its own. The history is read,
+  changed and written in one go (saving a session, Import), and a session is only saved once (by its
+  start time), so nothing is lost there. `history.html` shows a session finished in another tab after
+  a reload.
+
 ## Personalities
 
 There's no style to choose: each character's `group` in `public/js/data/characters.js` decides its
@@ -364,7 +405,7 @@ appear in the list as "—", but are left out of the trend and time-of-day numbe
 |---|---|
 | `ct_session_v1` | The session that's running right now (removed when it ends). `restartPending: true` while the continue/restart question is unanswered; older saved sessions don't have it, which means `false`. `leftAt` (timestamp in ms): only while the page is hidden, for the time away card; missing means the page wasn't left. Never copied into the history |
 | `ct_history_v1` | Finished sessions, newest first, max. 1000 |
-| `ct_prefs_v1` | Last chosen character, mode and duration, plus `endSound` and `keepScreenOn` (the two setup checkboxes, `true`/`false`). Prefs saved before these existed get `true` for both. `homeScreenTipDismissed`: `true` once **Got it** was tapped on the iPhone Home Screen tip. `persistRequested`: `true` once persistent storage was asked for (or skipped in Firefox), see [iPhone storage and the Home Screen app](#iphone-storage-and-the-home-screen-app). Prefs saved before these two existed get `false` for both. `howItWorksDismissed`: `true` once **Got it** was tapped on the How it works card; prefs saved before it existed get `false`, so the card shows once. A `style` value saved by older versions is ignored and dropped |
+| `ct_prefs_v1` | Last chosen character, mode and duration, plus `endSound` and `keepScreenOn` (the two setup checkboxes, `true`/`false`). Prefs saved before these existed get `true` for both. `homeScreenTipDismissed`: `true` once **Got it** was tapped on the iPhone Home Screen tip. `persistRequested`: `true` once persistent storage was asked for (or skipped in Firefox), see [iPhone storage and the Home Screen app](#iphone-storage-and-the-home-screen-app). Prefs saved before these two existed get `false` for both. `howItWorksDismissed`: `true` once **Got it** was tapped on the How it works card; prefs saved before it existed get `false`, so the card shows once. A `style` value saved by older versions is ignored and dropped. Saved field by field (see [Several tabs](#several-tabs-one-tab-at-a-time)) |
 
 Each history entry: `startedAt`, `endedAt` (timestamps in ms), `endedBy` (`"timer"`/`"manual"`/`"startOver"`),
 `characterId`, `style` (the character's personality when the session ran: `"kind"`, `"firm"`,
@@ -580,7 +621,7 @@ once with a decent connection fixes it, because every online start refreshes all
 
 | File | What's in it |
 |---|---|
-| `public/index.html` | All screens (setup, session, summary) and dialogs |
+| `public/index.html` | All screens (setup, session, summary, "open in another tab" notice) and dialogs |
 | `public/history.html` | Your finished sessions, streaks and focus trends |
 | `public/stats.html` | Popularity table (reads `/api/stats`) |
 | `public/sw.js` | Service worker: offline start, network first with a 3-second fallback to the cache, precache list and cache version (see [Offline use](#offline-use)) |
@@ -589,7 +630,7 @@ once with a decent connection fixes it, because every online start refreshes all
 | `public/js/data/characters.js` | Character list, groups and the personality each group gives (`personalityOf`), art paths |
 | `public/js/data/messages.js` | Motivation messages, summary titles and Simple-mode summary messages per result |
 | `public/js/placeholder-art.js` | Built-in placeholder drawings (kind, firm, strict and ragebait faces, plus each character's look) for characters without real art |
-| `public/js/app.js` | Timer, reaction engine, distraction category picker, Undo, disabled Advanced lengths, time away card, motivation rotation, end chime, screen wake lock and the "screen may turn off" note, summary, How it works card, iPhone Home Screen tip, persistent storage request |
+| `public/js/app.js` | Timer, reaction engine, distraction category picker, Undo, disabled Advanced lengths, time away card, motivation rotation, end chime, screen wake lock and the "screen may turn off" note, summary, How it works card, iPhone Home Screen tip, persistent storage request, one tab at a time (Web Locks) |
 | `public/js/history-store.js` | Saving/loading history, focus % and summary result (with their thresholds), distraction categories, export/import checks, iPhone Safari check (used by both pages) |
 | `public/js/history.js` | Streaks, weekly chart, time of day, distraction categories, session list and backup buttons on `history.html` |
 | `netlify/functions/picks.mjs` | `POST /api/picks`: counts one session started with a character |
