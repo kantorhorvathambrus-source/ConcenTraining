@@ -7,6 +7,20 @@ Netlify Functions plus a Netlify Database, used only for character popularity st
 
 ## How it works
 
+- **How it works card:** at the top of the setup screen (above step 1) a short card explains the
+  app in 4 points: pick a character and a timer; when you notice your mind has wandered, tap how much
+  (Simple) or how long (Advanced), the character reacts with a pose, never with words, and noticing
+  and coming back is the skill being trained; leaving the app during a session brings a "were you
+  distracted?" question; the history stays on this device only (with a link to Export on the history
+  page). It's shown on the setup screen until **Got it** is tapped (saved as `howItWorksDismissed` in
+  `ct_prefs_v1`), then never again by itself. Prefs saved before this existed don't have the key, so
+  existing users also see it once. The **How it works** button in the header (next to "Your history
+  →") brings it back any time without changing the pref: the card opens, scrolls into view and
+  keyboard/screen reader focus moves to its heading. **Got it** moves focus to that header button.
+  Shown automatically on page load, it doesn't move focus. If the iPhone Home Screen tip (see
+  [iPhone storage](#iphone-storage-and-the-home-screen-app)) shows too, this card comes first: it's
+  what a first visit needs, while the tip only appears once there's history and refers to Export,
+  which this card introduces. Same look as the tip (`.tip-card`).
 - **Setup:** 1. pick a character, 2. a mode (Simple / Advanced), 3. a focus duration.
   The character decides the personality (see below). Ragebait characters show a warning before
   they can be selected. Selecting a card only updates which card is pressed (`aria-pressed`), so
@@ -350,7 +364,7 @@ appear in the list as "—", but are left out of the trend and time-of-day numbe
 |---|---|
 | `ct_session_v1` | The session that's running right now (removed when it ends). `restartPending: true` while the continue/restart question is unanswered; older saved sessions don't have it, which means `false`. `leftAt` (timestamp in ms): only while the page is hidden, for the time away card; missing means the page wasn't left. Never copied into the history |
 | `ct_history_v1` | Finished sessions, newest first, max. 1000 |
-| `ct_prefs_v1` | Last chosen character, mode and duration, plus `endSound` and `keepScreenOn` (the two setup checkboxes, `true`/`false`). Prefs saved before these existed get `true` for both. `homeScreenTipDismissed`: `true` once **Got it** was tapped on the iPhone Home Screen tip. `persistRequested`: `true` once persistent storage was asked for (or skipped in Firefox), see [iPhone storage and the Home Screen app](#iphone-storage-and-the-home-screen-app). Prefs saved before these two existed get `false` for both. A `style` value saved by older versions is ignored and dropped |
+| `ct_prefs_v1` | Last chosen character, mode and duration, plus `endSound` and `keepScreenOn` (the two setup checkboxes, `true`/`false`). Prefs saved before these existed get `true` for both. `homeScreenTipDismissed`: `true` once **Got it** was tapped on the iPhone Home Screen tip. `persistRequested`: `true` once persistent storage was asked for (or skipped in Firefox), see [iPhone storage and the Home Screen app](#iphone-storage-and-the-home-screen-app). Prefs saved before these two existed get `false` for both. `howItWorksDismissed`: `true` once **Got it** was tapped on the How it works card; prefs saved before it existed get `false`, so the card shows once. A `style` value saved by older versions is ignored and dropped |
 
 Each history entry: `startedAt`, `endedAt` (timestamps in ms), `endedBy` (`"timer"`/`"manual"`/`"startOver"`),
 `characterId`, `style` (the character's personality when the session ran: `"kind"`, `"firm"`,
@@ -391,7 +405,8 @@ doesn't do this.
   - at least 1 finished session in the history, so first-time visitors don't see it,
   - **Got it** hasn't been tapped (saved as `homeScreenTipDismissed` in `ct_prefs_v1`).
 
-  It's never shown during a session or on the summary screen. The check is `iosSafariNotInstalled()`
+  It's never shown during a session or on the summary screen. If the How it works card shows too,
+  the tip comes right under it. The check is `iosSafariNotInstalled()`
   in `public/js/history-store.js`.
 - **History page:** under the same conditions (except the history and Got it rules), the storage note
   gets one more sentence about the 7-day rule and the Home Screen app.
@@ -569,7 +584,7 @@ once with a decent connection fixes it, because every online start refreshes all
 | `public/js/data/characters.js` | Character list, groups and the personality each group gives (`personalityOf`), art paths |
 | `public/js/data/messages.js` | Motivation messages, summary titles and Simple-mode summary messages per result |
 | `public/js/placeholder-art.js` | Built-in placeholder drawings (kind, firm, strict and ragebait faces, plus each character's look) for characters without real art |
-| `public/js/app.js` | Timer, reaction engine, distraction category picker, Undo, disabled Advanced lengths, time away card, motivation rotation, end chime, screen wake lock and the "screen may turn off" note, summary, iPhone Home Screen tip, persistent storage request |
+| `public/js/app.js` | Timer, reaction engine, distraction category picker, Undo, disabled Advanced lengths, time away card, motivation rotation, end chime, screen wake lock and the "screen may turn off" note, summary, How it works card, iPhone Home Screen tip, persistent storage request |
 | `public/js/history-store.js` | Saving/loading history, focus % and summary result (with their thresholds), distraction categories, export/import checks, iPhone Safari check (used by both pages) |
 | `public/js/history.js` | Streaks, weekly chart, time of day, distraction categories, session list and backup buttons on `history.html` |
 | `netlify/functions/picks.mjs` | `POST /api/picks`: counts one session started with a character |

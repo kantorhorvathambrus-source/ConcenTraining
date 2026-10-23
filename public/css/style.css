@@ -914,6 +914,41 @@ a {
   margin-top: 4px;
 }
 
+/* "How it works" in the header: a button (it opens the card, it doesn't go anywhere) that looks
+   like the "Your history" link next to it. */
+.text-btn {
+  border: none;
+  background: none;
+  padding: 4px 2px;
+  font-weight: 600;
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+.header-sep {
+  margin: 0 8px;
+  color: var(--muted);
+}
+
+/* Opened from the header button (openHowItWorks): keep a little space above the card. */
+.how-it-works {
+  scroll-margin-top: 16px;
+}
+
+.how-it-works ul {
+  margin: 0 0 10px;
+  padding-left: 1.2em;
+}
+
+.how-it-works li + li {
+  margin-top: 8px;
+}
+
+/* The heading only gets focus from the script, to be read out; it isn't something to press. */
+.how-it-works h2:focus {
+  outline: none;
+}
+
 .link-btn {
   margin-top: 10px;
   text-align: center;
