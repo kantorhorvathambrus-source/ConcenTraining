@@ -740,6 +740,21 @@ input:focus-visible {
   margin: 8px 0 0;
 }
 
+/* ---------- open in another tab ---------- */
+
+#elsewhereScreen {
+  text-align: center;
+  padding-top: 48px;
+}
+
+.elsewhere-title {
+  font-size: 1.4rem;
+}
+
+#elsewhereScreen p {
+  margin: 0 0 28px;
+}
+
 /* ---------- dialogs ---------- */
 
 dialog {
