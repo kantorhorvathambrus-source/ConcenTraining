@@ -46,7 +46,7 @@
     async function loadStats() {
       const status = document.getElementById("statsStatus");
       try {
-        const response = await fetch("/api/stats");
+        const response = await fetch("api/stats");
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const stats = await response.json();
 

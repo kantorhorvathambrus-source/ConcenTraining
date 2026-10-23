@@ -4,19 +4,22 @@
 // Strategy: network first. Online, every file comes from the network (so people always get the
 // newest version) and a copy is saved in the cache. Offline, or when the network hasn't answered
 // within NETWORK_TIMEOUT_MS, the saved copy is used instead.
-// Never touched: /api/* and /.netlify/* (backend), non-GET requests, other sites, Range requests.
+// Never touched: api/* and .netlify/* (backend), non-GET requests, other sites, Range requests.
 //
 // Netlify's Pretty URLs can serve history.html as /history (redirecting /history.html there and
 // rewriting links to it), so every copy is saved and looked up under one address: see cacheKey.
+//
+// Every address is relative to the service worker's scope (the folder sw.js is in), so it works
+// both at the domain root (Netlify) and under a subpath (GitHub Pages, /ConcenTraining/).
 
 // Bump CACHE_VERSION whenever PRECACHE changes (a startup file added, removed or renamed).
 // On activate every older "concentraining-" cache is deleted.
-const CACHE_VERSION = 2;
+const CACHE_VERSION = 3;
 const CACHE_PREFIX = "concentraining-";
 const CACHE_NAME = `${CACHE_PREFIX}v${CACHE_VERSION}`;
 
 // Everything needed to open index.html, run a session to the summary and open history.html offline.
-// stats.html stays online-only (it needs /api/stats anyway). index.html is saved as "/" (cacheKey).
+// stats.html stays online-only (it needs api/stats anyway). index.html is saved as the scope (cacheKey).
 const PRECACHE = [
   "index.html",
   "history.html",
@@ -48,6 +51,11 @@ const FILE_TIMEOUT_AFTER_NETWORK_PAGE_MS = 10000;
 // the page has loaded all its files.
 const pageSources = new Map();
 const MAX_PAGE_SOURCES = 50;
+
+// The app's folder, e.g. "https://example.org/" on Netlify or
+// "https://kantorhorvathambrus-source.github.io/ConcenTraining/" on GitHub Pages. Always ends in "/".
+const SCOPE_URL = new URL(self.registration.scope);
+const SCOPE_PATH = SCOPE_URL.pathname;
 
 // ---------- install / activate ----------
 
@@ -99,12 +107,15 @@ async function withoutRedirect(response) {
   });
 }
 
-// The one address a file is saved and looked up under, whichever address was asked for:
+// The one address a file is saved and looked up under, whichever address was asked for
+// (shown here at the root; under a subpath the same rules apply inside the scope):
 //   /index.html (and /index) → /     /history → /history.html     the ?query is dropped.
-// A path ending in "/" (other than the root) is left alone: relative links on it would break.
+// A path ending in "/" (other than the scope) is left alone: relative links on it would break.
 function cacheKey(url) {
   const { origin, pathname } = new URL(url, self.location.href);
-  if (pathname === "/index.html" || pathname === "/index") return `${origin}/`;
+  if (pathname === `${SCOPE_PATH}index.html` || pathname === `${SCOPE_PATH}index`) {
+    return `${origin}${SCOPE_PATH}`;
+  }
   const lastPart = pathname.slice(pathname.lastIndexOf("/") + 1);
   if (lastPart && !lastPart.includes(".")) return `${origin}${pathname}.html`;
   return `${origin}${pathname}`;
@@ -122,7 +133,9 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
-  if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/.netlify/")) return;
+  if (url.pathname.startsWith(`${SCOPE_PATH}api/`) || url.pathname.startsWith(`${SCOPE_PATH}.netlify/`)) {
+    return;
+  }
   if (request.headers.has("range")) return;
 
   event.respondWith(request.mode === "navigate" ? handlePage(event) : handleFile(event));

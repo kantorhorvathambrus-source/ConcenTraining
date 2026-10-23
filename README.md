@@ -518,7 +518,7 @@ works online exactly as before.
 - **First online visit (install):** the service worker downloads every file needed to start a
   session (the `PRECACHE` list in `sw.js`: both pages, CSS, all JS, manifest, icons, favicon) into a
   cache named `concentraining-v<CACHE_VERSION>`. If any file fails, nothing is saved and it tries
-  again on a later visit. `stats.html` is left out: it needs `/api/stats` anyway.
+  again on a later visit. `stats.html` is left out: it needs `api/stats` anyway.
 - **Network first:** every same-origin `GET` first tries the network. A good answer is used and its
   copy saved, so **online you always get the newest version**. A forgotten version bump can't
   leave anyone on an old app. The saved copy is used when the network fails (offline) or hasn't
@@ -531,9 +531,14 @@ works online exactly as before.
   `?query` is ignored. So the history page opens offline whichever address is used, even if it was
   never opened online. Redirect responses themselves are never saved; a page reached through one is
   saved without the redirect, because Chrome won't show a redirected response as a page.
-- **Never handled by the service worker:** `/api/*` and `/.netlify/*`, anything that isn't `GET`
-  (so `POST /api/picks` goes straight to the network: a pick sent offline is simply lost, as
+- **Never handled by the service worker:** `api/*` and `.netlify/*`, anything that isn't `GET`
+  (so `POST api/picks` goes straight to the network: a pick sent offline is simply lost, as
   before), other sites, and `Range` requests.
+- **Works at the root and under a subpath:** every address above is relative to the service
+  worker's scope (`self.registration.scope`, the folder `sw.js` is in). That's `/` on Netlify and
+  `/ConcenTraining/` on the [GitHub Pages test site](#github-pages-test-site-while-netlify-is-paused),
+  so there `/ConcenTraining/index.html` is saved as `/ConcenTraining/`. For the same reason every path
+  in `public/` is relative (no leading `/`), including the `api/picks` and `api/stats` calls.
 - **Updates:** the browser checks `sw.js` on every visit (`netlify.toml` sends it with
   `Cache-Control: no-cache`). A changed `sw.js` installs in the background, then takes over at once
   (`skipWaiting` + `clients.claim`) and deletes the older `concentraining-` caches. **It never
@@ -595,6 +600,7 @@ once with a decent connection fixes it, because every online start refreshes all
 | `public/icons/` | Placeholder app icons: `icon.svg` and `icon-small.svg` (sources) and the PNGs rendered from them (Home Screen, Android, maskable) |
 | `public/favicon.ico` | Browser tab icon (placeholder) |
 | `netlify.toml` | Tells Netlify the site is in `public/`, and sends `sw.js` with `Cache-Control: no-cache` |
+| `.github/workflows/pages.yml` | Temporary: publishes `public/` to the GitHub Pages test site on every push to `main` (see [GitHub Pages test site](#github-pages-test-site-while-netlify-is-paused)) |
 | `package.json` | The one dependency the functions need (`@netlify/database`) |
 
 ## Adding real character artwork
@@ -667,3 +673,27 @@ production deploy runs, i.e. when a `main` → `live` pull request is merged; me
 doesn't touch it. Because the copy starts with the live numbers, the preview's `/stats.html`
 shows real data. Netlify Database needs a credit-based Netlify plan;
 if a deploy fails with "database feature not available for this account", the plan is the reason.
+
+### GitHub Pages test site (while Netlify is paused)
+
+Netlify paused the account until about **2 November 2026** (usage limit), so right now there are no
+Deploy Previews and no `main` branch deploy. Until it's back:
+
+- **Test site:** https://kantorhorvathambrus-source.github.io/ConcenTraining/, published from `main`.
+- **How it's published:** a GitHub Actions workflow (`.github/workflows/pages.yml`: a small file
+  that tells GitHub to run steps on its own servers when something happens) uploads `public/` as it
+  is, with no build step, on every push to `main`. It can also be started by hand: **Actions** tab →
+  **Deploy to GitHub Pages** → **Run workflow**. The repo's Pages setting must stay on
+  **Source: GitHub Actions**.
+- **Workflow:** pull requests into `main` are merged **without a Deploy Preview** and tested on the
+  GitHub Pages site afterwards. That's safe because `main` isn't the live site; the live site still
+  only changes through a `main` → `live` pull request (which also has to wait for Netlify).
+- **No backend there:** the Netlify Functions don't run on Pages, so `POST api/picks` gets a 404 and
+  is ignored (no session is counted, the app works the same), and `stats.html` shows its
+  "Couldn't load stats" message.
+- **Subpath:** the site runs under `/ConcenTraining/`, not the domain root. Every path in `public/`
+  is relative and the service worker works relative to its scope (see [Offline use](#offline-use)),
+  so the app, history and offline start work the same as on Netlify.
+- **Separate saved data:** it's a different address from the Netlify sites, so its history,
+  settings and offline cache are separate too.
+- When Netlify is back, the workflow can stay or be deleted; it doesn't affect Netlify.
