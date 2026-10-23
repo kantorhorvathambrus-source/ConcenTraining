@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Your History · ConcenTraining</title>
-  <meta name="description" content="Your finished focus sessions, streaks and focus trends.">
+  <meta name="description" content="Your finished focus sessions, streaks, time per week and focus trends.">
   <link rel="stylesheet" href="css/style.css">
   <!-- Home Screen / install support. Colors: --bg of the light and dark theme (css/style.css). -->
   <link rel="manifest" href="manifest.webmanifest">
@@ -49,6 +49,13 @@
           </div>
         </div>
         <p class="muted small">A streak counts days with at least one finished session.</p>
+      </section>
+
+      <section class="history-section">
+        <h2>Time per week</h2>
+        <p class="muted small">All sessions over the last 12 weeks, Simple and Advanced.</p>
+        <div id="timeChart" class="chart"></div>
+        <p id="timeNote" class="muted"></p>
       </section>
 
       <section class="history-section">

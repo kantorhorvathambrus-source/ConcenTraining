@@ -172,8 +172,12 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   "Most common distractions: Screen (2), Thoughts (1)". Hidden if nothing was picked.
   Times are shown with seconds when there are any ("24 min 30 sec out of 25 min").
   In Advanced mode, a session ended before the timer ran out also shows its planned length:
-  "You focused for 28 min out of 30 min (60 min planned), with 2 distractions logged." A session
-  under 1 minute only shows the title and the "not saved" note (no focus %, sentence or categories).
+  "You focused for 28 min out of 30 min (60 min planned), with 2 distractions logged."
+  Simple mode shows the character's sentence (see "Summary result" below) and, under it, a factual
+  line: "Your session ran 24 min 30 sec (25 min planned), with 3 distractions logged." Simple mode has
+  no distraction lengths, so this is the session's length (distractions included), never "focused"
+  time; "(… planned)" follows the same rule as in Advanced mode. A session under 1 minute only shows
+  the title and the "not saved" note (no focus %, sentence, factual line or categories).
 
 ### Summary result
 
@@ -382,6 +386,11 @@ to history" checkbox was unticked (see above). The page shows:
 
 - **Current and longest streak:** days (local time) with at least one finished session.
   The current streak stays alive until today is over, even if you haven't finished a session yet today.
+- **Time per week:** an SVG bar chart of the time spent in sessions (Simple and Advanced) in the
+  same 12 weeks as the focus trend, by the week a session started. The axis is in minutes while the
+  busiest week is under 2 hours, in hours above that. This week's bar is full color, earlier weeks
+  are lighter, and the line under it says e.g. "This week: 2 h 15 min across 6 sessions." With no
+  sessions in those 12 weeks it only says "No sessions in the last 12 weeks."
 - **Weekly focus trend:** an SVG line chart of the last 12 weeks (weeks start on Monday).
   Each week is total focused time ÷ total session time, so longer sessions count more.
   Weeks without Advanced sessions are a gap in the line.
@@ -397,7 +406,8 @@ to history" checkbox was unticked (see above). The page shows:
 - **Backup:** Export and Import buttons (see below).
 
 Simple-mode sessions have no focus % (their buttons aren't time-based). They count for streaks and
-appear in the list as "—", but are left out of the trend and time-of-day numbers.
+time per week and appear in the list as "—", but are left out of the focus trend and time-of-day
+numbers.
 
 ### Browser storage keys
 
@@ -622,7 +632,7 @@ once with a decent connection fixes it, because every online start refreshes all
 | File | What's in it |
 |---|---|
 | `public/index.html` | All screens (setup, session, summary, "open in another tab" notice) and dialogs |
-| `public/history.html` | Your finished sessions, streaks and focus trends |
+| `public/history.html` | Your finished sessions, streaks, time per week and focus trends |
 | `public/stats.html` | Popularity table (reads `/api/stats`) |
 | `public/sw.js` | Service worker: offline start, network first with a 3-second fallback to the cache, precache list and cache version (see [Offline use](#offline-use)) |
 | `public/js/sw-register.js` | Registers `sw.js` from `index.html` and `history.html`; does nothing without service worker support |
@@ -632,7 +642,7 @@ once with a decent connection fixes it, because every online start refreshes all
 | `public/js/placeholder-art.js` | Built-in placeholder drawings (kind, firm, strict and ragebait faces, plus each character's look) for characters without real art |
 | `public/js/app.js` | Timer, reaction engine, distraction category picker, Undo, disabled Advanced lengths, time away card, motivation rotation, end chime, screen wake lock and the "screen may turn off" note, summary, How it works card, iPhone Home Screen tip, persistent storage request, one tab at a time (Web Locks) |
 | `public/js/history-store.js` | Saving/loading history, focus % and summary result (with their thresholds), distraction categories, export/import checks, iPhone Safari check (used by both pages) |
-| `public/js/history.js` | Streaks, weekly chart, time of day, distraction categories, session list and backup buttons on `history.html` |
+| `public/js/history.js` | Streaks, weekly time and focus charts, time of day, distraction categories, session list and backup buttons on `history.html` |
 | `netlify/functions/picks.mjs` | `POST /api/picks`: counts one session started with a character |
 | `netlify/functions/stats.mjs` | `GET /api/stats`: popularity + which characters are paid |
 | `netlify/lib/characters.mjs` | The characters whose picks are counted (id + name); a new character must be added here |

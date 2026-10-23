@@ -1097,6 +1097,16 @@ a {
   stroke-width: 2.5;
 }
 
+/* Time per week: earlier weeks lighter, the current week full color. */
+.chart-bar {
+  fill: var(--primary);
+  opacity: 0.5;
+}
+
+.chart-bar.current {
+  opacity: 1;
+}
+
 .day-parts,
 .session-list {
   list-style: none;
