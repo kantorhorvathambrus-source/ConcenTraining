@@ -38,7 +38,7 @@
           <li>Pick a character and a timer, then start focusing.</li>
           <li>When you notice your mind has wandered, tap how much (Simple) or how long (Advanced). Your character reacts with a pose, never with words. Noticing and coming back is the skill you're training.</li>
           <li>If you leave the app during a session, it asks when you're back whether you were distracted.</li>
-          <li>Your history is saved on this device only. To keep a backup, use <a href="history.html#backup">Export on the history page →</a></li>
+          <li>Your history is saved automatically on this device. To move it to another phone, use <a href="history.html#backup">Export on the history page →</a></li>
         </ul>
         <button id="howItWorksButton" type="button" class="btn">Got it</button>
       </aside>
@@ -137,13 +137,13 @@
           <div id="categoryButtons" class="category-buttons"></div>
         </div>
         <button id="motivateButton" type="button" class="btn primary">Motivate me</button>
-        <button id="endButton" type="button" class="btn">End session</button>
-        <!-- Takes End session's place (same cell, same size) for UNDO_WINDOW_MS after each
-             distraction tap (app.js), so nothing on the screen moves. -->
+        <!-- Takes Motivate me's place (same cell, same size) for UNDO_WINDOW_MS after each
+             distraction tap (app.js), so nothing on the screen moves and End session is always
+             there. The seconds left are hidden from screen readers: the button is just "Undo". -->
         <button id="undoButton" type="button" class="btn undo-btn" hidden>
-          Undo
-          <span class="undo-countdown" aria-hidden="true"><span class="undo-countdown-bar"></span></span>
+          Undo<span class="undo-seconds" aria-hidden="true"> · <span id="undoSeconds">5</span></span>
         </button>
+        <button id="endButton" type="button" class="btn">End session</button>
       </div>
     </section>
 

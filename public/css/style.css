@@ -634,11 +634,10 @@ input:focus-visible {
 
 /* ---------- undo ---------- */
 
-/* Sits in End session's cell while it's shown. The countdown bar along its bottom edge
-   empties over UNDO_WINDOW_MS (--undo-timeout, set in app.js); then End session comes back. */
+/* Sits in Motivate me's cell while it's shown. The seconds left (" · 5" … " · 1", updated in
+   app.js) are part of its label, not a bar, so they can't be read as a time limit on the
+   category picker above it; then Motivate me comes back. */
 .undo-btn {
-  position: relative;
-  overflow: hidden;
   border-color: var(--primary);
 }
 
@@ -646,26 +645,10 @@ input:focus-visible {
   border-color: var(--primary-hover);
 }
 
-.undo-countdown {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 4px;
-  background: var(--surface-2);
-}
-
-.undo-countdown-bar {
-  display: block;
-  height: 100%;
-  background: var(--primary);
-  transform-origin: left;
-  animation: undo-countdown var(--undo-timeout, 5s) linear forwards;
-}
-
-@keyframes undo-countdown {
-  from { transform: scaleX(1); }
-  to { transform: scaleX(0); }
+/* Every digit the same width, so the label doesn't wobble as it counts down. */
+.undo-seconds {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
 }
 
 .motivation-card {
@@ -1247,9 +1230,5 @@ a {
   .char-img,
   .stage {
     animation: none !important;
-  }
-
-  .undo-countdown {
-    display: none;
   }
 }

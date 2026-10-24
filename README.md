@@ -11,8 +11,8 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   app in 4 points: pick a character and a timer; when you notice your mind has wandered, tap how much
   (Simple) or how long (Advanced), the character reacts with a pose, never with words, and noticing
   and coming back is the skill being trained; leaving the app during a session brings a "were you
-  distracted?" question; the history stays on this device only (with a link to Export on the history
-  page). It's shown on the setup screen until **Got it** is tapped (saved as `howItWorksDismissed` in
+  distracted?" question; the history is saved automatically on this device, and Export on the
+  history page (linked) moves it to another phone. It's shown on the setup screen until **Got it** is tapped (saved as `howItWorksDismissed` in
   `ct_prefs_v1`), then never again by itself. Prefs saved before this existed don't have the key, so
   existing users also see it once. The **How it works** button in the header (next to "Your history
   →") brings it back any time without changing the pref: the card opens, scrolls into view and
@@ -48,9 +48,14 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   distraction or Undo. In a 5 min session "5 min", "10 min" and "10+ min" stay disabled the whole
   time, and in a 10 min session "10 min" and "10+ min" do, so the continue/restart question can't
   come up there in Advanced mode.
-- **Undo:** after any distraction button (both modes), **End session** turns into **Undo** for 5 s
-  (`UNDO_WINDOW_MS` in `public/js/app.js`): same place, same size, so nothing on the screen moves.
-  A thin bar along its bottom edge counts down the 5 s, then End session comes back. Undo takes back
+- **Undo:** after any distraction button (both modes), **Motivate me** turns into **Undo** for 5 s
+  (`UNDO_WINDOW_MS` in `public/js/app.js`): same place, same size, so nothing on the screen moves,
+  and **End session** stays next to it the whole time. The button counts down the seconds in its
+  label ("Undo · 5" … "Undo · 1"), then Motivate me comes back. The countdown is on the button, not
+  a bar, so it isn't mistaken for a time limit on the category picker right above it (the picker
+  has none). Screen readers hear just "Undo" (the number is hidden from them). If Undo has keyboard
+  focus when it goes away, focus moves to Motivate me in the same spot (and from Motivate me to Undo
+  when Undo appears). Undo takes back
   only the latest distraction: it's removed from the session, the reaction (or the refocus step after
   it) stops and the character goes back to its normal pose, the category picker closes, the "doing well" timer is set back to what it
   was before the tap, and the session is saved. A new tap inside the 5 s moves Undo to the new
@@ -64,7 +69,8 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   (`PICKER_AUTO_CLOSE_MS`), also with `null`, so it doesn't stay up for the rest of the session
   (both constants are at the top of `public/js/app.js`). Tapping another distraction button replaces
   the picker (the earlier distraction keeps `null`); **Undo**, ending the session and the timer running
-  out close it. Tapping **End session** only pauses it: it waits behind the question with its 60 s
+  out close it. Tapping **End session** only pauses it (also during the 5 s Undo window, or before
+  the picker has appeared: then it appears after **Keep going**, with the full 60 s): it waits behind the question with its 60 s
   stopped, so its safety close can't open the continue/restart question on top of it. After **Keep
   going** it's back with the time it had left, or closes then if its 60 s would have run out meanwhile. On small phones the open picker covers some of the distraction buttons (never the
   character or the timer); tap a category or Skip first, or scroll down, to log another one.
@@ -90,6 +96,9 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   The setup keeps the last character, mode and length. Under 1 minute there's no checkbox (nothing is
   saved anyway, and the summary is shown as before). If the timer runs out while the dialog is open,
   the session is saved as a full session.
+  Tapped during the 5 s Undo window, it closes Undo first: the distraction stays logged and Undo
+  doesn't come back after **Keep going**. A waiting continue/restart question doesn't open on top of
+  the dialog; after Keep going it opens once the category picker has closed, as usual.
 - **Time away:** if the page is hidden during a running session (another app, another tab, or a
   locked screen; the browser can't tell these apart, so the wording stays neutral) and you come back
   after at least 15 s (`AWAY_MIN_MS` in `public/js/history-store.js`), a card at the bottom of the
@@ -403,7 +412,8 @@ to history" checkbox was unticked (see above). The page shows:
   are left out of the bars and only counted in the note above them.
 - **Last 30 sessions** with date, character, mode, length, distractions and focus %. Sessions saved
   by **Start over** have a small "restarted" label.
-- **Backup:** Export and Import buttons (see below).
+- **Backup:** "Your sessions are saved automatically on this device. Export a copy if you switch
+  phones or clear your browser data.", then Export and Import buttons (see below).
 
 Simple-mode sessions have no focus % (their buttons aren't time-based). They count for streaks and
 time per week and appear in the list as "—", but are left out of the focus trend and time-of-day
@@ -430,7 +440,8 @@ Sessions saved before personalities came from the character keep the style that 
 (for example a strict Grandma). A session that was still running when this changed continues, and
 is saved, with the character's own personality.
 History lives only in this browser: clearing site data or switching devices starts it over.
-The history page says so, too.
+The history page says so, too (its storage note at the top: "Use Export below before you switch
+phones or clear your browser data.").
 
 ### iPhone storage and the Home Screen app
 
