@@ -36,9 +36,11 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   under 1 becomes 1, anything over 240 becomes 240, and decimals are rounded (`MIN_MINUTES`,
   `MAX_MINUTES` and `DEFAULT_MINUTES` in `public/js/app.js`). Whenever that changes what you typed, one
   short line appears right under the Custom field: "Max. 240 min.", "Min. 1 min.", "Set to 25 min." or
-  "Rounded to 13 min.". It's a status line, so screen readers read it once. It takes no space until
-  it appears, and it goes away as soon as the value is valid again (you type a valid number or tap
-  a preset), and when a session starts. If the tap on **Start session** (or **Start over** in the
+  "Rounded to 13 min.". The limits are checked on what you typed, before rounding: anything under 1
+  (0.5 too) says "Min. 1 min.", anything over 240 (240.4 too) says "Max. 240 min.", and "Rounded to …"
+  is only for decimals inside that range. It's a status line, so screen readers read it once. It
+  takes no space until it appears, and it goes away as soon as the value is valid again (you type a
+  valid number or tap a preset), and when a session starts. If the tap on **Start session** (or **Start over** in the
   dialog) is what corrected the field (you typed 300 and tapped the button without leaving the field
   first), that tap doesn't start anything: the message shows, and the next tap starts with the
   corrected value. So a session never starts with a length you didn't see.
@@ -47,6 +49,12 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   On iPhone, silent mode can mute it.") and **Keep the screen on during the session**.
   See "Sound and screen" below. A third one, **Remind me if I leave the app**, is off by default and
   only shown where it can work (not on iPhone or iPad); see [Leave reminder](#leave-reminder).
+- **Tap targets:** everything you can tap is at least 44 × 44 px (buttons, chips, the Custom field,
+  the header's **How it works** and **Your history →**, **Test sound**, the × on the Motivate me card,
+  **← Back to the timer**, and each checkbox together with its text). Where the text is smaller, the
+  tappable area around it is bigger than what you see. The only exceptions are links inside a
+  sentence ("Export on the history page →", "Go to Export →", "Start one →"), which stay the height
+  of their line so the paragraph keeps its normal line spacing.
 - **Simple mode:** 5 severity buttons (very briefly … a whole lot), not time-based.
 - **Advanced mode:** 7 duration buttons (30 sec … 10+ min). Ends with the % of the session spent focusing.
   "10+ min" counts as 10 minutes in that %. A length that can't have happened yet is disabled (greyed

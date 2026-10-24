@@ -431,12 +431,13 @@ function clampMinutes(value) {
 
 // The line under the custom field when clampMinutes changes what was typed, "" when it doesn't.
 // A number field reports text it can't read as "", so that gets the empty message too.
+// The limits are checked on what was typed, before rounding: 0.5 says "Min.", 240.4 says "Max.".
 function minutesNote(value) {
   const n = Number(value);
   if (String(value).trim() === "" || !Number.isFinite(n)) return `Set to ${DEFAULT_MINUTES} min.`;
+  if (n > MAX_MINUTES) return `Max. ${MAX_MINUTES} min.`;
+  if (n < MIN_MINUTES) return `Min. ${MIN_MINUTES} min.`;
   const rounded = Math.round(n);
-  if (rounded > MAX_MINUTES) return `Max. ${MAX_MINUTES} min.`;
-  if (rounded < MIN_MINUTES) return `Min. ${MIN_MINUTES} min.`;
   if (rounded !== n) return `Rounded to ${rounded} min.`;
   return "";
 }

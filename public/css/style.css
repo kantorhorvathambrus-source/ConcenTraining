@@ -171,6 +171,16 @@ input:focus-visible {
   color: var(--muted);
 }
 
+/* Links and text buttons that stand on their own (not inside a sentence): a 44px tall tap
+   target, with the text where it would be anyway. */
+.back-link,
+.header-link a,
+.text-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
 /* ---------- setup: characters ---------- */
 
 .character-list {
@@ -305,6 +315,7 @@ input:focus-visible {
 
 .custom-minutes input {
   width: 80px;
+  min-height: 44px;
   padding: 8px 10px;
   border: 1.5px solid var(--border);
   border-radius: 10px;
@@ -676,10 +687,18 @@ input:focus-visible {
   margin: 8px 0 0;
 }
 
+/* A 44px tap target in the card's right padding (so it never covers the text), with the ×
+   about where a smaller button would put it. */
 .motivation-card .icon-btn {
   position: absolute;
-  top: 8px;
-  right: 6px;
+  top: 2px;
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
 }
 
 .motivation-badge {
@@ -858,6 +877,9 @@ dialog .check-row {
 
 .btn.test-sound {
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   padding: 7px 12px;
   font-size: 0.85rem;
 }
@@ -902,7 +924,7 @@ a {
 }
 
 .header-link {
-  margin-top: 8px !important;
+  margin-top: 0 !important;
   font-weight: 600;
 }
 
@@ -928,7 +950,7 @@ a {
 .text-btn {
   border: none;
   background: none;
-  padding: 4px 2px;
+  padding: 0 2px;
   font-weight: 600;
   color: var(--primary);
   text-decoration: underline;
@@ -1221,6 +1243,16 @@ a {
 
   #restartDialog .divider {
     margin: 14px 0 10px !important;
+  }
+
+  /* Makes up for the 44px Custom field, so the dialog still fits 320x568. The note under the
+     field keeps no bottom margin of its own ("#restartDialog p" above), so these 10px are the gap. */
+  #restartDuration {
+    margin-bottom: 10px;
+  }
+
+  #restartDialog .custom-note {
+    margin-bottom: 0;
   }
 }
 
