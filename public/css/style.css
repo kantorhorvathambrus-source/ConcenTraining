@@ -313,6 +313,17 @@ input:focus-visible {
   font: inherit;
 }
 
+/* "Max. 240 min." etc. under the custom field: no height while empty, so it takes no space
+   until the field was corrected. Same size as the setting hints. */
+.custom-note {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.custom-note:not(:empty) {
+  margin-top: 6px;
+}
+
 /* ---------- session ---------- */
 
 .session-info {
