@@ -5,6 +5,7 @@
 // newest version) and a copy is saved in the cache. Offline, or when the network hasn't answered
 // within NETWORK_TIMEOUT_MS, the saved copy is used instead.
 // Never touched: api/* and .netlify/* (backend), non-GET requests, other sites, Range requests.
+// Also handles taps on the leave reminder notification (see "notifications" at the end).
 //
 // Netlify's Pretty URLs can serve history.html as /history (redirecting /history.html there and
 // rewriting links to it), so every copy is saved and looked up under one address: see cacheKey.
@@ -230,3 +231,29 @@ function networkFirst(event, timeoutMs) {
     );
   });
 }
+
+// ---------- notifications ----------
+
+// The leave reminder, shown by js/app.js while a session runs and the app has been left.
+// Tapping it closes it and brings back the app page: the open one if there is one (it runs the
+// session), otherwise a new one at the scope, which picks up the saved session like a reload.
+// history.html isn't used: the session lives on the app page. The page itself closes the
+// notification whenever it's shown again, however that happens.
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  event.waitUntil(
+    (async () => {
+      const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      const app = windows.find((client) => cacheKey(client.url) === SCOPE_URL.href);
+      if (app) {
+        try {
+          await app.focus();
+          return;
+        } catch {
+          // not allowed to focus it: open the app instead
+        }
+      }
+      await self.clients.openWindow(SCOPE_URL.href);
+    })()
+  );
+});

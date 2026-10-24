@@ -189,17 +189,22 @@ function saveFinishedSession(session, endedBy) {
 
 // ---------- iPhone storage ----------
 
+// True on an iPhone, iPad or iPod, in any browser or the Home Screen app. iPads in desktop
+// mode say they're a Mac, so a "Mac" with a touch screen counts as an iPad.
+function isIOS() {
+  const ua = navigator.userAgent;
+  return /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+}
+
 // True in Safari on an iPhone or iPad, but not in the Home Screen app. Safari can
 // erase a site's storage (history included) after 7 days without a visit; Home
-// Screen apps are exempt. iPads in desktop mode say they're a Mac, so a "Mac"
-// with a touch screen counts as an iPad. Chrome, Firefox, Edge, Opera and the
-// Google app on iOS add their own token; in-app browsers leave out "Safari".
+// Screen apps are exempt. Chrome, Firefox, Edge, Opera and the Google app on iOS
+// add their own token; in-app browsers leave out "Safari".
 function iosSafariNotInstalled() {
   const ua = navigator.userAgent;
-  const ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
   const safari = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS|GSA\//.test(ua);
   const standalone = navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
-  return ios && safari && !standalone;
+  return isIOS() && safari && !standalone;
 }
 
 // ---------- export / import ----------
