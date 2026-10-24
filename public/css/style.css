@@ -13,6 +13,7 @@
   --strict: #3567d4;
   --ragebait: #d93a2f;
   --error: #c62828;
+  --error-text: #ffffff; /* text on a filled --error button */
   --level-1: #f2c94c;
   --level-2: #f2a93b;
   --level-3: #ee8434;
@@ -34,6 +35,7 @@
     --primary: #ff7a45;
     --primary-hover: #ff8e5f;
     --error: #ff6b6b;
+    --error-text: #17161b; /* white on the lighter red would be too faint */
     --shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
     color-scheme: dark;
   }
@@ -154,6 +156,24 @@ button {
 .btn.wide {
   display: block;
   width: 100%;
+}
+
+/* Destructive (Delete in the history page's delete dialog). */
+.btn.danger {
+  background: var(--error);
+  border-color: var(--error);
+  color: var(--error-text);
+}
+
+.btn.danger:hover {
+  filter: brightness(0.92);
+}
+
+/* A smaller button that is still a 44x44px tap target (Edit / Done and Delete on the history page). */
+.btn.compact {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 8px 14px;
 }
 
 button:focus-visible,
@@ -1059,6 +1079,48 @@ a {
   color: var(--error);
 }
 
+/* Under the session list (outside #historyContent, after its 32px margin): looks like the backup
+   status, 12px under the list. Stays in the page while empty, so screen readers notice each new
+   message, but then takes no space. */
+.delete-status {
+  margin: 0;
+}
+
+.delete-status:not(:empty) {
+  margin: -20px 0 32px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1.5px solid var(--relaxed);
+  background: var(--surface);
+}
+
+.delete-status.error:not(:empty) {
+  border-color: var(--error);
+  color: var(--error);
+}
+
+/* Only focused by the script (after the last session is deleted), never by tapping or Tab. */
+#historyEmpty:focus {
+  outline: none;
+}
+
+/* The session list's title with the Edit / Done button on the right. */
+.list-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.list-head h2 {
+  margin: 0;
+}
+
+.delete-summary {
+  font-weight: 600;
+}
+
 .history-section > p {
   margin: 0 0 12px;
 }
@@ -1204,6 +1266,25 @@ a {
 
 .session-item:last-child {
   border-bottom: none;
+}
+
+/* Edit mode: the same two columns as above, plus the Delete button on a line of its own, so the
+   session's text keeps its full width. */
+.session-list.editing .session-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  column-gap: 12px;
+  row-gap: 8px;
+}
+
+.session-delete {
+  grid-column: 1 / -1;
+  justify-self: end;
+  color: var(--error);
+}
+
+.session-delete:hover {
+  border-color: var(--error);
 }
 
 .session-list {

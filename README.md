@@ -51,7 +51,8 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   only shown where it can work (not on iPhone or iPad); see [Leave reminder](#leave-reminder).
 - **Tap targets:** everything you can tap is at least 44 × 44 px (buttons, chips, the Custom field,
   the header's **How it works** and **Your history →**, **Test sound**, the × on the Motivate me card,
-  **← Back to the timer**, and each checkbox together with its text). Where the text is smaller, the
+  **← Back to the timer**, **Edit** / **Done** and **Delete** in the history list, and each checkbox
+  together with its text). Where the text is smaller, the
   tappable area around it is bigger than what you see. The only exceptions are links inside a
   sentence ("Export on the history page →", "Go to Export →", "Start one →"), which stay the height
   of their line so the paragraph keeps its normal line spacing.
@@ -424,9 +425,10 @@ a session at a time, so two tabs never overwrite each other's distractions or bo
 - **Prefs and history in several tabs:** the setup screen, `history.html` and `stats.html` can be open
   in any number of tabs. Prefs are saved field by field (only what was just changed, on top of what's
   saved), so a choice made in one tab isn't undone by another tab saving its own. The history is read,
-  changed and written in one go (saving a session, Import), and a session is only saved once (by its
-  start time), so nothing is lost there. `history.html` shows a session finished in another tab after
-  a reload.
+  changed and written in one go (saving a session, Import, Delete), and a session is only saved once
+  (by its start time), so nothing is lost there. `history.html` shows a session finished in another tab
+  after a reload, or right after you delete a session there (Delete reads the saved history again and
+  removes only that one session, never writing back the page's older copy).
 
 ## Personalities
 
@@ -513,13 +515,45 @@ to history" checkbox was unticked (see above). The page shows:
   and share. Distractions without a category (picker skipped, or logged before categories existed)
   are left out of the bars and only counted in the note above them.
 - **Last 30 sessions** with date, character, mode, length, distractions and focus %. Sessions saved
-  by **Start over** have a small "restarted" label.
+  by **Start over** have a small "restarted" label. The title says "Last 30 sessions (of N)" once
+  there are more than 30, otherwise "N sessions". See [Deleting a session](#deleting-a-session).
 - **Backup:** "Your sessions are saved automatically on this device. Export a copy if you switch
   phones or clear your browser data.", then Export and Import buttons (see below).
 
 Simple-mode sessions have no focus % (their buttons aren't time-based). They count for streaks and
 time per week and appear in the list as "—", but are left out of the focus trend and time-of-day
 numbers.
+
+### Deleting a session
+
+For a session that shouldn't count (timer left running, a test, an accidental save):
+
+1. Tap **Edit** next to the list title. Each listed session gets a **Delete** button on a line of its
+   own under it, and **Edit** becomes **Done**.
+2. Tap **Delete** under the session. A dialog asks "Delete this session?", shows the session's
+   summary line (character, mode, date and time, length) and says "It will be removed from your
+   history and from every number on this page."
+3. **Delete** (red) removes it; **Cancel**, Esc or Back keeps it.
+
+After a delete every number on the page is drawn again from the saved history, the next older
+session moves up into the list, and a line under the list says "Session deleted." Edit mode stays
+on, so you can delete several in a row; **Done** turns it off. Deleting the last session shows the
+empty state, as on a first visit (Export is disabled then).
+
+- **Only the newest 30 sessions** can be deleted, because only these are listed.
+- **An export brings it back:** Import adds every session whose start time isn't in the history, so
+  importing an export made before the delete adds the deleted session again. Delete it again, or
+  export a new file after deleting.
+- **Several tabs:** Delete reads the saved history at that moment and removes only that session, so
+  a session saved meanwhile in another tab is kept. If the session was already deleted in another
+  tab, the page just redraws.
+- If the browser refuses the change (storage blocked), nothing is deleted and the line under the
+  list says "Couldn't delete the session: your browser didn't allow the change."
+- Nothing else about the saved data changes: same key, same session format, same export version.
+- Screen readers: each Delete button is read with its session, e.g. "Delete session: Grandma, Mon 20
+  Oct, 14:05". After a delete the focus moves to the Delete button now at the same place in the list
+  (the one above if it was the last row, the empty-state text if no sessions are left), and "Session
+  deleted." is read out. After Cancel it goes back to the Delete button that opened the dialog.
 
 ### Browser storage keys
 

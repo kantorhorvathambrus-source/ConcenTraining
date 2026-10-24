@@ -9,6 +9,11 @@ const LIST_SIZE = 30;
 // A time-of-day slot can only be "best" once it has this many sessions with a focus %.
 const MIN_SESSIONS_FOR_BEST_TIME = 3;
 
+// Edit mode (the Edit / Done button above the list): each listed session gets a Delete button.
+// Stays on across redraws, so several sessions can be deleted in a row, and turns off when the
+// history becomes empty.
+let editing = false;
+
 // Sessions are grouped by the hour they started.
 const DAY_PARTS = [
   { label: "Morning", hours: "5:00–12:00", matches: (h) => h >= 5 && h < 12 },
@@ -150,6 +155,16 @@ function formatSessionLength(entry) {
   if (entry.endedBy === "timer") return `${planned} min`;
   const actual = Math.max(1, Math.round(entry.elapsedMs / 60000));
   return `${actual} of ${planned} min`;
+}
+
+// One line about a session, for the delete dialog: "Grandma · Advanced · Mon 20 Oct · 14:05 · 25 min".
+function formatSessionSummary(entry) {
+  return [
+    characterName(entry.characterId),
+    capitalize(entry.mode),
+    formatSessionDate(entry.startedAt),
+    formatSessionLength(entry),
+  ].join(" · ");
 }
 
 function characterName(id) {
@@ -398,10 +413,16 @@ function renderCategories(history) {
 
 function renderSessionList(history) {
   const recent = history.slice(0, LIST_SIZE);
+  //   (no-break space): next to the Edit button at 320px the title wraps before "sessions (of 40)",
+  // not inside the brackets.
   document.getElementById("listTitle").textContent =
-    history.length > LIST_SIZE ? `Last ${LIST_SIZE} sessions (of ${history.length})` : plural(history.length, "session");
+    history.length > LIST_SIZE
+      ? `Last ${LIST_SIZE} sessions (of ${history.length})`
+      : plural(history.length, "session");
 
+  document.getElementById("editButton").textContent = editing ? "Done" : "Edit";
   const list = document.getElementById("sessionList");
+  list.classList.toggle("editing", editing);
   list.innerHTML = "";
   for (const entry of recent) {
     const item = document.createElement("li");
@@ -434,18 +455,36 @@ function renderSessionList(history) {
     } else {
       focus.textContent = `${entry.focusPercent}%`;
     }
+
+    // On its own line under the row's text, so the text keeps its full width.
+    if (editing) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "btn compact session-delete";
+      button.textContent = "Delete";
+      button.setAttribute(
+        "aria-label",
+        `Delete session: ${characterName(entry.characterId)}, ${formatSessionDate(entry.startedAt).replace(" · ", ", ")}`
+      );
+      button.dataset.startedAt = entry.startedAt;
+      button.dataset.summary = formatSessionSummary(entry);
+      item.append(button);
+    }
     list.append(item);
   }
 }
 
-// Draws (or redraws, after an import) everything that depends on the history.
+// Draws (or redraws, after an import or a delete) everything that depends on the history.
 function render() {
   const history = loadHistory();
   const empty = history.length === 0;
   document.getElementById("historyEmpty").hidden = !empty;
   document.getElementById("historyContent").hidden = empty;
   document.getElementById("exportButton").disabled = empty;
-  if (empty) return;
+  if (empty) {
+    editing = false;
+    return;
+  }
 
   const now = Date.now();
   renderStreaks(history, now);
@@ -454,6 +493,77 @@ function render() {
   renderDayParts(history);
   renderCategories(history);
   renderSessionList(history);
+}
+
+// ---------- deleting a session ----------
+
+// Opens a <dialog> and resolves with the value of the button that closed it ("" for Esc / Back).
+// Same as ask() in app.js, which this page doesn't load.
+function ask(dialog) {
+  return new Promise((resolve) => {
+    dialog.returnValue = "";
+    dialog.addEventListener("close", () => resolve(dialog.returnValue), { once: true });
+    dialog.showModal();
+  });
+}
+
+function deleteButtons() {
+  return [...document.querySelectorAll("#sessionList .session-delete")];
+}
+
+// The text is cleared first and set a moment later, so screen readers read it out again even
+// when it's the same as last time (two deletes in a row).
+let deleteStatusTimer = null;
+
+function showDeleteStatus(message, isError) {
+  const status = document.getElementById("deleteStatus");
+  clearTimeout(deleteStatusTimer);
+  status.textContent = "";
+  status.classList.toggle("error", isError);
+  deleteStatusTimer = setTimeout(() => {
+    status.textContent = message;
+  }, 100);
+}
+
+function clearDeleteStatus() {
+  clearTimeout(deleteStatusTimer);
+  document.getElementById("deleteStatus").textContent = "";
+}
+
+function toggleEditing() {
+  editing = !editing;
+  if (!editing) clearDeleteStatus();
+  render();
+}
+
+// Asks first; only "Delete" in the dialog deletes. The page's own copy of the history is never
+// written back: deleteFromHistory reads the saved one again (see history-store.js).
+async function confirmDelete(button) {
+  document.getElementById("deleteSummary").textContent = button.dataset.summary;
+  if ((await ask(document.getElementById("deleteDialog"))) !== "delete") {
+    button.focus();
+    return;
+  }
+
+  const position = deleteButtons().indexOf(button);
+  // "missing" (already deleted in another tab) needs no message of its own: it's gone either way.
+  if (deleteFromHistory(Number(button.dataset.startedAt)) === "failed") {
+    showDeleteStatus("Couldn't delete the session: your browser didn't allow the change.", true);
+    button.focus();
+    return;
+  }
+
+  render();
+  showDeleteStatus("Session deleted.", false);
+  // Focus stays at the same place in the list: the row that moved up into it, or the row above
+  // if it was the last one. With no sessions left, the empty state replaces the list (render
+  // turns edit mode off then, and leaves the hidden list as it was).
+  const buttons = editing ? deleteButtons() : [];
+  if (buttons.length > 0) {
+    buttons[Math.min(position, buttons.length - 1)].focus();
+  } else {
+    document.getElementById("historyEmpty").focus();
+  }
 }
 
 // ---------- export / import ----------
@@ -546,6 +656,11 @@ function init() {
     const file = fileInput.files[0];
     fileInput.value = ""; // so picking the same file again still triggers "change"
     if (file) importHistory(file);
+  });
+  document.getElementById("editButton").addEventListener("click", toggleEditing);
+  document.getElementById("sessionList").addEventListener("click", (event) => {
+    const button = event.target.closest(".session-delete");
+    if (button) confirmDelete(button);
   });
   render();
 }
