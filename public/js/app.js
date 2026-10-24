@@ -447,8 +447,9 @@ let pressCount = 0;
 
 // Builds preset chips + a custom number field + the line that says when the field was corrected.
 // read() returns the minutes, or null when the tap on Start just corrected the field: then nothing
-// starts, so the message can be seen, and the next tap starts with the corrected value.
-// clearNote() hides the line.
+// starts, so the message can be seen, and the next tap starts with the corrected value. It blocks
+// only once per correction, so a click without a press (TalkBack, Voice Access, Switch Access)
+// can't get stuck. value() returns the minutes without blocking. clearNote() hides the line.
 function durationPicker(container, initialMinutes) {
   container.innerHTML = "";
 
@@ -519,14 +520,21 @@ function durationPicker(container, initialMinutes) {
   container.append(chips, custom, note);
   return {
     // correct() here too: some browsers don't take focus from the field when a button is tapped.
-    read: () => (correct() || correctedAtPress === pressCount ? null : clampMinutes(input.value)),
+    read: () => {
+      if (correct() || correctedAtPress === pressCount) {
+        correctedAtPress = -1; // blocked once: the next read starts, even without a new press
+        return null;
+      }
+      return clampMinutes(input.value);
+    },
+    value: () => clampMinutes(input.value),
     clearNote,
   };
 }
 
 // ---------- setup screen ----------
 
-let setupPicker = { read: () => prefs.minutes, clearNote() {} };
+let setupPicker = { read: () => prefs.minutes, value: () => prefs.minutes, clearNote() {} };
 
 // Saves only the given fields on top of what's saved now, so a field another tab changed since
 // this page loaded isn't undone. This page's copy fills in fields that were never saved, so the
@@ -943,7 +951,8 @@ async function askContinueOrRestart() {
     if (canSave && $("#restartSave").checked && saveFinishedSession({ ...session, endedAt: cutAt }, "startOver")) {
       requestPersistentStorage();
     }
-    startSession(characterId, mode, restartPicker.read()); // a waiting time away card is dropped with the old session
+    // value(), not read(): Start over's click already let it through, so it must never block here.
+    startSession(characterId, mode, restartPicker.value()); // a waiting time away card is dropped with the old session
   } else {
     askPendingAway();
   }
