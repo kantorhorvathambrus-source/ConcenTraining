@@ -23,6 +23,7 @@ const UNDO_WINDOW_MS = 5000; // after a distraction tap, Undo takes Motivate me'
 // AWAY_MIN_MS is in history-store.js, because imports check away distractions against it.
 const AWAY_ASK_AFTER_MS = AWAY_MIN_MS;
 const DURATION_PRESETS = [5, 10, 15, 25, 35, 45, 60, 90];
+const MIN_MINUTES = 1;
 const MAX_MINUTES = 240;
 const DEFAULT_MINUTES = 25;
 // The timer can run out while the page is closed or the phone is locked. If the app
@@ -425,10 +426,30 @@ function clampMinutes(value) {
   if (String(value).trim() === "") return DEFAULT_MINUTES;
   const n = Math.round(Number(value));
   if (!Number.isFinite(n)) return DEFAULT_MINUTES;
-  return Math.min(MAX_MINUTES, Math.max(1, n));
+  return Math.min(MAX_MINUTES, Math.max(MIN_MINUTES, n));
 }
 
-// Builds preset chips + a custom number field. Returns a function that reads the value.
+// The line under the custom field when clampMinutes changes what was typed, "" when it doesn't.
+// A number field reports text it can't read as "", so that gets the empty message too.
+function minutesNote(value) {
+  const n = Number(value);
+  if (String(value).trim() === "" || !Number.isFinite(n)) return `Set to ${DEFAULT_MINUTES} min.`;
+  const rounded = Math.round(n);
+  if (rounded > MAX_MINUTES) return `Max. ${MAX_MINUTES} min.`;
+  if (rounded < MIN_MINUTES) return `Min. ${MIN_MINUTES} min.`;
+  if (rounded !== n) return `Rounded to ${rounded} min.`;
+  return "";
+}
+
+// Every press (finger, mouse or key) counts up, so a picker can tell whether its last correction
+// came from the press going on now: tapping Start leaves the field first, which corrects it.
+let pressCount = 0;
+
+// Builds preset chips + a custom number field + the line that says when the field was corrected.
+// read() returns the minutes, or null when the tap on Start just corrected the field: then nothing
+// starts, so the message can be seen, and the next tap starts with the corrected value. It blocks
+// only once per correction, so a click without a press (TalkBack, Voice Access, Switch Access)
+// can't get stuck. value() returns the minutes without blocking. clearNote() hides the line.
 function durationPicker(container, initialMinutes) {
   container.innerHTML = "";
 
@@ -437,13 +458,36 @@ function durationPicker(container, initialMinutes) {
 
   const custom = document.createElement("label");
   custom.className = "custom-minutes";
-  custom.innerHTML = `Custom: <input type="number" min="1" max="${MAX_MINUTES}" inputmode="numeric"> min`;
+  custom.innerHTML = `Custom: <input type="number" min="${MIN_MINUTES}" max="${MAX_MINUTES}" inputmode="numeric"> min`;
   const input = custom.querySelector("input");
+
+  // Always in the page (a status line must exist before its text changes to be read out),
+  // empty and without height until the field is corrected.
+  const note = document.createElement("p");
+  note.className = "custom-note muted";
+  note.setAttribute("role", "status");
+  let correctedAtPress = -1;
+
+  const clearNote = () => {
+    note.textContent = "";
+  };
 
   const sync = () => {
     chips.querySelectorAll("button").forEach((chip) => {
       chip.setAttribute("aria-pressed", String(Number(chip.dataset.minutes) === Number(input.value)));
     });
+  };
+
+  // Shows the value that will really be used. Returns true if it differs from what was typed.
+  const correct = () => {
+    const text = minutesNote(input.value);
+    input.value = clampMinutes(input.value);
+    sync();
+    if (!text) return false;
+    note.textContent = "";
+    note.textContent = text; // re-set so screen readers announce it again
+    correctedAtPress = pressCount;
+    return true;
   };
 
   for (const minutes of DURATION_PRESETS) {
@@ -455,30 +499,42 @@ function durationPicker(container, initialMinutes) {
     chip.addEventListener("click", () => {
       input.value = minutes;
       sync();
+      clearNote();
     });
     chips.append(chip);
   }
 
   input.value = initialMinutes;
-  input.addEventListener("input", sync);
-  // When the field is left, show the value that will really be used.
-  input.addEventListener("change", () => {
-    input.value = clampMinutes(input.value);
+  // While typing the line only goes away (once the value is valid), it never appears.
+  input.addEventListener("input", () => {
     sync();
+    if (!minutesNote(input.value)) clearNote();
   });
+  input.addEventListener("change", correct);
   // Inside a dialog form, Enter would press the first button ("Continue") by accident.
   input.addEventListener("keydown", (event) => {
     if (event.key === "Enter") event.preventDefault();
   });
   sync();
 
-  container.append(chips, custom);
-  return () => clampMinutes(input.value);
+  container.append(chips, custom, note);
+  return {
+    // correct() here too: some browsers don't take focus from the field when a button is tapped.
+    read: () => {
+      if (correct() || correctedAtPress === pressCount) {
+        correctedAtPress = -1; // blocked once: the next read starts, even without a new press
+        return null;
+      }
+      return clampMinutes(input.value);
+    },
+    value: () => clampMinutes(input.value),
+    clearNote,
+  };
 }
 
 // ---------- setup screen ----------
 
-let readSetupMinutes = () => prefs.minutes;
+let setupPicker = { read: () => prefs.minutes, value: () => prefs.minutes, clearNote() {} };
 
 // Saves only the given fields on top of what's saved now, so a field another tab changed since
 // this page loaded isn't undone. This page's copy fills in fields that were never saved, so the
@@ -600,7 +656,11 @@ async function onStartClick() {
     $("#characterStep").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
     return;
   }
-  savePrefs({ minutes: readSetupMinutes() });
+  const minutes = setupPicker.read();
+  if (minutes === null) return; // this tap corrected the custom field: its message shows first
+  // The setup picker is kept, so the message would still be there after the session.
+  setupPicker.clearNote();
+  savePrefs({ minutes });
   if (prefs.endSound) unlockAudio(); // this tap is what allows the chime later
   // A session saved by another tab is never replaced (see "one tab at a time"): it carries on here
   // if its tab was closed, or the notice shows if that tab still runs it. Without Web Locks the
@@ -854,12 +914,19 @@ function askPendingRestart() {
   }
 }
 
+let restartPicker = null; // built again every time the dialog opens
+
+// "Start over" keeps the dialog open when this tap corrected the custom field (see durationPicker).
+function onStartOverClick(event) {
+  if (restartPicker && restartPicker.read() === null) event.preventDefault();
+}
+
 async function askContinueOrRestart() {
   if (!session || session.endedAt) return;
   const dialog = $("#restartDialog");
   if (dialog.open) return;
 
-  const readMinutes = durationPicker($("#restartDuration"), Math.round(session.durationMs / MIN));
+  restartPicker = durationPicker($("#restartDuration"), Math.round(session.durationMs / MIN));
 
   // "Save the first X to history": X is the time so far, and if it's kept, the
   // session is saved as ending right now, so what's shown is what's saved. Only
@@ -884,7 +951,8 @@ async function askContinueOrRestart() {
     if (canSave && $("#restartSave").checked && saveFinishedSession({ ...session, endedAt: cutAt }, "startOver")) {
       requestPersistentStorage();
     }
-    startSession(characterId, mode, readMinutes()); // a waiting time away card is dropped with the old session
+    // value(), not read(): Start over's click already let it through, so it must never block here.
+    startSession(characterId, mode, restartPicker.value()); // a waiting time away card is dropped with the old session
   } else {
     askPendingAway();
   }
@@ -1495,9 +1563,12 @@ function init() {
   initLeaveReminder();
   closeLeaveReminder(); // e.g. its tap reopened the app after the browser discarded the page
   buildCategoryButtons();
-  readSetupMinutes = durationPicker($("#setupDuration"), prefs.minutes);
+  setupPicker = durationPicker($("#setupDuration"), prefs.minutes);
+  // Capture phase, so the count goes up before the press moves focus (see pressCount).
+  for (const type of ["pointerdown", "keydown"]) document.addEventListener(type, () => pressCount++, true);
 
   $("#startButton").addEventListener("click", onStartClick);
+  $('#restartDialog button[value="restart"]').addEventListener("click", onStartOverClick);
   $("#howItWorksLink").addEventListener("click", openHowItWorks);
   $("#howItWorksButton").addEventListener("click", dismissHowItWorks);
   $("#homeScreenTipButton").addEventListener("click", dismissHomeScreenTip);

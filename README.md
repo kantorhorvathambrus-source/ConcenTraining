@@ -32,8 +32,16 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   in `public/js/app.js`, default 25), plus a custom field. The 5 and 10 min presets make a session
   easy to start for beginners and on hard days. The presets always sit in 2 rows of 4, both on the
   setup screen and in the Start over dialog, and each one is at least 44 px tall. A custom duration
-  is corrected as soon as you leave the field: empty becomes 25 min, anything under 1 becomes 1,
-  anything over 240 becomes 240.
+  is corrected as soon as you leave the field: empty (or not a number) becomes 25 min, anything
+  under 1 becomes 1, anything over 240 becomes 240, and decimals are rounded (`MIN_MINUTES`,
+  `MAX_MINUTES` and `DEFAULT_MINUTES` in `public/js/app.js`). Whenever that changes what you typed, one
+  short line appears right under the Custom field: "Max. 240 min.", "Min. 1 min.", "Set to 25 min." or
+  "Rounded to 13 min.". It's a status line, so screen readers read it once. It takes no space until
+  it appears, and it goes away as soon as the value is valid again (you type a valid number or tap
+  a preset), and when a session starts. If the tap on **Start session** (or **Start over** in the
+  dialog) is what corrected the field (you typed 300 and tapped the button without leaving the field
+  first), that tap doesn't start anything: the message shows, and the next tap starts with the
+  corrected value. So a session never starts with a length you didn't see.
   Under step 3 there are two checkboxes, both on by default: **Play a sound when time's up** (with a
   small **Test sound** button that plays the chime once, and a hint under it: "Uses your media volume.
   On iPhone, silent mode can mute it.") and **Keep the screen on during the session**.
