@@ -17,7 +17,7 @@ const REFOCUS_MS = 2500;
 // (e.g. the phone was put down), it closes silently after this long, so it doesn't stay up
 // for the rest of the session or hold back the continue/restart question forever.
 const PICKER_AUTO_CLOSE_MS = 60 * 1000;
-const UNDO_WINDOW_MS = 5000; // after a distraction tap, Undo takes End session's place for this long
+const UNDO_WINDOW_MS = 5000; // after a distraction tap, Undo takes Motivate me's place for this long
 // Page hidden (another app, another tab, locked screen) for at least this long during a session:
 // on return the app asks whether it was a distraction. Shorter absences are ignored.
 // AWAY_MIN_MS is in history-store.js, because imports check away distractions against it.
@@ -141,7 +141,8 @@ let nextGoodAt = 0;
 const picker = { distraction: null, showTimer: 0, hideTimer: 0, closesAt: 0 };
 // distraction: the latest one, while its Undo window is open. prevNextGoodAt: nextGoodAt
 // before that tap. setRestart: that tap set session.restartPending (it wasn't set before).
-const undo = { distraction: null, prevNextGoodAt: 0, setRestart: false, timer: 0 };
+// closesAt: when the window ends. countdownTimer: updates the seconds shown on the button.
+const undo = { distraction: null, prevNextGoodAt: 0, setRestart: false, timer: 0, closesAt: 0, countdownTimer: 0 };
 const motivation = { phase: null, index: 0, shown: false };
 // from / ms: when the page was left and for how long (whole seconds) the card asks about, also
 // while it waits for another dialog to close (ms 0: none). open: the card is on screen.
@@ -727,26 +728,39 @@ function updateLengthButtons() {
 
 // ---------- undo ----------
 
+// Undo sits in Motivate me's cell, so End session stays where it is the whole time. The seconds
+// left are shown on the button itself ("Undo · 4"), not as a bar, so they can't be mistaken
+// for a time limit on the category picker right above it.
 // Undo only applies to the latest distraction: a newer tap moves it there and restarts the window.
 function openUndo(distraction, prevNextGoodAt, setRestart) {
   closeUndo(false);
-  Object.assign(undo, { distraction, prevNextGoodAt, setRestart });
+  Object.assign(undo, { distraction, prevNextGoodAt, setRestart, closesAt: Date.now() + UNDO_WINDOW_MS });
   const button = $("#undoButton");
-  void button.offsetWidth; // so showing it again restarts the countdown bar
-  $("#endButton").hidden = true;
+  const motivate = $("#motivateButton");
+  const hadFocus = document.activeElement === motivate;
+  updateUndoCountdown();
+  motivate.hidden = true;
   button.hidden = false;
+  if (hadFocus) button.focus(); // keyboard focus stays in the same spot
   undo.timer = setTimeout(() => closeUndo(true), UNDO_WINDOW_MS);
+  undo.countdownTimer = setInterval(updateUndoCountdown, 250);
+}
+
+function updateUndoCountdown() {
+  const seconds = Math.max(1, Math.ceil((undo.closesAt - Date.now()) / 1000));
+  $("#undoSeconds").textContent = String(seconds);
 }
 
 // thenAsk: open the continue/restart dialog now if one is waiting for the Undo window.
 function closeUndo(thenAsk) {
   clearTimeout(undo.timer);
+  clearInterval(undo.countdownTimer);
   undo.distraction = null;
   const button = $("#undoButton");
   const hadFocus = document.activeElement === button;
   button.hidden = true;
-  $("#endButton").hidden = false;
-  if (hadFocus) $("#endButton").focus(); // keyboard focus stays in the same spot
+  $("#motivateButton").hidden = false;
+  if (hadFocus) $("#motivateButton").focus(); // keyboard focus stays in the same spot
   if (thenAsk) askPendingRestart();
 }
 
@@ -876,6 +890,9 @@ async function askContinueOrRestart() {
 }
 
 async function onEndClick() {
+  // Tapped during the Undo window: the distraction stays logged and Undo is over for good (it
+  // doesn't come back after Keep going). false: a waiting restart question doesn't open now.
+  closeUndo(false);
   // The picker waits behind this dialog, and a waiting restart question waits until it's answered.
   pausePicker();
   // "Save this session to your history": only offered when it could be saved at all
@@ -1349,7 +1366,6 @@ function init() {
   $("#motivationClose").addEventListener("click", () => ($("#motivationCard").hidden = true));
   $("#endButton").addEventListener("click", onEndClick);
   $("#undoButton").addEventListener("click", onUndoClick);
-  $("#undoButton").style.setProperty("--undo-timeout", `${UNDO_WINDOW_MS}ms`);
   $("#skipCategoryButton").addEventListener("click", () => closePicker(true));
   $("#newSessionButton").addEventListener("click", () => {
     session = null;
