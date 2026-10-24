@@ -94,6 +94,13 @@
           <input id="keepScreenOnCheck" type="checkbox" data-pref="keepScreenOn">
           <span>Keep the screen on during the session</span>
         </label>
+        <!-- Hidden where notifications can't work (initLeaveReminder in app.js). -->
+        <label id="leaveReminderRow" class="check-row" hidden>
+          <input id="leaveReminderCheck" type="checkbox">
+          <span>Remind me if I leave the app</span>
+        </label>
+        <!-- Only after a tick was refused. Text is set when shown, so screen readers announce it. -->
+        <p id="leaveReminderHint" class="setting-hint muted" role="status" hidden></p>
       </div>
 
       <button id="startButton" type="button" class="btn primary big">Start session</button>

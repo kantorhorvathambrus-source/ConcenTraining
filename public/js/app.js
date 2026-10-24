@@ -114,13 +114,14 @@ function countCharacterPick(id) {
 
 // ---------- state ----------
 
-// endSound / keepScreenOn: the setup checkboxes. homeScreenTipDismissed: "Got it" was tapped on the
-// iPhone Home Screen tip. persistRequested: persistent storage was asked for (or skipped, in Firefox).
+// endSound / keepScreenOn / leaveReminder: the setup checkboxes (leaveReminder: see "leave reminder").
+// homeScreenTipDismissed: "Got it" was tapped on the iPhone Home Screen tip.
+// persistRequested: persistent storage was asked for (or skipped, in Firefox).
 // howItWorksDismissed: "Got it" was tapped on the How it works card.
 // Prefs saved before any of these existed get these defaults.
 const prefs = Object.assign(
   {
-    characterId: null, mode: "simple", minutes: 25, endSound: true, keepScreenOn: true,
+    characterId: null, mode: "simple", minutes: 25, endSound: true, keepScreenOn: true, leaveReminder: false,
     homeScreenTipDismissed: false, persistRequested: false, howItWorksDismissed: false,
   },
   load(PREFS_KEY, {}),
@@ -981,6 +982,7 @@ function releaseControl() {
 // dialogs close, so nothing that waits on them (or on a timer) saves anything more.
 function loseControl() {
   clearInterval(tickTimer);
+  cancelLeaveReminder();
   stopStage();
   closePicker(false);
   closeUndo(false);
@@ -1047,6 +1049,7 @@ function onStorage(event) {
 // The page was hidden or shown again. The browser can't tell another app or tab from a locked
 // screen, so the card only says "away". Nothing is ever logged without a tap.
 function onVisibilityChange() {
+  if (!document.hidden) cancelLeaveReminder(); // any way back, also after the session ended meanwhile
   if (!session || session.endedAt) return;
   if (document.hidden) noteLeave();
   else noteReturn();
@@ -1057,6 +1060,7 @@ function onVisibilityChange() {
 // the first leave to the last return, so after such a reload the card still covers all of it.
 function noteLeave() {
   away.hiddenAt = Date.now();
+  scheduleLeaveReminder();
   if (session.leftAt) return;
   session.leftAt = away.ms ? away.from : away.hiddenAt;
   save(SESSION_KEY, session);
@@ -1122,6 +1126,137 @@ function logAwayDistraction(from, ms) {
   addDistraction(distraction, level === 5);
 }
 
+// ---------- leave reminder (system notification) ----------
+
+// Optional: the setup checkbox "Remind me if I leave the app" (prefs.leaveReminder, off by default).
+// Page hidden during a running session and still hidden AWAY_ASK_AFTER_MS later (the time away
+// card's threshold): one system notification, shown through the service worker, because
+// new Notification() doesn't work on Android Chrome. Tapping it brings the app back
+// (notificationclick in sw.js). Coming back any way closes it. It never logs anything: the time
+// away card handles the return as always. It's the app speaking, never a character.
+// It runs on a timer in the hidden page, so it doesn't come if the browser freezes or discards
+// the page before then. No push, no backend.
+const LEAVE_REMINDER_TAG = "ct-leave-reminder"; // a new notification with this tag replaces the old one
+const LEAVE_REMINDER_HINT =
+  "Notifications are blocked for this site. You can allow them in your browser's site settings.";
+const leaveReminder = { timer: 0 };
+
+// iPhones and iPads never get it: iOS pauses a web app almost as soon as it's left, so the timer
+// wouldn't run, and Safari outside the Home Screen app has no notifications at all.
+function leaveReminderSupported() {
+  try {
+    return (
+      !isIOS() && "Notification" in window && "serviceWorker" in navigator &&
+      "ServiceWorkerRegistration" in window && "showNotification" in ServiceWorkerRegistration.prototype
+    );
+  } catch {
+    return false;
+  }
+}
+
+function notificationsAllowed() {
+  return leaveReminderSupported() && Notification.permission === "granted";
+}
+
+// Unsupported: the row stays hidden. Permission taken back (or reset) since the box was ticked:
+// it shows unticked, and permission is never asked for again without a tap.
+function initLeaveReminder() {
+  if (!leaveReminderSupported()) return;
+  if (prefs.leaveReminder && !notificationsAllowed()) savePrefs({ leaveReminder: false });
+  const check = $("#leaveReminderCheck");
+  check.checked = prefs.leaveReminder;
+  check.addEventListener("change", onLeaveReminderChange);
+  $("#leaveReminderRow").hidden = false;
+}
+
+// Browsers only show the permission prompt inside a tap, so it's asked right here.
+// Denied (now or earlier): unticked, with the hint. Prompt closed without an answer: just unticked.
+async function onLeaveReminderChange() {
+  const check = $("#leaveReminderCheck");
+  const hint = $("#leaveReminderHint");
+  hint.hidden = true;
+  if (!check.checked) {
+    savePrefs({ leaveReminder: false });
+    return;
+  }
+  let permission = Notification.permission;
+  if (permission === "default") {
+    try {
+      permission = await new Promise((resolve) => {
+        const asked = Notification.requestPermission(resolve); // older browsers: the callback only
+        if (asked) asked.then(resolve, () => resolve("default"));
+      });
+    } catch {
+      permission = "default";
+    }
+  }
+  const allowed = permission === "granted";
+  check.checked = allowed;
+  savePrefs({ leaveReminder: allowed });
+  if (permission === "denied") {
+    hint.hidden = false;
+    hint.textContent = LEAVE_REMINDER_HINT; // set after showing it, so screen readers announce it
+  }
+}
+
+// Checked when the page is left (minLeftMs: AWAY_ASK_AFTER_MS, so a session ending before the
+// reminder gets its chime and summary instead) and again when the timer fires (0: it can run late).
+// Only the tab running the session (see "one tab at a time").
+function leaveReminderWanted(minLeftMs) {
+  return Boolean(
+    prefs.leaveReminder && notificationsAllowed() && document.hidden &&
+    session && !session.endedAt && (!locks || control.hold) &&
+    session.startedAt + session.durationMs - Date.now() > minLeftMs,
+  );
+}
+
+// From noteLeave: one timer per leave, cancelled on return.
+function scheduleLeaveReminder() {
+  clearTimeout(leaveReminder.timer);
+  leaveReminder.timer = 0;
+  if (leaveReminderWanted(AWAY_ASK_AFTER_MS)) {
+    leaveReminder.timer = setTimeout(showLeaveReminder, AWAY_ASK_AFTER_MS);
+  }
+}
+
+async function showLeaveReminder() {
+  leaveReminder.timer = 0;
+  if (!leaveReminderWanted(0)) return;
+  try {
+    const registration = await navigator.serviceWorker.getRegistration();
+    if (!registration || !registration.active) return; // no service worker yet: no reminder
+    await registration.showNotification("Your session is still running", {
+      body: "Is this part of what you're focusing on? Tap to go back.",
+      icon: "icons/icon-192.png",
+      tag: LEAVE_REMINDER_TAG,
+    });
+  } catch {
+    return; // refused or unsupported: the session carries on without it
+  }
+  // Came back, or the session ended, while it was being shown.
+  if (!document.hidden || !session || session.endedAt) closeLeaveReminder();
+}
+
+// On every return to the page and every end of the session in this tab.
+function cancelLeaveReminder() {
+  clearTimeout(leaveReminder.timer);
+  leaveReminder.timer = 0;
+  closeLeaveReminder();
+}
+
+function closeLeaveReminder() {
+  if (!notificationsAllowed()) return; // nothing can be showing
+  try {
+    navigator.serviceWorker
+      .getRegistration()
+      .then((registration) => (registration ? registration.getNotifications({ tag: LEAVE_REMINDER_TAG }) : []))
+      .then((notifications) => notifications.forEach((notification) => notification.close()))
+      .catch(() => {});
+  } catch {
+    // not supported: fine
+  }
+}
+
 // Once per device, after a session is saved: asks the browser to mark this site's storage as
 // persistent, so it isn't cleared on its own (e.g. when the device runs low on space). The
 // browser decides; nothing is shown either way. Skipped in Firefox, which would show a
@@ -1142,6 +1277,7 @@ function requestPersistentStorage() {
 // to the setup screen instead, like Discard in the "Welcome back" dialog.
 function finishSession(endedAt, keep = true) {
   clearInterval(tickTimer);
+  cancelLeaveReminder();
   stopStage();
   closePicker(false);
   closeUndo(false);
@@ -1178,6 +1314,7 @@ function onTimerRanOut(running) {
 
 async function askSaveLateSession(endedAt) {
   clearInterval(tickTimer);
+  cancelLeaveReminder();
   stopStage();
   closePicker(false);
   closeUndo(false);
@@ -1355,6 +1492,8 @@ function init() {
   renderCharacterList();
   bindChoiceGroups();
   bindSettingChecks();
+  initLeaveReminder();
+  closeLeaveReminder(); // e.g. its tap reopened the app after the browser discarded the page
   buildCategoryButtons();
   readSetupMinutes = durationPicker($("#setupDuration"), prefs.minutes);
 

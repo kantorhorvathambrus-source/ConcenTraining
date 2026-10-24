@@ -37,7 +37,8 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   Under step 3 there are two checkboxes, both on by default: **Play a sound when time's up** (with a
   small **Test sound** button that plays the chime once, and a hint under it: "Uses your media volume.
   On iPhone, silent mode can mute it.") and **Keep the screen on during the session**.
-  See "Sound and screen" below.
+  See "Sound and screen" below. A third one, **Remind me if I leave the app**, is off by default and
+  only shown where it can work (not on iPhone or iPad); see [Leave reminder](#leave-reminder).
 - **Simple mode:** 5 severity buttons (very briefly … a whole lot), not time-based.
 - **Advanced mode:** 7 duration buttons (30 sec … 10+ min). Ends with the % of the session spent focusing.
   "10+ min" counts as 10 minutes in that %. A length that can't have happened yet is disabled (greyed
@@ -103,7 +104,9 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   locked screen; the browser can't tell these apart, so the wording stays neutral) and you come back
   after at least 15 s (`AWAY_MIN_MS` in `public/js/history-store.js`), a card at the bottom of the
   screen asks "You were away for 2 min 15 sec. Were you distracted?" (measured to the second). Under
-  15 s nothing happens. Nothing is ever logged without a tap.
+  15 s nothing happens. Nothing is ever logged without a tap. With **Remind me if I leave the app**
+  on, a system notification also comes after 15 s away; it doesn't change anything here (see
+  [Leave reminder](#leave-reminder)).
   - While the card is open, the character holds its `level1` pose (no blinking, no "doing well"
     pose) and shows no text.
   - **No, it was for the task** (or Esc) closes it and logs nothing.
@@ -287,6 +290,57 @@ are in `public/js/data/messages.js`.
   page is hidden, it stays as it is, so it doesn't blink on every tap or return (`updateScreenNote()`
   in `public/js/app.js`).
 
+### Leave reminder
+
+An optional system notification that brings you back when you leave the app during a session.
+
+- **Setting:** the setup checkbox **Remind me if I leave the app**, under **Keep the screen on during
+  the session**. Off by default. Saved as `leaveReminder` in `ct_prefs_v1`; prefs saved before it
+  existed get `false`.
+- **Permission:** ticking the box asks the browser for permission to show notifications, in that
+  same tap (browsers only show the prompt after a tap). Allowed: the box stays ticked. Blocked (now,
+  or earlier for this site): the box unticks itself and a hint shows under it: "Notifications are
+  blocked for this site. You can allow them in your browser's site settings." The hint only shows
+  after such a tap, never on its own. Prompt closed without an answer: the box just unticks. If the
+  permission is taken back later in the browser's settings, the box shows unticked on the next visit
+  (and `leaveReminder` is saved as `false`); the app never asks again without a tap.
+- **Where it's shown:** only where notifications can work: the Notification API and a service worker
+  (see [Offline use](#offline-use)). Elsewhere the row is hidden, e.g. `index.html` opened as a local
+  file. It's also hidden on every iPhone and iPad (`isIOS()` in `public/js/history-store.js`), even in
+  the Home Screen app: iOS pauses a web app almost as soon as it's left, so the reminder wouldn't come.
+- **When:** the page is hidden during a running session (another app, another tab, the home screen,
+  a locked screen) and is still hidden 15 s later (`AWAY_ASK_AFTER_MS`, the time away card's
+  threshold): one notification.
+  - Title: "Your session is still running". Text: "Is this part of what you're focusing on? Tap to go
+    back." Icon: `icons/icon-192.png`.
+  - At most one per leave, and it has a tag (`ct-leave-reminder`): a new one replaces an old one, so
+    there's never more than one.
+  - Not shown if the session has 15 s or less left when you leave (the end chime and summary come
+    instead), if it ended meanwhile, or in a tab that doesn't run the session (see
+    [Several tabs](#several-tabs-one-tab-at-a-time)). Not during the "Welcome back" question either.
+  - It's the app speaking, like the time away card; characters never use text.
+- **Coming back** (by tapping the notification or any other way) closes it if it's still there.
+  It also closes when the session ends while you're away, and when the app starts (e.g. after the
+  browser discarded the page and the tap reloaded it). The time away card then works exactly as
+  before. The notification itself never logs anything.
+- **Tapping it:** the service worker closes it and brings back the open app page (`notificationclick`
+  in `public/sw.js`), or opens the app if no app page is open. That picks the session up like a
+  reload. The address comes from the service worker's scope, so it works at the domain root and under
+  `/ConcenTraining/`. It's shown through the service worker (`registration.showNotification`),
+  because `new Notification()` doesn't work on Android Chrome.
+- **How reliable it is:** it runs on a 15 s timer in the hidden page. No push, no backend.
+  - Chrome runs timers in hidden pages at most once a second for the first 5 minutes, so it normally
+    comes at about 15-16 s.
+  - If Android freezes or closes the browser before then (low memory, battery saver, aggressive power
+    settings on some phones) or discards the tab, the reminder doesn't come. The time away card still
+    works on return.
+  - If Chrome's own notifications are turned off in Android's settings, nothing shows even though the
+    site is allowed.
+- **Right after an update:** a page that is still controlled by an older service worker (without the
+  tap handler) for the first few seconds after a new version is deployed still shows the reminder.
+  Tapping it then doesn't open the app; coming back by hand closes it. The new service worker takes
+  over on its own (see [Offline use](#offline-use)).
+
 ### Several tabs (one tab at a time)
 
 The app can be open in several tabs at once, or in a tab and the installed app (on Android they
@@ -425,7 +479,7 @@ numbers.
 |---|---|
 | `ct_session_v1` | The session that's running right now (removed when it ends). `restartPending: true` while the continue/restart question is unanswered; older saved sessions don't have it, which means `false`. `leftAt` (timestamp in ms): only while the page is hidden, for the time away card; missing means the page wasn't left. Never copied into the history |
 | `ct_history_v1` | Finished sessions, newest first, max. 1000 |
-| `ct_prefs_v1` | Last chosen character, mode and duration, plus `endSound` and `keepScreenOn` (the two setup checkboxes, `true`/`false`). Prefs saved before these existed get `true` for both. `homeScreenTipDismissed`: `true` once **Got it** was tapped on the iPhone Home Screen tip. `persistRequested`: `true` once persistent storage was asked for (or skipped in Firefox), see [iPhone storage and the Home Screen app](#iphone-storage-and-the-home-screen-app). Prefs saved before these two existed get `false` for both. `howItWorksDismissed`: `true` once **Got it** was tapped on the How it works card; prefs saved before it existed get `false`, so the card shows once. A `style` value saved by older versions is ignored and dropped. Saved field by field (see [Several tabs](#several-tabs-one-tab-at-a-time)) |
+| `ct_prefs_v1` | Last chosen character, mode and duration, plus `endSound` and `keepScreenOn` (the two setup checkboxes, `true`/`false`). Prefs saved before these existed get `true` for both. `leaveReminder`: the **Remind me if I leave the app** checkbox (see [Leave reminder](#leave-reminder)); prefs saved before it existed get `false`. `homeScreenTipDismissed`: `true` once **Got it** was tapped on the iPhone Home Screen tip. `persistRequested`: `true` once persistent storage was asked for (or skipped in Firefox), see [iPhone storage and the Home Screen app](#iphone-storage-and-the-home-screen-app). Prefs saved before these two existed get `false` for both. `howItWorksDismissed`: `true` once **Got it** was tapped on the How it works card; prefs saved before it existed get `false`, so the card shows once. A `style` value saved by older versions is ignored and dropped. Saved field by field (see [Several tabs](#several-tabs-one-tab-at-a-time)) |
 
 Each history entry: `startedAt`, `endedAt` (timestamps in ms), `endedBy` (`"timer"`/`"manual"`/`"startOver"`),
 `characterId`, `style` (the character's personality when the session ran: `"kind"`, `"firm"`,
@@ -593,6 +647,10 @@ works online exactly as before.
   `?query` is ignored. So the history page opens offline whichever address is used, even if it was
   never opened online. Redirect responses themselves are never saved; a page reached through one is
   saved without the redirect, because Chrome won't show a redirected response as a page.
+- **Notification taps:** the service worker also handles taps on the
+  [leave reminder](#leave-reminder) (`notificationclick`): it focuses the open app page or opens the
+  app at its scope. This needed no new file, so `PRECACHE` and `CACHE_VERSION` didn't change: any
+  change to `sw.js` makes the browser install the new version anyway.
 - **Never handled by the service worker:** `api/*` and `.netlify/*`, anything that isn't `GET`
   (so `POST api/picks` goes straight to the network: a pick sent offline is simply lost, as
   before), other sites, and `Range` requests.
@@ -645,14 +703,14 @@ once with a decent connection fixes it, because every online start refreshes all
 | `public/index.html` | All screens (setup, session, summary, "open in another tab" notice) and dialogs |
 | `public/history.html` | Your finished sessions, streaks, time per week and focus trends |
 | `public/stats.html` | Popularity table (reads `/api/stats`) |
-| `public/sw.js` | Service worker: offline start, network first with a 3-second fallback to the cache, precache list and cache version (see [Offline use](#offline-use)) |
+| `public/sw.js` | Service worker: offline start, network first with a 3-second fallback to the cache, precache list and cache version (see [Offline use](#offline-use)), and taps on the leave reminder notification |
 | `public/js/sw-register.js` | Registers `sw.js` from `index.html` and `history.html`; does nothing without service worker support |
 | `public/css/style.css` | Styling, light/dark mode, breathing and reaction animations |
 | `public/js/data/characters.js` | Character list, groups and the personality each group gives (`personalityOf`), art paths |
 | `public/js/data/messages.js` | Motivation messages, summary titles and Simple-mode summary messages per result |
 | `public/js/placeholder-art.js` | Built-in placeholder drawings (kind, firm, strict and ragebait faces, plus each character's look) for characters without real art |
-| `public/js/app.js` | Timer, reaction engine, distraction category picker, Undo, disabled Advanced lengths, time away card, motivation rotation, end chime, screen wake lock and the "screen may turn off" note, summary, How it works card, iPhone Home Screen tip, persistent storage request, one tab at a time (Web Locks) |
-| `public/js/history-store.js` | Saving/loading history, focus % and summary result (with their thresholds), distraction categories, export/import checks, iPhone Safari check (used by both pages) |
+| `public/js/app.js` | Timer, reaction engine, distraction category picker, Undo, disabled Advanced lengths, time away card, leave reminder notification, motivation rotation, end chime, screen wake lock and the "screen may turn off" note, summary, How it works card, iPhone Home Screen tip, persistent storage request, one tab at a time (Web Locks) |
+| `public/js/history-store.js` | Saving/loading history, focus % and summary result (with their thresholds), distraction categories, export/import checks, iPhone/iPad and iPhone Safari checks (used by both pages) |
 | `public/js/history.js` | Streaks, weekly time and focus charts, time of day, distraction categories, session list and backup buttons on `history.html` |
 | `netlify/functions/picks.mjs` | `POST /api/picks`: counts one session started with a character |
 | `netlify/functions/stats.mjs` | `GET /api/stats`: popularity + which characters are paid |
