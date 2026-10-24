@@ -32,6 +32,60 @@ function personalityOf(character) {
   return group ? group.personality : "kind";
 }
 
+// Short, neutral descriptions of each pose for screen readers, like alt text: never the character
+// speaking and never addressed to the user, so the "poses only, never text" rule holds (nothing
+// is shown on screen). Used as the image's alt, and read out once when a distraction reaction
+// starts (announce in app.js). blink has none: a blink keeps the alt it had.
+// They match the README pose tables. Influencer's level4 has no slow clap, so that line leaves it out.
+const POSE_DESCRIPTIONS = {
+  kind: {
+    initial: "calm and smiling.",
+    level1: "a little surprised, smiling.",
+    level2: "pleased, smiling warmly.",
+    level3: "grinning, a bit flustered.",
+    level4: "worried, but still smiling.",
+    level5: "teary-eyed, a heart beside them.",
+    good: "beaming with pride.",
+    refocus: "smiling, encouraging.",
+  },
+  firm: {
+    initial: "calm, slight smile.",
+    level1: "one eyebrow raised.",
+    level2: "a long, narrow-eyed look.",
+    level3: "serious.",
+    level4: "stern, but calm.",
+    level5: "a disappointed sigh, eyes closed.",
+    good: "a small, approving smile.",
+    refocus: "calm and expectant, pointing back to the task.",
+  },
+  strict: {
+    initial: "straight-faced.",
+    level1: "stern.",
+    level2: "frowning, disapproving.",
+    level3: "angry.",
+    level4: "angry, shouting.",
+    level5: "furious, red-faced, steaming.",
+    good: "a satisfied smirk.",
+    refocus: "firm, pointing back to the task.",
+  },
+  ragebait: {
+    initial: "bored, smirking.",
+    level1: "side-eye and a smug grin.",
+    level2: "an exaggerated eye-roll.",
+    level3: "winking, tongue out.",
+    level4: "laughing hard, eyes squeezed shut.",
+    level5: "smirking, with a rude hand gesture.",
+    good: "arms crossed, looking away.",
+    refocus: "bored, lazily pointing back to the task.",
+  },
+};
+
+// "Grandma, a little surprised, smiling." Just the name for a pose without a description.
+function describePose(character, pose) {
+  const text = (POSE_DESCRIPTIONS[personalityOf(character)] || {})[pose];
+  return text ? `${character.name}, ${text}` : character.name;
+}
+
 // What the user sees for a saved style: its group's label ("kind" -> "Relaxed"). Old history
 // entries keep the style they ran with, so this goes by the style, not the character's group.
 function styleLabel(style) {

@@ -108,7 +108,8 @@
 
     <!-- ========== SESSION ========== -->
     <section id="sessionScreen" class="screen" hidden>
-      <p id="sessionInfo" class="session-info muted"></p>
+      <!-- Gets focus when a session starts, so a screen reader reads it (focusScreenStart in app.js). -->
+      <p id="sessionInfo" class="session-info muted" tabindex="-1"></p>
       <!-- Shown while the chime is on but the screen isn't being kept on (updateScreenNote in app.js). -->
       <p id="screenNote" class="screen-note muted" role="status" hidden>Your screen may turn off. If it does, you won't hear the chime.</p>
 
@@ -122,7 +123,7 @@
       </div>
 
       <div class="distraction">
-        <h2 id="distractionPrompt"></h2>
+        <h2 id="distractionPrompt" tabindex="-1"></h2>
         <div id="distractionButtons" class="distraction-buttons"></div>
       </div>
 
@@ -131,6 +132,10 @@
         <p id="motivationText"></p>
         <button id="motivationClose" type="button" class="icon-btn" aria-label="Hide message">×</button>
       </div>
+
+      <!-- Screen readers only: reads the reaction, the category picker and Undo out once (announce in
+           app.js). Polite, so it waits until the screen reader is done talking and never cuts in. -->
+      <p id="announcer" class="visually-hidden" aria-live="polite" aria-atomic="true"></p>
 
       <div class="session-bar">
         <!-- In the sticky bottom bar so it's on screen wherever you've scrolled.
@@ -159,7 +164,7 @@
       <div class="stage">
         <img id="summaryImg" class="char-img" alt="">
       </div>
-      <h1 id="summaryTitle" class="summary-title"></h1>
+      <h1 id="summaryTitle" class="summary-title" tabindex="-1"></h1>
       <p id="summaryPercent" class="summary-percent" hidden></p>
       <div class="summary-details">
         <p id="summaryMessage" class="summary-text" hidden></p>
@@ -182,9 +187,10 @@
   </main>
 
   <!-- ========== DIALOGS ========== -->
-  <dialog id="ragebaitDialog">
+  <!-- aria-labelledby / aria-describedby: screen readers read the question when focus moves into the dialog. -->
+  <dialog id="ragebaitDialog" aria-labelledby="ragebaitTitle" aria-describedby="ragebaitText">
     <form method="dialog">
-      <h2>Heads up!</h2>
+      <h2 id="ragebaitTitle">Heads up!</h2>
       <p id="ragebaitText"></p>
       <div class="dialog-actions">
         <button value="cancel" class="btn">Pick someone else</button>
@@ -193,10 +199,10 @@
     </form>
   </dialog>
 
-  <dialog id="restartDialog">
+  <dialog id="restartDialog" aria-labelledby="restartTitle" aria-describedby="restartText">
     <form method="dialog">
-      <h2>That was a long break</h2>
-      <p>Do you want to keep going with this session, or start fresh? After a long distraction, starting over is often easier.</p>
+      <h2 id="restartTitle">That was a long break</h2>
+      <p id="restartText">Do you want to keep going with this session, or start fresh? After a long distraction, starting over is often easier.</p>
       <button value="continue" class="btn primary wide">Continue this session</button>
       <p class="divider"><span>or start over with</span></p>
       <div id="restartDuration" class="duration-picker"></div>
@@ -208,9 +214,9 @@
     </form>
   </dialog>
 
-  <dialog id="endDialog">
+  <dialog id="endDialog" aria-labelledby="endTitle">
     <form method="dialog">
-      <h2>End this session now?</h2>
+      <h2 id="endTitle">End this session now?</h2>
       <!-- Only shown once the session could be saved (1 minute or more), ticked every time (onEndClick in app.js). -->
       <label id="endSaveRow" class="check-row" hidden>
         <input id="endSave" type="checkbox" checked>
@@ -225,20 +231,20 @@
 
   <!-- Opens when the page was hidden for 15 s or more during a session (time away in app.js).
        "Yes" logs the measured time away at once. -->
-  <dialog id="awayDialog" class="away-dialog" aria-labelledby="awayTitle">
+  <dialog id="awayDialog" class="away-dialog" aria-labelledby="awayTitle" aria-describedby="awayQuestion">
     <h2 id="awayTitle"></h2>
-    <p>Were you distracted?</p>
+    <p id="awayQuestion">Were you distracted?</p>
     <div class="dialog-actions">
       <button id="awayNoButton" type="button" class="btn">No, it was for the task</button>
       <button id="awayYesButton" type="button" class="btn primary">Yes</button>
     </div>
   </dialog>
 
-  <dialog id="lateDialog">
+  <dialog id="lateDialog" aria-labelledby="lateTitle" aria-describedby="lateText lateQuestion">
     <form method="dialog">
-      <h2>Welcome back!</h2>
+      <h2 id="lateTitle">Welcome back!</h2>
       <p id="lateText"></p>
-      <p>The app can't tell if you kept focusing until the end. Save it to your history?</p>
+      <p id="lateQuestion">The app can't tell if you kept focusing until the end. Save it to your history?</p>
       <div class="dialog-actions">
         <button value="discard" class="btn">Discard</button>
         <button value="save" class="btn primary" autofocus>Save</button>

@@ -18,6 +18,12 @@ const REFOCUS_MS = 2500;
 // for the rest of the session or hold back the continue/restart question forever.
 const PICKER_AUTO_CLOSE_MS = 60 * 1000;
 const UNDO_WINDOW_MS = 5000; // after a distraction tap, Undo takes Motivate me's place for this long
+// Screen reader announcements (see "screen reader announcements"): set this long after the live
+// region is emptied, and emptied again this long after that.
+const ANNOUNCE_DELAY_MS = 100;
+const ANNOUNCE_CLEAR_MS = 5000;
+const PICKER_ANNOUNCEMENT = "What distracted you? Choose below, or skip.";
+const UNDO_ANNOUNCEMENT = "Distraction undone.";
 // Page hidden (another app, another tab, locked screen) for at least this long during a session:
 // on return the app asks whether it was a distraction. Shorter absences are ignored.
 // AWAY_MIN_MS is in history-store.js, because imports check away distractions against it.
@@ -140,7 +146,9 @@ let nextGoodAt = 0;
 // If session.restartPending is set, the continue/restart dialog opens as soon as
 // the picker is closed and the Undo window is over. They never show at the same time.
 // closesAt: when the open picker's safety close (PICKER_AUTO_CLOSE_MS) is due.
-const picker = { distraction: null, showTimer: 0, hideTimer: 0, closesAt: 0 };
+// returnFocus: the distraction button that was tapped; focus goes back there when the picker
+// closes with focus inside it (a category or Skip was tapped), instead of being lost.
+const picker = { distraction: null, showTimer: 0, hideTimer: 0, closesAt: 0, returnFocus: null };
 // distraction: the latest one, while its Undo window is open. prevNextGoodAt: nextGoodAt
 // before that tap. setRestart: that tap set session.restartPending (it wasn't set before).
 // closesAt: when the window ends. countdownTimer: updates the seconds shown on the button.
@@ -212,14 +220,16 @@ function mountStage(character) {
   stage.img = $("#sessionImg");
   stage.character = character;
   for (const name of ["kind", "firm", "strict", "ragebait"]) stage.wrap.classList.toggle(name, personality === name);
-  stage.img.alt = character.name;
   preloadArt(character);
-  setPose("initial");
+  setPose("initial"); // also sets the alt
   scheduleBlink();
 }
 
+// The alt follows the pose (describePose in characters.js), so a screen reader can check the
+// character any time. A blink keeps the alt it had, so the alt doesn't change every few seconds.
 function setPose(pose) {
   setPoseImage(stage.img, stage.character, pose);
+  if (pose !== "blink") stage.img.alt = describePose(stage.character, pose);
 }
 
 // pose: "level1".."level5" or "good"; level: 1-5 for distraction reactions, 0 for "good".
@@ -273,6 +283,36 @@ function stopReaction() {
 function stopStage() {
   stopReaction();
   clearTimeout(stage.blinkTimer);
+  clearAnnouncement();
+}
+
+// ---------- screen reader announcements ----------
+
+// One visually hidden live region (#announcer in index.html, polite). Only for what follows the
+// user's own action: a distraction reaction, the category picker appearing, and Undo. The poses
+// that come by themselves (doing well, blinks, refocus) and Undo's countdown are never read out,
+// so they don't break the user's focus. Nothing is shown on screen, and it's never the character
+// speaking: the reactions are described like alt text (describePose in characters.js).
+const announcer = { text: "", timer: 0 };
+
+// Emptied first and set a moment later, so the same text is read again on the next tap. Emptied
+// again after ANNOUNCE_CLEAR_MS, so swiping through the page later doesn't find old text there.
+// Emptying it never cuts off what's being read: only new text is read out.
+function announce(text) {
+  const region = $("#announcer");
+  clearTimeout(announcer.timer);
+  announcer.text = text;
+  region.textContent = "";
+  announcer.timer = setTimeout(() => {
+    region.textContent = text;
+    announcer.timer = setTimeout(clearAnnouncement, ANNOUNCE_CLEAR_MS);
+  }, ANNOUNCE_DELAY_MS);
+}
+
+function clearAnnouncement() {
+  clearTimeout(announcer.timer);
+  announcer.text = "";
+  $("#announcer").textContent = "";
 }
 
 // ---------- end-of-session chime ----------
@@ -712,7 +752,7 @@ function enterSession() {
     button.type = "button";
     button.className = `btn level level-${option.level}`;
     button.textContent = option.label;
-    button.addEventListener("click", () => logDistraction(option));
+    button.addEventListener("click", () => logDistraction(option, button));
     buttons.append(button);
   }
 
@@ -725,6 +765,9 @@ function enterSession() {
 
   showScreen("sessionScreen");
   mountStage(character);
+  // The button that started it is gone now: without this, focus would be lost and a screen reader
+  // would say nothing. Without scrolling, so nothing moves on screen.
+  $("#sessionInfo").focus({ preventScroll: true });
 
   clearInterval(tickTimer);
   tick();
@@ -753,11 +796,11 @@ function tick() {
   if (remaining <= 0) onTimerRanOut(true);
 }
 
-function logDistraction(option) {
+function logDistraction(option, button) {
   if (!session || session.endedAt) return;
   const distraction = { at: Date.now(), level: option.level, ms: option.ms || 0, category: null };
   addDistraction(distraction, Boolean(option.askRestart));
-  schedulePicker(distraction);
+  schedulePicker(distraction, button);
 }
 
 // Saves a distraction and plays its reaction, with Undo. askRestart: level 5, which asks
@@ -771,6 +814,7 @@ function addDistraction(distraction, askRestart) {
   openUndo(distraction, nextGoodAt, setRestart);
   nextGoodAt = Date.now() + GOOD_EVERY_MS;
   react(`level${distraction.level}`, distraction.level);
+  announce(describePose(stage.character, `level${distraction.level}`));
   updateLengthButtons();
 }
 
@@ -839,6 +883,7 @@ function onUndoClick() {
   stopReaction();
   setPose("initial");
   closePicker(false);
+  announce(UNDO_ANNOUNCEMENT); // replaces the reaction's line if it hasn't been read yet
   updateLengthButtons();
   // An earlier "10+ min" / "A whole lot" that wasn't undone still asks, now.
   closeUndo(true);
@@ -859,13 +904,17 @@ function buildCategoryButtons() {
 }
 
 // A newer distraction replaces the picker of the previous one (which keeps category: null).
-function schedulePicker(distraction) {
+function schedulePicker(distraction, button) {
   closePicker(false);
   picker.distraction = distraction;
+  picker.returnFocus = button;
   picker.showTimer = setTimeout(() => showPicker(PICKER_AUTO_CLOSE_MS), PICKER_DELAY_MS);
 }
 
+// Announced only when it appears, not when it was already open (after Keep going). Polite, like
+// the reaction's line, so it's read after that one, not over it. Focus stays where it is.
 function showPicker(closeInMs) {
+  if ($("#categoryPicker").hidden) announce(PICKER_ANNOUNCEMENT);
   $("#categoryPicker").hidden = false;
   picker.closesAt = Date.now() + closeInMs;
   picker.hideTimer = setTimeout(() => closePicker(true), closeInMs);
@@ -899,11 +948,23 @@ function pickCategory(id) {
 
 // Skip, and the silent auto-close, also end up here: the category stays null (never guessed).
 // thenAsk: open the continue/restart dialog now if one is waiting for the picker.
+// Focus inside it (a category or Skip was tapped) goes back to the distraction button that was
+// tapped, or to the heading above the buttons if that one is disabled now (Advanced mode), so
+// it isn't lost. Before the restart question, so focus comes back there when that closes.
 function closePicker(thenAsk) {
   clearTimeout(picker.showTimer);
   clearTimeout(picker.hideTimer);
-  $("#categoryPicker").hidden = true;
+  const box = $("#categoryPicker");
+  const hadFocus = box.contains(document.activeElement);
+  box.hidden = true;
+  if (announcer.text === PICKER_ANNOUNCEMENT) clearAnnouncement();
+  if (hadFocus) {
+    const button = picker.returnFocus;
+    const target = button && button.isConnected && !button.disabled ? button : $("#distractionPrompt");
+    target.focus({ preventScroll: true });
+  }
   picker.distraction = null;
+  picker.returnFocus = null;
   if (thenAsk) askPendingRestart();
 }
 
@@ -1364,6 +1425,8 @@ function finishSession(endedAt, keep = true) {
   }
   renderSummary();
   showScreen("summaryScreen");
+  // Focus was on the session (now hidden): the title gets it, so a screen reader reads the result.
+  $("#summaryTitle").focus({ preventScroll: true });
 }
 
 // Back soon after the end (or watching it end): saved as a full session, as always.
@@ -1477,8 +1540,9 @@ function renderSummary() {
   const result = sessionResult(session);
   const short = result === "short";
   const img = $("#summaryImg");
-  img.alt = character.name;
-  setPoseImage(img, character, (SUMMARY_POSES[personalityOf(character)] || SUMMARY_POSES.kind)[result]);
+  const pose = (SUMMARY_POSES[personalityOf(character)] || SUMMARY_POSES.kind)[result];
+  img.alt = describePose(character, pose);
+  setPoseImage(img, character, pose);
 
   $("#summaryTitle").textContent = SUMMARY_TITLES[result];
   const percentEl = $("#summaryPercent");

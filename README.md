@@ -55,6 +55,36 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   tappable area around it is bigger than what you see. The only exceptions are links inside a
   sentence ("Export on the history page →", "Go to Export →", "Start one →"), which stay the height
   of their line so the paragraph keeps its normal line spacing.
+- **Screen readers (TalkBack, VoiceOver):** a screen reader user gets what a sighted user sees from
+  the characters, with nothing new on screen and no setting for it. Sighted users see and hear no
+  difference.
+  - **Reactions:** when a distraction reaction starts (a distraction button, or **Yes** on the time
+    away card), one short description of the pose is read out, like alt text: the character's name
+    and a few words, e.g. "Professor, a disappointed sigh, eyes closed." It's never the character
+    speaking (no quotes, never addressed to you), so "poses only, never text" still holds. There's one
+    description per personality and pose (`POSE_DESCRIPTIONS` and `describePose()` in
+    `public/js/data/characters.js`), matching the pose tables in [Personalities](#personalities). It's
+    read through a visually hidden live region in the session screen (`#announcer` in `index.html`,
+    `announce()` in `public/js/app.js`): polite, so it waits until the screen reader is done talking and
+    never cuts in. The same text is read again on the next tap, and the region empties itself after
+    5 s (`ANNOUNCE_CLEAR_MS`), so swiping through the page later doesn't find old text.
+  - **Not read out:** the "doing well" pose, blinks, the refocus pose, the Undo countdown and the
+    category picker's safety close. They happen without your action and would break your focus.
+  - **Category picker:** when it appears (1.4 s after the tap), "What distracted you? Choose below,
+    or skip." is read out, after the reaction's line (both are polite, so neither cuts off the other).
+    Focus stays where it is. Not read again after **Keep going** if it was already open. After a
+    category or **Skip**, focus goes back to the distraction button you tapped (or to the "Got
+    distracted?" heading if that button is disabled now, in Advanced mode), so it isn't lost.
+  - **Undo:** "Distraction undone." is read out.
+  - **Images:** the session and summary images have the same descriptions as their alt
+    ("Grandma, calm and smiling."), following the pose, so you can check the character any time by
+    moving to it. Blinks don't change the alt.
+  - **Screens:** when a session starts (Start session, Start over, Continue here, or a reload), focus
+    moves to the session info line ("Grandma · Relaxed · Simple · 25 min"); when it ends (End
+    session, timer ran out, Save in "Welcome back"), focus moves to the summary title. Focus moves
+    without scrolling, and these get no focus outline, so nothing changes on screen.
+  - **Dialogs:** every dialog is labelled by its title (and described by its question), so a screen
+    reader reads it when focus moves into it, e.g. "You were away for 2 min 10 sec. Were you distracted?"
 - **Simple mode:** 5 severity buttons (very briefly … a whole lot), not time-based.
 - **Advanced mode:** 7 duration buttons (30 sec … 10+ min). Ends with the % of the session spent focusing.
   "10+ min" counts as 10 minutes in that %. A length that can't have happened yet is disabled (greyed
@@ -418,7 +448,9 @@ is only what's saved. The history list finds the label from the saved `style` (`
 The picker lists the characters in group order: relaxed, firm, strict, ragebait (the order of
 `CHARACTERS` in `characters.js`).
 
-Characters react only with poses and facial expressions, never with text. The firm poses:
+Characters react only with poses and facial expressions, never with text. For screen readers each
+pose also has a short neutral description (`POSE_DESCRIPTIONS` in `characters.js`, see "Screen
+readers" above); when the art for a pose changes, check that its description still fits. The firm poses:
 
 | Pose | Firm reaction |
 |---|---|
@@ -722,7 +754,7 @@ once with a decent connection fixes it, because every online start refreshes all
 | `public/sw.js` | Service worker: offline start, network first with a 3-second fallback to the cache, precache list and cache version (see [Offline use](#offline-use)), and taps on the leave reminder notification |
 | `public/js/sw-register.js` | Registers `sw.js` from `index.html` and `history.html`; does nothing without service worker support |
 | `public/css/style.css` | Styling, light/dark mode, breathing and reaction animations |
-| `public/js/data/characters.js` | Character list, groups and the personality each group gives (`personalityOf`), art paths |
+| `public/js/data/characters.js` | Character list, groups and the personality each group gives (`personalityOf`), art paths, pose descriptions for screen readers (`POSE_DESCRIPTIONS`) |
 | `public/js/data/messages.js` | Motivation messages, summary titles and Simple-mode summary messages per result |
 | `public/js/placeholder-art.js` | Built-in placeholder drawings (kind, firm, strict and ragebait faces, plus each character's look) for characters without real art |
 | `public/js/app.js` | Timer, reaction engine, distraction category picker, Undo, disabled Advanced lengths, time away card, leave reminder notification, motivation rotation, end chime, screen wake lock and the "screen may turn off" note, summary, How it works card, iPhone Home Screen tip, persistent storage request, one tab at a time (Web Locks) |
