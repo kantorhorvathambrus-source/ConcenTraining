@@ -980,6 +980,27 @@ a {
   outline: none;
 }
 
+/* Same for these: focus goes there from the script so a screen reader reads them (app.js). */
+#sessionInfo:focus,
+#distractionPrompt:focus,
+#summaryTitle:focus {
+  outline: none;
+}
+
+/* Read by screen readers, invisible and taking no space on screen (the live region in index.html). */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .link-btn {
   margin-top: 10px;
   text-align: center;
