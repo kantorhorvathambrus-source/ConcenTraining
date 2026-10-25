@@ -32,7 +32,8 @@
       </span>
     </p>
 
-    <p id="historyEmpty" class="empty-state" hidden>
+    <!-- tabindex="-1": gets the focus after the last session is deleted (history.js). -->
+    <p id="historyEmpty" class="empty-state" tabindex="-1" hidden>
       No finished sessions yet. Every session that runs at least 1 minute shows up here once it ends.
       <a href="./">Start one →</a>
     </p>
@@ -79,10 +80,17 @@
       </section>
 
       <section class="history-section">
-        <h2 id="listTitle">Last 30 sessions</h2>
+        <div class="list-head">
+          <h2 id="listTitle">Last 30 sessions</h2>
+          <button id="editButton" type="button" class="btn compact">Edit</button>
+        </div>
         <ol id="sessionList" class="session-list"></ol>
       </section>
     </div>
+
+    <!-- "Session deleted." or the delete error. Outside #historyContent, so it still shows (and is
+         read out) after the last session is deleted. Takes no space while it's empty. -->
+    <p id="deleteStatus" class="delete-status" role="status"></p>
 
     <section id="backup" class="history-section">
       <h2>Backup</h2>
@@ -102,6 +110,20 @@
 
     <p><a href="./" class="back-link">← Back to the timer</a></p>
   </main>
+
+  <!-- Opened by a session's Delete button in edit mode. Cancel comes first, so it has the focus
+       when the dialog opens. Esc and Back close it like Cancel. -->
+  <dialog id="deleteDialog" aria-labelledby="deleteTitle" aria-describedby="deleteSummary deleteText">
+    <form method="dialog">
+      <h2 id="deleteTitle">Delete this session?</h2>
+      <p id="deleteSummary" class="delete-summary"></p>
+      <p id="deleteText">It will be removed from your history and from every number on this page.</p>
+      <div class="dialog-actions">
+        <button value="cancel" class="btn">Cancel</button>
+        <button value="delete" class="btn danger">Delete</button>
+      </div>
+    </form>
+  </dialog>
 
   <script src="js/data/characters.js"></script>
   <script src="js/history-store.js"></script>

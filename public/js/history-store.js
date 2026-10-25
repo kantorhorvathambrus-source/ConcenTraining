@@ -187,6 +187,17 @@ function saveFinishedSession(session, endedBy) {
   return writeHistory(history); // if it fails the app keeps working, the session just isn't remembered
 }
 
+// Removes the session with this start time (Delete on the history page). The saved history is
+// read again right here, never taken from the page, so a session saved meanwhile in another tab
+// is kept. Returns "deleted", "missing" (it isn't in the saved history any more, e.g. deleted in
+// another tab: nothing is written) or "failed" (the browser refused to store it: nothing changed).
+function deleteFromHistory(startedAt) {
+  const history = loadHistory();
+  const kept = history.filter((entry) => entry.startedAt !== startedAt);
+  if (kept.length === history.length) return "missing";
+  return writeHistory(kept) ? "deleted" : "failed";
+}
+
 // ---------- iPhone storage ----------
 
 // True on an iPhone, iPad or iPod, in any browser or the Home Screen app. iPads in desktop
