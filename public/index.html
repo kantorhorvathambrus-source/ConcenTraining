@@ -199,18 +199,31 @@
     </form>
   </dialog>
 
+  <!-- Two steps in one dialog (showRestartStep in app.js): step 1 asks only "continue or start
+       over" (title and text depend on the mode), step 2 (only after Start over) asks for the new
+       length. Esc / Back: continue in step 1, back to step 1 in step 2. -->
   <dialog id="restartDialog" aria-labelledby="restartTitle" aria-describedby="restartText">
     <form method="dialog">
-      <h2 id="restartTitle">That was a long break</h2>
-      <p id="restartText">Do you want to keep going with this session, or start fresh? After a long distraction, starting over is often easier.</p>
-      <button value="continue" class="btn primary wide">Continue this session</button>
-      <p class="divider"><span>or start over with</span></p>
-      <div id="restartDuration" class="duration-picker"></div>
-      <label id="restartSaveRow" class="check-row" hidden>
-        <input id="restartSave" type="checkbox" checked>
-        <span id="restartSaveText"></span>
-      </label>
-      <button value="restart" class="btn wide">Start over</button>
+      <div id="restartStep1">
+        <h2 id="restartTitle"></h2>
+        <p id="restartText"></p>
+        <div class="dialog-stack">
+          <button value="continue" class="btn primary wide">Continue this session</button>
+          <button id="restartOverButton" type="button" class="btn wide">Start over</button>
+        </div>
+      </div>
+      <div id="restartStep2" hidden>
+        <h2 id="restartStep2Title" tabindex="-1">How long should the new session be?</h2>
+        <div id="restartDuration" class="duration-picker"></div>
+        <label id="restartSaveRow" class="check-row" hidden>
+          <input id="restartSave" type="checkbox" checked>
+          <span id="restartSaveText"></span>
+        </label>
+        <div class="dialog-stack">
+          <button value="restart" class="btn primary wide">Start new session</button>
+          <button id="restartBackButton" type="button" class="btn wide">Back</button>
+        </div>
+      </div>
     </form>
   </dialog>
 
