@@ -21,6 +21,26 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   [iPhone storage](#iphone-storage-and-the-home-screen-app)) shows too, this card comes first: it's
   what a first visit needs, while the tip only appears once there's history and refers to Export,
   which this card introduces. Same look as the tip (`.tip-card`).
+- **Quick start card:** for returning users, a small card right under the header (above How it
+  works and the iPhone tip) starts a session in one tap, without scrolling down to **Start session**.
+  It shows a small image of the character (initial pose, decorative), a grey "Quick start" label,
+  one line like "Boss · Advanced · 25 min" (character · Simple/Advanced · minutes) and a **Start**
+  button. It only shows when the saved character still exists and the history has at least one
+  session, so a brand-new user (or someone who deleted all their history) never sees it. It always
+  shows the current setup, i.e. exactly what **Start session** would start, and follows every change
+  further down at once (character card, mode, chip, Custom field). The minutes are corrected the way
+  Start corrects them: while "300" is typed in the Custom field the card says 240 min, an empty
+  field says 25 min. **Start** runs the same code as **Start session** (`onStartClick(true)` in
+  `public/js/app.js`): same checks, same one-tab-at-a-time rules, a ragebait character saved earlier
+  doesn't warn again, and a quick double tap starts one session. If the tap corrected the Custom
+  field ("Max. 240 min." etc.), nothing starts and the page scrolls to step 3 so the message is
+  visible (an instant jump with reduced motion); the next tap starts. It's checked again whenever
+  the setup screen is shown (after a session, Discard, End without saving, a reload), when the page
+  comes back from the browser's back/forward cache, and when another tab changes the history. No
+  setting and nothing new saved: it only reads `ct_prefs_v1` and `ct_history_v1`. The image box has
+  a fixed size (56 px wide, 200:240) with `object-fit: contain`, so nothing moves when the image
+  loads and real artwork fits the same slot. At 320 × 568 the header and the whole card fit on the
+  first screen.
 - **Setup:** 1. pick a character, 2. a mode (Simple / Advanced), 3. a focus duration.
   The character decides the personality (see below). Ragebait characters show a warning before
   they can be selected. Selecting a card only updates which card is pressed (`aria-pressed`), so
@@ -50,6 +70,7 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   See "Sound and screen" below. A third one, **Remind me if I leave the app**, is off by default and
   only shown where it can work (not on iPhone or iPad); see [Leave reminder](#leave-reminder).
 - **Tap targets:** everything you can tap is at least 44 × 44 px (buttons, chips, the Custom field,
+  **Start** on the Quick start card,
   the header's **How it works** and **Your history →**, **Test sound**, the × on the Motivate me card,
   **← Back to the timer**, **Edit** / **Done** and **Delete** in the history list, and each checkbox
   together with its text). Where the text is smaller, the
@@ -80,10 +101,13 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   - **Images:** the session and summary images have the same descriptions as their alt
     ("Grandma, calm and smiling."), following the pose, so you can check the character any time by
     moving to it. Blinks don't change the alt.
-  - **Screens:** when a session starts (Start session, Start new session, Continue here, or a reload), focus
+  - **Screens:** when a session starts (Start session, Start on the Quick start card, Start new session, Continue here, or a reload), focus
     moves to the session info line ("Grandma · Relaxed · Simple · 25 min"); when it ends (End
     session, timer ran out, Save in "Welcome back"), focus moves to the summary title. Focus moves
     without scrolling, and these get no focus outline, so nothing changes on screen.
+  - **Quick start:** the card's **Start** button is named by its text plus the setup line
+    (`aria-labelledby`), e.g. "Start Boss · Advanced · 25 min", so it can't be confused with
+    **Start session**, and it still starts with the visible word "Start" for voice control.
   - **Dialogs:** every dialog is labelled by its title (and described by its question), so a screen
     reader reads it when focus moves into it, e.g. "You were away for 2 min 10 sec. Were you distracted?"
 - **Simple mode:** 5 severity buttons (very briefly … a whole lot), not time-based.

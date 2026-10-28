@@ -168,6 +168,7 @@ function showScreen(id) {
   if (id === "setupScreen") {
     updateHowItWorks();
     updateHomeScreenTip();
+    refreshQuickStart();
   }
   document.querySelectorAll(".screen").forEach((screen) => {
     screen.hidden = screen.id !== id;
@@ -621,6 +622,47 @@ function dismissHomeScreenTip() {
   $("#homeScreenTip").hidden = true;
 }
 
+// "Quick start" card at the top: starts the current setup (character, mode, duration) without
+// scrolling down to Start session. Only for returning users: a saved character that still exists
+// and at least one session in the history. It always shows what Start session would start, so it
+// follows every change further down. hasHistory: checked when the setup screen is shown (and when
+// the history changes in another tab), not on every keystroke. characterId: the one whose image
+// is shown, so the image is only set again when the character changes.
+const quickStart = { hasHistory: false, characterId: null };
+
+function refreshQuickStart() {
+  quickStart.hasHistory = loadHistory().length > 0;
+  updateQuickStart();
+}
+
+// The minutes are setupPicker.value(): what's typed, corrected the way Start corrects it
+// (300 shows 240, an empty field 25), so the line never shows a length that can't start.
+function updateQuickStart() {
+  const character = characterById(prefs.characterId);
+  const card = $("#quickStart");
+  card.hidden = !character || !quickStart.hasHistory;
+  if (card.hidden) return;
+  if (quickStart.characterId !== character.id) {
+    setPoseImage($("#quickStartImg"), character, "initial");
+    quickStart.characterId = character.id;
+  }
+  // No-break spaces (\u00a0): a narrow screen wraps after a "·", never before it or inside "25 min".
+  $("#quickStartLine").textContent =
+    `${character.name}\u00a0· ${capitalize(prefs.mode)}\u00a0· ${setupPicker.value()}\u00a0min`;
+}
+
+// A restore from the browser's back/forward cache (e.g. Back from history.html after deleting
+// sessions there) shows the page without showScreen, so the history is checked again here.
+function onPageShow(event) {
+  if (event.persisted && !$("#setupScreen").hidden) refreshQuickStart();
+}
+
+// The history changed in another tab (a session saved or deleted there). null: all storage was cleared.
+function onHistoryStorage(event) {
+  if (event.key !== HISTORY_KEY && event.key !== null) return;
+  if (!$("#setupScreen").hidden) refreshQuickStart();
+}
+
 function renderCharacterList() {
   const list = $("#characterList");
   list.innerHTML = "";
@@ -658,6 +700,7 @@ async function onCharacterTap(character) {
   savePrefs({ characterId: character.id });
   $("#characterError").hidden = true;
   updateCharacterCards();
+  updateQuickStart();
 }
 
 function bindChoiceGroups() {
@@ -670,6 +713,7 @@ function bindChoiceGroups() {
       button.addEventListener("click", () => {
         savePrefs({ [key]: button.dataset.value });
         sync();
+        updateQuickStart();
       });
     });
     sync();
@@ -687,18 +731,28 @@ function bindSettingChecks() {
   $("#testSoundButton").addEventListener("click", playChime);
 }
 
-async function onStartClick() {
+function scrollToStep(step) {
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  step.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+}
+
+// Start session (fromQuickStart false) and Start on the Quick start card (true) both come here.
+async function onStartClick(fromQuickStart) {
   if (!characterById(prefs.characterId)) {
     const error = $("#characterError");
     error.hidden = false;
     error.textContent = "";
     error.textContent = "Pick a character first."; // re-set so screen readers announce it again on every tap
-    const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    $("#characterStep").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+    scrollToStep($("#characterStep"));
     return;
   }
   const minutes = setupPicker.read();
-  if (minutes === null) return; // this tap corrected the custom field: its message shows first
+  if (minutes === null) {
+    // This tap corrected the custom field: its message shows first. The Quick start card is
+    // far above it, so the page goes to step 3, where the message is. Focus stays on the button.
+    if (fromQuickStart) scrollToStep($("#durationStep"));
+    return;
+  }
   // The setup picker is kept, so the message would still be there after the session.
   setupPicker.clearNote();
   savePrefs({ minutes });
@@ -1686,7 +1740,12 @@ function init() {
   // Capture phase, so the count goes up before the press moves focus (see pressCount).
   for (const type of ["pointerdown", "keydown"]) document.addEventListener(type, () => pressCount++, true);
 
-  $("#startButton").addEventListener("click", onStartClick);
+  // Wrapped, so the click event doesn't arrive as fromQuickStart.
+  $("#startButton").addEventListener("click", () => onStartClick(false));
+  $("#quickStartButton").addEventListener("click", () => onStartClick(true));
+  // Chips and the Custom field are inside #setupDuration: their events bubble up to it, after
+  // the picker's own handlers have set the value.
+  for (const type of ["click", "input", "change"]) $("#setupDuration").addEventListener(type, updateQuickStart);
   $('#restartDialog button[value="restart"]').addEventListener("click", onStartNewSessionClick);
   $("#restartOverButton").addEventListener("click", () => showRestartStep(2));
   $("#restartBackButton").addEventListener("click", () => showRestartStep(1));
@@ -1717,6 +1776,8 @@ function init() {
   $("#awayDialog").addEventListener("close", onAwayClosed);
   $("#continueHereButton").addEventListener("click", onContinueHereClick);
   window.addEventListener("storage", onStorage);
+  window.addEventListener("storage", onHistoryStorage);
+  window.addEventListener("pageshow", onPageShow);
 
   // Resume a session that was running when the page was closed or reloaded,
   // unless another tab runs it (see "one tab at a time").
