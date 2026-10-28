@@ -1022,6 +1022,16 @@ a {
   padding: 10px 14px;
 }
 
+/* "Change ↓" under the line: .footer-link on a <button> (it scrolls, it doesn't go anywhere), so no
+   button look, underlined like the link. The negative margin cancels .footer-link's side padding,
+   so the word lines up with the text above it. */
+.quick-start-change {
+  margin-left: -8px;
+  border: none;
+  background: none;
+  text-decoration: underline;
+}
+
 /* "How it works" in the header: a button (it opens the card, it doesn't go anywhere) that looks
    like the "Your history" link next to it. */
 .text-btn {
@@ -1061,6 +1071,7 @@ a {
 #sessionInfo:focus,
 #distractionPrompt:focus,
 #summaryTitle:focus,
+#characterStepTitle:focus,
 #restartStep2Title:focus {
   outline: none;
 }
