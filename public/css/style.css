@@ -201,6 +201,24 @@ input:focus-visible {
   min-height: 44px;
 }
 
+/* "Privacy" under Start session and at the bottom of history.html: small and grey, but still a
+   44x44px tap target. --muted is at least 4.5:1 on --bg in light and dark mode. */
+.page-footer {
+  margin: 16px 0 0;
+  text-align: center;
+}
+
+.footer-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 8px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
 /* ---------- setup: characters ---------- */
 
 .character-list {
@@ -1113,6 +1131,25 @@ a {
 }
 
 .history-section > p {
+  margin: 0 0 12px;
+}
+
+/* ---------- privacy page ---------- */
+
+/* Lets the email address (or any long word) break at 320px instead of scrolling sideways. */
+.privacy-page {
+  overflow-wrap: anywhere;
+}
+
+.privacy-top {
+  margin: 0 0 8px;
+}
+
+.privacy-section {
+  margin-bottom: 28px;
+}
+
+.privacy-section p {
   margin: 0 0 12px;
 }
 

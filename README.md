@@ -721,6 +721,22 @@ doesn't do this.
 - If the session fields ever change again, raise `EXPORT_VERSION` in `public/js/history-store.js`,
   add the new number to `IMPORT_VERSIONS`, and teach the import how to read the older files.
 
+## Privacy page (`privacy.html`)
+
+`privacy.html` explains in plain words what stays on the device, what is sent to the server (only
+the character count on **Start session**), hosting by Netlify, the legal basis and the user's GDPR
+rights (required before launch, GDPR Art. 13). It's linked as a small grey **Privacy** link below
+**Start session** on the setup screen and at the very bottom of `history.html`; not on `stats.html`,
+the session or summary screens, or in dialogs. "← Back to the timer" at the top and bottom goes to
+`./`, like on `history.html`; the phone's Back button returns to where you came from.
+
+- The page has **no scripts**: opening it reads and saves nothing in localStorage, takes no session
+  lock and registers nothing (it doesn't load `sw-register.js`).
+- **Keep it true:** whenever data handling changes (a new request to a server, new data stored on
+  the device or the server, a new third-party service, accounts or payments), update
+  `public/privacy.html` and its "Last updated" date in the same pull request (also a rule in
+  `CLAUDE.md`).
+
 ## Offline use
 
 Once the app has been opened online, it also opens and works **without internet**: the setup
@@ -765,6 +781,10 @@ works online exactly as before.
   reloads or interrupts an open page:** a running session keeps the code it started with, and the
   new version shows up the next time the app is opened or reloaded. A reload during a session
   still resumes it from `ct_session_v1`. No localStorage key changed for offline use.
+- **`privacy.html`** isn't in the precache list either: it isn't needed at startup. Once the service
+  worker is installed, the first online visit saves a copy (as `/privacy` and `privacy.html`, see
+  above), so it opens offline after that. Opened offline before any online visit, it shows the
+  browser's offline page; Back works as usual.
 - **Real character artwork** (`public/assets/...`) isn't in the precache list. Each image is saved
   the first time it loads online and is available offline after that.
 - **When you add, remove or rename a file the app needs at startup** (a page, CSS, a JS file, an
@@ -802,6 +822,7 @@ once with a decent connection fixes it, because every online start refreshes all
 |---|---|
 | `public/index.html` | All screens (setup, session, summary, "open in another tab" notice) and dialogs |
 | `public/history.html` | Your finished sessions, streaks, time per week and focus trends |
+| `public/privacy.html` | Privacy page: what stays on the device, what is sent to the server, hosting, your rights (no scripts) |
 | `public/stats.html` | Popularity table (reads `/api/stats`) |
 | `public/sw.js` | Service worker: offline start, network first with a 3-second fallback to the cache, precache list and cache version (see [Offline use](#offline-use)), and taps on the leave reminder notification |
 | `public/js/sw-register.js` | Registers `sw.js` from `index.html` and `history.html`; does nothing without service worker support |

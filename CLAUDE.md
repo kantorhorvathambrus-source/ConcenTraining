@@ -30,6 +30,7 @@
 - Never invent data: if a value can't be measured (e.g. focus % in Simple mode), store null instead of estimating.
 - New character: besides public/js/data/characters.js, add it with the same id and name to CHARACTERS in netlify/lib/characters.mjs. Only ids listed there are counted and shown on stats.html.
 - Offline: whenever a file in public/ that the app needs at startup (a page, CSS, JS, manifest, icon, favicon) is added, removed or renamed, update the PRECACHE list in public/sw.js and raise CACHE_VERSION in the same change.
+- Whenever data handling changes (a new request to a server, new data stored on the device or the server, a new third-party service, accounts or payments), update public/privacy.html and its 'Last updated' date in the same PR.
 
 ## Communication
 - I'm not a professional developer. When you use a technical term or tool, explain it in one sentence.
