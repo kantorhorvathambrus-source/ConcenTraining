@@ -30,6 +30,18 @@
         </p>
       </header>
 
+      <!-- Returning users only: a saved character and at least one session in the history
+           (updateQuickStart in app.js). Shows the current setup and starts it like Start session. -->
+      <div id="quickStart" class="quick-start" hidden>
+        <img id="quickStartImg" class="quick-start-img" alt="">
+        <div class="quick-start-text">
+          <p class="quick-start-label muted">Quick start</p>
+          <p id="quickStartLine" class="quick-start-line"></p>
+        </div>
+        <button id="quickStartButton" type="button" class="btn primary quick-start-btn"
+                aria-labelledby="quickStartButton quickStartLine">Start</button>
+      </div>
+
       <!-- Shown until "Got it" is tapped, and again from the header button (updateHowItWorks in app.js).
            Above the Home Screen tip: it's what a first visit needs, the tip only comes once there's history. -->
       <aside id="howItWorks" class="tip-card how-it-works" aria-labelledby="howItWorksTitle" hidden>
@@ -76,7 +88,7 @@
         </div>
       </div>
 
-      <div class="step">
+      <div class="step" id="durationStep">
         <h2>3. How long do you want to focus?</h2>
         <div id="setupDuration" class="duration-picker"></div>
       </div>

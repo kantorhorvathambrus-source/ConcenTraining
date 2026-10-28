@@ -101,8 +101,10 @@ h2 {
   margin-bottom: 28px;
 }
 
-/* Start without a character scrolls here (onStartClick); keep a little space above the heading. */
-#characterStep {
+/* Start without a character scrolls to step 1, and a Quick start tap that corrected the Custom
+   field to step 3 (onStartClick); keep a little space above the heading. */
+#characterStep,
+#durationStep {
   scroll-margin-top: 16px;
 }
 
@@ -971,6 +973,53 @@ a {
 
 .tip-card .btn {
   margin-top: 4px;
+}
+
+/* "Quick start" card under the header (updateQuickStart in app.js). The image box has a fixed
+   size before the image loads, so nothing moves; any artwork fits inside it (object-fit). */
+.quick-start {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 28px;
+  padding: 12px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.quick-start-img {
+  flex: none;
+  width: 56px;
+  aspect-ratio: 200 / 240;
+  object-fit: contain;
+}
+
+.quick-start-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.quick-start-text p {
+  margin: 0;
+}
+
+.quick-start-label {
+  font-size: 0.85rem;
+}
+
+.quick-start-line {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+/* Less side padding than .btn, so the line has room on a 320px screen. Still 44x44px or more. */
+.quick-start-btn {
+  flex: none;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 10px 14px;
 }
 
 /* "How it works" in the header: a button (it opens the card, it doesn't go anywhere) that looks
