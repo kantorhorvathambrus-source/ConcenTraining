@@ -28,8 +28,9 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   underlined **Change ↓** under that line and a **Start** button. **Change ↓** is for anyone who
   doesn't realise the setup can be changed further down: it scrolls to step 1 (`scrollToStep`, an
   instant jump with reduced motion) and changes nothing else. The card only shows when the saved
-  character still exists and the history has at least one session, so a brand-new user (or someone who deleted all their history) never sees it. It always
-  shows the current setup, i.e. exactly what **Start session** would start, and follows every change
+  character still exists and the history has at least one session, so a brand-new user (or someone
+  who deleted all their history) never sees it. It always shows the current setup, i.e. exactly
+  what **Start session** would start, and follows every change
   further down at once (character card, mode, chip, Custom field). The minutes are corrected the way
   Start corrects them: while "300" is typed in the Custom field the card says 240 min, an empty
   field says 25 min. **Start** runs the same code as **Start session** (`onStartClick(true)` in
