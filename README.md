@@ -24,10 +24,13 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
 - **Quick start card:** for returning users, a small card right under the header (above How it
   works and the iPhone tip) starts a session in one tap, without scrolling down to **Start session**.
   It shows a small image of the character (initial pose, decorative), a grey "Quick start" label,
-  one line like "Boss · Advanced · 25 min" (character · Simple/Advanced · minutes) and a **Start**
-  button. It only shows when the saved character still exists and the history has at least one
-  session, so a brand-new user (or someone who deleted all their history) never sees it. It always
-  shows the current setup, i.e. exactly what **Start session** would start, and follows every change
+  one line like "Boss · Advanced · 25 min" (character · Simple/Advanced · minutes), a small grey
+  underlined **Change ↓** under that line and a **Start** button. **Change ↓** is for anyone who
+  doesn't realise the setup can be changed further down: it scrolls to step 1 (`scrollToStep`, an
+  instant jump with reduced motion) and changes nothing else. The card only shows when the saved
+  character still exists and the history has at least one session, so a brand-new user (or someone
+  who deleted all their history) never sees it. It always shows the current setup, i.e. exactly
+  what **Start session** would start, and follows every change
   further down at once (character card, mode, chip, Custom field). The minutes are corrected the way
   Start corrects them: while "300" is typed in the Custom field the card says 240 min, an empty
   field says 25 min. **Start** runs the same code as **Start session** (`onStartClick(true)` in
@@ -108,6 +111,9 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   - **Quick start:** the card's **Start** button is named by its text plus the setup line
     (`aria-labelledby`), e.g. "Start Boss · Advanced · 25 min", so it can't be confused with
     **Start session**, and it still starts with the visible word "Start" for voice control.
+    **Change ↓** is named "Change setup" (`aria-label`), so the arrow isn't read out and "tap Change"
+    still works in voice control. It moves focus to the step 1 heading ("1. Choose your character")
+    without a second scroll and without a focus outline, so a screen reader carries on reading there.
   - **Dialogs:** every dialog is labelled by its title (and described by its question), so a screen
     reader reads it when focus moves into it, e.g. "You were away for 2 min 10 sec. Were you distracted?"
 - **Simple mode:** 5 severity buttons (very briefly … a whole lot), not time-based.

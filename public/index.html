@@ -37,6 +37,10 @@
         <div class="quick-start-text">
           <p class="quick-start-label muted">Quick start</p>
           <p id="quickStartLine" class="quick-start-line"></p>
+          <!-- Scrolls to step 1 for anyone who doesn't realise the setup can be changed further down
+               (onQuickStartChange in app.js). Named "Change setup" so the arrow isn't read out. -->
+          <button id="quickStartChange" type="button" class="footer-link quick-start-change"
+                  aria-label="Change setup">Change ↓</button>
         </div>
         <button id="quickStartButton" type="button" class="btn primary quick-start-btn"
                 aria-labelledby="quickStartButton quickStartLine">Start</button>
@@ -69,7 +73,7 @@
       </aside>
 
       <div class="step" id="characterStep">
-        <h2>1. Choose your character</h2>
+        <h2 id="characterStepTitle" tabindex="-1">1. Choose your character</h2>
         <p id="characterError" class="error" role="alert" hidden>Pick a character first.</p>
         <div id="characterList" class="character-list"></div>
       </div>

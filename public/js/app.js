@@ -736,6 +736,13 @@ function scrollToStep(step) {
   step.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
 }
 
+// "Change ↓" on the Quick start card: go to step 1 and move focus to its heading without a second
+// scroll, so a screen reader carries on reading there.
+function onQuickStartChange() {
+  scrollToStep($("#characterStep"));
+  $("#characterStepTitle").focus({ preventScroll: true });
+}
+
 // Start session (fromQuickStart false) and Start on the Quick start card (true) both come here.
 async function onStartClick(fromQuickStart) {
   if (!characterById(prefs.characterId)) {
@@ -1743,6 +1750,7 @@ function init() {
   // Wrapped, so the click event doesn't arrive as fromQuickStart.
   $("#startButton").addEventListener("click", () => onStartClick(false));
   $("#quickStartButton").addEventListener("click", () => onStartClick(true));
+  $("#quickStartChange").addEventListener("click", onQuickStartChange);
   // Chips and the Custom field are inside #setupDuration: their events bubble up to it, after
   // the picker's own handlers have set the value.
   for (const type of ["click", "input", "change"]) $("#setupDuration").addEventListener(type, updateQuickStart);
