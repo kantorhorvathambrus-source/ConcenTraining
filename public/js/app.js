@@ -978,8 +978,57 @@ function askPendingRestart() {
 
 let restartPicker = null; // built again every time the dialog opens
 
-// "Start over" keeps the dialog open when this tap corrected the custom field (see durationPicker).
-function onStartOverClick(event) {
+// Step 1 of the continue/restart dialog. Simple mode has no times, so it doesn't say "long break".
+const RESTART_TEXTS = {
+  simple: {
+    title: "That was a big distraction",
+    text: "Keep going with this session, or start fresh? After a big distraction, starting over is often easier.",
+  },
+  advanced: {
+    title: "That was a long break",
+    text: "Keep going with this session, or start fresh? After a long break, starting over is often easier.",
+  },
+};
+
+// Step 1 asks only "continue or start over"; step 2 (after Start over) asks for the new length,
+// so the preselected chip can't be read as "how long was the distraction?". One dialog, so
+// everything that closes it (answer, loseControl, timer end) works the same in both steps.
+// The dialog is labelled by the visible step's title, so it's read out with the step. Step 2:
+// focus goes to its title, so a screen reader reads the question. Back to step 1: focus goes to
+// Start over, the button that left it.
+function showRestartStep(step) {
+  const dialog = $("#restartDialog");
+  $("#restartStep1").hidden = step !== 1;
+  $("#restartStep2").hidden = step !== 2;
+  if (step === 1) {
+    dialog.setAttribute("aria-labelledby", "restartTitle");
+    dialog.setAttribute("aria-describedby", "restartText");
+  } else {
+    dialog.setAttribute("aria-labelledby", "restartStep2Title");
+    dialog.removeAttribute("aria-describedby");
+  }
+  if (!dialog.open) return;
+  if (step === 2) {
+    $("#restartStep2Title").focus();
+  } else {
+    $("#restartOverButton").focus();
+    // After the focus move: leaving the custom field can correct it and show the note.
+    // The chosen length stays for the next Start over in this opening, the note doesn't.
+    if (restartPicker) restartPicker.clearNote();
+  }
+}
+
+// Esc / Android Back: in step 1 the dialog closes ("" = continue), as before. In step 2 it goes
+// back to step 1 instead. If the browser won't let that be stopped (Chrome allows one per tap),
+// the dialog closes and it counts as continue.
+function onRestartCancel(event) {
+  if ($("#restartStep2").hidden || !event.cancelable) return;
+  event.preventDefault();
+  showRestartStep(1);
+}
+
+// "Start new session" keeps the dialog open when this tap corrected the custom field (see durationPicker).
+function onStartNewSessionClick(event) {
   if (restartPicker && restartPicker.read() === null) event.preventDefault();
 }
 
@@ -988,6 +1037,11 @@ async function askContinueOrRestart() {
   const dialog = $("#restartDialog");
   if (dialog.open) return;
 
+  // Every opening starts at step 1 with fresh chips, even after a reload or a takeover.
+  const texts = RESTART_TEXTS[session.mode] || RESTART_TEXTS.simple;
+  $("#restartTitle").textContent = texts.title;
+  $("#restartText").textContent = texts.text;
+  showRestartStep(1);
   restartPicker = durationPicker($("#restartDuration"), Math.round(session.durationMs / MIN));
 
   // "Save the first X to history": X is the time so far, and if it's kept, the
@@ -1004,7 +1058,7 @@ async function askContinueOrRestart() {
   if (!session || session.endedAt) return; // the timer ran out while the question was open
   if (session !== asked) return; // another tab took the session over meanwhile (loseControl)
 
-  // Answered (Esc counts as "continue"), so a reload won't ask again.
+  // Answered (Esc in step 1 counts as "continue"), so a reload won't ask again.
   session.restartPending = false;
   save(SESSION_KEY, session);
   if (answer === "restart") {
@@ -1013,7 +1067,7 @@ async function askContinueOrRestart() {
     if (canSave && $("#restartSave").checked && saveFinishedSession({ ...session, endedAt: cutAt }, "startOver")) {
       requestPersistentStorage();
     }
-    // value(), not read(): Start over's click already let it through, so it must never block here.
+    // value(), not read(): Start new session's click already let it through, so it must never block here.
     startSession(characterId, mode, restartPicker.value()); // a waiting time away card is dropped with the old session
   } else {
     askPendingAway();
@@ -1633,7 +1687,10 @@ function init() {
   for (const type of ["pointerdown", "keydown"]) document.addEventListener(type, () => pressCount++, true);
 
   $("#startButton").addEventListener("click", onStartClick);
-  $('#restartDialog button[value="restart"]').addEventListener("click", onStartOverClick);
+  $('#restartDialog button[value="restart"]').addEventListener("click", onStartNewSessionClick);
+  $("#restartOverButton").addEventListener("click", () => showRestartStep(2));
+  $("#restartBackButton").addEventListener("click", () => showRestartStep(1));
+  $("#restartDialog").addEventListener("cancel", onRestartCancel);
   $("#howItWorksLink").addEventListener("click", openHowItWorks);
   $("#howItWorksButton").addEventListener("click", dismissHowItWorks);
   $("#homeScreenTipButton").addEventListener("click", dismissHomeScreenTip);

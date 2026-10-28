@@ -31,7 +31,7 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   Duration presets: 5, 10, 15, 25, 35, 45, 60 and 90 min (`DURATION_PRESETS`
   in `public/js/app.js`, default 25), plus a custom field. The 5 and 10 min presets make a session
   easy to start for beginners and on hard days. The presets always sit in 2 rows of 4, both on the
-  setup screen and in the Start over dialog, and each one is at least 44 px tall. A custom duration
+  setup screen and in step 2 of the continue/restart dialog, and each one is at least 44 px tall. A custom duration
   is corrected as soon as you leave the field: empty (or not a number) becomes 25 min, anything
   under 1 becomes 1, anything over 240 becomes 240, and decimals are rounded (`MIN_MINUTES`,
   `MAX_MINUTES` and `DEFAULT_MINUTES` in `public/js/app.js`). Whenever that changes what you typed, one
@@ -40,8 +40,8 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   (0.5 too) says "Min. 1 min.", anything over 240 (240.4 too) says "Max. 240 min.", and "Rounded to …"
   is only for decimals inside that range. It's a status line, so screen readers read it once. It
   takes no space until it appears, and it goes away as soon as the value is valid again (you type a
-  valid number or tap a preset), and when a session starts. If the tap on **Start session** (or **Start over** in the
-  dialog) is what corrected the field (you typed 300 and tapped the button without leaving the field
+  valid number or tap a preset), and when a session starts. If the tap on **Start session** (or **Start new session** in the
+  continue/restart dialog) is what corrected the field (you typed 300 and tapped the button without leaving the field
   first), that tap doesn't start anything: the message shows, and the next tap starts with the
   corrected value. So a session never starts with a length you didn't see.
   Under step 3 there are two checkboxes, both on by default: **Play a sound when time's up** (with a
@@ -80,7 +80,7 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   - **Images:** the session and summary images have the same descriptions as their alt
     ("Grandma, calm and smiling."), following the pose, so you can check the character any time by
     moving to it. Blinks don't change the alt.
-  - **Screens:** when a session starts (Start session, Start over, Continue here, or a reload), focus
+  - **Screens:** when a session starts (Start session, Start new session, Continue here, or a reload), focus
     moves to the session info line ("Grandma · Relaxed · Simple · 25 min"); when it ends (End
     session, timer ran out, Save in "Welcome back"), focus moves to the summary title. Focus moves
     without scrolling, and these get no focus outline, so nothing changes on screen.
@@ -123,19 +123,37 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   going** it's back with the time it had left, or closes then if its 60 s would have run out meanwhile. On small phones the open picker covers some of the distraction buttons (never the
   character or the timer); tap a category or Skip first, or scroll down, to log another one.
 - **"A whole lot" / "10+ min"** asks: continue this session, or start over with a new duration.
+  The question comes in two steps of one dialog, so the duration chips can't be read as "how long
+  was the distraction?" (the app never asks that):
+  - **Step 1** asks only continue or start over. Simple mode (which has no times): "That was a big
+    distraction" / "Keep going with this session, or start fresh? After a big distraction, starting
+    over is often easier." Advanced mode: "That was a long break" / "Keep going with this session, or
+    start fresh? After a long break, starting over is often easier." Buttons: **Continue this
+    session** (gets the focus) and **Start over**. Esc or Android Back means Continue.
+  - **Step 2** (only after **Start over**): "How long should the new session be?", the duration chips
+    and Custom field (the current session length preselected), the "Save the first …" checkbox (see
+    below), **Start new session** and **Back**. **Back**, Esc and Android Back go back to step 1 (if the
+    browser doesn't let the app stop Esc/Back, which Chrome allows only once per tap, the dialog
+    closes and that counts as Continue). A length picked in step 2 stays there if you go Back and
+    tap Start over again; the correction line under the Custom field doesn't.
+  - Screen readers: the dialog is labelled by the visible step's title (step 1 also by its text).
+    Step 2's title gets the focus, so it's read out; Back puts the focus on **Start over**.
+  - Every time the dialog opens (also after a reload, or when another tab takes the session over)
+    it starts at step 1 with fresh chips and the checkbox ticked.
   The category picker, the Undo window and the time away card come first: the dialog opens once the
   picker has closed (category picked, Skip, or the 60 s safety close), the 5 s Undo window is over and
   the time away card (see below) has been answered, so they never show at the same time. Undoing the tap means no question
   (an earlier "10+ min" / "A whole lot" that wasn't undone still asks, right after the Undo). The
   question is saved with the running session (`restartPending`) as soon as the button is tapped, so if
   the page is reloaded before it's answered, it's asked right after the reload.
-  If the session has run at least 1 minute, the dialog also has a checkbox above **Start over**:
-  "Save the first 12 min 30 sec to history" (the time so far, measured when the dialog opens), ticked
-  by default. With it ticked, **Start over** saves the abandoned part to the history first, as ending
+  If the session has run at least 1 minute, step 2 also has a checkbox above **Start new session**:
+  "Save the first 12 min 30 sec to history" (the time so far, measured when the dialog first opens,
+  so time spent in the dialog isn't added), ticked by default. With it ticked, **Start new session**
+  saves the abandoned part to the history first, as ending
   at that moment, with `endedBy: "startOver"`. Its focus % and stats are calculated the normal way
   (including the long distraction that triggered the question), and it counts for the streak and all
   history stats like any other session. Unticked, the abandoned part is thrown away. **Continue**
-  ignores the checkbox. Under 1 minute there's no checkbox and nothing is saved, as before.
+  (also after going Back from step 2) ignores the checkbox. Under 1 minute there's no checkbox and nothing is saved, as before.
 - **End session** asks "End this session now?". If the session has run at least 1 minute (measured
   when the dialog opens), the dialog also has a checkbox: "Save this session to your history",
   ticked every time the dialog opens (it isn't remembered). Unticked means "this session doesn't
@@ -185,7 +203,7 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
     open, the card closes and nothing is logged.
   - If End session's question or the continue/restart question was open when you left, it stays and
     comes first; the card follows after **Keep going** / **Continue** (and is dropped after **End
-    session** or **Start over**). An open category picker stays as it was (it still belongs to the
+    session** or **Start new session**). An open category picker stays as it was (it still belongs to the
     earlier distraction). An open Undo window is closed on return (its 5 s are long over).
   - Leaving again while the card is open: if the new absence is 15 s or more, the time away now runs
     from the first leave to this return (including the few seconds the card was on screen in

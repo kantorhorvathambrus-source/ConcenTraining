@@ -831,20 +831,10 @@ dialog p {
   gap: 10px;
 }
 
-.divider {
-  display: flex;
-  align-items: center;
+/* Full-width buttons on top of each other, the primary one first (the continue/restart dialog). */
+.dialog-stack {
+  display: grid;
   gap: 10px;
-  color: var(--muted);
-  font-size: 0.85rem;
-  margin: 18px 0 12px !important;
-}
-
-.divider::before,
-.divider::after {
-  content: "";
-  flex: 1;
-  border-top: 1px solid var(--border);
 }
 
 #restartDuration {
@@ -872,7 +862,7 @@ dialog p {
   min-width: 0;
 }
 
-/* Dialogs: the "save to history" checkboxes in the Start over and End session dialogs. */
+/* Dialogs: the "save to history" checkboxes in the continue/restart and End session dialogs. */
 dialog .check-row {
   min-height: 44px;
   align-items: center;
@@ -1003,7 +993,8 @@ a {
 /* Same for these: focus goes there from the script so a screen reader reads them (app.js). */
 #sessionInfo:focus,
 #distractionPrompt:focus,
-#summaryTitle:focus {
+#summaryTitle:focus,
+#restartStep2Title:focus {
   outline: none;
 }
 
@@ -1320,8 +1311,8 @@ a {
     grid-template-columns: 1fr;
   }
 
-  /* Narrow dialogs: less padding, so "90 min" fits in a quarter of the Start over dialog
-     at 320px, and that dialog fits a 320x568 screen without scrolling. */
+  /* Narrow dialogs: less padding, so "90 min" fits in a quarter of the continue/restart dialog
+     at 320px, and both its steps fit a 320x568 screen without scrolling. */
   dialog {
     padding: 16px;
   }
@@ -1341,10 +1332,6 @@ a {
 
   #restartDialog p {
     margin-bottom: 12px;
-  }
-
-  #restartDialog .divider {
-    margin: 14px 0 10px !important;
   }
 
   /* Makes up for the 44px Custom field, so the dialog still fits 320x568. The note under the
