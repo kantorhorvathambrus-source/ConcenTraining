@@ -152,6 +152,12 @@ const SUMMARY_TITLES = {
 // Shown under the title for sessions under 1 minute, in both modes.
 const SUMMARY_SHORT_NOTE = "Sessions shorter than 1 minute aren't saved to your history.";
 
+// Shown when the browser refused to store a finished session (storage full or site data blocked):
+// on the summary, and on the new session's screen after Start new session.
+const SUMMARY_SAVE_ERROR =
+  "Couldn't save this session to your history: your browser didn't allow it. Full storage or blocked site data can cause this.";
+const RESTART_SAVE_ERROR = "Couldn't save the first part to your history: your browser didn't allow it.";
+
 // End-of-session messages for Simple mode (it has no stats), one is picked at random.
 const SIMPLE_SUMMARY_MESSAGES = {
   great: [

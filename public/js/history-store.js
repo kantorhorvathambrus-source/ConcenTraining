@@ -161,13 +161,14 @@ function writeHistory(history) {
 
 // Adds a finished session to the front of the history (newest first).
 // endedBy is worked out from the times ("timer" or "manual") unless it's given.
-// Returns true if the session is now in the saved history.
+// Returns "saved", "exists" (already in the saved history: same start time, nothing is written),
+// "short" (under HISTORY_MIN_MS: not saved on purpose) or "failed" (the browser refused to store it).
 function saveFinishedSession(session, endedBy) {
   const { elapsedMs, distractedMs, focusPercent } = sessionFocus(session);
-  if (elapsedMs < HISTORY_MIN_MS) return false;
+  if (elapsedMs < HISTORY_MIN_MS) return "short";
 
   const history = loadHistory();
-  if (history.some((entry) => entry.startedAt === session.startedAt)) return true; // already saved
+  if (history.some((entry) => entry.startedAt === session.startedAt)) return "exists";
 
   history.unshift({
     startedAt: session.startedAt,
@@ -184,7 +185,8 @@ function saveFinishedSession(session, endedBy) {
     distractions: session.distractions.map(withCategory),
   });
   history.length = Math.min(history.length, HISTORY_LIMIT);
-  return writeHistory(history); // if it fails the app keeps working, the session just isn't remembered
+  // If it fails the app keeps working, the session just isn't remembered (and the user is told).
+  return writeHistory(history) ? "saved" : "failed";
 }
 
 // Removes the session with this start time (Delete on the history page). The saved history is

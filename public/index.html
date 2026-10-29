@@ -131,6 +131,8 @@
       <p id="sessionInfo" class="session-info muted" tabindex="-1"></p>
       <!-- Shown while the chime is on but the screen isn't being kept on (updateScreenNote in app.js). -->
       <p id="screenNote" class="screen-note muted" role="status" hidden>Your screen may turn off. If it does, you won't hear the chime.</p>
+      <!-- Shown when Start new session couldn't save the abandoned part (showSaveErrorNote in app.js). -->
+      <p id="saveErrorNote" class="screen-note error" role="status" hidden></p>
 
       <div id="sessionStage" class="stage">
         <img id="sessionImg" class="char-img" alt="">
@@ -189,6 +191,8 @@
         <p id="summaryMessage" class="summary-text" hidden></p>
         <p id="summaryText" class="summary-text"></p>
         <p id="summaryNote" class="summary-text" hidden></p>
+        <!-- Shown when the browser refused to store the session (renderSummary in app.js). -->
+        <p id="summarySaveError" class="summary-text error" role="status" hidden></p>
         <p id="summaryCategories" class="summary-text" hidden></p>
       </div>
       <button id="newSessionButton" type="button" class="btn primary big">Start another session</button>
