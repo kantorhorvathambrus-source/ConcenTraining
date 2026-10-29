@@ -116,7 +116,8 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
     without a second scroll and without a focus outline, so a screen reader carries on reading there.
   - **Dialogs:** every dialog is labelled by its title (and described by its question), so a screen
     reader reads it when focus moves into it, e.g. "You were away for 2 min 10 sec. Were you distracted?"
-- **Simple mode:** 5 severity buttons (very briefly … a whole lot), not time-based.
+- **Simple mode:** 5 severity buttons (A flicker, Drifted, Lost track, Far away, Totally gone), not
+  time-based. They always sit in two full rows: three in the first, two wider ones in the second.
 - **Advanced mode:** 7 duration buttons (30 sec … 10+ min). Ends with the % of the session spent focusing.
   "10+ min" counts as 10 minutes in that %. A length that can't have happened yet is disabled (greyed
   out but readable): one longer than the free time, which is the time so far minus the distraction time
@@ -152,7 +153,7 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   stopped, so its safety close can't open the continue/restart question on top of it. After **Keep
   going** it's back with the time it had left, or closes then if its 60 s would have run out meanwhile. On small phones the open picker covers some of the distraction buttons (never the
   character or the timer); tap a category or Skip first, or scroll down, to log another one.
-- **"A whole lot" / "10+ min"** asks: continue this session, or start over with a new duration.
+- **"Totally gone" / "10+ min"** asks: continue this session, or start over with a new duration.
   The question comes in two steps of one dialog, so the duration chips can't be read as "how long
   was the distraction?" (the app never asks that):
   - **Step 1** asks only continue or start over. Simple mode (which has no times): "That was a big
@@ -173,7 +174,7 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   The category picker, the Undo window and the time away card come first: the dialog opens once the
   picker has closed (category picked, Skip, or the 60 s safety close), the 5 s Undo window is over and
   the time away card (see below) has been answered, so they never show at the same time. Undoing the tap means no question
-  (an earlier "10+ min" / "A whole lot" that wasn't undone still asks, right after the Undo). The
+  (an earlier "10+ min" / "Totally gone" that wasn't undone still asks, right after the Undo). The
   question is saved with the running session (`restartPending`) as soon as the button is tapped, so if
   the page is reloaded before it's answered, it's asked right after the reload.
   If the session has run at least 1 minute, step 2 also has a checkbox above **Start new session**:
@@ -265,11 +266,11 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
 
 | Button (Simple) | Button (Advanced) | Pose |
 |---|---|---|
-| Very briefly | 30 sec | level1 |
-| Briefly | 1 min | level2 |
-| Moderately | 2 min, 3 min | level3 |
-| A lot | 5 min, 10 min | level4 |
-| A whole lot | 10+ min | level5 |
+| A flicker | 30 sec | level1 |
+| Drifted | 1 min | level2 |
+| Lost track | 2 min, 3 min | level3 |
+| Far away | 5 min, 10 min | level4 |
+| Totally gone | 10+ min | level5 |
 
 - **Motivation button:** always visible. Messages rotate in phases (see `js/data/messages.js`).
   The messages are research-based: every "Brain fact" has a `// source:` comment in
@@ -315,12 +316,12 @@ Every finished session gets a result. The thresholds are constants at the top of
   (`SUMMARY_OKAY_FOCUS`), **rough** below that. The focus % is only 100% when no distraction time was
   logged at all (99.6% shows as 99%).
 - **Simple mode** has no focus % (it's saved as `null`), so it uses distraction points: each logged
-  distraction scores its level (Very briefly = 1, Briefly = 2, Moderately = 3, A lot = 4,
-  A whole lot = 5). The points are counted per 25 minutes of session time; sessions shorter than
+  distraction scores its level (A flicker = 1, Drifted = 2, Lost track = 3, Far away = 4,
+  Totally gone = 5). The points are counted per 25 minutes of session time; sessions shorter than
   25 minutes count as 25 minutes. **great** up to 2 points per 25 min (`SIMPLE_GREAT_POINTS`),
-  **rough** from 8 (`SIMPLE_ROUGH_POINTS`), **okay** in between. Example: two "A lot" in a 25-minute
+  **rough** from 8 (`SIMPLE_ROUGH_POINTS`), **okay** in between. Example: two "Far away" in a 25-minute
   session = 8 points = rough. Short sessions are judged like a 25-minute one on purpose, so they
-  aren't harsher: one "Moderately" in a 5-minute session = 3 points = okay (one "Briefly" = great).
+  aren't harsher: one "Lost track" in a 5-minute session = 3 points = okay (one "Drifted" = great).
 - **early:** the session ran less than half of its planned time (`EARLY_END_RATIO` = 0.5), whatever
   the focus % or distraction points. Ending early isn't judged as good or bad: the title is
   "Ended early", the pose is neutral, and Simple mode shows a short neutral message. Advanced mode

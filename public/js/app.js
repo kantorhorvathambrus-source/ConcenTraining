@@ -59,11 +59,11 @@ const SUMMARY_POSES = {
 
 // Simple mode: severity only, no time. Level = which reaction pose to show (1-5).
 const SIMPLE_OPTIONS = [
-  { label: "Very briefly", level: 1 },
-  { label: "Briefly", level: 2 },
-  { label: "Moderately", level: 3 },
-  { label: "A lot", level: 4 },
-  { label: "A whole lot", level: 5, askRestart: true },
+  { label: "A flicker", level: 1 },
+  { label: "Drifted", level: 2 },
+  { label: "Lost track", level: 3 },
+  { label: "Far away", level: 4 },
+  { label: "Totally gone", level: 5, askRestart: true },
 ];
 
 // Advanced mode: distraction length. "10+ min" counts as 10 minutes in the focus %.
@@ -138,7 +138,7 @@ const prefs = Object.assign(
 );
 delete prefs.style; // saved before personalities came from the character; dropped on the next save
 // style: the character's personality when the session ran ("kind", "firm", "strict" or "ragebait")
-// restartPending: "A whole lot" / "10+ min" was tapped and the continue/restart question
+// restartPending: "Totally gone" / "10+ min" was tapped and the continue/restart question
 // hasn't been answered yet. Saved, so a reload still asks it.
 // leftAt: set while the page is hidden, cleared on return (see "time away"). Saved, so a page the
 // browser discarded in the background still asks after the reload. Never goes into the history.
@@ -835,6 +835,7 @@ function enterSession() {
   const buttons = $("#distractionButtons");
   buttons.innerHTML = "";
   buttons.classList.toggle("advanced", session.mode === "advanced");
+  buttons.classList.toggle("simple", session.mode !== "advanced");
   for (const option of options) {
     const button = document.createElement("button");
     button.type = "button";
@@ -974,7 +975,7 @@ function onUndoClick() {
   closePicker(false);
   announce(UNDO_ANNOUNCEMENT); // replaces the reaction's line if it hasn't been read yet
   updateLengthButtons();
-  // An earlier "10+ min" / "A whole lot" that wasn't undone still asks, now.
+  // An earlier "10+ min" / "Totally gone" that wasn't undone still asks, now.
   closeUndo(true);
 }
 
