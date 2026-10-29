@@ -266,6 +266,9 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
 | A whole lot | 10+ min | level5 |
 
 - **Motivation button:** always visible. Messages rotate in phases (see `js/data/messages.js`).
+  The messages are research-based: every "Brain fact" has a `// source:` comment in
+  `js/data/messages.js`, and the full references are listed in its header. Tone rule: informational,
+  no pressure, no guilt, no emoji.
   Sessions of 35+ min: 0–10 min general → 10–20 min "hardest part" → 20 min–85% middle → 85–100% final stretch.
   Shorter sessions: general messages without the "first 20 minutes" facts → final stretch.
   E.g. the final stretch starts at 4:15 in a 5 min session and at 8:30 in a 10 min session.
