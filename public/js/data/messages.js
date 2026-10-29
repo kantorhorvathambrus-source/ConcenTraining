@@ -4,6 +4,8 @@
 //                  Every fact has a "// source:" comment; the full references are listed below.
 //   type "boost" = a concrete, optional action or a calm reframe for this stage of the session.
 // Tone: informational, never controlling (no "must", no guilt, no pressure, no emoji).
+// Every boost is doable in about 10 seconds, in your head or with one movement, no writing.
+// The only exception is "Leave a note for next time…" in final.
 // Noticing a distraction and coming back is the skill the app trains, so it's framed as a success.
 //
 // Sessions of 35+ minutes: general (0-10 min) -> hardest (10-20 min)
@@ -52,10 +54,10 @@ const MOTIVATION = {
     { type: "boost", text: "Make the first step tiny: open the file, write one line, read one paragraph. Starting is the hard part, not the step." },
     // source: Leroy 2009
     { type: "fact", text: "When you switch tasks, part of your attention stays on the last one for a while. Researchers call it attention residue." },
-    { type: "boost", text: "Decide now what you'll do when an urge comes: \"When I want to check my phone, I'll note it down and keep going.\"" },
+    { type: "boost", text: "Decide now what you'll do when an urge comes: \"When I want to check my phone, I'll take one breath and keep going.\"" },
     // source: Gollwitzer & Sheeran 2006
     { type: "fact", text: "If-then plans (\"When X happens, I'll do Y\") make people clearly more likely to follow through on what they set out to do." },
-    { type: "boost", text: "Something unfinished on your mind? Write down what it is and when you'll deal with it. Then it can wait." },
+    { type: "boost", text: "Something unfinished on your mind? Decide when you'll deal with it, for example \"after this session\". Then it can wait." },
     // source: Masicampo & Baumeister 2011
     { type: "fact", text: "Making a specific plan for an unfinished task can stop it from popping into your head while you work on something else." },
     // source: Killingsworth & Gilbert 2010
@@ -70,8 +72,8 @@ const MOTIVATION = {
     { type: "boost", text: "You noticed you drifted. That's the rep. Come back to the exact line you were on, not the top of the page." },
     // source: Bjork 1994
     { type: "fact", text: "Learning that feels hard, like recalling instead of rereading, often sticks better than learning that feels easy. Effort here can be a good sign." },
-    { type: "boost", text: "Stuck? Write down exactly what you don't get, in one sentence. Often the next step shows up while you write it." },
-    { type: "boost", text: "Bored isn't the same as done. Change how you work, not what you work on: write instead of reading, or explain it out loud." },
+    { type: "boost", text: "Stuck? Say to yourself in one sentence exactly what you don't get. Often the next step shows up while you say it." },
+    { type: "boost", text: "Bored isn't the same as done. Keep the task, change the angle: start from a different part of it." },
     { type: "boost", text: "Breathe in, then take a second short breath in, then breathe out slowly and fully. Twice. Then the next line." },
     // source: Balban et al. 2023
     { type: "fact", text: "In a month-long study, five minutes a day of breathing with long exhales improved mood more than the same time spent on mindfulness meditation." },
@@ -84,7 +86,7 @@ const MOTIVATION = {
     { type: "boost", text: "You're in the long middle stretch. A steady pace works better here than a fast one." },
     // source: Stothart, Mitchum & Yehnert 2015
     { type: "fact", text: "A notification you don't even check can still pull your attention away for a moment. Silent mode is doing real work for you." },
-    { type: "boost", text: "Quick check: cover your notes and explain the last part in your own words. What you can't explain is what to look at again." },
+    { type: "boost", text: "Quick check: without looking, try to recall the last part. What you can't recall is what to look at again." },
     // source: Roediger & Karpicke 2006
     { type: "fact", text: "Testing yourself beats rereading. Pulling an answer out of your memory makes it stick better than seeing it again." },
     { type: "boost", text: "Stuck on one thing for a while? Mark it, skip it and come back at the end. One problem doesn't get the whole session." },
@@ -94,7 +96,7 @@ const MOTIVATION = {
     { type: "boost", text: "Sip of water, sit up, shoulders down. Then straight back in." },
     // source: Dunlosky et al. 2013
     { type: "fact", text: "Asking yourself \"why is this true?\" and linking it to what you already know helps new material stick." },
-    { type: "boost", text: "Write one line about where you are right now. If you drift later, that line gets you back in seconds." },
+    { type: "boost", text: "Notice where you are right now: which line, which step. If you drift later, you'll know exactly where to come back to." },
     // source: Harkin et al. 2016
     { type: "fact", text: "Keeping track of your progress makes reaching a goal more likely, especially when you write it down." },
     { type: "boost", text: "This is the kind of part that's easiest to put off. You're doing it anyway." },
@@ -114,7 +116,7 @@ const MOTIVATION = {
     { type: "boost", text: "Before the timer ends, name three things you did in this session. Recalling them helps them stay." },
     { type: "boost", text: "Think back to where you were when you started. What you got done since then is real progress." },
     // source: Masicampo & Baumeister 2011
-    { type: "boost", text: "Something still unfinished? Write down the next step and when you'll do it. Then you can let it go for today." },
+    { type: "boost", text: "Something still unfinished? Decide what the next step is and when you'll do it. Then you can let it go for today." },
     { type: "boost", text: "Last few minutes. Finish the piece in front of you and end on something done." },
   ],
   short: [
@@ -127,13 +129,13 @@ const MOTIVATION = {
     { type: "boost", text: "Make the task tiny: one page, one problem, one paragraph. Then the next one." },
     { type: "boost", text: "An urge to check something? Name it (\"that's an urge\") and let it pass. Then back to the exact line you were on." },
     // source: Masicampo & Baumeister 2011
-    { type: "boost", text: "A thought keeps coming back? Write it down in a few words, with when you'll deal with it, and carry on." },
+    { type: "boost", text: "A thought keeps coming back? Tell yourself when you'll deal with it, for example \"after this session\", and carry on." },
     { type: "boost", text: "No need to feel ready first. Start messy. You can fix a bad first draft, but not a blank page." },
     // source: Roediger & Karpicke 2006
     { type: "fact", text: "Testing yourself beats rereading. Cover your notes for a moment and try to recall the main point." },
     // source: Stothart, Mitchum & Yehnert 2015
     { type: "fact", text: "A notification you don't check can still pull your attention away. Silent mode helps more than it seems." },
-    { type: "boost", text: "Stuck? Write down exactly what you don't get, in one sentence. Often the next step shows up while you write it." },
+    { type: "boost", text: "Stuck? Say to yourself in one sentence exactly what you don't get. Often the next step shows up while you say it." },
     { type: "boost", text: "Short sessions add up. A few focused minutes today do more than a perfect plan for tomorrow." },
   ],
 };
