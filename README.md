@@ -184,6 +184,12 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   (including the long distraction that triggered the question), and it counts for the streak and all
   history stats like any other session. Unticked, the abandoned part is thrown away. **Continue**
   (also after going Back from step 2) ignores the checkbox. Under 1 minute there's no checkbox and nothing is saved, as before.
+  If the box was ticked but the browser refused to store the part (storage full or site data
+  blocked), the new session starts as usual and a red line under the session info says "Couldn't save
+  the first part to your history: your browser didn't allow it." (`role="status"`, so a screen reader
+  reads it once). After 10 s (`SAVE_ERROR_NOTE_MS` in `public/js/app.js`) it turns invisible but
+  keeps its space, so nothing on the screen moves while a distraction button may be tapped; the next
+  session removes it completely.
 - **End session** asks "End this session now?". If the session has run at least 1 minute (measured
   when the dialog opens), the dialog also has a checkbox: "Save this session to your history",
   ticked every time the dialog opens (it isn't remembered). Unticked means "this session doesn't
@@ -289,6 +295,16 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   no distraction lengths, so this is the session's length (distractions included), never "focused"
   time; "(… planned)" follows the same rule as in Advanced mode. A session under 1 minute only shows
   the title and the "not saved" note (no focus %, sentence, factual line or categories).
+- **Couldn't save:** if the browser refused to store a finished session (storage full or site data
+  blocked), the summary adds one red line under the details: "Couldn't save this session to your
+  history: your browser didn't allow it. Full storage or blocked site data can cause this."
+  (`role="status"`, read once by a screen reader; the title still gets focus). Everything else on the
+  summary stays the same. It's never shown for a session under 1 minute (not saved on purpose), for a
+  session that was already in the history (same start time, e.g. finished again after a reload), or
+  when "Save this session to your history" was unticked (no summary then). Every summary starts
+  without it, so an old error never shows after a later successful save.
+  `saveFinishedSession` in `public/js/history-store.js` returns `"saved"`, `"exists"`, `"short"` or
+  `"failed"`; persistent storage is only requested after `"saved"` or `"exists"`, as before.
 
 ### Summary result
 

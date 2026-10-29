@@ -44,6 +44,9 @@ const CHIME_GAP_S = 0.18; // between note starts
 const CHIME_NOTE_S = 0.75; // each note fades out over this long
 const CHIME_VOLUME = 0.25; // 1 = full scale
 const END_VIBRATION = [150, 80, 150]; // ms on, off, on (Android; iOS ignores it)
+// "Couldn't save the first part" note after Start new session: long enough to read it once the
+// dialog has closed, then it turns invisible (keeping its space, so nothing moves).
+const SAVE_ERROR_NOTE_MS = 10 * 1000;
 
 // Summary screen pose for each session result (see sessionResult in history-store.js).
 // early: neutral, never the proud "good" pose and never the "rough" one.
@@ -142,6 +145,7 @@ delete prefs.style; // saved before personalities came from the character; dropp
 let session = null; // { characterId, style, mode, durationMs, startedAt, distractions: [], endedAt, restartPending, leftAt }
 let tickTimer = 0;
 let nextGoodAt = 0;
+let saveErrorNoteTimer = 0;
 // distraction: the one the open (or about to open) picker belongs to.
 // If session.restartPending is set, the continue/restart dialog opens as soon as
 // the picker is closed and the Undo window is over. They never show at the same time.
@@ -445,6 +449,29 @@ function updateScreenNote() {
   }
   if (wakeLock.pending || document.visibilityState !== "visible") return;
   note.hidden = Boolean(wakeLock.sentinel);
+}
+
+// "Couldn't save the first part" note: shown on the new session's screen when Start new session
+// couldn't save the abandoned part. After SAVE_ERROR_NOTE_MS it turns invisible but keeps its
+// space, so nothing on the screen moves while a distraction button may be tapped. The next
+// session (enterSession) removes it completely.
+function showSaveErrorNote() {
+  const note = $("#saveErrorNote");
+  clearTimeout(saveErrorNoteTimer);
+  note.style.visibility = "";
+  note.textContent = RESTART_SAVE_ERROR; // set when shown, so a screen reader reads it once
+  note.hidden = false;
+  saveErrorNoteTimer = setTimeout(() => {
+    note.style.visibility = "hidden"; // also hides it from screen readers
+  }, SAVE_ERROR_NOTE_MS);
+}
+
+function hideSaveErrorNote() {
+  const note = $("#saveErrorNote");
+  clearTimeout(saveErrorNoteTimer);
+  note.hidden = true;
+  note.textContent = "";
+  note.style.visibility = "";
 }
 
 function releaseWakeLock() {
@@ -819,6 +846,7 @@ function enterSession() {
 
   closePicker(false);
   closeUndo(false);
+  hideSaveErrorNote();
   Object.assign(away, { from: 0, ms: 0, open: false, yes: false, hiddenAt: 0 });
   motivation.phase = null;
   $("#motivationCard").hidden = true;
@@ -1125,11 +1153,11 @@ async function askContinueOrRestart() {
   if (answer === "restart") {
     const { characterId, mode } = session;
     // The checkbox only matters here: "Continue" keeps the session running.
-    if (canSave && $("#restartSave").checked && saveFinishedSession({ ...session, endedAt: cutAt }, "startOver")) {
-      requestPersistentStorage();
-    }
+    const saved = canSave && $("#restartSave").checked ? saveFinishedSession({ ...session, endedAt: cutAt }, "startOver") : "";
+    if (saved === "saved" || saved === "exists") requestPersistentStorage();
     // value(), not read(): Start new session's click already let it through, so it must never block here.
     startSession(characterId, mode, restartPicker.value()); // a waiting time away card is dropped with the old session
+    if (saved === "failed") showSaveErrorNote();
   } else {
     askPendingAway();
   }
@@ -1527,7 +1555,8 @@ function finishSession(endedAt, keep = true) {
   closePicker(false);
   closeUndo(false);
   session.endedAt = Math.min(endedAt, session.startedAt + session.durationMs);
-  if (keep && saveFinishedSession(session)) requestPersistentStorage();
+  const saved = keep ? saveFinishedSession(session) : "";
+  if (saved === "saved" || saved === "exists") requestPersistentStorage();
   remove(SESSION_KEY);
   releaseControl();
   document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
@@ -1538,7 +1567,7 @@ function finishSession(endedAt, keep = true) {
     showScreen("setupScreen");
     return;
   }
-  renderSummary();
+  renderSummary(saved === "failed");
   showScreen("summaryScreen");
   // Focus was on the session (now hidden): the title gets it, so a screen reader reads the result.
   $("#summaryTitle").focus({ preventScroll: true });
@@ -1650,7 +1679,8 @@ function showMotivation() {
 // The pose, title and message all follow the session result (great / okay / rough / early / short).
 // Both modes show a factual line (time and distractions); Simple mode also shows a sentence above it.
 // A short session only shows the title and the "not saved" note, in both modes.
-function renderSummary() {
+// saveFailed: the browser refused to store the session, so the summary says so.
+function renderSummary(saveFailed) {
   const character = characterById(session.characterId);
   const result = sessionResult(session);
   const short = result === "short";
@@ -1666,6 +1696,11 @@ function renderSummary() {
   const noteEl = $("#summaryNote");
   noteEl.textContent = SUMMARY_SHORT_NOTE;
   noteEl.hidden = !short;
+  // Reset every time, so the next summary never shows an old error. The text is only set when it's
+  // shown, so a screen reader reads it once.
+  const saveErrorEl = $("#summarySaveError");
+  saveErrorEl.textContent = saveFailed ? SUMMARY_SAVE_ERROR : "";
+  saveErrorEl.hidden = !saveFailed;
 
   const { elapsedMs: elapsed, distractedMs: distracted, focusPercent: percent } = sessionFocus(session);
   const count = session.distractions.length;

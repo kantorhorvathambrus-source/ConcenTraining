@@ -793,6 +793,10 @@ input:focus-visible {
   margin: 8px 0 0;
 }
 
+.summary-text.error {
+  color: var(--error); /* "Couldn't save this session" */
+}
+
 /* ---------- open in another tab ---------- */
 
 #elsewhereScreen {
