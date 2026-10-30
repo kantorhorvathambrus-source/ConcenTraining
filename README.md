@@ -139,6 +139,7 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   it) stops and the character goes back to its normal pose, the category picker closes, the "doing well" timer is set back to what it
   was before the tap, and the session is saved. A new tap inside the 5 s moves Undo to the new
   distraction and starts the 5 s again. After a reload there's no Undo.
+- **Tap guard:** a tap that comes less than 0.4 s after the previous accepted tap is ignored everywhere in the app (`TAP_GUARD_MS` in `public/js/app.js`), so an accidental double tap never logs twice or presses what appears under the finger; keyboard and screen reader activation, Undo, text fields and checkbox labels are never blocked.
 - **Distraction categories:** after each distraction button, once the reaction has played (1.4 s,
   `PICKER_DELAY_MS`), a small picker appears above the bottom buttons: "What distracted you?" with
   Screen, Thoughts, Noise, People, Tired, Other, and a grey **Skip** button on the right. There's no
