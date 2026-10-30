@@ -14,7 +14,7 @@ const EARLY_END_RATIO = 0.5;
 const SUMMARY_GREAT_FOCUS = 85;
 const SUMMARY_OKAY_FOCUS = 60;
 // Simple mode has no focus %, so it uses distraction points instead: each logged
-// distraction scores its level (Very briefly = 1 … A whole lot = 5), counted per
+// distraction scores its level (A flicker = 1 … Totally gone = 5), counted per
 // 25 minutes. Great up to 2 points per 25 min, rough from 8, okay in between.
 const SIMPLE_GREAT_POINTS = 2;
 const SIMPLE_ROUGH_POINTS = 8;

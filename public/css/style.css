@@ -605,6 +605,23 @@ input:focus-visible {
   padding: 12px 8px;
 }
 
+/* Simple: always two full rows, 3 + 2. On a 6-column grid the first three buttons span 2 columns,
+   the last two span 3. Less side padding, so "Lost track" stays on one line on 320px phones. If a
+   label still wraps (a large phone font), every row grows to the same height. */
+.distraction-buttons.simple {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-auto-rows: 1fr;
+}
+
+.distraction-buttons.simple .btn.level {
+  grid-column: span 2;
+  padding: 12px 4px;
+}
+
+.distraction-buttons.simple .btn.level:nth-child(n + 4) {
+  grid-column: span 3;
+}
+
 /* Advanced labels are short: keep "10+ min" on one line in a 4-column row on 360px phones. */
 .distraction-buttons.advanced .btn.level {
   padding: 12px 4px;
