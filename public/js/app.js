@@ -487,6 +487,43 @@ function onSessionInput() {
   updateWakeLock();
 }
 
+// ---------- tap guard ----------
+
+// Many taps remove or replace what's under the finger (a dialog closes, the picker hides, Undo
+// turns back into Motivate me, the screen changes). The second tap of an accidental double tap
+// would then press whatever appeared there, or log a distraction twice. So a click from a tap
+// or mouse that comes less than TAP_GUARD_MS after the last accepted one is dropped, wherever it
+// lands: no handler runs, no dialog closes, no checkbox toggles. 400 ms: Android's double-tap
+// timeout (300 ms from lift to the next touch) plus the second press. A deliberate tap on
+// something that just appeared takes longer than that. A dropped click doesn't restart the time.
+// Always let through: keyboard and assistive-tech clicks (detail 0), Undo (it may follow a
+// distraction tap at once), text fields (a click there does nothing) and the click a <label>
+// passes on to its checkbox right after its own.
+const TAP_GUARD_MS = 400;
+const tapGuard = { lastAt: -Infinity, labelControl: null };
+
+function onGuardedClick(event) {
+  const target = event.target instanceof Element ? event.target : null;
+  const passes =
+    event.detail === 0 ||
+    (target && target.closest("#undoButton")) ||
+    (target && target.matches("input:not([type=checkbox]):not([type=radio]), textarea, select")) ||
+    (target && target === tapGuard.labelControl);
+  if (!passes && event.timeStamp - tapGuard.lastAt < TAP_GUARD_MS) {
+    event.stopImmediatePropagation();
+    event.preventDefault();
+    return;
+  }
+  tapGuard.labelControl = null;
+  if (event.detail === 0) return; // a key press doesn't start the time
+  tapGuard.lastAt = event.timeStamp;
+  const label = target && target.closest("label");
+  if (label && label.control) {
+    tapGuard.labelControl = label.control;
+    setTimeout(() => (tapGuard.labelControl = null)); // the passed-on click comes before this
+  }
+}
+
 // ---------- duration picker (used on setup and in the restart dialog) ----------
 
 // Empty becomes 25, anything under 1 becomes 1, anything over 240 becomes 240.
@@ -1773,6 +1810,8 @@ function formatTimeAgo(ms) {
 // ---------- start-up ----------
 
 function init() {
+  // On window, capture phase: runs before every other click listener (see "tap guard").
+  window.addEventListener("click", onGuardedClick, true);
   renderCharacterList();
   bindChoiceGroups();
   bindSettingChecks();
