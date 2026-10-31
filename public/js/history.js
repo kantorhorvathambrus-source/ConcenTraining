@@ -14,6 +14,12 @@ const MIN_SESSIONS_FOR_BEST_TIME = 3;
 // history becomes empty.
 let editing = false;
 
+// What the page was last drawn from: the day and the saved history as text (see historySource).
+// renderPending: the history may have changed while the Delete dialog was open; it's drawn once
+// the dialog closes, never under it.
+let drawnFrom = null;
+let renderPending = false;
+
 // Sessions are grouped by the hour they started.
 const DAY_PARTS = [
   { label: "Morning", hours: "5:00–12:00", matches: (h) => h >= 5 && h < 12 },
@@ -476,6 +482,8 @@ function renderSessionList(history) {
 
 // Draws (or redraws, after an import or a delete) everything that depends on the history.
 function render() {
+  drawnFrom = historySource();
+  renderPending = false;
   const history = loadHistory();
   const empty = history.length === 0;
   document.getElementById("historyEmpty").hidden = !empty;
@@ -493,6 +501,66 @@ function render() {
   renderDayParts(history);
   renderCategories(history);
   renderSessionList(history);
+}
+
+// ---------- changes made elsewhere ----------
+
+// The saved history as text, plus today's date: the streak and "this week" depend on the day too.
+// Same text as last time: nothing to draw again.
+function historySource() {
+  let saved = null;
+  try {
+    saved = localStorage.getItem(HISTORY_KEY);
+  } catch {
+    // storage blocked: loadHistory sees an empty history, so does this
+  }
+  return `${dayKey(new Date())}|${saved}`;
+}
+
+// The page keeps showing what it drew, so it's drawn again when the history may have changed
+// without this page: a session saved, deleted or imported in another tab (the storage event), a
+// return from the back/forward cache (e.g. Android Back after a session on index.html), or the
+// page being shown again (Android can freeze a background tab, so it may miss the storage event).
+// Edit mode stays as it is, and so do the "Session deleted." and Backup lines.
+function refreshInBackground() {
+  if (document.getElementById("deleteDialog").open) {
+    renderPending = true; // drawn when the dialog closes (confirmDelete)
+    return;
+  }
+  if (historySource() === drawnFrom) return;
+  redrawKeepingFocus(document.activeElement);
+}
+
+// render() replaces the list, so a focused Delete button is replaced too: focus goes to the new
+// button of the same session, or to the one now at its place if that session is gone (see
+// focusInList). Anything else focused stays, unless no sessions are left and it's hidden (Edit) or
+// disabled (Export) now: then focus goes to the empty state, which replaces the content.
+function redrawKeepingFocus(focused) {
+  const element = focused && focused !== document.body && focused.closest ? focused : null;
+  const deleteButton = element ? element.closest(".session-delete") : null;
+  const position = deleteButton ? deleteButtons().indexOf(deleteButton) : -1;
+  render();
+  const empty = document.getElementById("historyEmpty");
+  if (deleteButton) {
+    focusInList(Number(deleteButton.dataset.startedAt), position);
+  } else if (element && !empty.hidden && (element.closest("[hidden]") || element.disabled)) {
+    empty.focus();
+  }
+}
+
+// After the list is drawn again: the Delete button of the session that started at startedAt, or
+// else the one now at position (the row that moved up into it, or the row above if it was the last
+// one). With no sessions left the empty state replaces the list (render turns edit mode off then).
+function focusInList(startedAt, position) {
+  const buttons = editing ? deleteButtons() : [];
+  const same = buttons.find((button) => Number(button.dataset.startedAt) === startedAt);
+  if (same) {
+    same.focus();
+  } else if (buttons.length > 0) {
+    buttons[Math.min(Math.max(position, 0), buttons.length - 1)].focus();
+  } else {
+    document.getElementById("historyEmpty").focus();
+  }
 }
 
 // ---------- deleting a session ----------
@@ -538,32 +606,32 @@ function toggleEditing() {
 
 // Asks first; only "Delete" in the dialog deletes. The page's own copy of the history is never
 // written back: deleteFromHistory reads the saved one again (see history-store.js).
+// If the history changed in another tab while the dialog was open, the page is drawn again once,
+// right after it closes, whatever the answer (a delete draws it anyway).
 async function confirmDelete(button) {
   document.getElementById("deleteSummary").textContent = button.dataset.summary;
-  if ((await ask(document.getElementById("deleteDialog"))) !== "delete") {
-    button.focus();
+  const answer = await ask(document.getElementById("deleteDialog"));
+  const startedAt = Number(button.dataset.startedAt);
+
+  // "missing" (already deleted in another tab) needs no message of its own: it's gone either way.
+  if (answer !== "delete" || deleteFromHistory(startedAt) === "failed") {
+    if (answer === "delete") {
+      showDeleteStatus("Couldn't delete the session: your browser didn't allow the change.", true);
+    }
+    const changed = renderPending && historySource() !== drawnFrom;
+    renderPending = false;
+    if (changed) redrawKeepingFocus(button); // its session's new button, or the one at its place
+    else button.focus();
     return;
   }
 
   const position = deleteButtons().indexOf(button);
-  // "missing" (already deleted in another tab) needs no message of its own: it's gone either way.
-  if (deleteFromHistory(Number(button.dataset.startedAt)) === "failed") {
-    showDeleteStatus("Couldn't delete the session: your browser didn't allow the change.", true);
-    button.focus();
-    return;
-  }
-
   render();
   showDeleteStatus("Session deleted.", false);
   // Focus stays at the same place in the list: the row that moved up into it, or the row above
   // if it was the last one. With no sessions left, the empty state replaces the list (render
   // turns edit mode off then, and leaves the hidden list as it was).
-  const buttons = editing ? deleteButtons() : [];
-  if (buttons.length > 0) {
-    buttons[Math.min(position, buttons.length - 1)].focus();
-  } else {
-    document.getElementById("historyEmpty").focus();
-  }
+  focusInList(startedAt, position);
 }
 
 // ---------- export / import ----------
@@ -661,6 +729,15 @@ function init() {
   document.getElementById("sessionList").addEventListener("click", (event) => {
     const button = event.target.closest(".session-delete");
     if (button) confirmDelete(button);
+  });
+  window.addEventListener("storage", (event) => {
+    if (event.key === HISTORY_KEY || event.key === null) refreshInBackground(); // null: all storage was cleared
+  });
+  window.addEventListener("pageshow", (event) => {
+    if (event.persisted) refreshInBackground();
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) refreshInBackground();
   });
   render();
 }

@@ -717,8 +717,11 @@ function updateQuickStart() {
 
 // A restore from the browser's back/forward cache (e.g. Back from history.html after deleting
 // sessions there) shows the page without showScreen, so the history is checked again here.
+// It also checks whether another tab started a session meanwhile (see checkSessionElsewhere).
 function onPageShow(event) {
-  if (event.persisted && !$("#setupScreen").hidden) refreshQuickStart();
+  if (!event.persisted) return;
+  if (!$("#setupScreen").hidden) refreshQuickStart();
+  checkSessionElsewhere();
 }
 
 // The history changed in another tab (a session saved or deleted there). null: all storage was cleared.
@@ -836,7 +839,7 @@ async function onStartClick(fromQuickStart) {
     return;
   }
   if (!(await takeControl(false))) {
-    showScreen("elsewhereScreen");
+    showElsewhere();
     return;
   }
   if (session) return; // a quick second tap: already started
@@ -1301,7 +1304,7 @@ function loseControl() {
   session = null;
   document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
   document.title = BASE_TITLE;
-  showScreen("elsewhereScreen");
+  showElsewhere();
 }
 
 // Picks up the session saved in ct_session_v1: after a reload, or when this tab takes it over.
@@ -1331,7 +1334,7 @@ function resumeSavedSession() {
 // Another tab holds the lock (and steal isn't set): the notice. The session ended meanwhile: setup.
 async function continueSavedSession(steal) {
   if (!(await takeControl(steal))) {
-    showScreen("elsewhereScreen");
+    showElsewhere();
     return;
   }
   if (session) return; // a quick second tap: it's already running here
@@ -1342,17 +1345,107 @@ async function continueSavedSession(steal) {
 }
 
 function onContinueHereClick() {
+  setupView.saved = null; // the setup screen comes back after this session, as after any other
   if (prefs.endSound) unlockAudio(); // this tap is what allows the chime later, as on Start
   continueSavedSession(true);
 }
 
-// The notice goes when the session ends in the other tab (finished or discarded there).
-// "storage" only fires in the other tabs of the site, never in the one that saved.
-function onStorage(event) {
-  if (event.key !== SESSION_KEY && event.key !== null) return; // null: all storage was cleared
-  if ($("#elsewhereScreen").hidden || savedRunningSession()) return;
+// Every way to the notice comes here: Start (or Quick start) while another tab runs the session,
+// start-up with the session running elsewhere, another tab's Continue here (loseControl), and the
+// switch by itself below. The screen before it is hidden now, so focus would be lost: it goes to
+// the heading, which a screen reader then reads. Without scrolling and with no focus outline.
+function showElsewhere() {
+  showScreen("elsewhereScreen");
+  $("#elsewhereTitle").focus({ preventScroll: true });
+}
+
+// A tab showing the setup screen switches to the notice by itself when another tab runs a
+// session, so Start doesn't have to be tapped to find out. Only from the plain setup screen:
+// never from the summary, the "Welcome back" question (session is set then), the ragebait
+// warning or any other open dialog, and never while this tab is starting a session itself.
+// Without Web Locks the tabs can't tell, so nothing changes there.
+function canShowElsewhere() {
+  return Boolean(
+    locks && !$("#setupScreen").hidden && !session && !control.hold && !control.pending &&
+    !document.querySelector("dialog[open]") && savedRunningSession()
+  );
+}
+
+// saved: where the setup screen was when the notice replaced it by itself (scroll position, the
+// focused element and, for a character card, its id: the cards are rebuilt on the way back), so it
+// looks the same when it comes back. In memory only. Cleared by Continue here.
+const setupView = { saved: null };
+
+function showElsewhereByItself() {
+  const focused = document.activeElement;
+  setupView.saved = {
+    scrollY: window.scrollY,
+    focused: focused && focused !== document.body ? focused : null,
+    cardId: focused && focused.classList.contains("char-card") ? focused.dataset.id : null,
+  };
+  showElsewhere();
+}
+
+// Back on the setup screen after the notice (the session ended in the other tab): the scroll
+// position and focus it had before the notice replaced it by itself. Nothing else needs restoring:
+// the choices live in this tab's prefs and the setup screen's fields, which the notice leaves alone.
+function restoreSetupView() {
+  const saved = setupView.saved;
+  setupView.saved = null;
+  if (!saved) return;
+  window.scrollTo(0, saved.scrollY);
+  const target = saved.cardId
+    ? $("#characterList").querySelector(`.char-card[data-id="${CSS.escape(saved.cardId)}"]`)
+    : saved.focused;
+  if (target && target.isConnected) target.focus({ preventScroll: true });
+}
+
+// The notice replaced the setup screen by itself and is still shown, with no answer pending here.
+function elsewhereByItself() {
+  return Boolean(setupView.saved && !$("#elsewhereScreen").hidden && !control.hold && !control.pending);
+}
+
+// The setup screen comes back as it was before the notice.
+function backToSetup() {
   renderCharacterList();
   showScreen("setupScreen");
+  restoreSetupView();
+}
+
+// The page is shown again (another tab or app, or the back/forward cache). Android can freeze a
+// tab in the background, so it may have missed the storage event of a session started elsewhere.
+// The saved session alone isn't enough here: its tab may have been closed meanwhile, and then
+// Start resumes it, as before. So it only switches if another tab holds the lock (this one doesn't).
+// The other way round too: a notice shown by itself goes back to the setup screen when no tab
+// holds the lock any more. Closing a tab saves its session one last time (the leave time), so the
+// notice can come up in the very moment that tab goes away, and no storage event follows.
+async function checkSessionElsewhere() {
+  if (document.hidden || !locks || (!canShowElsewhere() && !elsewhereByItself())) return;
+  let held = [];
+  try {
+    ({ held } = await locks.query());
+  } catch {
+    return;
+  }
+  if (document.hidden) return;
+  const heldElsewhere = held.some((lock) => lock.name === SESSION_LOCK);
+  // Checked again: something may have changed while the browser answered.
+  if (heldElsewhere && canShowElsewhere()) showElsewhereByItself();
+  else if (!heldElsewhere && elsewhereByItself()) backToSetup();
+}
+
+// "storage" only fires in the other tabs of the site, never in the one that saved. Every save of
+// the running session fires it (each distraction, each leave), so both cases only act once:
+// a session started in another tab replaces the setup screen with the notice, and the notice goes
+// when the session ends there (finished or discarded), bringing the setup screen back as it was.
+function onStorage(event) {
+  if (event.key !== SESSION_KEY && event.key !== null) return; // null: all storage was cleared
+  if (canShowElsewhere()) {
+    showElsewhereByItself();
+    return;
+  }
+  if ($("#elsewhereScreen").hidden || savedRunningSession()) return;
+  backToSetup();
 }
 
 // ---------- time away ----------
@@ -1851,6 +1944,7 @@ function init() {
   for (const type of ["touchend", "click", "keydown"]) document.addEventListener(type, onSessionInput, true);
   document.addEventListener("visibilitychange", updateWakeLock);
   document.addEventListener("visibilitychange", onVisibilityChange);
+  document.addEventListener("visibilitychange", checkSessionElsewhere);
   $("#awayNoButton").addEventListener("click", () => $("#awayDialog").close());
   $("#awayYesButton").addEventListener("click", () => {
     away.yes = true;

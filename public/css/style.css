@@ -1093,7 +1093,8 @@ a {
 #distractionPrompt:focus,
 #summaryTitle:focus,
 #characterStepTitle:focus,
-#restartStep2Title:focus {
+#restartStep2Title:focus,
+#elsewhereTitle:focus {
   outline: none;
 }
 
