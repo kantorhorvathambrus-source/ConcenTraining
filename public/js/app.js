@@ -44,8 +44,9 @@ const CHIME_GAP_S = 0.18; // between note starts
 const CHIME_NOTE_S = 0.75; // each note fades out over this long
 const CHIME_VOLUME = 0.25; // 1 = full scale
 const END_VIBRATION = [150, 80, 150]; // ms on, off, on (Android; iOS ignores it)
-// "Couldn't save the first part" note after Start new session: long enough to read it once the
-// dialog has closed, then it turns invisible (keeping its space, so nothing moves).
+// Red note on a new session's screen ("This session can't be saved…" or "Couldn't save the first
+// part…"): long enough to read it once the screen (or the dialog) has changed, then it turns
+// invisible (keeping its space, so nothing moves).
 const SAVE_ERROR_NOTE_MS = 10 * 1000;
 
 // Summary screen pose for each session result (see sessionResult in history-store.js).
@@ -451,15 +452,16 @@ function updateScreenNote() {
   note.hidden = Boolean(wakeLock.sentinel);
 }
 
-// "Couldn't save the first part" note: shown on the new session's screen when Start new session
-// couldn't save the abandoned part. After SAVE_ERROR_NOTE_MS it turns invisible but keeps its
-// space, so nothing on the screen moves while a distraction button may be tapped. The next
+// Red note on the new session's screen: SESSION_STORAGE_NOTE when the session starts while the
+// browser doesn't let the site save anything (startSession), or RESTART_SAVE_ERROR when Start new
+// session couldn't save the abandoned part. After SAVE_ERROR_NOTE_MS it turns invisible but keeps
+// its space, so nothing on the screen moves while a distraction button may be tapped. The next
 // session (enterSession) removes it completely.
-function showSaveErrorNote() {
+function showSaveErrorNote(text) {
   const note = $("#saveErrorNote");
   clearTimeout(saveErrorNoteTimer);
   note.style.visibility = "";
-  note.textContent = RESTART_SAVE_ERROR; // set when shown, so a screen reader reads it once
+  note.textContent = text; // set when shown, so a screen reader reads it once
   note.hidden = false;
   saveErrorNoteTimer = setTimeout(() => {
     note.style.visibility = "hidden"; // also hides it from screen readers
@@ -638,6 +640,32 @@ function durationPicker(container, initialMinutes) {
   };
 }
 
+// ---------- can this browser save? ----------
+
+// Runs the test write (storageWorks in history-store.js) and shows or hides the setup screen note.
+// Called at start-up, when a session starts, and when the page is shown again. Returns the result.
+function checkStorage() {
+  const ok = storageWorks();
+  updateSetupStorageNote(ok);
+  return ok;
+}
+
+// Only changes something when the result changed, and the text is set when the note appears, so a
+// screen reader reads it once, not on every check. The note sits at the top of the setup screen:
+// if the page is scrolled down, it's scrolled by the note's height, so what's on screen stays put.
+// (Browsers with scroll anchoring already keep it in place: the difference is 0 there.)
+function updateSetupStorageNote(ok) {
+  const note = $("#setupStorageNote");
+  if (note.hidden === ok) return;
+  const anchor = $("#characterStep");
+  const before = anchor.getBoundingClientRect().top;
+  note.textContent = ok ? "" : SETUP_STORAGE_NOTE;
+  note.hidden = ok;
+  if ($("#setupScreen").hidden || window.scrollY === 0) return;
+  const moved = anchor.getBoundingClientRect().top - before;
+  if (moved) window.scrollBy(0, moved);
+}
+
 // ---------- setup screen ----------
 
 let setupPicker = { read: () => prefs.minutes, value: () => prefs.minutes, clearNote() {} };
@@ -720,6 +748,7 @@ function updateQuickStart() {
 // It also checks whether another tab started a session meanwhile (see checkSessionElsewhere).
 function onPageShow(event) {
   if (!event.persisted) return;
+  checkStorage(); // site data may have been allowed or blocked meanwhile
   if (!$("#setupScreen").hidden) refreshQuickStart();
   checkSessionElsewhere();
 }
@@ -849,6 +878,8 @@ async function onStartClick(fromQuickStart) {
 
 // ---------- session ----------
 
+// Start, Quick start and Start new session. Returns whether this browser can save (checkStorage):
+// if it can't, the new session's screen says so (after enterSession, which clears that line).
 function startSession(characterId, mode, minutes) {
   session = {
     characterId,
@@ -861,6 +892,9 @@ function startSession(characterId, mode, minutes) {
   };
   save(SESSION_KEY, session);
   enterSession();
+  const ok = checkStorage();
+  if (!ok) showSaveErrorNote(SESSION_STORAGE_NOTE);
+  return ok;
 }
 
 function enterSession() {
@@ -1197,8 +1231,11 @@ async function askContinueOrRestart() {
     const saved = canSave && $("#restartSave").checked ? saveFinishedSession({ ...session, endedAt: cutAt }, "startOver") : "";
     if (saved === "saved" || saved === "exists") requestPersistentStorage();
     // value(), not read(): Start new session's click already let it through, so it must never block here.
-    startSession(characterId, mode, restartPicker.value()); // a waiting time away card is dropped with the old session
-    if (saved === "failed") showSaveErrorNote();
+    // a waiting time away card is dropped with the old session
+    const canSaveNow = startSession(characterId, mode, restartPicker.value());
+    // Only one line fits: if nothing can be saved at all, the new session's note (already shown by
+    // startSession) also covers the lost first part.
+    if (saved === "failed" && canSaveNow) showSaveErrorNote(RESTART_SAVE_ERROR);
   } else {
     askPendingAway();
   }
@@ -1945,6 +1982,10 @@ function init() {
   document.addEventListener("visibilitychange", updateWakeLock);
   document.addEventListener("visibilitychange", onVisibilityChange);
   document.addEventListener("visibilitychange", checkSessionElsewhere);
+  // Back from the browser's site settings: the setup note follows what's allowed now.
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) checkStorage();
+  });
   $("#awayNoButton").addEventListener("click", () => $("#awayDialog").close());
   $("#awayYesButton").addEventListener("click", () => {
     away.yes = true;
@@ -1955,6 +1996,8 @@ function init() {
   window.addEventListener("storage", onStorage);
   window.addEventListener("storage", onHistoryStorage);
   window.addEventListener("pageshow", onPageShow);
+
+  checkStorage();
 
   // Resume a session that was running when the page was closed or reloaded,
   // unless another tab runs it (see "one tab at a time").

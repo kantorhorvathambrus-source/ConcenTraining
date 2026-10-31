@@ -149,6 +149,26 @@ function loadHistory() {
   }
 }
 
+// Whether this browser lets the site save anything right now: a tiny test write, removed at once.
+// Site data blocked (e.g. Chrome's "Don't allow sites to save data on your device") throws when
+// localStorage is touched, full storage throws on setItem: either way nothing stays behind, and
+// both count as "can't save". Storage that is only nearly full can pass this test and still
+// refuse a whole session; the summary's "Couldn't save" line covers that. Other tabs get a
+// storage event for this key, which their listeners ignore (they only watch the app's own keys).
+// Checked when index.html and history.html load, when a session starts, and when the page is
+// shown again (so the notes go away once site data is allowed).
+const STORAGE_TEST_KEY = "ct_storage_test";
+
+function storageWorks() {
+  try {
+    localStorage.setItem(STORAGE_TEST_KEY, "1");
+    localStorage.removeItem(STORAGE_TEST_KEY);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // Returns false if the browser refused to store it (storage full or blocked).
 function writeHistory(history) {
   try {

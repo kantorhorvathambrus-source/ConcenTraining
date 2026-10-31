@@ -14,7 +14,12 @@ const MIN_SESSIONS_FOR_BEST_TIME = 3;
 // history becomes empty.
 let editing = false;
 
-// What the page was last drawn from: the day and the saved history as text (see historySource).
+// Whether this browser lets the site save anything (storageWorks in history-store.js). Checked
+// when the page loads and whenever it's shown again (e.g. back from the browser's site settings);
+// while it's false, the storage note shows instead of the empty state (renderStorageNote).
+let canSave = true;
+
+// What the page was last drawn from: the day, canSave and the saved history as text (see historySource).
 // renderPending: the history may have changed while the Delete dialog was open; it's drawn once
 // the dialog closes, never under it.
 let drawnFrom = null;
@@ -486,7 +491,9 @@ function render() {
   renderPending = false;
   const history = loadHistory();
   const empty = history.length === 0;
-  document.getElementById("historyEmpty").hidden = !empty;
+  renderStorageNote();
+  // "No finished sessions yet … Start one →" would be a promise this browser can't keep.
+  document.getElementById("historyEmpty").hidden = !empty || !canSave;
   document.getElementById("historyContent").hidden = empty;
   document.getElementById("exportButton").disabled = empty;
   if (empty) {
@@ -503,6 +510,22 @@ function render() {
   renderSessionList(history);
 }
 
+// "Your browser isn't letting this site save data": in place of the empty state, or above the
+// sessions if some can still be read (e.g. storage that is full, not blocked). Only changes when
+// canSave changed, and the text is set when it appears, so a screen reader reads it once.
+function renderStorageNote() {
+  const note = document.getElementById("historyStorageNote");
+  if (note.hidden === canSave) return;
+  note.textContent = canSave ? "" : HISTORY_STORAGE_NOTE;
+  note.hidden = canSave;
+}
+
+// What shows when there are no sessions: the empty state, or the storage note in its place.
+function emptyPlace() {
+  const empty = document.getElementById("historyEmpty");
+  return empty.hidden ? document.getElementById("historyStorageNote") : empty;
+}
+
 // ---------- changes made elsewhere ----------
 
 // The saved history as text, plus today's date: the streak and "this week" depend on the day too.
@@ -514,10 +537,10 @@ function historySource() {
   } catch {
     // storage blocked: loadHistory sees an empty history, so does this
   }
-  return `${dayKey(new Date())}|${saved}`;
+  return `${dayKey(new Date())}|${canSave}|${saved}`;
 }
 
-// The page keeps showing what it drew, so it's drawn again when the history may have changed
+// The page keeps showing what it drew, so it's drawn again when the history (or canSave) may have changed
 // without this page: a session saved, deleted or imported in another tab (the storage event), a
 // return from the back/forward cache (e.g. Android Back after a session on index.html), or the
 // page being shown again (Android can freeze a background tab, so it may miss the storage event).
@@ -534,13 +557,14 @@ function refreshInBackground() {
 // render() replaces the list, so a focused Delete button is replaced too: focus goes to the new
 // button of the same session, or to the one now at its place if that session is gone (see
 // focusInList). Anything else focused stays, unless no sessions are left and it's hidden (Edit) or
-// disabled (Export) now: then focus goes to the empty state, which replaces the content.
+// disabled (Export) now: then focus goes to the empty state (or the storage note in its place),
+// which replaces the content.
 function redrawKeepingFocus(focused) {
   const element = focused && focused !== document.body && focused.closest ? focused : null;
   const deleteButton = element ? element.closest(".session-delete") : null;
   const position = deleteButton ? deleteButtons().indexOf(deleteButton) : -1;
   render();
-  const empty = document.getElementById("historyEmpty");
+  const empty = emptyPlace();
   if (deleteButton) {
     focusInList(Number(deleteButton.dataset.startedAt), position);
   } else if (element && !empty.hidden && (element.closest("[hidden]") || element.disabled)) {
@@ -559,7 +583,7 @@ function focusInList(startedAt, position) {
   } else if (buttons.length > 0) {
     buttons[Math.min(Math.max(position, 0), buttons.length - 1)].focus();
   } else {
-    document.getElementById("historyEmpty").focus();
+    emptyPlace().focus();
   }
 }
 
@@ -714,6 +738,12 @@ function invalidSummary(reasons) {
   return `Skipped ${plural(reasons.length, "invalid session")} (${why}).`;
 }
 
+// Shown again: site data may have been allowed or blocked meanwhile, and the history may have changed.
+function recheckAndRefresh() {
+  canSave = storageWorks();
+  refreshInBackground();
+}
+
 function init() {
   // The 7-day rule only applies in Safari on iPhone/iPad (see iosSafariNotInstalled in history-store.js).
   document.getElementById("iosStorageNote").hidden = !iosSafariNotInstalled();
@@ -734,11 +764,12 @@ function init() {
     if (event.key === HISTORY_KEY || event.key === null) refreshInBackground(); // null: all storage was cleared
   });
   window.addEventListener("pageshow", (event) => {
-    if (event.persisted) refreshInBackground();
+    if (event.persisted) recheckAndRefresh();
   });
   document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) refreshInBackground();
+    if (!document.hidden) recheckAndRefresh();
   });
+  canSave = storageWorks();
   render();
 }
 

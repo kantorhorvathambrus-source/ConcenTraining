@@ -194,7 +194,10 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   the first part to your history: your browser didn't allow it." (`role="status"`, so a screen reader
   reads it once). After 10 s (`SAVE_ERROR_NOTE_MS` in `public/js/app.js`) it turns invisible but
   keeps its space, so nothing on the screen moves while a distraction button may be tapped; the next
-  session removes it completely.
+  session removes it completely. If the browser doesn't let the site save anything at all, the new
+  session's own note ("This session can't be saved to your history…", see
+  [When the browser won't save](#when-the-browser-wont-save)) shows in that spot instead: only one
+  line fits, and it covers the lost first part too.
 - **End session** asks "End this session now?". If the session has run at least 1 minute (measured
   when the dialog opens), the dialog also has a checkbox: "Save this session to your history",
   ticked every time the dialog opens (it isn't remembered). Unticked means "this session doesn't
@@ -301,7 +304,8 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   time; "(… planned)" follows the same rule as in Advanced mode. A session under 1 minute only shows
   the title and the "not saved" note (no focus %, sentence, factual line or categories).
 - **Couldn't save:** if the browser refused to store a finished session (storage full or site data
-  blocked), the summary adds one red line under the details: "Couldn't save this session to your
+  blocked; usually the setup and session screens already said so, see
+  [When the browser won't save](#when-the-browser-wont-save)), the summary adds one red line under the details: "Couldn't save this session to your
   history: your browser didn't allow it. Full storage or blocked site data can cause this."
   (`role="status"`, read once by a screen reader; the title still gets focus). Everything else on the
   summary stays the same. It's never shown for a session under 1 minute (not saved on purpose), for a
@@ -696,6 +700,41 @@ History lives only in this browser: clearing site data or switching devices star
 The history page says so, too (its storage note at the top: "Use Export below before you switch
 phones or clear your browser data.").
 
+### When the browser won't save
+
+Browsers can refuse to let a site store anything (in Chrome on Android: Settings → Site settings →
+On-device site data → "Don't allow sites to save data on your device", for all sites or just this
+one), and storage can be full. Then nothing reaches the history and settings aren't remembered, so
+the app says so before a session, not only on the summary:
+
+- **How it's checked:** `storageWorks()` in `public/js/history-store.js` writes `ct_storage_test` =
+  `"1"` and removes it straight away. If storage is blocked or full the write throws, so nothing is
+  ever left behind and no new data is kept. Blocked and full count the same. It runs when
+  `index.html` and `history.html` load, when a session starts (Start, Quick start, Start new
+  session), and whenever the page is shown again (so the notes go away without a reload once site
+  data is allowed, and appear on the next check if it's blocked while the page is open). Other tabs
+  get a `storage` event for the test key, which all their listeners ignore. Storage that is only
+  nearly full can pass the 1-byte test and still refuse a session: then the summary's "Couldn't
+  save" line is the only hint, as before.
+- **Setup screen:** a red line right under the header, above the Quick start card: "Your browser
+  isn't letting this site save data, so sessions won't go into your history and your settings won't
+  be remembered. You can allow it in your browser's site settings." Only while the check fails;
+  there's no setting for it. The Quick start card, How it works card and iPhone tip show and hide as
+  before. If the page is scrolled down when the line appears or goes, the page is scrolled by its
+  height, so what's on screen stays put.
+- **Session screen:** when a session starts and the check fails, the red line under the session info
+  says "This session can't be saved to your history: your browser isn't letting this site save
+  data." Like the "Couldn't save the first part" line it turns invisible after 10 s
+  (`SAVE_ERROR_NOTE_MS`), keeping its space, and the next session removes it. A session resumed after
+  a reload doesn't check again.
+- **History page:** while the check fails, "Your browser isn't letting this site save data, so no
+  sessions can be stored here. You can allow it in your browser's site settings." shows instead of
+  "No finished sessions yet … Start one →". If sessions can still be read (full storage), they're
+  drawn under it. Export and Import keep their own messages.
+- All three notes are `role="status"` and their text is set only when they appear, so a screen reader
+  reads them once, not on every check. The texts are in `public/js/data/messages.js` (which
+  `history.html` loads too).
+
 ### iPhone storage and the Home Screen app
 
 Safari on iPhone and iPad can erase a site's saved data (history, streak, prefs) after 7 days of
@@ -927,10 +966,10 @@ once with a decent connection fixes it, because every online start refreshes all
 | `public/js/sw-register.js` | Registers `sw.js` from `index.html` and `history.html`; does nothing without service worker support |
 | `public/css/style.css` | Styling, light/dark mode, breathing and reaction animations |
 | `public/js/data/characters.js` | Character list, groups and the personality each group gives (`personalityOf`), art paths, pose descriptions for screen readers (`POSE_DESCRIPTIONS`) |
-| `public/js/data/messages.js` | Motivation messages, summary titles and Simple-mode summary messages per result |
+| `public/js/data/messages.js` | Motivation messages, summary titles, Simple-mode summary messages per result, and the "can't save" notes (also loaded by `history.html`) |
 | `public/js/placeholder-art.js` | Built-in placeholder drawings (kind, firm, strict and ragebait faces, plus each character's look) for characters without real art |
 | `public/js/app.js` | Timer, reaction engine, distraction category picker, Undo, disabled Advanced lengths, time away card, leave reminder notification, motivation rotation, end chime, screen wake lock and the "screen may turn off" note, summary, How it works card, iPhone Home Screen tip, persistent storage request, one tab at a time (Web Locks) |
-| `public/js/history-store.js` | Saving/loading history, focus % and summary result (with their thresholds), distraction categories, export/import checks, iPhone/iPad and iPhone Safari checks (used by both pages) |
+| `public/js/history-store.js` | Saving/loading history, focus % and summary result (with their thresholds), distraction categories, export/import checks, iPhone/iPad and iPhone Safari checks, the "can this browser save?" test (`storageWorks`) (used by both pages) |
 | `public/js/history.js` | Streaks, weekly time and focus charts, time of day, distraction categories, session list and backup buttons on `history.html` |
 | `netlify/functions/picks.mjs` | `POST /api/picks`: counts one session started with a character |
 | `netlify/functions/stats.mjs` | `GET /api/stats`: popularity + which characters are paid |

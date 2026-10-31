@@ -30,6 +30,10 @@
         </p>
       </header>
 
+      <!-- Shown only while the browser doesn't let the site save anything (updateSetupStorageNote in
+           app.js). Its text is set when it appears, so a screen reader reads it once. -->
+      <p id="setupStorageNote" class="error storage-warning" role="status" hidden></p>
+
       <!-- Returning users only: a saved character and at least one session in the history
            (updateQuickStart in app.js). Shows the current setup and starts it like Start session. -->
       <div id="quickStart" class="quick-start" hidden>
@@ -131,7 +135,8 @@
       <p id="sessionInfo" class="session-info muted" tabindex="-1"></p>
       <!-- Shown while the chime is on but the screen isn't being kept on (updateScreenNote in app.js). -->
       <p id="screenNote" class="screen-note muted" role="status" hidden>Your screen may turn off. If it does, you won't hear the chime.</p>
-      <!-- Shown when Start new session couldn't save the abandoned part (showSaveErrorNote in app.js). -->
+      <!-- Shown when a session starts while the browser doesn't let the site save anything, or when
+           Start new session couldn't save the abandoned part (showSaveErrorNote in app.js). -->
       <p id="saveErrorNote" class="screen-note error" role="status" hidden></p>
 
       <div id="sessionStage" class="stage">
