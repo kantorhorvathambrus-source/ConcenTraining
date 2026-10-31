@@ -158,6 +158,15 @@ const SUMMARY_SAVE_ERROR =
   "Couldn't save this session to your history: your browser didn't allow it. Full storage or blocked site data can cause this.";
 const RESTART_SAVE_ERROR = "Couldn't save the first part to your history: your browser didn't allow it.";
 
+// Shown while the browser doesn't let the site save anything (site data blocked or storage full,
+// see storageWorks in history-store.js): on the setup screen, on a new session's screen, and on
+// the history page instead of its empty state.
+const SETUP_STORAGE_NOTE =
+  "Your browser isn't letting this site save data, so sessions won't go into your history and your settings won't be remembered. You can allow it in your browser's site settings.";
+const SESSION_STORAGE_NOTE = "This session won't be saved: your browser isn't letting this site save data.";
+const HISTORY_STORAGE_NOTE =
+  "Your browser isn't letting this site save data, so no sessions can be stored here. You can allow it in your browser's site settings.";
+
 // End-of-session messages for Simple mode (it has no stats), one is picked at random.
 const SIMPLE_SUMMARY_MESSAGES = {
   great: [

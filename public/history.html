@@ -32,6 +32,12 @@
       </span>
     </p>
 
+    <!-- Shown instead of the empty state (and above the sessions, if any can still be read) while
+         the browser doesn't let the site save anything (renderStorageNote in history.js). Its text
+         is set when it appears, so a screen reader reads it once. tabindex="-1": can get the focus
+         like the empty state. -->
+    <p id="historyStorageNote" class="error storage-warning" role="status" tabindex="-1" hidden></p>
+
     <!-- tabindex="-1": gets the focus after the last session is deleted (history.js). -->
     <p id="historyEmpty" class="empty-state" tabindex="-1" hidden>
       No finished sessions yet. Every session that runs at least 1 minute shows up here once it ends.
@@ -128,6 +134,7 @@
   </dialog>
 
   <script src="js/data/characters.js"></script>
+  <script src="js/data/messages.js"></script>
   <script src="js/history-store.js"></script>
   <script src="js/history.js"></script>
   <script src="js/sw-register.js"></script>

@@ -82,6 +82,12 @@ h2 {
   margin: 8px 0 0;
 }
 
+/* "Your browser isn't letting this site save data": under the setup header, and on the history
+   page in place of the empty state. Same red line as the other errors, with the space of a card. */
+.storage-warning {
+  margin: 0 0 24px;
+}
+
 .app {
   max-width: 600px;
   margin: 0 auto;
