@@ -163,8 +163,7 @@ const RESTART_SAVE_ERROR = "Couldn't save the first part to your history: your b
 // the history page instead of its empty state.
 const SETUP_STORAGE_NOTE =
   "Your browser isn't letting this site save data, so sessions won't go into your history and your settings won't be remembered. You can allow it in your browser's site settings.";
-const SESSION_STORAGE_NOTE =
-  "This session can't be saved to your history: your browser isn't letting this site save data.";
+const SESSION_STORAGE_NOTE = "This session won't be saved: your browser isn't letting this site save data.";
 const HISTORY_STORAGE_NOTE =
   "Your browser isn't letting this site save data, so no sessions can be stored here. You can allow it in your browser's site settings.";
 

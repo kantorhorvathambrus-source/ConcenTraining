@@ -195,7 +195,7 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   reads it once). After 10 s (`SAVE_ERROR_NOTE_MS` in `public/js/app.js`) it turns invisible but
   keeps its space, so nothing on the screen moves while a distraction button may be tapped; the next
   session removes it completely. If the browser doesn't let the site save anything at all, the new
-  session's own note ("This session can't be saved to your history…", see
+  session's own note ("This session won't be saved…", see
   [When the browser won't save](#when-the-browser-wont-save)) shows in that spot instead: only one
   line fits, and it covers the lost first part too.
 - **End session** asks "End this session now?". If the session has run at least 1 minute (measured
@@ -723,8 +723,7 @@ the app says so before a session, not only on the summary:
   before. If the page is scrolled down when the line appears or goes, the page is scrolled by its
   height, so what's on screen stays put.
 - **Session screen:** when a session starts and the check fails, the red line under the session info
-  says "This session can't be saved to your history: your browser isn't letting this site save
-  data." Like the "Couldn't save the first part" line it turns invisible after 10 s
+  says "This session won't be saved: your browser isn't letting this site save data." Like the "Couldn't save the first part" line it turns invisible after 10 s
   (`SAVE_ERROR_NOTE_MS`), keeping its space, and the next session removes it. A session resumed after
   a reload doesn't check again.
 - **History page:** while the check fails, "Your browser isn't letting this site save data, so no

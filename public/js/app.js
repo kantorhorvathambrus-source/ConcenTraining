@@ -44,7 +44,7 @@ const CHIME_GAP_S = 0.18; // between note starts
 const CHIME_NOTE_S = 0.75; // each note fades out over this long
 const CHIME_VOLUME = 0.25; // 1 = full scale
 const END_VIBRATION = [150, 80, 150]; // ms on, off, on (Android; iOS ignores it)
-// Red note on a new session's screen ("This session can't be saved…" or "Couldn't save the first
+// Red note on a new session's screen ("This session won't be saved…" or "Couldn't save the first
 // part…"): long enough to read it once the screen (or the dialog) has changed, then it turns
 // invisible (keeping its space, so nothing moves).
 const SAVE_ERROR_NOTE_MS = 10 * 1000;
