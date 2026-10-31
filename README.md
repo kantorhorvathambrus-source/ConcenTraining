@@ -106,7 +106,10 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
     moving to it. Blinks don't change the alt.
   - **Screens:** when a session starts (Start session, Start on the Quick start card, Start new session, Continue here, or a reload), focus
     moves to the session info line ("Grandma · Relaxed · Simple · 25 min"); when it ends (End
-    session, timer ran out, Save in "Welcome back"), focus moves to the summary title. Focus moves
+    session, timer ran out, Save in "Welcome back"), focus moves to the summary title. Whenever "This session is open in another tab." shows
+    (Start or Quick start while another tab runs the session, opening the app then, another tab's
+    **Continue here**, or the setup screen switching by itself), focus moves to that heading
+    (`showElsewhere()` in `public/js/app.js`), so it's read out once. Focus moves
     without scrolling, and these get no focus outline, so nothing changes on screen.
   - **Quick start:** the card's **Start** button is named by its text plus the setup line
     (`aria-labelledby`), e.g. "Start Boss · Advanced · 25 min", so it can't be confused with
@@ -472,7 +475,26 @@ a session at a time, so two tabs never overwrite each other's distractions or bo
   under it, and no saved data or storage key changed.
 - **The other tabs** show a calm notice instead of the session: "This session is open in another tab."
   with a **Continue here** button. They run no timers, reactions, sounds, wake lock or time away card,
-  and save nothing.
+  and save nothing. Focus moves to the notice's heading, so a screen reader reads it.
+- **A tab on the setup screen switches to the notice by itself** as soon as another tab runs a
+  session, so you don't have to tap Start to find out. Two things trigger it:
+  - the `storage` event for `ct_session_v1` (the browser sends it to the other tabs whenever saved
+    data changes), if a running session is saved;
+  - the tab being shown again (`visibilitychange`, or `pageshow` after the back/forward cache), because
+    Android can freeze a background tab so it misses the event. Here it also asks the browser
+    (`navigator.locks.query()`) whether another tab holds the lock: a saved session whose tab was
+    closed doesn't switch, and Start resumes it, as before.
+
+  It only switches from the plain setup screen: never from the summary, the "Welcome back" question,
+  the ragebait warning or any other open dialog, and never while this tab is starting a session
+  itself. It switches once: the saves that follow (each distraction, each leave) change nothing, so
+  nothing flickers and focus moves only once. Without Web Locks nothing switches.
+  Nothing on the setup screen is lost: the character, mode, typed Custom minutes and checkboxes stay
+  as they were (this tab's own choices, not the other tab's), and when the notice goes again the
+  scroll position and the focused element come back too (`setupView` in `public/js/app.js`, in memory
+  only). Closing the other tab saves its session one last time, so the notice can come up just as
+  that tab goes away; when this tab is shown again and no tab holds the lock, a notice that came by
+  itself goes back to the setup screen.
 - **Continue here** takes the lock from the other tab first, then reads the latest saved session, so
   everything logged in the other tab is there. From then on it works like a reload of that tab: the
   timer carries on, a waiting continue/restart question is asked, and a session whose time ran out
@@ -486,7 +508,7 @@ a session at a time, so two tabs never overwrite each other's distractions or bo
   directly, and another tab can take it with Continue here. No tab takes over by itself, so a tab in
   the background never suddenly starts the timer or the chime.
 - **Session ended in the other tab:** a tab showing the notice goes back to the setup screen by itself
-  (the `storage` event, which the browser sends to the other tabs whenever saved data changes).
+  (the `storage` event). If the notice had come by itself, the setup screen looks as it was left.
 - **Start session while another tab runs a session:** there's only one saved running session, so it's
   never replaced. If its tab is still open, the notice shows. If its tab was closed, Start continues
   that session instead of starting a new one (like a reload would).
@@ -496,9 +518,10 @@ a session at a time, so two tabs never overwrite each other's distractions or bo
   in any number of tabs. Prefs are saved field by field (only what was just changed, on top of what's
   saved), so a choice made in one tab isn't undone by another tab saving its own. The history is read,
   changed and written in one go (saving a session, Import, Delete), and a session is only saved once
-  (by its start time), so nothing is lost there. `history.html` shows a session finished in another tab
-  after a reload, or right after you delete a session there (Delete reads the saved history again and
-  removes only that one session, never writing back the page's older copy).
+  (by its start time), so nothing is lost there. `history.html` draws itself again when another tab
+  saves, deletes or imports sessions, and when it's shown again (see
+  [Changes from other tabs](#changes-from-other-tabs)). Delete reads the saved history again and
+  removes only that one session, never writing back the page's older copy.
 
 ## Personalities
 
@@ -616,14 +639,38 @@ empty state, as on a first visit (Export is disabled then).
   export a new file after deleting.
 - **Several tabs:** Delete reads the saved history at that moment and removes only that session, so
   a session saved meanwhile in another tab is kept. If the session was already deleted in another
-  tab, the page just redraws.
+  tab, the page just redraws. See also [Changes from other tabs](#changes-from-other-tabs).
 - If the browser refuses the change (storage blocked), nothing is deleted and the line under the
   list says "Couldn't delete the session: your browser didn't allow the change."
 - Nothing else about the saved data changes: same key, same session format, same export version.
 - Screen readers: each Delete button is read with its session, e.g. "Delete session: Grandma, Mon 20
   Oct, 14:05". After a delete the focus moves to the Delete button now at the same place in the list
   (the one above if it was the last row, the empty-state text if no sessions are left), and "Session
-  deleted." is read out. After Cancel it goes back to the Delete button that opened the dialog.
+  deleted." is read out. After Cancel it goes back to the Delete button that opened the dialog (or,
+  if another tab changed the history meanwhile, to that session's Delete button in the redrawn list).
+
+### Changes from other tabs
+
+The page doesn't keep showing old numbers: it's drawn again from the saved history when
+- another tab saves, deletes or imports sessions, or all site data is cleared there (the `storage`
+  event for `ct_history_v1`, or with no key);
+- it comes back from the browser's back/forward cache (`pageshow` with `persisted`), e.g. Android
+  Back after a session was saved on the app page;
+- it's shown again (`visibilitychange`), because Android can freeze a background tab so it misses
+  the storage event. This also happens when the file picker of **Import** closes.
+
+It's only drawn again if something changed: the saved history (as text) or the date, since the
+streak and "this week" depend on the day (`historySource()` in `public/js/history.js`). So showing the
+page again after nothing happened draws nothing, and an Import only draws once (its own).
+- **Edit mode** stays as it is (it only turns off when no sessions are left).
+- **"Session deleted."** and the Backup line (e.g. "Imported 3 sessions.") stay.
+- **Delete dialog open:** nothing is drawn under it. Once it closes the page is drawn again once,
+  whatever the answer (a delete draws it anyway, so never twice).
+- **Focus:** if a Delete button had it, it moves to the new Delete button of the same session, or, if
+  that session is gone, to the one now at its place (the row above if it was the last one), or to
+  the empty-state text if no sessions are left. Everything else that's focused (Edit, Export, Import,
+  links) isn't replaced, so it keeps focus, unless no sessions are left and it's hidden (Edit) or
+  disabled (Export): then focus goes to the empty-state text. Nothing is read out.
 
 ### Browser storage keys
 
