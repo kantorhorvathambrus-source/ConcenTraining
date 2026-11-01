@@ -229,6 +229,12 @@ function isIOS() {
   return /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
 }
 
+// True when the page runs as an installed app in its own window (the iPhone/iPad Home Screen app,
+// or an installed app on Android and desktop), not in a browser tab.
+function inHomeScreenApp() {
+  return navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
+}
+
 // True in Safari on an iPhone or iPad, but not in the Home Screen app. Safari can
 // erase a site's storage (history included) after 7 days without a visit; Home
 // Screen apps are exempt. Chrome, Firefox, Edge, Opera and the Google app on iOS
@@ -236,8 +242,7 @@ function isIOS() {
 function iosSafariNotInstalled() {
   const ua = navigator.userAgent;
   const safari = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS|GSA\//.test(ua);
-  const standalone = navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
-  return isIOS() && safari && !standalone;
+  return isIOS() && safari && !inHomeScreenApp();
 }
 
 // ---------- export / import ----------

@@ -746,7 +746,9 @@ function updateQuickStart() {
 // A restore from the browser's back/forward cache (e.g. Back from history.html after deleting
 // sessions there) shows the page without showScreen, so the history is checked again here.
 // It also checks whether another tab started a session meanwhile (see checkSessionElsewhere).
+// Every pageshow ends the "unloading" state set by pagehide (see "leave reminder").
 function onPageShow(event) {
+  leaveReminder.unloading = false;
   if (!event.persisted) return;
   checkStorage(); // site data may have been allowed or blocked meanwhile
   if (!$("#setupScreen").hidden) refreshQuickStart();
@@ -1501,7 +1503,7 @@ function onVisibilityChange() {
 // the first leave to the last return, so after such a reload the card still covers all of it.
 function noteLeave() {
   away.hiddenAt = Date.now();
-  scheduleLeaveReminder();
+  showLeaveReminder();
   if (session.leftAt) return;
   session.leftAt = away.ms ? away.from : away.hiddenAt;
   save(SESSION_KEY, session);
@@ -1570,24 +1572,32 @@ function logAwayDistraction(from, ms) {
 // ---------- leave reminder (system notification) ----------
 
 // Optional: the setup checkbox "Remind me if I leave the app" (prefs.leaveReminder, off by default).
-// Page hidden during a running session and still hidden AWAY_ASK_AFTER_MS later (the time away
-// card's threshold): one system notification, shown through the service worker, because
-// new Notification() doesn't work on Android Chrome. Tapping it brings the app back
-// (notificationclick in sw.js). Coming back any way closes it. It never logs anything: the time
-// away card handles the return as always. It's the app speaking, never a character.
-// It runs on a timer in the hidden page, so it doesn't come if the browser freezes or discards
-// the page before then. No push, no backend.
+// Page hidden during a running session: one system notification at once, shown through the
+// service worker, because new Notification() doesn't work on Android Chrome. Tapping it brings the
+// app back (notificationclick in sw.js). Coming back any way closes it. It never logs anything: the
+// time away card handles the return as always. It's the app speaking, never a character.
+// No timer: Android throttles hidden pages hard, so a delayed one came late or not at all. And no
+// waiting either: showNotification is called inside the visibilitychange handler itself, with the
+// registration fetched beforehand, because iOS freezes a Home Screen app very soon after it's left.
+// No push, no backend.
 const LEAVE_REMINDER_TAG = "ct-leave-reminder"; // a new notification with this tag replaces the old one
 const LEAVE_REMINDER_HINT =
   "Notifications are blocked for this site. You can allow them in your browser's site settings.";
-const leaveReminder = { timer: 0 };
+// The one switch for iPhones and iPads. Untested on a real device: false turns it off there again.
+const LEAVE_REMINDER_ON_IOS = true;
+// registration: the service worker registration, kept ready for the synchronous call (see above).
+// unloading: set by pagehide. It comes before the visibilitychange of a reload, a closed tab or a
+// link to another page, and these never get a reminder: the session carries on as before and is
+// picked up on the next open. Cleared by pageshow (back from the back/forward cache).
+const leaveReminder = { registration: null, unloading: false };
 
-// iPhones and iPads never get it: iOS pauses a web app almost as soon as it's left, so the timer
-// wouldn't run, and Safari outside the Home Screen app has no notifications at all.
+// iPhones and iPads: only in the Home Screen app. Safari tabs have no web notifications at all
+// (there the checks below are false anyway: iOS only turns these APIs on for Home Screen apps).
 function leaveReminderSupported() {
   try {
     return (
-      !isIOS() && "Notification" in window && "serviceWorker" in navigator &&
+      (!isIOS() || (LEAVE_REMINDER_ON_IOS && inHomeScreenApp())) &&
+      "Notification" in window && "serviceWorker" in navigator &&
       "ServiceWorkerRegistration" in window && "showNotification" in ServiceWorkerRegistration.prototype
     );
   } catch {
@@ -1608,6 +1618,23 @@ function initLeaveReminder() {
   check.checked = prefs.leaveReminder;
   check.addEventListener("change", onLeaveReminderChange);
   $("#leaveReminderRow").hidden = false;
+  keepLeaveReminderRegistration();
+}
+
+// Keeps the registration for showLeaveReminder. getRegistration answers at once if the service
+// worker is already set up. On a first visit it isn't yet (sw-register.js registers it after this
+// load), so ready fills it in as soon as the worker is active. The object stays the same after an
+// update (its active worker changes), so this is only needed once per page.
+function keepLeaveReminderRegistration() {
+  const keep = (registration) => {
+    if (registration) leaveReminder.registration = registration;
+  };
+  try {
+    navigator.serviceWorker.getRegistration().then(keep, () => {});
+    navigator.serviceWorker.ready.then(keep, () => {});
+  } catch {
+    // not supported: no reminder
+  }
 }
 
 // Browsers only show the permission prompt inside a tap, so it's asked right here.
@@ -1640,52 +1667,44 @@ async function onLeaveReminderChange() {
   }
 }
 
-// Checked when the page is left (minLeftMs: AWAY_ASK_AFTER_MS, so a session ending before the
-// reminder gets its chime and summary instead) and again when the timer fires (0: it can run late).
-// Only the tab running the session (see "one tab at a time").
-function leaveReminderWanted(minLeftMs) {
+// More than AWAY_ASK_AFTER_MS of the session must be left: a session ending sooner gets its chime
+// and summary instead. Only the tab running the session (see "one tab at a time").
+function leaveReminderWanted() {
   return Boolean(
-    prefs.leaveReminder && notificationsAllowed() && document.hidden &&
+    prefs.leaveReminder && notificationsAllowed() && document.hidden && !leaveReminder.unloading &&
     session && !session.endedAt && (!locks || control.hold) &&
-    session.startedAt + session.durationMs - Date.now() > minLeftMs,
+    session.startedAt + session.durationMs - Date.now() > AWAY_ASK_AFTER_MS,
   );
 }
 
-// From noteLeave: one timer per leave, cancelled on return.
-function scheduleLeaveReminder() {
-  clearTimeout(leaveReminder.timer);
-  leaveReminder.timer = 0;
-  if (leaveReminderWanted(AWAY_ASK_AFTER_MS)) {
-    leaveReminder.timer = setTimeout(showLeaveReminder, AWAY_ASK_AFTER_MS);
-  }
-}
-
-async function showLeaveReminder() {
-  leaveReminder.timer = 0;
-  if (!leaveReminderWanted(0)) return;
+// From noteLeave, i.e. inside the visibilitychange handler. Every leave shows it again; the same
+// tag means there's never more than one. Sound and vibration: the phone's defaults for the site.
+function showLeaveReminder() {
+  if (!leaveReminderWanted()) return;
+  const registration = leaveReminder.registration;
+  if (!registration || !registration.active) return; // no service worker yet: no reminder
+  let shown;
   try {
-    const registration = await navigator.serviceWorker.getRegistration();
-    if (!registration || !registration.active) return; // no service worker yet: no reminder
-    await registration.showNotification("Your session is still running", {
+    shown = registration.showNotification("Your session is still running", {
       body: "Is this part of what you're focusing on? Tap to go back.",
       icon: "icons/icon-192.png",
       tag: LEAVE_REMINDER_TAG,
     });
   } catch {
-    return; // refused or unsupported: the session carries on without it
+    return; // unsupported: the session carries on without it
   }
-  // Came back, or the session ended, while it was being shown.
-  if (!document.hidden || !session || session.endedAt) closeLeaveReminder();
+  Promise.resolve(shown).then(
+    // Came back, or the session ended, while it was being shown.
+    () => {
+      if (!document.hidden || !session || session.endedAt) cancelLeaveReminder();
+    },
+    () => {}, // refused: the session carries on without it
+  );
 }
 
-// On every return to the page and every end of the session in this tab.
+// Closes it if it's showing: on every return to the page, every end of the session in this tab,
+// and at start-up.
 function cancelLeaveReminder() {
-  clearTimeout(leaveReminder.timer);
-  leaveReminder.timer = 0;
-  closeLeaveReminder();
-}
-
-function closeLeaveReminder() {
   if (!notificationsAllowed()) return; // nothing can be showing
   try {
     navigator.serviceWorker
@@ -1946,7 +1965,7 @@ function init() {
   bindChoiceGroups();
   bindSettingChecks();
   initLeaveReminder();
-  closeLeaveReminder(); // e.g. its tap reopened the app after the browser discarded the page
+  cancelLeaveReminder(); // e.g. its tap reopened the app after the browser discarded the page
   buildCategoryButtons();
   setupPicker = durationPicker($("#setupDuration"), prefs.minutes);
   // Capture phase, so the count goes up before the press moves focus (see pressCount).
@@ -1996,6 +2015,7 @@ function init() {
   window.addEventListener("storage", onStorage);
   window.addEventListener("storage", onHistoryStorage);
   window.addEventListener("pageshow", onPageShow);
+  window.addEventListener("pagehide", () => (leaveReminder.unloading = true)); // see "leave reminder"
 
   checkStorage();
 

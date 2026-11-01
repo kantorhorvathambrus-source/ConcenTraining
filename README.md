@@ -71,7 +71,8 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   small **Test sound** button that plays the chime once, and a hint under it: "Uses your media volume.
   On iPhone, silent mode can mute it.") and **Keep the screen on during the session**.
   See "Sound and screen" below. A third one, **Remind me if I leave the app**, is off by default and
-  only shown where it can work (not on iPhone or iPad); see [Leave reminder](#leave-reminder).
+  only shown where it can work (on iPhone and iPad only in the Home Screen app, never in a Safari
+  tab); see [Leave reminder](#leave-reminder).
 - **Tap targets:** everything you can tap is at least 44 × 44 px (buttons, chips, the Custom field,
   **Start** on the Quick start card,
   the header's **How it works** and **Your history →**, **Test sound**, the × on the Motivate me card,
@@ -214,7 +215,7 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   after at least 15 s (`AWAY_MIN_MS` in `public/js/history-store.js`), a card at the bottom of the
   screen asks "You were away for 2 min 15 sec. Were you distracted?" (measured to the second). Under
   15 s nothing happens. Nothing is ever logged without a tap. With **Remind me if I leave the app**
-  on, a system notification also comes after 15 s away; it doesn't change anything here (see
+  on, a system notification also comes as soon as you leave; it doesn't change anything here (see
   [Leave reminder](#leave-reminder)).
   - While the card is open, the character holds its `level1` pose (no blinking, no "doing well"
     pose) and shows no text.
@@ -430,34 +431,45 @@ An optional system notification that brings you back when you leave the app duri
   (and `leaveReminder` is saved as `false`); the app never asks again without a tap.
 - **Where it's shown:** only where notifications can work: the Notification API and a service worker
   (see [Offline use](#offline-use)). Elsewhere the row is hidden, e.g. `index.html` opened as a local
-  file. It's also hidden on every iPhone and iPad (`isIOS()` in `public/js/history-store.js`), even in
-  the Home Screen app: iOS pauses a web app almost as soon as it's left, so the reminder wouldn't come.
-- **When:** the page is hidden during a running session (another app, another tab, the home screen,
-  a locked screen) and is still hidden 15 s later (`AWAY_ASK_AFTER_MS`, the time away card's
-  threshold): one notification.
+  file.
+  - **iPhone and iPad:** only in the Home Screen app (`inHomeScreenApp()` in
+    `public/js/history-store.js`: `navigator.standalone` or `display-mode: standalone`), never in a
+    Safari tab, where iOS has no web notifications (iOS turns the Notification API and
+    `showNotification` on only for Home Screen apps, from iOS 16.4). **Untested on a real iPhone or
+    iPad.** It's one switch: `LEAVE_REMINDER_ON_IOS` in `public/js/app.js`; `false` hides the row on
+    iPhone and iPad again.
+- **When:** as soon as the page is hidden during a running session (another app, another tab, the
+  home screen, a locked screen; the browser can't tell these apart): one notification. There's no
+  delay: even if you're back after 2 s, it was shown and the return closes it.
   - Title: "Your session is still running". Text: "Is this part of what you're focusing on? Tap to go
-    back." Icon: `icons/icon-192.png`.
-  - At most one per leave, and it has a tag (`ct-leave-reminder`): a new one replaces an old one, so
-    there's never more than one.
-  - Not shown if the session has 15 s or less left when you leave (the end chime and summary come
-    instead), if it ended meanwhile, or in a tab that doesn't run the session (see
+    back." Icon: `icons/icon-192.png`. Sound and vibration: the phone's defaults for the site.
+  - One per leave, and it has a tag (`ct-leave-reminder`): a new one replaces an old one, so there's
+    never more than one. Every new leave shows it again.
+  - Not shown if the session has 15 s or less left when you leave (`AWAY_ASK_AFTER_MS`; the end chime
+    and summary come instead), if it ended meanwhile, or in a tab that doesn't run the session (see
     [Several tabs](#several-tabs-one-tab-at-a-time)). Not during the "Welcome back" question either.
+  - Not shown when the page itself goes away: a reload, closing the tab, or going to another page
+    (e.g. **Your history →**). The browser fires `pagehide` just before the page is hidden then, and
+    the app checks for it. The session carries on as always and is picked up on the next open.
   - It's the app speaking, like the time away card; characters never use text.
 - **Coming back** (by tapping the notification or any other way) closes it if it's still there.
   It also closes when the session ends while you're away, and when the app starts (e.g. after the
   browser discarded the page and the tap reloaded it). The time away card then works exactly as
-  before. The notification itself never logs anything.
+  before (still only after 15 s or more away). The notification itself never logs anything.
 - **Tapping it:** the service worker closes it and brings back the open app page (`notificationclick`
-  in `public/sw.js`), or opens the app if no app page is open. That picks the session up like a
-  reload. The address comes from the service worker's scope, so it works at the domain root and under
-  `/ConcenTraining/`. It's shown through the service worker (`registration.showNotification`),
-  because `new Notification()` doesn't work on Android Chrome.
-- **How reliable it is:** it runs on a 15 s timer in the hidden page. No push, no backend.
-  - Chrome runs timers in hidden pages at most once a second for the first 5 minutes, so it normally
-    comes at about 15-16 s.
-  - If Android freezes or closes the browser before then (low memory, battery saver, aggressive power
-    settings on some phones) or discards the tab, the reminder doesn't come. The time away card still
-    works on return.
+  in `public/sw.js`), or opens the app if no app page is open (or if bringing it back fails, as on
+  some iOS versions). That picks the session up like a reload. The address comes from the service
+  worker's scope, so it works at the domain root and under `/ConcenTraining/`. It's shown through the
+  service worker (`registration.showNotification`), because `new Notification()` doesn't work on
+  Android Chrome.
+- **How reliable it is:** no timer, no push, no backend. It's shown inside the page's own "hidden"
+  event, so it doesn't depend on timers in a background page (Android slows those down a lot, which
+  made the earlier 15 s delay come late or not at all).
+  - The service worker registration is fetched when the app starts, and again as soon as the service
+    worker becomes active (on a first visit it isn't active yet when the app starts), so the
+    notification can be shown at once, without waiting. iOS pauses a Home Screen app very soon after
+    it's left.
+  - Until the service worker is active (the first seconds of a first visit), there's no reminder.
   - If Chrome's own notifications are turned off in Android's settings, nothing shows even though the
     site is allowed.
 - **Right after an update:** a page that is still controlled by an older service worker (without the
