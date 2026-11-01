@@ -1679,6 +1679,9 @@ function leaveReminderWanted() {
 
 // From noteLeave, i.e. inside the visibilitychange handler. Every leave shows it again; the same
 // tag means there's never more than one. Sound and vibration: the phone's defaults for the site.
+// renotify: a notification that replaces one with the same tag (e.g. an older reminder still in the
+// notification shade) is silent without it. Browsers that don't support it (Safari, Firefox) skip
+// it; it only throws with an empty tag, and the tag here is never empty.
 function showLeaveReminder() {
   if (!leaveReminderWanted()) return;
   const registration = leaveReminder.registration;
@@ -1689,6 +1692,7 @@ function showLeaveReminder() {
       body: "Is this part of what you're focusing on? Tap to go back.",
       icon: "icons/icon-192.png",
       tag: LEAVE_REMINDER_TAG,
+      renotify: true,
     });
   } catch {
     return; // unsupported: the session carries on without it

@@ -444,7 +444,9 @@ An optional system notification that brings you back when you leave the app duri
   - Title: "Your session is still running". Text: "Is this part of what you're focusing on? Tap to go
     back." Icon: `icons/icon-192.png`. Sound and vibration: the phone's defaults for the site.
   - One per leave, and it has a tag (`ct-leave-reminder`): a new one replaces an old one, so there's
-    never more than one. Every new leave shows it again.
+    never more than one. Every new leave shows it again. It's shown with `renotify: true`, so it
+    still plays the phone's sound and vibration when it replaces an older one that's still in the
+    notification shade (without it, a replacement is silent; Safari and Firefox ignore the option).
   - Not shown if the session has 15 s or less left when you leave (`AWAY_ASK_AFTER_MS`; the end chime
     and summary come instead), if it ended meanwhile, or in a tab that doesn't run the session (see
     [Several tabs](#several-tabs-one-tab-at-a-time)). Not during the "Welcome back" question either.
