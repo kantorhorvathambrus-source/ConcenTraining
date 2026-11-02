@@ -13,6 +13,7 @@
   --strict: #3567d4;
   --ragebait: #d93a2f;
   --error: #c62828;
+  --error-text: #ffffff; /* text on a filled --error button */
   --level-1: #f2c94c;
   --level-2: #f2a93b;
   --level-3: #ee8434;
@@ -34,6 +35,7 @@
     --primary: #ff7a45;
     --primary-hover: #ff8e5f;
     --error: #ff6b6b;
+    --error-text: #17161b; /* white on the lighter red would be too faint */
     --shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
     color-scheme: dark;
   }
@@ -80,6 +82,12 @@ h2 {
   margin: 8px 0 0;
 }
 
+/* "Your browser isn't letting this site save data": under the setup header, and on the history
+   page in place of the empty state. Same red line as the other errors, with the space of a card. */
+.storage-warning {
+  margin: 0 0 24px;
+}
+
 .app {
   max-width: 600px;
   margin: 0 auto;
@@ -99,8 +107,10 @@ h2 {
   margin-bottom: 28px;
 }
 
-/* Start without a character scrolls here (onStartClick); keep a little space above the heading. */
-#characterStep {
+/* Start without a character scrolls to step 1, and a Quick start tap that corrected the Custom
+   field to step 3 (onStartClick); keep a little space above the heading. */
+#characterStep,
+#durationStep {
   scroll-margin-top: 16px;
 }
 
@@ -156,6 +166,24 @@ button {
   width: 100%;
 }
 
+/* Destructive (Delete in the history page's delete dialog). */
+.btn.danger {
+  background: var(--error);
+  border-color: var(--error);
+  color: var(--error-text);
+}
+
+.btn.danger:hover {
+  filter: brightness(0.92);
+}
+
+/* A smaller button that is still a 44x44px tap target (Edit / Done and Delete on the history page). */
+.btn.compact {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 8px 14px;
+}
+
 button:focus-visible,
 input:focus-visible {
   outline: 3px solid var(--primary);
@@ -168,6 +196,34 @@ input:focus-visible {
   font-size: 1.4rem;
   line-height: 1;
   padding: 4px 8px;
+  color: var(--muted);
+}
+
+/* Links and text buttons that stand on their own (not inside a sentence): a 44px tall tap
+   target, with the text where it would be anyway. */
+.back-link,
+.header-link a,
+.text-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+/* "Privacy" under Start session and at the bottom of history.html: small and grey, but still a
+   44x44px tap target. --muted is at least 4.5:1 on --bg in light and dark mode. */
+.page-footer {
+  margin: 16px 0 0;
+  text-align: center;
+}
+
+.footer-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 8px;
+  font-size: 0.85rem;
   color: var(--muted);
 }
 
@@ -305,12 +361,24 @@ input:focus-visible {
 
 .custom-minutes input {
   width: 80px;
+  min-height: 44px;
   padding: 8px 10px;
   border: 1.5px solid var(--border);
   border-radius: 10px;
   background: var(--surface);
   color: var(--text);
   font: inherit;
+}
+
+/* "Max. 240 min." etc. under the custom field: no height while empty, so it takes no space
+   until the field was corrected. Same size as the setting hints. */
+.custom-note {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.custom-note:not(:empty) {
+  margin-top: 6px;
 }
 
 /* ---------- session ---------- */
@@ -320,6 +388,14 @@ input:focus-visible {
   font-size: 0.9rem;
   margin: 0 0 8px;
   text-wrap: balance; /* if it wraps, two even lines instead of "min" alone */
+}
+
+/* In the page flow (not on top), so it never covers the character, timer or buttons. */
+.screen-note {
+  text-align: center;
+  font-size: 0.85rem;
+  margin: -4px 0 8px;
+  text-wrap: balance;
 }
 
 .stage {
@@ -535,6 +611,23 @@ input:focus-visible {
   padding: 12px 8px;
 }
 
+/* Simple: always two full rows, 3 + 2. On a 6-column grid the first three buttons span 2 columns,
+   the last two span 3. Less side padding, so "Lost track" stays on one line on 320px phones. If a
+   label still wraps (a large phone font), every row grows to the same height. */
+.distraction-buttons.simple {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-auto-rows: 1fr;
+}
+
+.distraction-buttons.simple .btn.level {
+  grid-column: span 2;
+  padding: 12px 4px;
+}
+
+.distraction-buttons.simple .btn.level:nth-child(n + 4) {
+  grid-column: span 3;
+}
+
 /* Advanced labels are short: keep "10+ min" on one line in a 4-column row on 360px phones. */
 .distraction-buttons.advanced .btn.level {
   padding: 12px 4px;
@@ -626,11 +719,10 @@ input:focus-visible {
 
 /* ---------- undo ---------- */
 
-/* Sits in End session's cell while it's shown. The countdown bar along its bottom edge
-   empties over UNDO_WINDOW_MS (--undo-timeout, set in app.js); then End session comes back. */
+/* Sits in Motivate me's cell while it's shown. The seconds left (" · 5" … " · 1", updated in
+   app.js) are part of its label, not a bar, so they can't be read as a time limit on the
+   category picker above it; then Motivate me comes back. */
 .undo-btn {
-  position: relative;
-  overflow: hidden;
   border-color: var(--primary);
 }
 
@@ -638,26 +730,10 @@ input:focus-visible {
   border-color: var(--primary-hover);
 }
 
-.undo-countdown {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 4px;
-  background: var(--surface-2);
-}
-
-.undo-countdown-bar {
-  display: block;
-  height: 100%;
-  background: var(--primary);
-  transform-origin: left;
-  animation: undo-countdown var(--undo-timeout, 5s) linear forwards;
-}
-
-@keyframes undo-countdown {
-  from { transform: scaleX(1); }
-  to { transform: scaleX(0); }
+/* Every digit the same width, so the label doesn't wobble as it counts down. */
+.undo-seconds {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
 }
 
 .motivation-card {
@@ -674,10 +750,18 @@ input:focus-visible {
   margin: 8px 0 0;
 }
 
+/* A 44px tap target in the card's right padding (so it never covers the text), with the ×
+   about where a smaller button would put it. */
 .motivation-card .icon-btn {
   position: absolute;
-  top: 8px;
-  right: 6px;
+  top: 2px;
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
 }
 
 .motivation-badge {
@@ -732,6 +816,25 @@ input:focus-visible {
   margin: 8px 0 0;
 }
 
+.summary-text.error {
+  color: var(--error); /* "Couldn't save this session" */
+}
+
+/* ---------- open in another tab ---------- */
+
+#elsewhereScreen {
+  text-align: center;
+  padding-top: 48px;
+}
+
+.elsewhere-title {
+  font-size: 1.4rem;
+}
+
+#elsewhereScreen p {
+  margin: 0 0 28px;
+}
+
 /* ---------- dialogs ---------- */
 
 dialog {
@@ -752,6 +855,22 @@ dialog p {
   margin: 0 0 16px;
 }
 
+/* ---------- time away card ---------- */
+
+/* At the bottom of the screen, over a lighter backdrop, so the character (held in its level1
+   pose) and the timer stay visible above it. */
+.away-dialog {
+  margin: auto auto calc(16px + env(safe-area-inset-bottom));
+}
+
+.away-dialog::backdrop {
+  background: rgba(20, 15, 10, 0.3);
+}
+
+.away-dialog h2 {
+  margin-top: 0;
+}
+
 .dialog-actions {
   display: flex;
   justify-content: flex-end;
@@ -759,20 +878,10 @@ dialog p {
   gap: 10px;
 }
 
-.divider {
-  display: flex;
-  align-items: center;
+/* Full-width buttons on top of each other, the primary one first (the continue/restart dialog). */
+.dialog-stack {
+  display: grid;
   gap: 10px;
-  color: var(--muted);
-  font-size: 0.85rem;
-  margin: 18px 0 12px !important;
-}
-
-.divider::before,
-.divider::after {
-  content: "";
-  flex: 1;
-  border-top: 1px solid var(--border);
 }
 
 #restartDuration {
@@ -800,7 +909,7 @@ dialog p {
   min-width: 0;
 }
 
-/* Dialogs: the "save to history" checkboxes in the Start over and End session dialogs. */
+/* Dialogs: the "save to history" checkboxes in the continue/restart and End session dialogs. */
 dialog .check-row {
   min-height: 44px;
   align-items: center;
@@ -825,7 +934,16 @@ dialog .check-row {
 
 .btn.test-sound {
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   padding: 7px 12px;
+  font-size: 0.85rem;
+}
+
+/* Lined up with the checkbox text: checkbox width + gap. */
+.setting-hint {
+  margin: 0 0 6px 30px;
   font-size: 0.85rem;
 }
 
@@ -863,7 +981,7 @@ a {
 }
 
 .header-link {
-  margin-top: 8px !important;
+  margin-top: 0 !important;
   font-weight: 600;
 }
 
@@ -882,6 +1000,122 @@ a {
 
 .tip-card .btn {
   margin-top: 4px;
+}
+
+/* "Quick start" card under the header (updateQuickStart in app.js). The image box has a fixed
+   size before the image loads, so nothing moves; any artwork fits inside it (object-fit). */
+.quick-start {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 28px;
+  padding: 12px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.quick-start-img {
+  flex: none;
+  width: 56px;
+  aspect-ratio: 200 / 240;
+  object-fit: contain;
+}
+
+.quick-start-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.quick-start-text p {
+  margin: 0;
+}
+
+.quick-start-label {
+  font-size: 0.85rem;
+}
+
+.quick-start-line {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+/* Less side padding than .btn, so the line has room on a 320px screen. Still 44x44px or more. */
+.quick-start-btn {
+  flex: none;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 10px 14px;
+}
+
+/* "Change ↓" under the line: .footer-link on a <button> (it scrolls, it doesn't go anywhere), so no
+   button look, underlined like the link. The negative margin cancels .footer-link's side padding,
+   so the word lines up with the text above it. */
+.quick-start-change {
+  margin-left: -8px;
+  border: none;
+  background: none;
+  text-decoration: underline;
+}
+
+/* "How it works" in the header: a button (it opens the card, it doesn't go anywhere) that looks
+   like the "Your history" link next to it. */
+.text-btn {
+  border: none;
+  background: none;
+  padding: 0 2px;
+  font-weight: 600;
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+.header-sep {
+  margin: 0 8px;
+  color: var(--muted);
+}
+
+/* Opened from the header button (openHowItWorks): keep a little space above the card. */
+.how-it-works {
+  scroll-margin-top: 16px;
+}
+
+.how-it-works ul {
+  margin: 0 0 10px;
+  padding-left: 1.2em;
+}
+
+.how-it-works li + li {
+  margin-top: 8px;
+}
+
+/* The heading only gets focus from the script, to be read out; it isn't something to press. */
+.how-it-works h2:focus {
+  outline: none;
+}
+
+/* Same for these: focus goes there from the script so a screen reader reads them (app.js). */
+#sessionInfo:focus,
+#distractionPrompt:focus,
+#summaryTitle:focus,
+#characterStepTitle:focus,
+#restartStep2Title:focus,
+#elsewhereTitle:focus {
+  outline: none;
+}
+
+/* Read by screen readers, invisible and taking no space on screen (the live region in index.html). */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .link-btn {
@@ -942,7 +1176,68 @@ a {
   color: var(--error);
 }
 
+/* Under the session list (outside #historyContent, after its 32px margin): looks like the backup
+   status, 12px under the list. Stays in the page while empty, so screen readers notice each new
+   message, but then takes no space. */
+.delete-status {
+  margin: 0;
+}
+
+.delete-status:not(:empty) {
+  margin: -20px 0 32px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1.5px solid var(--relaxed);
+  background: var(--surface);
+}
+
+.delete-status.error:not(:empty) {
+  border-color: var(--error);
+  color: var(--error);
+}
+
+/* Only focused by the script (after the last session is deleted), never by tapping or Tab. */
+#historyEmpty:focus {
+  outline: none;
+}
+
+/* The session list's title with the Edit / Done button on the right. */
+.list-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.list-head h2 {
+  margin: 0;
+}
+
+.delete-summary {
+  font-weight: 600;
+}
+
 .history-section > p {
+  margin: 0 0 12px;
+}
+
+/* ---------- privacy page ---------- */
+
+/* Lets the email address (or any long word) break at 320px instead of scrolling sideways. */
+.privacy-page {
+  overflow-wrap: anywhere;
+}
+
+.privacy-top {
+  margin: 0 0 8px;
+}
+
+.privacy-section {
+  margin-bottom: 28px;
+}
+
+.privacy-section p {
   margin: 0 0 12px;
 }
 
@@ -1017,6 +1312,16 @@ a {
   stroke-width: 2.5;
 }
 
+/* Time per week: earlier weeks lighter, the current week full color. */
+.chart-bar {
+  fill: var(--primary);
+  opacity: 0.5;
+}
+
+.chart-bar.current {
+  opacity: 1;
+}
+
 .day-parts,
 .session-list {
   list-style: none;
@@ -1079,6 +1384,25 @@ a {
   border-bottom: none;
 }
 
+/* Edit mode: the same two columns as above, plus the Delete button on a line of its own, so the
+   session's text keeps its full width. */
+.session-list.editing .session-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  column-gap: 12px;
+  row-gap: 8px;
+}
+
+.session-delete {
+  grid-column: 1 / -1;
+  justify-self: end;
+  color: var(--error);
+}
+
+.session-delete:hover {
+  border-color: var(--error);
+}
+
 .session-list {
   background: var(--surface);
   border: 1.5px solid var(--border);
@@ -1112,8 +1436,8 @@ a {
     grid-template-columns: 1fr;
   }
 
-  /* Narrow dialogs: less padding, so "90 min" fits in a quarter of the Start over dialog
-     at 320px, and that dialog fits a 320x568 screen without scrolling. */
+  /* Narrow dialogs: less padding, so "90 min" fits in a quarter of the continue/restart dialog
+     at 320px, and both its steps fit a 320x568 screen without scrolling. */
   dialog {
     padding: 16px;
   }
@@ -1135,8 +1459,14 @@ a {
     margin-bottom: 12px;
   }
 
-  #restartDialog .divider {
-    margin: 14px 0 10px !important;
+  /* Makes up for the 44px Custom field, so the dialog still fits 320x568. The note under the
+     field keeps no bottom margin of its own ("#restartDialog p" above), so these 10px are the gap. */
+  #restartDuration {
+    margin-bottom: 10px;
+  }
+
+  #restartDialog .custom-note {
+    margin-bottom: 0;
   }
 }
 
@@ -1157,9 +1487,5 @@ a {
   .char-img,
   .stage {
     animation: none !important;
-  }
-
-  .undo-countdown {
-    display: none;
   }
 }

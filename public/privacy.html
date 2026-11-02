@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Privacy · ConcenTraining</title>
+  <meta name="description" content="What ConcenTraining keeps on your device, what it sends to the server, and your rights.">
+  <link rel="stylesheet" href="css/style.css">
+  <!-- Same as history.html. Colors: --bg of the light and dark theme (css/style.css). -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#f6f3ee" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#17161b" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48">
+  <link rel="icon" href="icons/icon-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-title" content="ConcenTraining">
+</head>
+<body>
+  <!-- No scripts on purpose: this page reads or saves nothing, takes no session lock and registers
+       nothing. It isn't in the sw.js precache list: an already installed service worker saves a copy
+       the first time it's opened online. Whenever data handling changes, update this text and the
+       "Last updated" date (see CLAUDE.md). -->
+  <main class="app privacy-page">
+    <p class="privacy-top"><a href="./" class="back-link">← Back to the timer</a></p>
+
+    <header class="app-header">
+      <h1>Privacy</h1>
+      <p class="muted">Last updated: 28 October 2026</p>
+    </header>
+
+    <section class="privacy-section">
+      <h2>Who is responsible</h2>
+      <p>
+        ConcenTraining is made by Ambrus Kántor-Horváth in Hungary. For any question about your data,
+        email <a href="mailto:concentrainer@gmail.com">concentrainer@gmail.com</a>.
+      </p>
+    </section>
+
+    <section class="privacy-section">
+      <h2>The short version</h2>
+      <p>
+        Your sessions, history and settings stay on your device. ConcenTraining has no accounts, no
+        analytics, no advertising and no cookies.
+      </p>
+    </section>
+
+    <section class="privacy-section">
+      <h2>What stays on your device</h2>
+      <p>
+        Your settings, the session that's running and your session history are saved in your
+        browser's storage on this device. They are never sent to us. You can delete single sessions
+        on the History page, or everything by clearing this site's data in your browser settings.
+        Export creates a file on your device; we never see it.
+      </p>
+      <p>
+        If you turn on "Remind me if I leave the app", your browser asks for permission to show
+        notifications. These notifications are created on your device, and nothing about them is sent
+        to a server.
+      </p>
+    </section>
+
+    <section class="privacy-section">
+      <h2>What is sent to our server</h2>
+      <p>
+        When you tap Start session, the app sends the name of the character you chose (for example
+        "grandma") to our server. We keep only a count per character per day, to see which characters
+        are popular. Nothing that identifies you is stored with it.
+      </p>
+      <p>
+        To stop anyone from inflating these counts, the server limits how many counts one IP address
+        can send per minute. The IP address is used only for this limit and is not saved with the
+        counts.
+      </p>
+    </section>
+
+    <section class="privacy-section">
+      <h2>Hosting</h2>
+      <p>
+        The site is hosted by Netlify, Inc. in the USA. Like any web server, Netlify processes
+        technical data for each request, such as your IP address, your browser type and the page you
+        asked for, to deliver the site and keep it secure. Netlify does this on our behalf as a data
+        processor, under its
+        <a href="https://www.netlify.com/pdf/netlify-dpa.pdf">Data Processing Agreement</a>. According
+        to that agreement, its logs are kept online for 90 days and offline for up to 1 year, and data
+        is transferred to the USA under the EU-U.S. Data Privacy Framework.
+      </p>
+    </section>
+
+    <section class="privacy-section">
+      <h2>Why we may do this</h2>
+      <p>
+        The character counts and the hosting logs are based on our legitimate interest in running the
+        site securely and knowing which characters people use (Article 6(1)(f) GDPR). Saving your data
+        on your device is what makes the app work the way you asked.
+      </p>
+    </section>
+
+    <section class="privacy-section">
+      <h2>Your rights</h2>
+      <p>
+        Under the GDPR you can ask to access, correct or delete your personal data, to restrict or
+        object to its processing, and to receive it in a portable format. Because your history is only
+        on your device, you can view, export and delete it yourself in the app. For anything else,
+        email <a href="mailto:concentrainer@gmail.com">concentrainer@gmail.com</a>. You can also
+        complain to the Hungarian data protection authority, <a href="https://naih.hu">NAIH</a>.
+      </p>
+    </section>
+
+    <section class="privacy-section">
+      <h2>Changes</h2>
+      <p>
+        If this changes, for example when accounts or payments are added, this page will be updated
+        before the change goes live.
+      </p>
+    </section>
+
+    <p><a href="./" class="back-link">← Back to the timer</a></p>
+  </main>
+</body>
+</html>

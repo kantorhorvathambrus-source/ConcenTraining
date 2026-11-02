@@ -23,8 +23,45 @@
       <header class="app-header">
         <h1>ConcenTraining</h1>
         <p class="muted">Pick a buddy, set a timer, and get focused.</p>
-        <p class="header-link"><a href="history.html">Your history →</a></p>
+        <p class="header-link">
+          <button id="howItWorksLink" type="button" class="text-btn" aria-controls="howItWorks">How it works</button>
+          <span class="header-sep" aria-hidden="true">·</span>
+          <a href="history.html">Your history →</a>
+        </p>
       </header>
+
+      <!-- Shown only while the browser doesn't let the site save anything (updateSetupStorageNote in
+           app.js). Its text is set when it appears, so a screen reader reads it once. -->
+      <p id="setupStorageNote" class="error storage-warning" role="status" hidden></p>
+
+      <!-- Returning users only: a saved character and at least one session in the history
+           (updateQuickStart in app.js). Shows the current setup and starts it like Start session. -->
+      <div id="quickStart" class="quick-start" hidden>
+        <img id="quickStartImg" class="quick-start-img" alt="">
+        <div class="quick-start-text">
+          <p class="quick-start-label muted">Quick start</p>
+          <p id="quickStartLine" class="quick-start-line"></p>
+          <!-- Scrolls to step 1 for anyone who doesn't realise the setup can be changed further down
+               (onQuickStartChange in app.js). Named "Change setup" so the arrow isn't read out. -->
+          <button id="quickStartChange" type="button" class="footer-link quick-start-change"
+                  aria-label="Change setup">Change ↓</button>
+        </div>
+        <button id="quickStartButton" type="button" class="btn primary quick-start-btn"
+                aria-labelledby="quickStartButton quickStartLine">Start</button>
+      </div>
+
+      <!-- Shown until "Got it" is tapped, and again from the header button (updateHowItWorks in app.js).
+           Above the Home Screen tip: it's what a first visit needs, the tip only comes once there's history. -->
+      <aside id="howItWorks" class="tip-card how-it-works" aria-labelledby="howItWorksTitle" hidden>
+        <h2 id="howItWorksTitle" tabindex="-1">How it works</h2>
+        <ul>
+          <li>Pick a character and a timer, then start focusing.</li>
+          <li>When you notice your mind has wandered, tap how much (Simple) or how long (Advanced). Your character reacts with a pose, never with words. Noticing and coming back is the skill you're training.</li>
+          <li>If you leave the app during a session, it asks when you're back whether you were distracted.</li>
+          <li>Your history is saved automatically on this device. To move it to another phone, use <a href="history.html#backup">Export on the history page →</a></li>
+        </ul>
+        <button id="howItWorksButton" type="button" class="btn">Got it</button>
+      </aside>
 
       <!-- iPhone/iPad Safari only, once there's history to lose (updateHomeScreenTip in app.js). -->
       <aside id="homeScreenTip" class="tip-card" aria-labelledby="homeScreenTipTitle" hidden>
@@ -40,7 +77,7 @@
       </aside>
 
       <div class="step" id="characterStep">
-        <h2>1. Choose your character</h2>
+        <h2 id="characterStepTitle" tabindex="-1">1. Choose your character</h2>
         <p id="characterError" class="error" role="alert" hidden>Pick a character first.</p>
         <div id="characterList" class="character-list"></div>
       </div>
@@ -59,7 +96,7 @@
         </div>
       </div>
 
-      <div class="step">
+      <div class="step" id="durationStep">
         <h2>3. How long do you want to focus?</h2>
         <div id="setupDuration" class="duration-picker"></div>
       </div>
@@ -72,18 +109,35 @@
           </label>
           <button id="testSoundButton" type="button" class="btn test-sound">Test sound</button>
         </div>
+        <p class="setting-hint muted">Uses your media volume. On iPhone, silent mode can mute it.</p>
         <label class="check-row">
           <input id="keepScreenOnCheck" type="checkbox" data-pref="keepScreenOn">
           <span>Keep the screen on during the session</span>
         </label>
+        <!-- Hidden where notifications can't work (initLeaveReminder in app.js). -->
+        <label id="leaveReminderRow" class="check-row" hidden>
+          <input id="leaveReminderCheck" type="checkbox">
+          <span>Remind me if I leave the app</span>
+        </label>
+        <!-- Only after a tick was refused. Text is set when shown, so screen readers announce it. -->
+        <p id="leaveReminderHint" class="setting-hint muted" role="status" hidden></p>
       </div>
 
       <button id="startButton" type="button" class="btn primary big">Start session</button>
+
+      <!-- Inside the setup screen, so it never shows on the session or summary screens. -->
+      <p class="page-footer"><a href="privacy.html" class="footer-link">Privacy</a></p>
     </section>
 
     <!-- ========== SESSION ========== -->
     <section id="sessionScreen" class="screen" hidden>
-      <p id="sessionInfo" class="session-info muted"></p>
+      <!-- Gets focus when a session starts, so a screen reader reads it (focusScreenStart in app.js). -->
+      <p id="sessionInfo" class="session-info muted" tabindex="-1"></p>
+      <!-- Shown while the chime is on but the screen isn't being kept on (updateScreenNote in app.js). -->
+      <p id="screenNote" class="screen-note muted" role="status" hidden>Your screen may turn off. If it does, you won't hear the chime.</p>
+      <!-- Shown when a session starts while the browser doesn't let the site save anything, or when
+           Start new session couldn't save the abandoned part (showSaveErrorNote in app.js). -->
+      <p id="saveErrorNote" class="screen-note error" role="status" hidden></p>
 
       <div id="sessionStage" class="stage">
         <img id="sessionImg" class="char-img" alt="">
@@ -95,7 +149,7 @@
       </div>
 
       <div class="distraction">
-        <h2 id="distractionPrompt"></h2>
+        <h2 id="distractionPrompt" tabindex="-1"></h2>
         <div id="distractionButtons" class="distraction-buttons"></div>
       </div>
 
@@ -104,6 +158,10 @@
         <p id="motivationText"></p>
         <button id="motivationClose" type="button" class="icon-btn" aria-label="Hide message">×</button>
       </div>
+
+      <!-- Screen readers only: reads the reaction, the category picker and Undo out once (announce in
+           app.js). Polite, so it waits until the screen reader is done talking and never cuts in. -->
+      <p id="announcer" class="visually-hidden" aria-live="polite" aria-atomic="true"></p>
 
       <div class="session-bar">
         <!-- In the sticky bottom bar so it's on screen wherever you've scrolled.
@@ -117,13 +175,13 @@
           <div id="categoryButtons" class="category-buttons"></div>
         </div>
         <button id="motivateButton" type="button" class="btn primary">Motivate me</button>
-        <button id="endButton" type="button" class="btn">End session</button>
-        <!-- Takes End session's place (same cell, same size) for UNDO_WINDOW_MS after each
-             distraction tap (app.js), so nothing on the screen moves. -->
+        <!-- Takes Motivate me's place (same cell, same size) for UNDO_WINDOW_MS after each
+             distraction tap (app.js), so nothing on the screen moves and End session is always
+             there. The seconds left are hidden from screen readers: the button is just "Undo". -->
         <button id="undoButton" type="button" class="btn undo-btn" hidden>
-          Undo
-          <span class="undo-countdown" aria-hidden="true"><span class="undo-countdown-bar"></span></span>
+          Undo<span class="undo-seconds" aria-hidden="true"> · <span id="undoSeconds">5</span></span>
         </button>
+        <button id="endButton" type="button" class="btn">End session</button>
       </div>
     </section>
 
@@ -132,22 +190,36 @@
       <div class="stage">
         <img id="summaryImg" class="char-img" alt="">
       </div>
-      <h1 id="summaryTitle" class="summary-title"></h1>
+      <h1 id="summaryTitle" class="summary-title" tabindex="-1"></h1>
       <p id="summaryPercent" class="summary-percent" hidden></p>
       <div class="summary-details">
+        <p id="summaryMessage" class="summary-text" hidden></p>
         <p id="summaryText" class="summary-text"></p>
         <p id="summaryNote" class="summary-text" hidden></p>
+        <!-- Shown when the browser refused to store the session (renderSummary in app.js). -->
+        <p id="summarySaveError" class="summary-text error" role="status" hidden></p>
         <p id="summaryCategories" class="summary-text" hidden></p>
       </div>
       <button id="newSessionButton" type="button" class="btn primary big">Start another session</button>
       <a href="history.html" class="btn big link-btn">See your history</a>
     </section>
+
+    <!-- ========== OPEN IN ANOTHER TAB ========== -->
+    <!-- Shown instead of the session while another tab (or the installed app) runs it:
+         "one tab at a time" in app.js. "Continue here" moves the session to this tab. -->
+    <section id="elsewhereScreen" class="screen" hidden>
+      <!-- tabindex="-1": gets the focus whenever this notice shows (showElsewhere in app.js). -->
+      <h1 id="elsewhereTitle" class="elsewhere-title" tabindex="-1">This session is open in another tab.</h1>
+      <p class="muted">Only one tab can run a session at a time.</p>
+      <button id="continueHereButton" type="button" class="btn primary big">Continue here</button>
+    </section>
   </main>
 
   <!-- ========== DIALOGS ========== -->
-  <dialog id="ragebaitDialog">
+  <!-- aria-labelledby / aria-describedby: screen readers read the question when focus moves into the dialog. -->
+  <dialog id="ragebaitDialog" aria-labelledby="ragebaitTitle" aria-describedby="ragebaitText">
     <form method="dialog">
-      <h2>Heads up!</h2>
+      <h2 id="ragebaitTitle">Heads up!</h2>
       <p id="ragebaitText"></p>
       <div class="dialog-actions">
         <button value="cancel" class="btn">Pick someone else</button>
@@ -156,24 +228,37 @@
     </form>
   </dialog>
 
-  <dialog id="restartDialog">
+  <!-- Two steps in one dialog (showRestartStep in app.js): step 1 asks only "continue or start
+       over" (title and text depend on the mode), step 2 (only after Start over) asks for the new
+       length. Esc / Back: continue in step 1, back to step 1 in step 2. -->
+  <dialog id="restartDialog" aria-labelledby="restartTitle" aria-describedby="restartText">
     <form method="dialog">
-      <h2>That was a long break</h2>
-      <p>Do you want to keep going with this session, or start fresh? After a long distraction, starting over is often easier.</p>
-      <button value="continue" class="btn primary wide">Continue this session</button>
-      <p class="divider"><span>or start over with</span></p>
-      <div id="restartDuration" class="duration-picker"></div>
-      <label id="restartSaveRow" class="check-row" hidden>
-        <input id="restartSave" type="checkbox" checked>
-        <span id="restartSaveText"></span>
-      </label>
-      <button value="restart" class="btn wide">Start over</button>
+      <div id="restartStep1">
+        <h2 id="restartTitle"></h2>
+        <p id="restartText"></p>
+        <div class="dialog-stack">
+          <button value="continue" class="btn primary wide">Continue this session</button>
+          <button id="restartOverButton" type="button" class="btn wide">Start over</button>
+        </div>
+      </div>
+      <div id="restartStep2" hidden>
+        <h2 id="restartStep2Title" tabindex="-1">How long should the new session be?</h2>
+        <div id="restartDuration" class="duration-picker"></div>
+        <label id="restartSaveRow" class="check-row" hidden>
+          <input id="restartSave" type="checkbox" checked>
+          <span id="restartSaveText"></span>
+        </label>
+        <div class="dialog-stack">
+          <button value="restart" class="btn primary wide">Start new session</button>
+          <button id="restartBackButton" type="button" class="btn wide">Back</button>
+        </div>
+      </div>
     </form>
   </dialog>
 
-  <dialog id="endDialog">
+  <dialog id="endDialog" aria-labelledby="endTitle">
     <form method="dialog">
-      <h2>End this session now?</h2>
+      <h2 id="endTitle">End this session now?</h2>
       <!-- Only shown once the session could be saved (1 minute or more), ticked every time (onEndClick in app.js). -->
       <label id="endSaveRow" class="check-row" hidden>
         <input id="endSave" type="checkbox" checked>
@@ -186,11 +271,22 @@
     </form>
   </dialog>
 
-  <dialog id="lateDialog">
+  <!-- Opens when the page was hidden for 15 s or more during a session (time away in app.js).
+       "Yes" logs the measured time away at once. -->
+  <dialog id="awayDialog" class="away-dialog" aria-labelledby="awayTitle" aria-describedby="awayQuestion">
+    <h2 id="awayTitle"></h2>
+    <p id="awayQuestion">Were you distracted?</p>
+    <div class="dialog-actions">
+      <button id="awayNoButton" type="button" class="btn">No, it was for the task</button>
+      <button id="awayYesButton" type="button" class="btn primary">Yes</button>
+    </div>
+  </dialog>
+
+  <dialog id="lateDialog" aria-labelledby="lateTitle" aria-describedby="lateText lateQuestion">
     <form method="dialog">
-      <h2>Welcome back!</h2>
+      <h2 id="lateTitle">Welcome back!</h2>
       <p id="lateText"></p>
-      <p>The app can't tell if you kept focusing until the end. Save it to your history?</p>
+      <p id="lateQuestion">The app can't tell if you kept focusing until the end. Save it to your history?</p>
       <div class="dialog-actions">
         <button value="discard" class="btn">Discard</button>
         <button value="save" class="btn primary" autofocus>Save</button>
@@ -203,5 +299,6 @@
   <script src="js/placeholder-art.js"></script>
   <script src="js/history-store.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/sw-register.js"></script>
 </body>
 </html>

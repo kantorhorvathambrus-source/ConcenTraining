@@ -17,8 +17,19 @@ const REFOCUS_MS = 2500;
 // (e.g. the phone was put down), it closes silently after this long, so it doesn't stay up
 // for the rest of the session or hold back the continue/restart question forever.
 const PICKER_AUTO_CLOSE_MS = 60 * 1000;
-const UNDO_WINDOW_MS = 5000; // after a distraction tap, Undo takes End session's place for this long
+const UNDO_WINDOW_MS = 5000; // after a distraction tap, Undo takes Motivate me's place for this long
+// Screen reader announcements (see "screen reader announcements"): set this long after the live
+// region is emptied, and emptied again this long after that.
+const ANNOUNCE_DELAY_MS = 100;
+const ANNOUNCE_CLEAR_MS = 5000;
+const PICKER_ANNOUNCEMENT = "What distracted you? Choose below, or skip.";
+const UNDO_ANNOUNCEMENT = "Distraction undone.";
+// Page hidden (another app, another tab, locked screen) for at least this long during a session:
+// on return the app asks whether it was a distraction. Shorter absences are ignored.
+// AWAY_MIN_MS is in history-store.js, because imports check away distractions against it.
+const AWAY_ASK_AFTER_MS = AWAY_MIN_MS;
 const DURATION_PRESETS = [5, 10, 15, 25, 35, 45, 60, 90];
+const MIN_MINUTES = 1;
 const MAX_MINUTES = 240;
 const DEFAULT_MINUTES = 25;
 // The timer can run out while the page is closed or the phone is locked. If the app
@@ -33,6 +44,10 @@ const CHIME_GAP_S = 0.18; // between note starts
 const CHIME_NOTE_S = 0.75; // each note fades out over this long
 const CHIME_VOLUME = 0.25; // 1 = full scale
 const END_VIBRATION = [150, 80, 150]; // ms on, off, on (Android; iOS ignores it)
+// Red note on a new session's screen ("This session won't be saved…" or "Couldn't save the first
+// part…"): long enough to read it once the screen (or the dialog) has changed, then it turns
+// invisible (keeping its space, so nothing moves).
+const SAVE_ERROR_NOTE_MS = 10 * 1000;
 
 // Summary screen pose for each session result (see sessionResult in history-store.js).
 // early: neutral, never the proud "good" pose and never the "rough" one.
@@ -45,11 +60,11 @@ const SUMMARY_POSES = {
 
 // Simple mode: severity only, no time. Level = which reaction pose to show (1-5).
 const SIMPLE_OPTIONS = [
-  { label: "Very briefly", level: 1 },
-  { label: "Briefly", level: 2 },
-  { label: "Moderately", level: 3 },
-  { label: "A lot", level: 4 },
-  { label: "A whole lot", level: 5, askRestart: true },
+  { label: "A flicker", level: 1 },
+  { label: "Drifted", level: 2 },
+  { label: "Lost track", level: 3 },
+  { label: "Far away", level: 4 },
+  { label: "Totally gone", level: 5, askRestart: true },
 ];
 
 // Advanced mode: distraction length. "10+ min" counts as 10 minutes in the focus %.
@@ -96,10 +111,11 @@ function remove(key) {
 
 // Popularity stats: one count per session started with Start session, finished or not.
 // Browsing the cards, a cancelled ragebait warning, Start over and a restored session don't count.
-// Sent to the Netlify Function in netlify/functions/picks.mjs. Fire-and-forget:
-// if it fails (offline, or index.html opened as a local file) the app works the same.
+// Sent to the Netlify Function in netlify/functions/picks.mjs. Fire-and-forget: if it fails
+// (offline, index.html opened as a local file, or the GitHub Pages test site, which has no
+// backend) the app works the same. Relative address, so it stays inside the app's own folder.
 function countCharacterPick(id) {
-  fetch("/api/picks", {
+  fetch("api/picks", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ characterId: id }),
@@ -109,38 +125,56 @@ function countCharacterPick(id) {
 
 // ---------- state ----------
 
-// endSound / keepScreenOn: the setup checkboxes. homeScreenTipDismissed: "Got it" was tapped on the
-// iPhone Home Screen tip. persistRequested: persistent storage was asked for (or skipped, in Firefox).
+// endSound / keepScreenOn / leaveReminder: the setup checkboxes (leaveReminder: see "leave reminder").
+// homeScreenTipDismissed: "Got it" was tapped on the iPhone Home Screen tip.
+// persistRequested: persistent storage was asked for (or skipped, in Firefox).
+// howItWorksDismissed: "Got it" was tapped on the How it works card.
 // Prefs saved before any of these existed get these defaults.
 const prefs = Object.assign(
   {
-    characterId: null, mode: "simple", minutes: 25, endSound: true, keepScreenOn: true,
-    homeScreenTipDismissed: false, persistRequested: false,
+    characterId: null, mode: "simple", minutes: 25, endSound: true, keepScreenOn: true, leaveReminder: false,
+    homeScreenTipDismissed: false, persistRequested: false, howItWorksDismissed: false,
   },
   load(PREFS_KEY, {}),
 );
 delete prefs.style; // saved before personalities came from the character; dropped on the next save
 // style: the character's personality when the session ran ("kind", "firm", "strict" or "ragebait")
-// restartPending: "A whole lot" / "10+ min" was tapped and the continue/restart question
+// restartPending: "Totally gone" / "10+ min" was tapped and the continue/restart question
 // hasn't been answered yet. Saved, so a reload still asks it.
-let session = null; // { characterId, style, mode, durationMs, startedAt, distractions: [], endedAt, restartPending }
+// leftAt: set while the page is hidden, cleared on return (see "time away"). Saved, so a page the
+// browser discarded in the background still asks after the reload. Never goes into the history.
+let session = null; // { characterId, style, mode, durationMs, startedAt, distractions: [], endedAt, restartPending, leftAt }
 let tickTimer = 0;
 let nextGoodAt = 0;
+let saveErrorNoteTimer = 0;
 // distraction: the one the open (or about to open) picker belongs to.
 // If session.restartPending is set, the continue/restart dialog opens as soon as
 // the picker is closed and the Undo window is over. They never show at the same time.
-const picker = { distraction: null, showTimer: 0, hideTimer: 0 };
+// closesAt: when the open picker's safety close (PICKER_AUTO_CLOSE_MS) is due.
+// returnFocus: the distraction button that was tapped; focus goes back there when the picker
+// closes with focus inside it (a category or Skip was tapped), instead of being lost.
+const picker = { distraction: null, showTimer: 0, hideTimer: 0, closesAt: 0, returnFocus: null };
 // distraction: the latest one, while its Undo window is open. prevNextGoodAt: nextGoodAt
 // before that tap. setRestart: that tap set session.restartPending (it wasn't set before).
-const undo = { distraction: null, prevNextGoodAt: 0, setRestart: false, timer: 0 };
+// closesAt: when the window ends. countdownTimer: updates the seconds shown on the button.
+const undo = { distraction: null, prevNextGoodAt: 0, setRestart: false, timer: 0, closesAt: 0, countdownTimer: 0 };
 const motivation = { phase: null, index: 0, shown: false };
+// from / ms: when the page was left and for how long (whole seconds) the card asks about, also
+// while it waits for another dialog to close (ms 0: none). open: the card is on screen.
+// yes: "Yes" was tapped, logged once the card has closed. hiddenAt: the latest time the page
+// was hidden (in memory only).
+const away = { from: 0, ms: 0, open: false, yes: false, hiddenAt: 0 };
 
 function characterById(id) {
   return CHARACTERS.find((c) => c.id === id) || null;
 }
 
 function showScreen(id) {
-  if (id === "setupScreen") updateHomeScreenTip();
+  if (id === "setupScreen") {
+    updateHowItWorks();
+    updateHomeScreenTip();
+    refreshQuickStart();
+  }
   document.querySelectorAll(".screen").forEach((screen) => {
     screen.hidden = screen.id !== id;
   });
@@ -192,14 +226,16 @@ function mountStage(character) {
   stage.img = $("#sessionImg");
   stage.character = character;
   for (const name of ["kind", "firm", "strict", "ragebait"]) stage.wrap.classList.toggle(name, personality === name);
-  stage.img.alt = character.name;
   preloadArt(character);
-  setPose("initial");
+  setPose("initial"); // also sets the alt
   scheduleBlink();
 }
 
+// The alt follows the pose (describePose in characters.js), so a screen reader can check the
+// character any time. A blink keeps the alt it had, so the alt doesn't change every few seconds.
 function setPose(pose) {
   setPoseImage(stage.img, stage.character, pose);
+  if (pose !== "blink") stage.img.alt = describePose(stage.character, pose);
 }
 
 // pose: "level1".."level5" or "good"; level: 1-5 for distraction reactions, 0 for "good".
@@ -253,6 +289,36 @@ function stopReaction() {
 function stopStage() {
   stopReaction();
   clearTimeout(stage.blinkTimer);
+  clearAnnouncement();
+}
+
+// ---------- screen reader announcements ----------
+
+// One visually hidden live region (#announcer in index.html, polite). Only for what follows the
+// user's own action: a distraction reaction, the category picker appearing, and Undo. The poses
+// that come by themselves (doing well, blinks, refocus) and Undo's countdown are never read out,
+// so they don't break the user's focus. Nothing is shown on screen, and it's never the character
+// speaking: the reactions are described like alt text (describePose in characters.js).
+const announcer = { text: "", timer: 0 };
+
+// Emptied first and set a moment later, so the same text is read again on the next tap. Emptied
+// again after ANNOUNCE_CLEAR_MS, so swiping through the page later doesn't find old text there.
+// Emptying it never cuts off what's being read: only new text is read out.
+function announce(text) {
+  const region = $("#announcer");
+  clearTimeout(announcer.timer);
+  announcer.text = text;
+  region.textContent = "";
+  announcer.timer = setTimeout(() => {
+    region.textContent = text;
+    announcer.timer = setTimeout(clearAnnouncement, ANNOUNCE_CLEAR_MS);
+  }, ANNOUNCE_DELAY_MS);
+}
+
+function clearAnnouncement() {
+  clearTimeout(announcer.timer);
+  announcer.text = "";
+  $("#announcer").textContent = "";
 }
 
 // ---------- end-of-session chime ----------
@@ -342,11 +408,15 @@ function wakeLockWanted() {
 // Holds the lock while a session is on screen, releases it everywhere else. Called on every
 // screen change, when the page becomes visible again (the browser drops the lock while it's
 // hidden) and on taps during a session (a reload may be refused until the first tap).
-// Unsupported or refused: nothing happens.
+// Unsupported or refused: the session carries on without it (and the note below shows).
 async function updateWakeLock() {
-  if (!("wakeLock" in navigator)) return;
+  if (!("wakeLock" in navigator)) {
+    updateScreenNote();
+    return;
+  }
   if (!wakeLockWanted()) {
     releaseWakeLock();
+    updateScreenNote();
     return;
   }
   if (wakeLock.sentinel || wakeLock.pending) return;
@@ -355,6 +425,7 @@ async function updateWakeLock() {
     const sentinel = await navigator.wakeLock.request("screen");
     sentinel.addEventListener("release", () => {
       if (wakeLock.sentinel === sentinel) wakeLock.sentinel = null;
+      updateScreenNote();
     });
     wakeLock.sentinel = sentinel;
   } catch {
@@ -362,6 +433,47 @@ async function updateWakeLock() {
   }
   wakeLock.pending = false;
   if (!wakeLockWanted()) releaseWakeLock(); // the session ended while the request was out
+  updateScreenNote();
+}
+
+// "Your screen may turn off" note: a turned-off screen pauses the page, so the chime can't play.
+// Shown while a session is on screen with the chime on and the screen lock not held (setting
+// off, unsupported, refused, or released and not taken back). While a request is out, or the
+// page is hidden (the browser drops the lock then), it stays as it is, so it doesn't blink
+// (and move the page) on every tap or return to the page.
+function updateScreenNote() {
+  const note = $("#screenNote");
+  const running = Boolean(session && !session.endedAt && !$("#sessionScreen").hidden);
+  if (!running || !prefs.endSound) {
+    note.hidden = true;
+    return;
+  }
+  if (wakeLock.pending || document.visibilityState !== "visible") return;
+  note.hidden = Boolean(wakeLock.sentinel);
+}
+
+// Red note on the new session's screen: SESSION_STORAGE_NOTE when the session starts while the
+// browser doesn't let the site save anything (startSession), or RESTART_SAVE_ERROR when Start new
+// session couldn't save the abandoned part. After SAVE_ERROR_NOTE_MS it turns invisible but keeps
+// its space, so nothing on the screen moves while a distraction button may be tapped. The next
+// session (enterSession) removes it completely.
+function showSaveErrorNote(text) {
+  const note = $("#saveErrorNote");
+  clearTimeout(saveErrorNoteTimer);
+  note.style.visibility = "";
+  note.textContent = text; // set when shown, so a screen reader reads it once
+  note.hidden = false;
+  saveErrorNoteTimer = setTimeout(() => {
+    note.style.visibility = "hidden"; // also hides it from screen readers
+  }, SAVE_ERROR_NOTE_MS);
+}
+
+function hideSaveErrorNote() {
+  const note = $("#saveErrorNote");
+  clearTimeout(saveErrorNoteTimer);
+  note.hidden = true;
+  note.textContent = "";
+  note.style.visibility = "";
 }
 
 function releaseWakeLock() {
@@ -377,6 +489,43 @@ function onSessionInput() {
   updateWakeLock();
 }
 
+// ---------- tap guard ----------
+
+// Many taps remove or replace what's under the finger (a dialog closes, the picker hides, Undo
+// turns back into Motivate me, the screen changes). The second tap of an accidental double tap
+// would then press whatever appeared there, or log a distraction twice. So a click from a tap
+// or mouse that comes less than TAP_GUARD_MS after the last accepted one is dropped, wherever it
+// lands: no handler runs, no dialog closes, no checkbox toggles. 400 ms: Android's double-tap
+// timeout (300 ms from lift to the next touch) plus the second press. A deliberate tap on
+// something that just appeared takes longer than that. A dropped click doesn't restart the time.
+// Always let through: keyboard and assistive-tech clicks (detail 0), Undo (it may follow a
+// distraction tap at once), text fields (a click there does nothing) and the click a <label>
+// passes on to its checkbox right after its own.
+const TAP_GUARD_MS = 400;
+const tapGuard = { lastAt: -Infinity, labelControl: null };
+
+function onGuardedClick(event) {
+  const target = event.target instanceof Element ? event.target : null;
+  const passes =
+    event.detail === 0 ||
+    (target && target.closest("#undoButton")) ||
+    (target && target.matches("input:not([type=checkbox]):not([type=radio]), textarea, select")) ||
+    (target && target === tapGuard.labelControl);
+  if (!passes && event.timeStamp - tapGuard.lastAt < TAP_GUARD_MS) {
+    event.stopImmediatePropagation();
+    event.preventDefault();
+    return;
+  }
+  tapGuard.labelControl = null;
+  if (event.detail === 0) return; // a key press doesn't start the time
+  tapGuard.lastAt = event.timeStamp;
+  const label = target && target.closest("label");
+  if (label && label.control) {
+    tapGuard.labelControl = label.control;
+    setTimeout(() => (tapGuard.labelControl = null)); // the passed-on click comes before this
+  }
+}
+
 // ---------- duration picker (used on setup and in the restart dialog) ----------
 
 // Empty becomes 25, anything under 1 becomes 1, anything over 240 becomes 240.
@@ -384,10 +533,31 @@ function clampMinutes(value) {
   if (String(value).trim() === "") return DEFAULT_MINUTES;
   const n = Math.round(Number(value));
   if (!Number.isFinite(n)) return DEFAULT_MINUTES;
-  return Math.min(MAX_MINUTES, Math.max(1, n));
+  return Math.min(MAX_MINUTES, Math.max(MIN_MINUTES, n));
 }
 
-// Builds preset chips + a custom number field. Returns a function that reads the value.
+// The line under the custom field when clampMinutes changes what was typed, "" when it doesn't.
+// A number field reports text it can't read as "", so that gets the empty message too.
+// The limits are checked on what was typed, before rounding: 0.5 says "Min.", 240.4 says "Max.".
+function minutesNote(value) {
+  const n = Number(value);
+  if (String(value).trim() === "" || !Number.isFinite(n)) return `Set to ${DEFAULT_MINUTES} min.`;
+  if (n > MAX_MINUTES) return `Max. ${MAX_MINUTES} min.`;
+  if (n < MIN_MINUTES) return `Min. ${MIN_MINUTES} min.`;
+  const rounded = Math.round(n);
+  if (rounded !== n) return `Rounded to ${rounded} min.`;
+  return "";
+}
+
+// Every press (finger, mouse or key) counts up, so a picker can tell whether its last correction
+// came from the press going on now: tapping Start leaves the field first, which corrects it.
+let pressCount = 0;
+
+// Builds preset chips + a custom number field + the line that says when the field was corrected.
+// read() returns the minutes, or null when the tap on Start just corrected the field: then nothing
+// starts, so the message can be seen, and the next tap starts with the corrected value. It blocks
+// only once per correction, so a click without a press (TalkBack, Voice Access, Switch Access)
+// can't get stuck. value() returns the minutes without blocking. clearNote() hides the line.
 function durationPicker(container, initialMinutes) {
   container.innerHTML = "";
 
@@ -396,13 +566,36 @@ function durationPicker(container, initialMinutes) {
 
   const custom = document.createElement("label");
   custom.className = "custom-minutes";
-  custom.innerHTML = `Custom: <input type="number" min="1" max="${MAX_MINUTES}" inputmode="numeric"> min`;
+  custom.innerHTML = `Custom: <input type="number" min="${MIN_MINUTES}" max="${MAX_MINUTES}" inputmode="numeric"> min`;
   const input = custom.querySelector("input");
+
+  // Always in the page (a status line must exist before its text changes to be read out),
+  // empty and without height until the field is corrected.
+  const note = document.createElement("p");
+  note.className = "custom-note muted";
+  note.setAttribute("role", "status");
+  let correctedAtPress = -1;
+
+  const clearNote = () => {
+    note.textContent = "";
+  };
 
   const sync = () => {
     chips.querySelectorAll("button").forEach((chip) => {
       chip.setAttribute("aria-pressed", String(Number(chip.dataset.minutes) === Number(input.value)));
     });
+  };
+
+  // Shows the value that will really be used. Returns true if it differs from what was typed.
+  const correct = () => {
+    const text = minutesNote(input.value);
+    input.value = clampMinutes(input.value);
+    sync();
+    if (!text) return false;
+    note.textContent = "";
+    note.textContent = text; // re-set so screen readers announce it again
+    correctedAtPress = pressCount;
+    return true;
   };
 
   for (const minutes of DURATION_PRESETS) {
@@ -414,33 +607,99 @@ function durationPicker(container, initialMinutes) {
     chip.addEventListener("click", () => {
       input.value = minutes;
       sync();
+      clearNote();
     });
     chips.append(chip);
   }
 
   input.value = initialMinutes;
-  input.addEventListener("input", sync);
-  // When the field is left, show the value that will really be used.
-  input.addEventListener("change", () => {
-    input.value = clampMinutes(input.value);
+  // While typing the line only goes away (once the value is valid), it never appears.
+  input.addEventListener("input", () => {
     sync();
+    if (!minutesNote(input.value)) clearNote();
   });
+  input.addEventListener("change", correct);
   // Inside a dialog form, Enter would press the first button ("Continue") by accident.
   input.addEventListener("keydown", (event) => {
     if (event.key === "Enter") event.preventDefault();
   });
   sync();
 
-  container.append(chips, custom);
-  return () => clampMinutes(input.value);
+  container.append(chips, custom, note);
+  return {
+    // correct() here too: some browsers don't take focus from the field when a button is tapped.
+    read: () => {
+      if (correct() || correctedAtPress === pressCount) {
+        correctedAtPress = -1; // blocked once: the next read starts, even without a new press
+        return null;
+      }
+      return clampMinutes(input.value);
+    },
+    value: () => clampMinutes(input.value),
+    clearNote,
+  };
+}
+
+// ---------- can this browser save? ----------
+
+// Runs the test write (storageWorks in history-store.js) and shows or hides the setup screen note.
+// Called at start-up, when a session starts, and when the page is shown again. Returns the result.
+function checkStorage() {
+  const ok = storageWorks();
+  updateSetupStorageNote(ok);
+  return ok;
+}
+
+// Only changes something when the result changed, and the text is set when the note appears, so a
+// screen reader reads it once, not on every check. The note sits at the top of the setup screen:
+// if the page is scrolled down, it's scrolled by the note's height, so what's on screen stays put.
+// (Browsers with scroll anchoring already keep it in place: the difference is 0 there.)
+function updateSetupStorageNote(ok) {
+  const note = $("#setupStorageNote");
+  if (note.hidden === ok) return;
+  const anchor = $("#characterStep");
+  const before = anchor.getBoundingClientRect().top;
+  note.textContent = ok ? "" : SETUP_STORAGE_NOTE;
+  note.hidden = ok;
+  if ($("#setupScreen").hidden || window.scrollY === 0) return;
+  const moved = anchor.getBoundingClientRect().top - before;
+  if (moved) window.scrollBy(0, moved);
 }
 
 // ---------- setup screen ----------
 
-let readSetupMinutes = () => prefs.minutes;
+let setupPicker = { read: () => prefs.minutes, value: () => prefs.minutes, clearNote() {} };
 
-function savePrefs() {
-  save(PREFS_KEY, prefs);
+// Saves only the given fields on top of what's saved now, so a field another tab changed since
+// this page loaded isn't undone. This page's copy fills in fields that were never saved, so the
+// saved prefs stay complete. Only the given fields change in this page's copy: the others stay
+// as this page shows them.
+function savePrefs(changes) {
+  Object.assign(prefs, changes);
+  const next = Object.assign({}, prefs, load(PREFS_KEY, {}), changes);
+  delete next.style; // see prefs above
+  save(PREFS_KEY, next);
+}
+
+// Shown on the setup screen until "Got it" is tapped. The header button brings it back without
+// changing the pref, so after that it only shows again when asked for.
+function updateHowItWorks() {
+  $("#howItWorks").hidden = prefs.howItWorksDismissed;
+}
+
+// Header button: show the card and move focus to its heading, so a screen reader reads it out.
+function openHowItWorks() {
+  $("#howItWorks").hidden = false;
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  $("#howItWorks").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+  $("#howItWorksTitle").focus({ preventScroll: true });
+}
+
+// Focus goes to the header button: the "Got it" button disappears, and that's where the card comes back from.
+function dismissHowItWorks() {
+  savePrefs({ howItWorksDismissed: true });
+  $("#howItWorks").hidden = true;
+  $("#howItWorksLink").focus();
 }
 
 // iPhone/iPad Safari only (see iosSafariNotInstalled in history-store.js), and only once
@@ -451,9 +710,55 @@ function updateHomeScreenTip() {
 }
 
 function dismissHomeScreenTip() {
-  prefs.homeScreenTipDismissed = true;
-  savePrefs();
+  savePrefs({ homeScreenTipDismissed: true });
   $("#homeScreenTip").hidden = true;
+}
+
+// "Quick start" card at the top: starts the current setup (character, mode, duration) without
+// scrolling down to Start session. Only for returning users: a saved character that still exists
+// and at least one session in the history. It always shows what Start session would start, so it
+// follows every change further down. hasHistory: checked when the setup screen is shown (and when
+// the history changes in another tab), not on every keystroke. characterId: the one whose image
+// is shown, so the image is only set again when the character changes.
+const quickStart = { hasHistory: false, characterId: null };
+
+function refreshQuickStart() {
+  quickStart.hasHistory = loadHistory().length > 0;
+  updateQuickStart();
+}
+
+// The minutes are setupPicker.value(): what's typed, corrected the way Start corrects it
+// (300 shows 240, an empty field 25), so the line never shows a length that can't start.
+function updateQuickStart() {
+  const character = characterById(prefs.characterId);
+  const card = $("#quickStart");
+  card.hidden = !character || !quickStart.hasHistory;
+  if (card.hidden) return;
+  if (quickStart.characterId !== character.id) {
+    setPoseImage($("#quickStartImg"), character, "initial");
+    quickStart.characterId = character.id;
+  }
+  // No-break spaces (\u00a0): a narrow screen wraps after a "·", never before it or inside "25 min".
+  $("#quickStartLine").textContent =
+    `${character.name}\u00a0· ${capitalize(prefs.mode)}\u00a0· ${setupPicker.value()}\u00a0min`;
+}
+
+// A restore from the browser's back/forward cache (e.g. Back from history.html after deleting
+// sessions there) shows the page without showScreen, so the history is checked again here.
+// It also checks whether another tab started a session meanwhile (see checkSessionElsewhere).
+// Every pageshow ends the "unloading" state set by pagehide (see "leave reminder").
+function onPageShow(event) {
+  leaveReminder.unloading = false;
+  if (!event.persisted) return;
+  checkStorage(); // site data may have been allowed or blocked meanwhile
+  if (!$("#setupScreen").hidden) refreshQuickStart();
+  checkSessionElsewhere();
+}
+
+// The history changed in another tab (a session saved or deleted there). null: all storage was cleared.
+function onHistoryStorage(event) {
+  if (event.key !== HISTORY_KEY && event.key !== null) return;
+  if (!$("#setupScreen").hidden) refreshQuickStart();
 }
 
 function renderCharacterList() {
@@ -463,6 +768,7 @@ function renderCharacterList() {
     const card = document.createElement("button");
     card.type = "button";
     card.className = "char-card";
+    card.dataset.id = character.id;
     card.setAttribute("aria-pressed", String(prefs.characterId === character.id));
     card.innerHTML = `
       <img alt="">
@@ -475,16 +781,24 @@ function renderCharacterList() {
   }
 }
 
+// Updates the selection in place: rebuilding the cards would move keyboard and screen reader
+// focus away from the card that was just tapped.
+function updateCharacterCards() {
+  $("#characterList").querySelectorAll(".char-card").forEach((card) => {
+    card.setAttribute("aria-pressed", String(card.dataset.id === prefs.characterId));
+  });
+}
+
 async function onCharacterTap(character) {
   if (character.group === "ragebait" && prefs.characterId !== character.id) {
     $("#ragebaitText").textContent = `${character.name}: ${GROUPS.ragebait.warning}`;
     if ((await ask($("#ragebaitDialog"))) !== "ok") return;
   }
 
-  prefs.characterId = character.id;
-  savePrefs();
+  savePrefs({ characterId: character.id });
   $("#characterError").hidden = true;
-  renderCharacterList();
+  updateCharacterCards();
+  updateQuickStart();
 }
 
 function bindChoiceGroups() {
@@ -495,9 +809,9 @@ function bindChoiceGroups() {
 
     buttons.forEach((button) => {
       button.addEventListener("click", () => {
-        prefs[key] = button.dataset.value;
-        savePrefs();
+        savePrefs({ [key]: button.dataset.value });
         sync();
+        updateQuickStart();
       });
     });
     sync();
@@ -509,32 +823,65 @@ function bindSettingChecks() {
     const key = check.dataset.pref;
     check.checked = Boolean(prefs[key]);
     check.addEventListener("change", () => {
-      prefs[key] = check.checked;
-      savePrefs();
+      savePrefs({ [key]: check.checked });
     });
   });
   $("#testSoundButton").addEventListener("click", playChime);
 }
 
-function onStartClick() {
+function scrollToStep(step) {
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  step.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+}
+
+// "Change ↓" on the Quick start card: go to step 1 and move focus to its heading without a second
+// scroll, so a screen reader carries on reading there.
+function onQuickStartChange() {
+  scrollToStep($("#characterStep"));
+  $("#characterStepTitle").focus({ preventScroll: true });
+}
+
+// Start session (fromQuickStart false) and Start on the Quick start card (true) both come here.
+async function onStartClick(fromQuickStart) {
   if (!characterById(prefs.characterId)) {
     const error = $("#characterError");
     error.hidden = false;
     error.textContent = "";
     error.textContent = "Pick a character first."; // re-set so screen readers announce it again on every tap
-    const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    $("#characterStep").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+    scrollToStep($("#characterStep"));
     return;
   }
-  prefs.minutes = readSetupMinutes();
-  savePrefs();
+  const minutes = setupPicker.read();
+  if (minutes === null) {
+    // This tap corrected the custom field: its message shows first. The Quick start card is
+    // far above it, so the page goes to step 3, where the message is. Focus stays on the button.
+    if (fromQuickStart) scrollToStep($("#durationStep"));
+    return;
+  }
+  // The setup picker is kept, so the message would still be there after the session.
+  setupPicker.clearNote();
+  savePrefs({ minutes });
   if (prefs.endSound) unlockAudio(); // this tap is what allows the chime later
+  // A session saved by another tab is never replaced (see "one tab at a time"): it carries on here
+  // if its tab was closed, or the notice shows if that tab still runs it. Without Web Locks the
+  // tabs can't tell, so Start works as it always has.
+  if (locks && savedRunningSession()) {
+    continueSavedSession(false);
+    return;
+  }
+  if (!(await takeControl(false))) {
+    showElsewhere();
+    return;
+  }
+  if (session) return; // a quick second tap: already started
   countCharacterPick(prefs.characterId); // here, not in startSession(): Start over is not a new choice
   startSession(prefs.characterId, prefs.mode, prefs.minutes);
 }
 
 // ---------- session ----------
 
+// Start, Quick start and Start new session. Returns whether this browser can save (checkStorage):
+// if it can't, the new session's screen says so (after enterSession, which clears that line).
 function startSession(characterId, mode, minutes) {
   session = {
     characterId,
@@ -547,6 +894,9 @@ function startSession(characterId, mode, minutes) {
   };
   save(SESSION_KEY, session);
   enterSession();
+  const ok = checkStorage();
+  if (!ok) showSaveErrorNote(SESSION_STORAGE_NOTE);
+  return ok;
 }
 
 function enterSession() {
@@ -554,30 +904,36 @@ function enterSession() {
   const options = session.mode === "advanced" ? ADVANCED_OPTIONS : SIMPLE_OPTIONS;
 
   $("#sessionInfo").textContent =
-    `${character.name} · ${capitalize(session.style)} · ${capitalize(session.mode)} · ${Math.round(session.durationMs / MIN)} min`;
+    `${character.name} · ${styleLabel(session.style)} · ${capitalize(session.mode)} · ${Math.round(session.durationMs / MIN)} min`;
   $("#distractionPrompt").textContent =
     session.mode === "advanced" ? "Got distracted? For how long?" : "Got distracted? How much?";
 
   const buttons = $("#distractionButtons");
   buttons.innerHTML = "";
   buttons.classList.toggle("advanced", session.mode === "advanced");
+  buttons.classList.toggle("simple", session.mode !== "advanced");
   for (const option of options) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = `btn level level-${option.level}`;
     button.textContent = option.label;
-    button.addEventListener("click", () => logDistraction(option));
+    button.addEventListener("click", () => logDistraction(option, button));
     buttons.append(button);
   }
 
   closePicker(false);
   closeUndo(false);
+  hideSaveErrorNote();
+  Object.assign(away, { from: 0, ms: 0, open: false, yes: false, hiddenAt: 0 });
   motivation.phase = null;
   $("#motivationCard").hidden = true;
   nextGoodAt = Date.now() + GOOD_EVERY_MS;
 
   showScreen("sessionScreen");
   mountStage(character);
+  // The button that started it is gone now: without this, focus would be lost and a screen reader
+  // would say nothing. Without scrolling, so nothing moves on screen.
+  $("#sessionInfo").focus({ preventScroll: true });
 
   clearInterval(tickTimer);
   tick();
@@ -606,18 +962,25 @@ function tick() {
   if (remaining <= 0) onTimerRanOut(true);
 }
 
-function logDistraction(option) {
+function logDistraction(option, button) {
   if (!session || session.endedAt) return;
   const distraction = { at: Date.now(), level: option.level, ms: option.ms || 0, category: null };
-  const setRestart = Boolean(option.askRestart && !session.restartPending);
+  addDistraction(distraction, Boolean(option.askRestart));
+  schedulePicker(distraction, button);
+}
+
+// Saves a distraction and plays its reaction, with Undo. askRestart: level 5, which asks
+// continue or restart once the picker (if any) and the Undo window are over.
+function addDistraction(distraction, askRestart) {
+  const setRestart = askRestart && !session.restartPending;
   session.distractions.push(distraction);
-  if (option.askRestart) session.restartPending = true;
+  if (askRestart) session.restartPending = true;
   save(SESSION_KEY, session);
 
   openUndo(distraction, nextGoodAt, setRestart);
   nextGoodAt = Date.now() + GOOD_EVERY_MS;
-  react(`level${option.level}`, option.level);
-  schedulePicker(distraction);
+  react(`level${distraction.level}`, distraction.level);
+  announce(describePose(stage.character, `level${distraction.level}`));
   updateLengthButtons();
 }
 
@@ -637,26 +1000,39 @@ function updateLengthButtons() {
 
 // ---------- undo ----------
 
+// Undo sits in Motivate me's cell, so End session stays where it is the whole time. The seconds
+// left are shown on the button itself ("Undo · 4"), not as a bar, so they can't be mistaken
+// for a time limit on the category picker right above it.
 // Undo only applies to the latest distraction: a newer tap moves it there and restarts the window.
 function openUndo(distraction, prevNextGoodAt, setRestart) {
   closeUndo(false);
-  Object.assign(undo, { distraction, prevNextGoodAt, setRestart });
+  Object.assign(undo, { distraction, prevNextGoodAt, setRestart, closesAt: Date.now() + UNDO_WINDOW_MS });
   const button = $("#undoButton");
-  void button.offsetWidth; // so showing it again restarts the countdown bar
-  $("#endButton").hidden = true;
+  const motivate = $("#motivateButton");
+  const hadFocus = document.activeElement === motivate;
+  updateUndoCountdown();
+  motivate.hidden = true;
   button.hidden = false;
+  if (hadFocus) button.focus(); // keyboard focus stays in the same spot
   undo.timer = setTimeout(() => closeUndo(true), UNDO_WINDOW_MS);
+  undo.countdownTimer = setInterval(updateUndoCountdown, 250);
+}
+
+function updateUndoCountdown() {
+  const seconds = Math.max(1, Math.ceil((undo.closesAt - Date.now()) / 1000));
+  $("#undoSeconds").textContent = String(seconds);
 }
 
 // thenAsk: open the continue/restart dialog now if one is waiting for the Undo window.
 function closeUndo(thenAsk) {
   clearTimeout(undo.timer);
+  clearInterval(undo.countdownTimer);
   undo.distraction = null;
   const button = $("#undoButton");
   const hadFocus = document.activeElement === button;
   button.hidden = true;
-  $("#endButton").hidden = false;
-  if (hadFocus) $("#endButton").focus(); // keyboard focus stays in the same spot
+  $("#motivateButton").hidden = false;
+  if (hadFocus) $("#motivateButton").focus(); // keyboard focus stays in the same spot
   if (thenAsk) askPendingRestart();
 }
 
@@ -673,8 +1049,9 @@ function onUndoClick() {
   stopReaction();
   setPose("initial");
   closePicker(false);
+  announce(UNDO_ANNOUNCEMENT); // replaces the reaction's line if it hasn't been read yet
   updateLengthButtons();
-  // An earlier "10+ min" / "A whole lot" that wasn't undone still asks, now.
+  // An earlier "10+ min" / "Totally gone" that wasn't undone still asks, now.
   closeUndo(true);
 }
 
@@ -693,13 +1070,38 @@ function buildCategoryButtons() {
 }
 
 // A newer distraction replaces the picker of the previous one (which keeps category: null).
-function schedulePicker(distraction) {
+function schedulePicker(distraction, button) {
   closePicker(false);
   picker.distraction = distraction;
-  picker.showTimer = setTimeout(() => {
-    $("#categoryPicker").hidden = false;
-    picker.hideTimer = setTimeout(() => closePicker(true), PICKER_AUTO_CLOSE_MS);
-  }, PICKER_DELAY_MS);
+  picker.returnFocus = button;
+  picker.showTimer = setTimeout(() => showPicker(PICKER_AUTO_CLOSE_MS), PICKER_DELAY_MS);
+}
+
+// Announced only when it appears, not when it was already open (after Keep going). Polite, like
+// the reaction's line, so it's read after that one, not over it. Focus stays where it is.
+function showPicker(closeInMs) {
+  if ($("#categoryPicker").hidden) announce(PICKER_ANNOUNCEMENT);
+  $("#categoryPicker").hidden = false;
+  picker.closesAt = Date.now() + closeInMs;
+  picker.hideTimer = setTimeout(() => closePicker(true), closeInMs);
+}
+
+// While End session's question is open, the picker's timers are stopped: its safety close
+// would ask a waiting continue/restart question, which must not open on top of that dialog.
+// The picker stays (behind the dialog, where it can't be tapped) and keeps its distraction,
+// so a waiting continue/restart question keeps waiting for it, as before.
+function pausePicker() {
+  clearTimeout(picker.showTimer);
+  clearTimeout(picker.hideTimer);
+}
+
+// After Keep going: the picker is back as it was, with the time it had left. If its safety
+// close would have happened in the meantime, it closes now instead (category stays null).
+function resumePicker() {
+  if (!picker.distraction || !session || session.endedAt) return;
+  if ($("#categoryPicker").hidden) showPicker(PICKER_AUTO_CLOSE_MS); // End was tapped before it appeared
+  else if (Date.now() >= picker.closesAt) closePicker(false);
+  else showPicker(picker.closesAt - Date.now());
 }
 
 function pickCategory(id) {
@@ -712,18 +1114,88 @@ function pickCategory(id) {
 
 // Skip, and the silent auto-close, also end up here: the category stays null (never guessed).
 // thenAsk: open the continue/restart dialog now if one is waiting for the picker.
+// Focus inside it (a category or Skip was tapped) goes back to the distraction button that was
+// tapped, or to the heading above the buttons if that one is disabled now (Advanced mode), so
+// it isn't lost. Before the restart question, so focus comes back there when that closes.
 function closePicker(thenAsk) {
   clearTimeout(picker.showTimer);
   clearTimeout(picker.hideTimer);
-  $("#categoryPicker").hidden = true;
+  const box = $("#categoryPicker");
+  const hadFocus = box.contains(document.activeElement);
+  box.hidden = true;
+  if (announcer.text === PICKER_ANNOUNCEMENT) clearAnnouncement();
+  if (hadFocus) {
+    const button = picker.returnFocus;
+    const target = button && button.isConnected && !button.disabled ? button : $("#distractionPrompt");
+    target.focus({ preventScroll: true });
+  }
   picker.distraction = null;
+  picker.returnFocus = null;
   if (thenAsk) askPendingRestart();
 }
 
-// Waits while the category picker is open (or about to open) or the Undo window is open:
-// closing either one calls this again.
+// Waits while the category picker is open (or about to open), the Undo window is open, or
+// the time away card is open or waiting: closing any of them calls this again.
 function askPendingRestart() {
-  if (session && session.restartPending && !picker.distraction && !undo.distraction) askContinueOrRestart();
+  if (session && session.restartPending && !picker.distraction && !undo.distraction && !away.ms) {
+    askContinueOrRestart();
+  }
+}
+
+let restartPicker = null; // built again every time the dialog opens
+
+// Step 1 of the continue/restart dialog. Simple mode has no times, so it doesn't say "long break".
+const RESTART_TEXTS = {
+  simple: {
+    title: "That was a big distraction",
+    text: "Keep going with this session, or start fresh? After a big distraction, starting over is often easier.",
+  },
+  advanced: {
+    title: "That was a long break",
+    text: "Keep going with this session, or start fresh? After a long break, starting over is often easier.",
+  },
+};
+
+// Step 1 asks only "continue or start over"; step 2 (after Start over) asks for the new length,
+// so the preselected chip can't be read as "how long was the distraction?". One dialog, so
+// everything that closes it (answer, loseControl, timer end) works the same in both steps.
+// The dialog is labelled by the visible step's title, so it's read out with the step. Step 2:
+// focus goes to its title, so a screen reader reads the question. Back to step 1: focus goes to
+// Start over, the button that left it.
+function showRestartStep(step) {
+  const dialog = $("#restartDialog");
+  $("#restartStep1").hidden = step !== 1;
+  $("#restartStep2").hidden = step !== 2;
+  if (step === 1) {
+    dialog.setAttribute("aria-labelledby", "restartTitle");
+    dialog.setAttribute("aria-describedby", "restartText");
+  } else {
+    dialog.setAttribute("aria-labelledby", "restartStep2Title");
+    dialog.removeAttribute("aria-describedby");
+  }
+  if (!dialog.open) return;
+  if (step === 2) {
+    $("#restartStep2Title").focus();
+  } else {
+    $("#restartOverButton").focus();
+    // After the focus move: leaving the custom field can correct it and show the note.
+    // The chosen length stays for the next Start over in this opening, the note doesn't.
+    if (restartPicker) restartPicker.clearNote();
+  }
+}
+
+// Esc / Android Back: in step 1 the dialog closes ("" = continue), as before. In step 2 it goes
+// back to step 1 instead. If the browser won't let that be stopped (Chrome allows one per tap),
+// the dialog closes and it counts as continue.
+function onRestartCancel(event) {
+  if ($("#restartStep2").hidden || !event.cancelable) return;
+  event.preventDefault();
+  showRestartStep(1);
+}
+
+// "Start new session" keeps the dialog open when this tap corrected the custom field (see durationPicker).
+function onStartNewSessionClick(event) {
+  if (restartPicker && restartPicker.read() === null) event.preventDefault();
 }
 
 async function askContinueOrRestart() {
@@ -731,7 +1203,12 @@ async function askContinueOrRestart() {
   const dialog = $("#restartDialog");
   if (dialog.open) return;
 
-  const readMinutes = durationPicker($("#restartDuration"), Math.round(session.durationMs / MIN));
+  // Every opening starts at step 1 with fresh chips, even after a reload or a takeover.
+  const texts = RESTART_TEXTS[session.mode] || RESTART_TEXTS.simple;
+  $("#restartTitle").textContent = texts.title;
+  $("#restartText").textContent = texts.text;
+  showRestartStep(1);
+  restartPicker = durationPicker($("#restartDuration"), Math.round(session.durationMs / MIN));
 
   // "Save the first X to history": X is the time so far, and if it's kept, the
   // session is saved as ending right now, so what's shown is what's saved. Only
@@ -742,34 +1219,505 @@ async function askContinueOrRestart() {
   $("#restartSave").checked = true;
   $("#restartSaveText").textContent = `Save the first ${formatDuration(cutAt - session.startedAt)} to history`;
 
+  const asked = session;
   const answer = await ask(dialog);
   if (!session || session.endedAt) return; // the timer ran out while the question was open
+  if (session !== asked) return; // another tab took the session over meanwhile (loseControl)
 
-  // Answered (Esc counts as "continue"), so a reload won't ask again.
+  // Answered (Esc in step 1 counts as "continue"), so a reload won't ask again.
   session.restartPending = false;
   save(SESSION_KEY, session);
   if (answer === "restart") {
     const { characterId, mode } = session;
     // The checkbox only matters here: "Continue" keeps the session running.
-    if (canSave && $("#restartSave").checked && saveFinishedSession({ ...session, endedAt: cutAt }, "startOver")) {
-      requestPersistentStorage();
-    }
-    startSession(characterId, mode, readMinutes());
+    const saved = canSave && $("#restartSave").checked ? saveFinishedSession({ ...session, endedAt: cutAt }, "startOver") : "";
+    if (saved === "saved" || saved === "exists") requestPersistentStorage();
+    // value(), not read(): Start new session's click already let it through, so it must never block here.
+    // a waiting time away card is dropped with the old session
+    const canSaveNow = startSession(characterId, mode, restartPicker.value());
+    // Only one line fits: if nothing can be saved at all, the new session's note (already shown by
+    // startSession) also covers the lost first part.
+    if (saved === "failed" && canSaveNow) showSaveErrorNote(RESTART_SAVE_ERROR);
+  } else {
+    askPendingAway();
   }
 }
 
 async function onEndClick() {
-  // No picker behind this dialog, and a waiting restart question waits until it's answered.
-  closePicker(false);
+  // Tapped during the Undo window: the distraction stays logged and Undo is over for good (it
+  // doesn't come back after Keep going). false: a waiting restart question doesn't open now.
+  closeUndo(false);
+  // The picker waits behind this dialog, and a waiting restart question waits until it's answered.
+  pausePicker();
   // "Save this session to your history": only offered when it could be saved at all
   // (same 1-minute rule as saving). Ticked every time the dialog opens, never remembered.
   const canSave = Date.now() - session.startedAt >= HISTORY_MIN_MS;
   $("#endSaveRow").hidden = !canSave;
   $("#endSave").checked = true;
-  if ((await ask($("#endDialog"))) === "end" && session && !session.endedAt) {
+  const asked = session;
+  const answer = await ask($("#endDialog"));
+  if (session !== asked) return; // another tab took the session over meanwhile (loseControl)
+  if (answer === "end" && session && !session.endedAt) {
     finishSession(Date.now(), !canSave || $("#endSave").checked);
   } else {
+    resumePicker();
+    askPendingAway();
     askPendingRestart();
+  }
+}
+
+// ---------- one tab at a time (Web Locks API) ----------
+
+// With the app open in several tabs (or a tab and the installed app), only the tab holding the
+// browser lock SESSION_LOCK runs the running session: timers, reactions, sounds, the time away
+// card and every save. The others show "This session is open in another tab." (elsewhereScreen).
+// The browser frees the lock by itself when its tab is closed, reloaded or crashes. "Continue
+// here" takes it from the other tab, which then stops at once without saving anything more.
+// The lock is held from the start (or resume) of a session until it's finished or discarded.
+// The setup screen, the summary, history.html and stats.html need no lock.
+// Without Web Locks (old browsers, or index.html opened as a file: locks need HTTPS) every tab
+// runs the session on its own, as before this existed.
+const SESSION_LOCK = "ct_session"; // a lock name, not a storage key: nothing is saved under it
+const locks = (() => {
+  try {
+    return navigator.locks && typeof navigator.locks.request === "function" ? navigator.locks : null;
+  } catch {
+    return null;
+  }
+})();
+// hold: { release } while this tab holds the lock. pending: an unanswered request (see takeControl).
+const control = { hold: null, pending: null };
+
+// The session saved in ct_session_v1, if one is running (or ran out without being saved yet).
+function savedRunningSession() {
+  const saved = load(SESSION_KEY, null);
+  return saved && !saved.endedAt && characterById(saved.characterId) ? saved : null;
+}
+
+// Resolves true once this tab holds the lock, false if another tab holds it. steal: take it from
+// that tab ("Continue here"). Without Web Locks, or if the browser refuses the request, always true.
+function takeControl(steal) {
+  if (!locks || control.hold) return Promise.resolve(true);
+  if (control.pending) return control.pending; // e.g. a quick second tap on Start
+  const mine = { release: null };
+  control.pending = new Promise((resolve) => {
+    locks
+      .request(SESSION_LOCK, steal ? { steal: true } : { ifAvailable: true }, (lock) => {
+        control.pending = null;
+        if (!lock) {
+          resolve(false);
+          return undefined;
+        }
+        control.hold = mine;
+        resolve(true);
+        return new Promise((release) => (mine.release = release)); // held until releaseControl()
+      })
+      .catch(() => {
+        control.pending = null;
+        if (control.hold === mine) {
+          control.hold = null;
+          loseControl(); // another tab took it ("Continue here" there)
+        } else {
+          resolve(true); // refused before it was granted: carry on as without Web Locks
+        }
+      });
+  });
+  return control.pending;
+}
+
+function releaseControl() {
+  const hold = control.hold;
+  control.hold = null;
+  if (hold) hold.release();
+}
+
+// Another tab took the session over. Everything here stops, and session is dropped before the
+// dialogs close, so nothing that waits on them (or on a timer) saves anything more.
+function loseControl() {
+  clearInterval(tickTimer);
+  cancelLeaveReminder();
+  stopStage();
+  closePicker(false);
+  closeUndo(false);
+  Object.assign(away, { from: 0, ms: 0, open: false, yes: false, hiddenAt: 0 });
+  session = null;
+  document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
+  document.title = BASE_TITLE;
+  showElsewhere();
+}
+
+// Picks up the session saved in ct_session_v1: after a reload, or when this tab takes it over.
+// It's read only now, after the lock, so whatever the other tab logged is in it. Taking over
+// works exactly like a reload: a leftAt the other tab saved when it was hidden (the switch to
+// this tab) counts like a normal return, so 15 s or more away asks the time away card, here only.
+// Returns false if there's no running session any more (it ended in the meantime).
+function resumeSavedSession() {
+  const saved = savedRunningSession();
+  if (!saved) return false;
+  session = saved;
+  // A session saved before personalities came from the character can hold any
+  // style: it continues (and goes into the history) with the character's own.
+  session.style = personalityOf(characterById(saved.characterId));
+  save(SESSION_KEY, session);
+  if (Date.now() >= saved.startedAt + saved.durationMs) {
+    onTimerRanOut(false);
+  } else {
+    enterSession();
+    onVisibilityChange(); // a leave time saved before the reload counts like a normal return
+    askPendingRestart(); // the page was reloaded before the continue/restart question was answered
+  }
+  return true;
+}
+
+// Start-up with a running session saved, Start while one is saved, and "Continue here".
+// Another tab holds the lock (and steal isn't set): the notice. The session ended meanwhile: setup.
+async function continueSavedSession(steal) {
+  if (!(await takeControl(steal))) {
+    showElsewhere();
+    return;
+  }
+  if (session) return; // a quick second tap: it's already running here
+  if (resumeSavedSession()) return;
+  releaseControl();
+  renderCharacterList();
+  showScreen("setupScreen");
+}
+
+function onContinueHereClick() {
+  setupView.saved = null; // the setup screen comes back after this session, as after any other
+  if (prefs.endSound) unlockAudio(); // this tap is what allows the chime later, as on Start
+  continueSavedSession(true);
+}
+
+// Every way to the notice comes here: Start (or Quick start) while another tab runs the session,
+// start-up with the session running elsewhere, another tab's Continue here (loseControl), and the
+// switch by itself below. The screen before it is hidden now, so focus would be lost: it goes to
+// the heading, which a screen reader then reads. Without scrolling and with no focus outline.
+function showElsewhere() {
+  showScreen("elsewhereScreen");
+  $("#elsewhereTitle").focus({ preventScroll: true });
+}
+
+// A tab showing the setup screen switches to the notice by itself when another tab runs a
+// session, so Start doesn't have to be tapped to find out. Only from the plain setup screen:
+// never from the summary, the "Welcome back" question (session is set then), the ragebait
+// warning or any other open dialog, and never while this tab is starting a session itself.
+// Without Web Locks the tabs can't tell, so nothing changes there.
+function canShowElsewhere() {
+  return Boolean(
+    locks && !$("#setupScreen").hidden && !session && !control.hold && !control.pending &&
+    !document.querySelector("dialog[open]") && savedRunningSession()
+  );
+}
+
+// saved: where the setup screen was when the notice replaced it by itself (scroll position, the
+// focused element and, for a character card, its id: the cards are rebuilt on the way back), so it
+// looks the same when it comes back. In memory only. Cleared by Continue here.
+const setupView = { saved: null };
+
+function showElsewhereByItself() {
+  const focused = document.activeElement;
+  setupView.saved = {
+    scrollY: window.scrollY,
+    focused: focused && focused !== document.body ? focused : null,
+    cardId: focused && focused.classList.contains("char-card") ? focused.dataset.id : null,
+  };
+  showElsewhere();
+}
+
+// Back on the setup screen after the notice (the session ended in the other tab): the scroll
+// position and focus it had before the notice replaced it by itself. Nothing else needs restoring:
+// the choices live in this tab's prefs and the setup screen's fields, which the notice leaves alone.
+function restoreSetupView() {
+  const saved = setupView.saved;
+  setupView.saved = null;
+  if (!saved) return;
+  window.scrollTo(0, saved.scrollY);
+  const target = saved.cardId
+    ? $("#characterList").querySelector(`.char-card[data-id="${CSS.escape(saved.cardId)}"]`)
+    : saved.focused;
+  if (target && target.isConnected) target.focus({ preventScroll: true });
+}
+
+// The notice replaced the setup screen by itself and is still shown, with no answer pending here.
+function elsewhereByItself() {
+  return Boolean(setupView.saved && !$("#elsewhereScreen").hidden && !control.hold && !control.pending);
+}
+
+// The setup screen comes back as it was before the notice.
+function backToSetup() {
+  renderCharacterList();
+  showScreen("setupScreen");
+  restoreSetupView();
+}
+
+// The page is shown again (another tab or app, or the back/forward cache). Android can freeze a
+// tab in the background, so it may have missed the storage event of a session started elsewhere.
+// The saved session alone isn't enough here: its tab may have been closed meanwhile, and then
+// Start resumes it, as before. So it only switches if another tab holds the lock (this one doesn't).
+// The other way round too: a notice shown by itself goes back to the setup screen when no tab
+// holds the lock any more. Closing a tab saves its session one last time (the leave time), so the
+// notice can come up in the very moment that tab goes away, and no storage event follows.
+async function checkSessionElsewhere() {
+  if (document.hidden || !locks || (!canShowElsewhere() && !elsewhereByItself())) return;
+  let held = [];
+  try {
+    ({ held } = await locks.query());
+  } catch {
+    return;
+  }
+  if (document.hidden) return;
+  const heldElsewhere = held.some((lock) => lock.name === SESSION_LOCK);
+  // Checked again: something may have changed while the browser answered.
+  if (heldElsewhere && canShowElsewhere()) showElsewhereByItself();
+  else if (!heldElsewhere && elsewhereByItself()) backToSetup();
+}
+
+// "storage" only fires in the other tabs of the site, never in the one that saved. Every save of
+// the running session fires it (each distraction, each leave), so both cases only act once:
+// a session started in another tab replaces the setup screen with the notice, and the notice goes
+// when the session ends there (finished or discarded), bringing the setup screen back as it was.
+function onStorage(event) {
+  if (event.key !== SESSION_KEY && event.key !== null) return; // null: all storage was cleared
+  if (canShowElsewhere()) {
+    showElsewhereByItself();
+    return;
+  }
+  if ($("#elsewhereScreen").hidden || savedRunningSession()) return;
+  backToSetup();
+}
+
+// ---------- time away ----------
+
+// The page was hidden or shown again. The browser can't tell another app or tab from a locked
+// screen, so the card only says "away". Nothing is ever logged without a tap.
+function onVisibilityChange() {
+  if (!document.hidden) cancelLeaveReminder(); // any way back, also after the session ended meanwhile
+  if (!session || session.endedAt) return;
+  if (document.hidden) noteLeave();
+  else noteReturn();
+}
+
+// Saved at once: on Android a background tab is often discarded and reloaded on return.
+// If a card is already open or waiting, leftAt keeps its start: the time away then runs from
+// the first leave to the last return, so after such a reload the card still covers all of it.
+function noteLeave() {
+  away.hiddenAt = Date.now();
+  showLeaveReminder();
+  if (session.leftAt) return;
+  session.leftAt = away.ms ? away.from : away.hiddenAt;
+  save(SESSION_KEY, session);
+}
+
+// Also runs right after a reload, with the leftAt saved before it.
+function noteReturn() {
+  if (!session.leftAt) return;
+  tick(); // the timer check comes first: if the session ran out while away, the end logic wins
+  if (!session || session.endedAt) return;
+  const now = Date.now();
+  const from = session.leftAt;
+  // With a card open or waiting, only this latest absence decides whether anything changes.
+  const absence = away.ms ? now - away.hiddenAt : now - from;
+  delete session.leftAt;
+  save(SESSION_KEY, session);
+  if (absence < AWAY_ASK_AFTER_MS) return; // short: nothing happens
+  away.from = from;
+  away.ms = Math.floor((now - from) / 1000) * 1000; // whole seconds, as shown and saved
+  closeUndo(false); // its 5 s are long over, but timers in a hidden page can run late
+  if (away.open) showAwayQuestion(); // left again while the card was open: the new total
+  else askPendingAway();
+}
+
+// An open question (End session, continue/restart) comes first: closing it calls this again.
+function askPendingAway() {
+  if (!away.ms || away.open || !session || session.endedAt) return;
+  if (document.querySelector("dialog[open]")) return;
+  away.open = true;
+  away.yes = false;
+  // The level1 pose, held still: no blinking and no "doing well" pose while the card is open.
+  stopReaction();
+  stage.reacting = true;
+  setPose("level1");
+  showAwayQuestion();
+  $("#awayDialog").showModal();
+}
+
+function showAwayQuestion() {
+  $("#awayTitle").textContent = `You were away for ${formatDuration(away.ms)}.`;
+}
+
+// Every way the card closes ends up here: "Yes", "No", Esc, the session ending.
+function onAwayClosed() {
+  const { yes, from, ms } = away;
+  Object.assign(away, { from: 0, ms: 0, open: false, yes: false });
+  if (!session || session.endedAt) return; // the timer ran out while it was open: nothing is logged
+  if (yes) logAwayDistraction(from, ms); // its reaction takes over the pose
+  else endReaction();
+  askPendingRestart();
+}
+
+// "Yes" logs the measured time away: at is the moment the page was left, the level comes
+// from the length (awayLevel in history-store.js), and Advanced mode saves the length itself
+// (Simple mode has no lengths: ms 0). The category is "phone" (shown as "Screen") and there's no
+// picker. Reaction, Undo and the level 5 continue/restart question work as for a tap. If only
+// part of it was a distraction, Undo it and log that part by hand.
+function logAwayDistraction(from, ms) {
+  const level = awayLevel(ms);
+  const distraction = {
+    at: from, level, ms: session.mode === "advanced" ? ms : 0, category: "phone", source: "away",
+  };
+  addDistraction(distraction, level === 5);
+}
+
+// ---------- leave reminder (system notification) ----------
+
+// Optional: the setup checkbox "Remind me if I leave the app" (prefs.leaveReminder, off by default).
+// Page hidden during a running session: one system notification at once, shown through the
+// service worker, because new Notification() doesn't work on Android Chrome. Tapping it brings the
+// app back (notificationclick in sw.js). Coming back any way closes it. It never logs anything: the
+// time away card handles the return as always. It's the app speaking, never a character.
+// No timer: Android throttles hidden pages hard, so a delayed one came late or not at all. And no
+// waiting either: showNotification is called inside the visibilitychange handler itself, with the
+// registration fetched beforehand, because iOS freezes a Home Screen app very soon after it's left.
+// No push, no backend.
+const LEAVE_REMINDER_TAG = "ct-leave-reminder"; // a new notification with this tag replaces the old one
+const LEAVE_REMINDER_HINT =
+  "Notifications are blocked for this site. You can allow them in your browser's site settings.";
+// The one switch for iPhones and iPads. Untested on a real device: false turns it off there again.
+const LEAVE_REMINDER_ON_IOS = true;
+// registration: the service worker registration, kept ready for the synchronous call (see above).
+// unloading: set by pagehide. It comes before the visibilitychange of a reload, a closed tab or a
+// link to another page, and these never get a reminder: the session carries on as before and is
+// picked up on the next open. Cleared by pageshow (back from the back/forward cache).
+const leaveReminder = { registration: null, unloading: false };
+
+// iPhones and iPads: only in the Home Screen app. Safari tabs have no web notifications at all
+// (there the checks below are false anyway: iOS only turns these APIs on for Home Screen apps).
+function leaveReminderSupported() {
+  try {
+    return (
+      (!isIOS() || (LEAVE_REMINDER_ON_IOS && inHomeScreenApp())) &&
+      "Notification" in window && "serviceWorker" in navigator &&
+      "ServiceWorkerRegistration" in window && "showNotification" in ServiceWorkerRegistration.prototype
+    );
+  } catch {
+    return false;
+  }
+}
+
+function notificationsAllowed() {
+  return leaveReminderSupported() && Notification.permission === "granted";
+}
+
+// Unsupported: the row stays hidden. Permission taken back (or reset) since the box was ticked:
+// it shows unticked, and permission is never asked for again without a tap.
+function initLeaveReminder() {
+  if (!leaveReminderSupported()) return;
+  if (prefs.leaveReminder && !notificationsAllowed()) savePrefs({ leaveReminder: false });
+  const check = $("#leaveReminderCheck");
+  check.checked = prefs.leaveReminder;
+  check.addEventListener("change", onLeaveReminderChange);
+  $("#leaveReminderRow").hidden = false;
+  keepLeaveReminderRegistration();
+}
+
+// Keeps the registration for showLeaveReminder. getRegistration answers at once if the service
+// worker is already set up. On a first visit it isn't yet (sw-register.js registers it after this
+// load), so ready fills it in as soon as the worker is active. The object stays the same after an
+// update (its active worker changes), so this is only needed once per page.
+function keepLeaveReminderRegistration() {
+  const keep = (registration) => {
+    if (registration) leaveReminder.registration = registration;
+  };
+  try {
+    navigator.serviceWorker.getRegistration().then(keep, () => {});
+    navigator.serviceWorker.ready.then(keep, () => {});
+  } catch {
+    // not supported: no reminder
+  }
+}
+
+// Browsers only show the permission prompt inside a tap, so it's asked right here.
+// Denied (now or earlier): unticked, with the hint. Prompt closed without an answer: just unticked.
+async function onLeaveReminderChange() {
+  const check = $("#leaveReminderCheck");
+  const hint = $("#leaveReminderHint");
+  hint.hidden = true;
+  if (!check.checked) {
+    savePrefs({ leaveReminder: false });
+    return;
+  }
+  let permission = Notification.permission;
+  if (permission === "default") {
+    try {
+      permission = await new Promise((resolve) => {
+        const asked = Notification.requestPermission(resolve); // older browsers: the callback only
+        if (asked) asked.then(resolve, () => resolve("default"));
+      });
+    } catch {
+      permission = "default";
+    }
+  }
+  const allowed = permission === "granted";
+  check.checked = allowed;
+  savePrefs({ leaveReminder: allowed });
+  if (permission === "denied") {
+    hint.hidden = false;
+    hint.textContent = LEAVE_REMINDER_HINT; // set after showing it, so screen readers announce it
+  }
+}
+
+// More than AWAY_ASK_AFTER_MS of the session must be left: a session ending sooner gets its chime
+// and summary instead. Only the tab running the session (see "one tab at a time").
+function leaveReminderWanted() {
+  return Boolean(
+    prefs.leaveReminder && notificationsAllowed() && document.hidden && !leaveReminder.unloading &&
+    session && !session.endedAt && (!locks || control.hold) &&
+    session.startedAt + session.durationMs - Date.now() > AWAY_ASK_AFTER_MS,
+  );
+}
+
+// From noteLeave, i.e. inside the visibilitychange handler. Every leave shows it again; the same
+// tag means there's never more than one. Sound and vibration: the phone's defaults for the site.
+// renotify: a notification that replaces one with the same tag (e.g. an older reminder still in the
+// notification shade) is silent without it. Browsers that don't support it (Safari, Firefox) skip
+// it; it only throws with an empty tag, and the tag here is never empty.
+function showLeaveReminder() {
+  if (!leaveReminderWanted()) return;
+  const registration = leaveReminder.registration;
+  if (!registration || !registration.active) return; // no service worker yet: no reminder
+  let shown;
+  try {
+    shown = registration.showNotification("Your session is still running", {
+      body: "Is this part of what you're focusing on? Tap to go back.",
+      icon: "icons/icon-192.png",
+      tag: LEAVE_REMINDER_TAG,
+      renotify: true,
+    });
+  } catch {
+    return; // unsupported: the session carries on without it
+  }
+  Promise.resolve(shown).then(
+    // Came back, or the session ended, while it was being shown.
+    () => {
+      if (!document.hidden || !session || session.endedAt) cancelLeaveReminder();
+    },
+    () => {}, // refused: the session carries on without it
+  );
+}
+
+// Closes it if it's showing: on every return to the page, every end of the session in this tab,
+// and at start-up.
+function cancelLeaveReminder() {
+  if (!notificationsAllowed()) return; // nothing can be showing
+  try {
+    navigator.serviceWorker
+      .getRegistration()
+      .then((registration) => (registration ? registration.getNotifications({ tag: LEAVE_REMINDER_TAG }) : []))
+      .then((notifications) => notifications.forEach((notification) => notification.close()))
+      .catch(() => {});
+  } catch {
+    // not supported: fine
   }
 }
 
@@ -779,8 +1727,7 @@ async function onEndClick() {
 // permission bar right after the session (persistRequested is still set, so it's not tried again).
 function requestPersistentStorage() {
   if (prefs.persistRequested) return;
-  prefs.persistRequested = true;
-  savePrefs();
+  savePrefs({ persistRequested: true });
   if (/Firefox\/|FxiOS/.test(navigator.userAgent)) return;
   try {
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
@@ -794,12 +1741,15 @@ function requestPersistentStorage() {
 // to the setup screen instead, like Discard in the "Welcome back" dialog.
 function finishSession(endedAt, keep = true) {
   clearInterval(tickTimer);
+  cancelLeaveReminder();
   stopStage();
   closePicker(false);
   closeUndo(false);
   session.endedAt = Math.min(endedAt, session.startedAt + session.durationMs);
-  if (keep && saveFinishedSession(session)) requestPersistentStorage();
+  const saved = keep ? saveFinishedSession(session) : "";
+  if (saved === "saved" || saved === "exists") requestPersistentStorage();
   remove(SESSION_KEY);
+  releaseControl();
   document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
   document.title = BASE_TITLE;
   if (!keep) {
@@ -808,8 +1758,10 @@ function finishSession(endedAt, keep = true) {
     showScreen("setupScreen");
     return;
   }
-  renderSummary();
+  renderSummary(saved === "failed");
   showScreen("summaryScreen");
+  // Focus was on the session (now hidden): the title gets it, so a screen reader reads the result.
+  $("#summaryTitle").focus({ preventScroll: true });
 }
 
 // Back soon after the end (or watching it end): saved as a full session, as always.
@@ -829,6 +1781,7 @@ function onTimerRanOut(running) {
 
 async function askSaveLateSession(endedAt) {
   clearInterval(tickTimer);
+  cancelLeaveReminder();
   stopStage();
   closePicker(false);
   closeUndo(false);
@@ -846,13 +1799,19 @@ async function askSaveLateSession(endedAt) {
     `${character.name} ended ${formatTimeAgo(Date.now() - endedAt)}.`;
 
   // Discard deletes the session, so only a tap on a button answers (Esc asks again).
+  // Another tab taking the session over closes the dialog: then this one stops asking.
+  const late = session;
   let answer = "";
-  while (answer !== "save" && answer !== "discard") answer = await ask($("#lateDialog"));
+  while (answer !== "save" && answer !== "discard") {
+    answer = await ask($("#lateDialog"));
+    if (session !== late) return;
+  }
 
   if (answer === "save") {
     finishSession(endedAt);
   } else {
     remove(SESSION_KEY);
+    releaseControl();
     session = null;
     renderCharacterList();
   }
@@ -909,39 +1868,52 @@ function showMotivation() {
 // ---------- summary ----------
 
 // The pose, title and message all follow the session result (great / okay / rough / early / short).
+// Both modes show a factual line (time and distractions); Simple mode also shows a sentence above it.
 // A short session only shows the title and the "not saved" note, in both modes.
-function renderSummary() {
+// saveFailed: the browser refused to store the session, so the summary says so.
+function renderSummary(saveFailed) {
   const character = characterById(session.characterId);
   const result = sessionResult(session);
   const short = result === "short";
   const img = $("#summaryImg");
-  img.alt = character.name;
-  setPoseImage(img, character, (SUMMARY_POSES[personalityOf(character)] || SUMMARY_POSES.kind)[result]);
+  const pose = (SUMMARY_POSES[personalityOf(character)] || SUMMARY_POSES.kind)[result];
+  img.alt = describePose(character, pose);
+  setPoseImage(img, character, pose);
 
   $("#summaryTitle").textContent = SUMMARY_TITLES[result];
   const percentEl = $("#summaryPercent");
+  const messageEl = $("#summaryMessage");
   const textEl = $("#summaryText");
   const noteEl = $("#summaryNote");
   noteEl.textContent = SUMMARY_SHORT_NOTE;
   noteEl.hidden = !short;
+  // Reset every time, so the next summary never shows an old error. The text is only set when it's
+  // shown, so a screen reader reads it once.
+  const saveErrorEl = $("#summarySaveError");
+  saveErrorEl.textContent = saveFailed ? SUMMARY_SAVE_ERROR : "";
+  saveErrorEl.hidden = !saveFailed;
+
+  const { elapsedMs: elapsed, distractedMs: distracted, focusPercent: percent } = sessionFocus(session);
+  const count = session.distractions.length;
+  const logged = `with ${count} distraction${count === 1 ? "" : "s"} logged.`;
+  // Ended before the timer ran out: also say how long it was meant to be.
+  const planned = elapsed < session.durationMs ? ` (${formatDuration(session.durationMs)} planned)` : "";
+  textEl.hidden = short; // means nothing after a few seconds
 
   if (session.mode === "advanced") {
-    const { elapsedMs: elapsed, distractedMs: distracted, focusPercent: percent } = sessionFocus(session);
-    const count = session.distractions.length;
-    // Ended before the timer ran out: also say how long it was meant to be.
-    const planned = elapsed < session.durationMs ? ` (${formatDuration(session.durationMs)} planned)` : "";
-
+    messageEl.hidden = true;
     percentEl.textContent = `${percent}% focused`;
-    percentEl.hidden = short; // means nothing after a few seconds
+    percentEl.hidden = short;
     textEl.textContent =
-      `You focused for ${formatDuration(elapsed - distracted)} out of ${formatDuration(elapsed)}${planned}, ` +
-      `with ${count} distraction${count === 1 ? "" : "s"} logged.`;
-    textEl.hidden = short;
+      `You focused for ${formatDuration(elapsed - distracted)} out of ${formatDuration(elapsed)}${planned}, ${logged}`;
   } else {
+    // Simple mode has no lengths, so the elapsed time includes the distractions:
+    // it's the session's length, not focused time. The character's sentence comes first.
     percentEl.hidden = true;
     const messages = SIMPLE_SUMMARY_MESSAGES[result];
-    textEl.hidden = !messages; // a short session only shows the note
-    if (messages) textEl.textContent = messages[Math.floor(Math.random() * messages.length)];
+    messageEl.hidden = !messages; // a short session only shows the note
+    if (messages) messageEl.textContent = messages[Math.floor(Math.random() * messages.length)];
+    textEl.textContent = `Your session ran ${formatDuration(elapsed)}${planned}, ${logged}`;
   }
 
   // Top 3 picked categories. Hidden if none was picked this session, or if it was short.
@@ -991,19 +1963,36 @@ function formatTimeAgo(ms) {
 // ---------- start-up ----------
 
 function init() {
+  // On window, capture phase: runs before every other click listener (see "tap guard").
+  window.addEventListener("click", onGuardedClick, true);
   renderCharacterList();
   bindChoiceGroups();
   bindSettingChecks();
+  initLeaveReminder();
+  cancelLeaveReminder(); // e.g. its tap reopened the app after the browser discarded the page
   buildCategoryButtons();
-  readSetupMinutes = durationPicker($("#setupDuration"), prefs.minutes);
+  setupPicker = durationPicker($("#setupDuration"), prefs.minutes);
+  // Capture phase, so the count goes up before the press moves focus (see pressCount).
+  for (const type of ["pointerdown", "keydown"]) document.addEventListener(type, () => pressCount++, true);
 
-  $("#startButton").addEventListener("click", onStartClick);
+  // Wrapped, so the click event doesn't arrive as fromQuickStart.
+  $("#startButton").addEventListener("click", () => onStartClick(false));
+  $("#quickStartButton").addEventListener("click", () => onStartClick(true));
+  $("#quickStartChange").addEventListener("click", onQuickStartChange);
+  // Chips and the Custom field are inside #setupDuration: their events bubble up to it, after
+  // the picker's own handlers have set the value.
+  for (const type of ["click", "input", "change"]) $("#setupDuration").addEventListener(type, updateQuickStart);
+  $('#restartDialog button[value="restart"]').addEventListener("click", onStartNewSessionClick);
+  $("#restartOverButton").addEventListener("click", () => showRestartStep(2));
+  $("#restartBackButton").addEventListener("click", () => showRestartStep(1));
+  $("#restartDialog").addEventListener("cancel", onRestartCancel);
+  $("#howItWorksLink").addEventListener("click", openHowItWorks);
+  $("#howItWorksButton").addEventListener("click", dismissHowItWorks);
   $("#homeScreenTipButton").addEventListener("click", dismissHomeScreenTip);
   $("#motivateButton").addEventListener("click", onMotivateClick);
   $("#motivationClose").addEventListener("click", () => ($("#motivationCard").hidden = true));
   $("#endButton").addEventListener("click", onEndClick);
   $("#undoButton").addEventListener("click", onUndoClick);
-  $("#undoButton").style.setProperty("--undo-timeout", `${UNDO_WINDOW_MS}ms`);
   $("#skipCategoryButton").addEventListener("click", () => closePicker(true));
   $("#newSessionButton").addEventListener("click", () => {
     session = null;
@@ -1014,21 +2003,30 @@ function init() {
   // touchend for iPhones, which don't always send click for taps on plain areas.
   for (const type of ["touchend", "click", "keydown"]) document.addEventListener(type, onSessionInput, true);
   document.addEventListener("visibilitychange", updateWakeLock);
+  document.addEventListener("visibilitychange", onVisibilityChange);
+  document.addEventListener("visibilitychange", checkSessionElsewhere);
+  // Back from the browser's site settings: the setup note follows what's allowed now.
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) checkStorage();
+  });
+  $("#awayNoButton").addEventListener("click", () => $("#awayDialog").close());
+  $("#awayYesButton").addEventListener("click", () => {
+    away.yes = true;
+    $("#awayDialog").close();
+  });
+  $("#awayDialog").addEventListener("close", onAwayClosed);
+  $("#continueHereButton").addEventListener("click", onContinueHereClick);
+  window.addEventListener("storage", onStorage);
+  window.addEventListener("storage", onHistoryStorage);
+  window.addEventListener("pageshow", onPageShow);
+  window.addEventListener("pagehide", () => (leaveReminder.unloading = true)); // see "leave reminder"
 
-  // Resume a session that was running when the page was closed or reloaded.
-  const saved = load(SESSION_KEY, null);
-  if (saved && !saved.endedAt && characterById(saved.characterId)) {
-    session = saved;
-    // A session saved before personalities came from the character can hold any
-    // style: it continues (and goes into the history) with the character's own.
-    session.style = personalityOf(characterById(saved.characterId));
-    save(SESSION_KEY, session);
-    if (Date.now() >= saved.startedAt + saved.durationMs) {
-      onTimerRanOut(false);
-    } else {
-      enterSession();
-      askPendingRestart(); // the page was reloaded before the continue/restart question was answered
-    }
+  checkStorage();
+
+  // Resume a session that was running when the page was closed or reloaded,
+  // unless another tab runs it (see "one tab at a time").
+  if (savedRunningSession()) {
+    continueSavedSession(false);
     return;
   }
   showScreen("setupScreen");

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Your History · ConcenTraining</title>
-  <meta name="description" content="Your finished focus sessions, streaks and focus trends.">
+  <meta name="description" content="Your finished focus sessions, streaks, time per week and focus trends.">
   <link rel="stylesheet" href="css/style.css">
   <!-- Home Screen / install support. Colors: --bg of the light and dark theme (css/style.css). -->
   <link rel="manifest" href="manifest.webmanifest">
@@ -24,14 +24,22 @@
 
     <p class="storage-note">
       Your history is stored only in this browser. Clearing site data, using private mode or
-      switching devices starts it over. Use <strong>Export</strong> below to keep a backup.
+      switching devices starts it over. Use <strong>Export</strong> below before you switch phones
+      or clear your browser data.
       <span id="iosStorageNote" hidden>
         On iPhone and iPad, Safari may also erase it if you don't visit for 7 days. Adding ConcenTraining
         to your Home Screen (tap Share, or ••• → Share, then Add to Home Screen) keeps it.
       </span>
     </p>
 
-    <p id="historyEmpty" class="empty-state" hidden>
+    <!-- Shown instead of the empty state (and above the sessions, if any can still be read) while
+         the browser doesn't let the site save anything (renderStorageNote in history.js). Its text
+         is set when it appears, so a screen reader reads it once. tabindex="-1": can get the focus
+         like the empty state. -->
+    <p id="historyStorageNote" class="error storage-warning" role="status" tabindex="-1" hidden></p>
+
+    <!-- tabindex="-1": gets the focus after the last session is deleted (history.js). -->
+    <p id="historyEmpty" class="empty-state" tabindex="-1" hidden>
       No finished sessions yet. Every session that runs at least 1 minute shows up here once it ends.
       <a href="./">Start one →</a>
     </p>
@@ -49,6 +57,13 @@
           </div>
         </div>
         <p class="muted small">A streak counts days with at least one finished session.</p>
+      </section>
+
+      <section class="history-section">
+        <h2>Time per week</h2>
+        <p class="muted small">All sessions over the last 12 weeks, Simple and Advanced.</p>
+        <div id="timeChart" class="chart"></div>
+        <p id="timeNote" class="muted"></p>
       </section>
 
       <section class="history-section">
@@ -71,17 +86,25 @@
       </section>
 
       <section class="history-section">
-        <h2 id="listTitle">Last 30 sessions</h2>
+        <div class="list-head">
+          <h2 id="listTitle">Last 30 sessions</h2>
+          <button id="editButton" type="button" class="btn compact">Edit</button>
+        </div>
         <ol id="sessionList" class="session-list"></ol>
       </section>
     </div>
 
+    <!-- "Session deleted." or the delete error. Outside #historyContent, so it still shows (and is
+         read out) after the last session is deleted. Takes no space while it's empty. -->
+    <p id="deleteStatus" class="delete-status" role="status"></p>
+
     <section id="backup" class="history-section">
       <h2>Backup</h2>
       <p class="muted small">
-        Export saves all your sessions as a .json file. Import adds the sessions from such a file;
-        sessions you already have are skipped. Only the newest 1000 sessions are kept: if the total
-        goes over 1000, the oldest sessions are removed.
+        Your sessions are saved automatically on this device. Export a copy if you switch phones or
+        clear your browser data. Export saves all your sessions as a .json file. Import adds the
+        sessions from such a file; sessions you already have are skipped. Only the newest 1000
+        sessions are kept: if the total goes over 1000, the oldest sessions are removed.
       </p>
       <div class="backup-actions">
         <button id="exportButton" type="button" class="btn">Export history</button>
@@ -91,11 +114,29 @@
       <p id="backupStatus" class="backup-status" role="status" hidden></p>
     </section>
 
-    <p><a href="./">← Back to the timer</a></p>
+    <p><a href="./" class="back-link">← Back to the timer</a></p>
+
+    <p class="page-footer"><a href="privacy.html" class="footer-link">Privacy</a></p>
   </main>
 
+  <!-- Opened by a session's Delete button in edit mode. Cancel comes first, so it has the focus
+       when the dialog opens. Esc and Back close it like Cancel. -->
+  <dialog id="deleteDialog" aria-labelledby="deleteTitle" aria-describedby="deleteSummary deleteText">
+    <form method="dialog">
+      <h2 id="deleteTitle">Delete this session?</h2>
+      <p id="deleteSummary" class="delete-summary"></p>
+      <p id="deleteText">It will be removed from your history and from every number on this page.</p>
+      <div class="dialog-actions">
+        <button value="cancel" class="btn">Cancel</button>
+        <button value="delete" class="btn danger">Delete</button>
+      </div>
+    </form>
+  </dialog>
+
   <script src="js/data/characters.js"></script>
+  <script src="js/data/messages.js"></script>
   <script src="js/history-store.js"></script>
   <script src="js/history.js"></script>
+  <script src="js/sw-register.js"></script>
 </body>
 </html>

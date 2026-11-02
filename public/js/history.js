@@ -1,13 +1,29 @@
 "use strict";
 
-// History page: streaks, weekly focus trend, best time of day, distraction
-// categories, recent sessions.
+// History page: streaks, time per week, weekly focus trend, best time of day,
+// distraction categories, recent sessions.
 // All dates use the device's local time.
 
 const TREND_WEEKS = 12;
 const LIST_SIZE = 30;
 // A time-of-day slot can only be "best" once it has this many sessions with a focus %.
 const MIN_SESSIONS_FOR_BEST_TIME = 3;
+
+// Edit mode (the Edit / Done button above the list): each listed session gets a Delete button.
+// Stays on across redraws, so several sessions can be deleted in a row, and turns off when the
+// history becomes empty.
+let editing = false;
+
+// Whether this browser lets the site save anything (storageWorks in history-store.js). Checked
+// when the page loads and whenever it's shown again (e.g. back from the browser's site settings);
+// while it's false, the storage note shows instead of the empty state (renderStorageNote).
+let canSave = true;
+
+// What the page was last drawn from: the day, canSave and the saved history as text (see historySource).
+// renderPending: the history may have changed while the Delete dialog was open; it's drawn once
+// the dialog closes, never under it.
+let drawnFrom = null;
+let renderPending = false;
 
 // Sessions are grouped by the hour they started.
 const DAY_PARTS = [
@@ -98,6 +114,20 @@ function calcWeeklyTrend(history, now) {
   return weeks;
 }
 
+// Session time per week, all modes: the sum of elapsedMs, so in Simple mode it
+// includes the distractions. Same weeks as the focus trend (by start time).
+function calcWeeklyTime(history, now) {
+  const thisWeek = startOfWeek(now);
+  const weeks = [];
+  for (let i = TREND_WEEKS - 1; i >= 0; i--) {
+    const start = addDays(thisWeek, -7 * i);
+    const end = addDays(start, 7);
+    const entries = history.filter((entry) => entry.startedAt >= start.getTime() && entry.startedAt < end.getTime());
+    weeks.push({ start, ms: entries.reduce((sum, entry) => sum + entry.elapsedMs, 0), count: entries.length });
+  }
+  return weeks;
+}
+
 function calcDayParts(history) {
   return DAY_PARTS.map((part) => {
     const focus = combinedFocus(history.filter((entry) => part.matches(new Date(entry.startedAt).getHours())));
@@ -122,11 +152,30 @@ function formatSessionDate(time) {
   return `${day} · ${clock}`;
 }
 
+// Rounded to whole minutes: "45 min", "1 h", "2 h 15 min".
+function formatTotalTime(ms) {
+  const total = Math.round(ms / 60000);
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  if (h === 0) return `${m} min`;
+  return m ? `${h} h ${m} min` : `${h} h`;
+}
+
 function formatSessionLength(entry) {
   const planned = Math.round(entry.plannedMs / 60000);
   if (entry.endedBy === "timer") return `${planned} min`;
   const actual = Math.max(1, Math.round(entry.elapsedMs / 60000));
   return `${actual} of ${planned} min`;
+}
+
+// One line about a session, for the delete dialog: "Grandma · Advanced · Mon 20 Oct · 14:05 · 25 min".
+function formatSessionSummary(entry) {
+  return [
+    characterName(entry.characterId),
+    capitalize(entry.mode),
+    formatSessionDate(entry.startedAt),
+    formatSessionLength(entry),
+  ].join(" · ");
 }
 
 function characterName(id) {
@@ -138,7 +187,7 @@ function capitalize(text) {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-// ---------- chart ----------
+// ---------- charts ----------
 
 // Line chart of weekly focus %. Weeks without data leave a gap in the line.
 // Colors come from CSS classes, so the chart follows light/dark mode.
@@ -188,12 +237,97 @@ function trendChartSvg(weeks) {
   </svg>`;
 }
 
+// The y-axis of the time chart: minutes while the busiest week is under 2 hours, hours
+// above that. The step is picked so there are at most 4 steps, and at least 2.
+function timeScale(maxMs) {
+  const maxMinutes = maxMs / 60000;
+  const [unit, unitMinutes, steps] =
+    maxMinutes < 120 ? ["min", 1, [5, 10, 15, 30]] : ["h", 60, [1, 2, 5, 10, 20, 50, 100]];
+  const max = maxMinutes / unitMinutes;
+  const step = steps.find((s) => Math.ceil(max / s) <= 4) || steps[steps.length - 1];
+  const stepCount = Math.max(2, Math.ceil(max / step));
+  const ticks = [];
+  for (let i = 0; i <= stepCount; i++) ticks.push({ ms: i * step * unitMinutes * 60000, label: `${i * step} ${unit}` });
+  return { topMs: stepCount * step * unitMinutes * 60000, ticks };
+}
+
+// Bar chart of session time per week. The current week is full color, earlier weeks lighter.
+// Weeks without sessions have no bar. Same size, labels and CSS classes as trendChartSvg.
+function timeChartSvg(weeks) {
+  const width = 400;
+  const height = 210;
+  const left = 52; // room for "120 min"
+  const right = 26;
+  const top = 12;
+  const bottom = 30;
+  const slot = (width - left - right) / weeks.length;
+  const barWidth = slot * 0.6;
+  const { topMs, ticks } = timeScale(Math.max(...weeks.map((week) => week.ms)));
+  const y = (ms) => top + (height - top - bottom) * (1 - ms / topMs);
+  const center = (i) => left + slot * (i + 0.5);
+
+  let grid = "";
+  for (const tick of ticks) {
+    grid += `<line class="chart-grid" x1="${left}" x2="${width - right}" y1="${y(tick.ms)}" y2="${y(tick.ms)}"/>`;
+    grid += `<text class="chart-label" x="${left - 6}" y="${y(tick.ms) + 4}" text-anchor="end">${tick.label}</text>`;
+  }
+
+  // Label every third week, ending with the current week.
+  let labels = "";
+  weeks.forEach((week, i) => {
+    if ((weeks.length - 1 - i) % 3 === 0) {
+      labels += `<text class="chart-label" x="${center(i)}" y="${height - 8}" text-anchor="middle">${formatShortDate(week.start)}</text>`;
+    }
+  });
+
+  let bars = "";
+  weeks.forEach((week, i) => {
+    if (week.ms === 0) return;
+    // At least 2 px tall, so a single short session still shows up next to a long week.
+    const h = Math.max(2, y(0) - y(week.ms));
+    const x0 = center(i) - barWidth / 2;
+    const y0 = y(0) - h;
+    const r = Math.min(3, h / 2); // rounded top corners only
+    const d =
+      `M${x0} ${y(0)} V${y0 + r} Q${x0} ${y0} ${x0 + r} ${y0} H${x0 + barWidth - r} ` +
+      `Q${x0 + barWidth} ${y0} ${x0 + barWidth} ${y0 + r} V${y(0)} Z`;
+    const current = i === weeks.length - 1 ? " current" : "";
+    bars +=
+      `<path class="chart-bar${current}" d="${d}">` +
+      `<title>Week of ${formatShortDate(week.start)}: ${formatTotalTime(week.ms)} (${plural(week.count, "session")})</title></path>`;
+  });
+
+  return `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Time spent in sessions per week for the last ${weeks.length} weeks">
+    ${grid}${labels}
+    ${bars}
+  </svg>`;
+}
+
 // ---------- rendering ----------
 
 function renderStreaks(history, now) {
   const { current, longest } = calcStreaks(history, now);
   document.getElementById("currentStreak").textContent = plural(current, "day");
   document.getElementById("longestStreak").textContent = plural(longest, "day");
+}
+
+function renderWeeklyTime(history, now) {
+  const weeks = calcWeeklyTime(history, now);
+  const chart = document.getElementById("timeChart");
+  const note = document.getElementById("timeNote");
+
+  if (weeks.every((week) => week.count === 0)) {
+    chart.innerHTML = "";
+    note.textContent = "No sessions in the last 12 weeks.";
+    return;
+  }
+
+  chart.innerHTML = timeChartSvg(weeks);
+  const thisWeek = weeks[weeks.length - 1];
+  note.textContent =
+    thisWeek.count === 0
+      ? "No sessions this week yet."
+      : `This week: ${formatTotalTime(thisWeek.ms)} across ${plural(thisWeek.count, "session")}.`;
 }
 
 function renderTrend(history, now) {
@@ -290,10 +424,16 @@ function renderCategories(history) {
 
 function renderSessionList(history) {
   const recent = history.slice(0, LIST_SIZE);
+  //   (no-break space): next to the Edit button at 320px the title wraps before "sessions (of 40)",
+  // not inside the brackets.
   document.getElementById("listTitle").textContent =
-    history.length > LIST_SIZE ? `Last ${LIST_SIZE} sessions (of ${history.length})` : plural(history.length, "session");
+    history.length > LIST_SIZE
+      ? `Last ${LIST_SIZE} sessions (of ${history.length})`
+      : plural(history.length, "session");
 
+  document.getElementById("editButton").textContent = editing ? "Done" : "Edit";
   const list = document.getElementById("sessionList");
+  list.classList.toggle("editing", editing);
   list.innerHTML = "";
   for (const entry of recent) {
     const item = document.createElement("li");
@@ -305,7 +445,7 @@ function renderSessionList(history) {
       </div>
       <div class="session-item-focus"></div>`;
     item.querySelector("strong").textContent = characterName(entry.characterId);
-    item.querySelector(".session-item-mode").textContent = `${capitalize(entry.mode)} · ${capitalize(entry.style)}`;
+    item.querySelector(".session-item-mode").textContent = `${capitalize(entry.mode)} · ${styleLabel(entry.style)}`;
     if (entry.endedBy === "startOver") {
       const tag = document.createElement("span");
       tag.className = "session-tag";
@@ -326,25 +466,196 @@ function renderSessionList(history) {
     } else {
       focus.textContent = `${entry.focusPercent}%`;
     }
+
+    // On its own line under the row's text, so the text keeps its full width.
+    if (editing) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "btn compact session-delete";
+      button.textContent = "Delete";
+      button.setAttribute(
+        "aria-label",
+        `Delete session: ${characterName(entry.characterId)}, ${formatSessionDate(entry.startedAt).replace(" · ", ", ")}`
+      );
+      button.dataset.startedAt = entry.startedAt;
+      button.dataset.summary = formatSessionSummary(entry);
+      item.append(button);
+    }
     list.append(item);
   }
 }
 
-// Draws (or redraws, after an import) everything that depends on the history.
+// Draws (or redraws, after an import or a delete) everything that depends on the history.
 function render() {
+  drawnFrom = historySource();
+  renderPending = false;
   const history = loadHistory();
   const empty = history.length === 0;
-  document.getElementById("historyEmpty").hidden = !empty;
+  renderStorageNote();
+  // "No finished sessions yet … Start one →" would be a promise this browser can't keep.
+  document.getElementById("historyEmpty").hidden = !empty || !canSave;
   document.getElementById("historyContent").hidden = empty;
   document.getElementById("exportButton").disabled = empty;
-  if (empty) return;
+  if (empty) {
+    editing = false;
+    return;
+  }
 
   const now = Date.now();
   renderStreaks(history, now);
+  renderWeeklyTime(history, now);
   renderTrend(history, now);
   renderDayParts(history);
   renderCategories(history);
   renderSessionList(history);
+}
+
+// "Your browser isn't letting this site save data": in place of the empty state, or above the
+// sessions if some can still be read (e.g. storage that is full, not blocked). Only changes when
+// canSave changed, and the text is set when it appears, so a screen reader reads it once.
+function renderStorageNote() {
+  const note = document.getElementById("historyStorageNote");
+  if (note.hidden === canSave) return;
+  note.textContent = canSave ? "" : HISTORY_STORAGE_NOTE;
+  note.hidden = canSave;
+}
+
+// What shows when there are no sessions: the empty state, or the storage note in its place.
+function emptyPlace() {
+  const empty = document.getElementById("historyEmpty");
+  return empty.hidden ? document.getElementById("historyStorageNote") : empty;
+}
+
+// ---------- changes made elsewhere ----------
+
+// The saved history as text, plus today's date: the streak and "this week" depend on the day too.
+// Same text as last time: nothing to draw again.
+function historySource() {
+  let saved = null;
+  try {
+    saved = localStorage.getItem(HISTORY_KEY);
+  } catch {
+    // storage blocked: loadHistory sees an empty history, so does this
+  }
+  return `${dayKey(new Date())}|${canSave}|${saved}`;
+}
+
+// The page keeps showing what it drew, so it's drawn again when the history (or canSave) may have changed
+// without this page: a session saved, deleted or imported in another tab (the storage event), a
+// return from the back/forward cache (e.g. Android Back after a session on index.html), or the
+// page being shown again (Android can freeze a background tab, so it may miss the storage event).
+// Edit mode stays as it is, and so do the "Session deleted." and Backup lines.
+function refreshInBackground() {
+  if (document.getElementById("deleteDialog").open) {
+    renderPending = true; // drawn when the dialog closes (confirmDelete)
+    return;
+  }
+  if (historySource() === drawnFrom) return;
+  redrawKeepingFocus(document.activeElement);
+}
+
+// render() replaces the list, so a focused Delete button is replaced too: focus goes to the new
+// button of the same session, or to the one now at its place if that session is gone (see
+// focusInList). Anything else focused stays, unless no sessions are left and it's hidden (Edit) or
+// disabled (Export) now: then focus goes to the empty state (or the storage note in its place),
+// which replaces the content.
+function redrawKeepingFocus(focused) {
+  const element = focused && focused !== document.body && focused.closest ? focused : null;
+  const deleteButton = element ? element.closest(".session-delete") : null;
+  const position = deleteButton ? deleteButtons().indexOf(deleteButton) : -1;
+  render();
+  const empty = emptyPlace();
+  if (deleteButton) {
+    focusInList(Number(deleteButton.dataset.startedAt), position);
+  } else if (element && !empty.hidden && (element.closest("[hidden]") || element.disabled)) {
+    empty.focus();
+  }
+}
+
+// After the list is drawn again: the Delete button of the session that started at startedAt, or
+// else the one now at position (the row that moved up into it, or the row above if it was the last
+// one). With no sessions left the empty state replaces the list (render turns edit mode off then).
+function focusInList(startedAt, position) {
+  const buttons = editing ? deleteButtons() : [];
+  const same = buttons.find((button) => Number(button.dataset.startedAt) === startedAt);
+  if (same) {
+    same.focus();
+  } else if (buttons.length > 0) {
+    buttons[Math.min(Math.max(position, 0), buttons.length - 1)].focus();
+  } else {
+    emptyPlace().focus();
+  }
+}
+
+// ---------- deleting a session ----------
+
+// Opens a <dialog> and resolves with the value of the button that closed it ("" for Esc / Back).
+// Same as ask() in app.js, which this page doesn't load.
+function ask(dialog) {
+  return new Promise((resolve) => {
+    dialog.returnValue = "";
+    dialog.addEventListener("close", () => resolve(dialog.returnValue), { once: true });
+    dialog.showModal();
+  });
+}
+
+function deleteButtons() {
+  return [...document.querySelectorAll("#sessionList .session-delete")];
+}
+
+// The text is cleared first and set a moment later, so screen readers read it out again even
+// when it's the same as last time (two deletes in a row).
+let deleteStatusTimer = null;
+
+function showDeleteStatus(message, isError) {
+  const status = document.getElementById("deleteStatus");
+  clearTimeout(deleteStatusTimer);
+  status.textContent = "";
+  status.classList.toggle("error", isError);
+  deleteStatusTimer = setTimeout(() => {
+    status.textContent = message;
+  }, 100);
+}
+
+function clearDeleteStatus() {
+  clearTimeout(deleteStatusTimer);
+  document.getElementById("deleteStatus").textContent = "";
+}
+
+function toggleEditing() {
+  editing = !editing;
+  if (!editing) clearDeleteStatus();
+  render();
+}
+
+// Asks first; only "Delete" in the dialog deletes. The page's own copy of the history is never
+// written back: deleteFromHistory reads the saved one again (see history-store.js).
+// If the history changed in another tab while the dialog was open, the page is drawn again once,
+// right after it closes, whatever the answer (a delete draws it anyway).
+async function confirmDelete(button) {
+  document.getElementById("deleteSummary").textContent = button.dataset.summary;
+  const answer = await ask(document.getElementById("deleteDialog"));
+  const startedAt = Number(button.dataset.startedAt);
+
+  // "missing" (already deleted in another tab) needs no message of its own: it's gone either way.
+  if (answer !== "delete" || deleteFromHistory(startedAt) === "failed") {
+    if (answer === "delete") {
+      showDeleteStatus("Couldn't delete the session: your browser didn't allow the change.", true);
+    }
+    const changed = renderPending && historySource() !== drawnFrom;
+    renderPending = false;
+    if (changed) redrawKeepingFocus(button); // its session's new button, or the one at its place
+    else button.focus();
+    return;
+  }
+
+  const position = deleteButtons().indexOf(button);
+  render();
+  showDeleteStatus("Session deleted.", false);
+  // Focus stays at the same place in the list: the row that moved up into it, or the row above
+  // if it was the last one. With no sessions left, the empty state replaces the list (render
+  // turns edit mode off then, and leaves the hidden list as it was).
+  focusInList(startedAt, position);
 }
 
 // ---------- export / import ----------
@@ -427,6 +738,12 @@ function invalidSummary(reasons) {
   return `Skipped ${plural(reasons.length, "invalid session")} (${why}).`;
 }
 
+// Shown again: site data may have been allowed or blocked meanwhile, and the history may have changed.
+function recheckAndRefresh() {
+  canSave = storageWorks();
+  refreshInBackground();
+}
+
 function init() {
   // The 7-day rule only applies in Safari on iPhone/iPad (see iosSafariNotInstalled in history-store.js).
   document.getElementById("iosStorageNote").hidden = !iosSafariNotInstalled();
@@ -438,6 +755,21 @@ function init() {
     fileInput.value = ""; // so picking the same file again still triggers "change"
     if (file) importHistory(file);
   });
+  document.getElementById("editButton").addEventListener("click", toggleEditing);
+  document.getElementById("sessionList").addEventListener("click", (event) => {
+    const button = event.target.closest(".session-delete");
+    if (button) confirmDelete(button);
+  });
+  window.addEventListener("storage", (event) => {
+    if (event.key === HISTORY_KEY || event.key === null) refreshInBackground(); // null: all storage was cleared
+  });
+  window.addEventListener("pageshow", (event) => {
+    if (event.persisted) recheckAndRefresh();
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) recheckAndRefresh();
+  });
+  canSave = storageWorks();
   render();
 }
 

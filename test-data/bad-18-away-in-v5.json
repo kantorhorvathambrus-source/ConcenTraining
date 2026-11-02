@@ -1,0 +1,29 @@
+{
+  "app": "ConcenTraining",
+  "type": "session-history",
+  "version": 5,
+  "exportedAt": "2026-10-22T09:00:00.000Z",
+  "sessions": [
+    {
+      "startedAt": 1790427600000,
+      "endedAt": 1790429100000,
+      "endedBy": "timer",
+      "characterId": "grandma",
+      "style": "kind",
+      "mode": "advanced",
+      "plannedMs": 1500000,
+      "elapsedMs": 1500000,
+      "distractedMs": 20000,
+      "focusPercent": 99,
+      "distractions": [
+        {
+          "at": 1790427960000,
+          "level": 1,
+          "ms": 20000,
+          "category": "phone",
+          "source": "away"
+        }
+      ]
+    }
+  ]
+}

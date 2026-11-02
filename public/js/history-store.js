@@ -14,7 +14,7 @@ const EARLY_END_RATIO = 0.5;
 const SUMMARY_GREAT_FOCUS = 85;
 const SUMMARY_OKAY_FOCUS = 60;
 // Simple mode has no focus %, so it uses distraction points instead: each logged
-// distraction scores its level (Very briefly = 1 … A whole lot = 5), counted per
+// distraction scores its level (A flicker = 1 … Totally gone = 5), counted per
 // 25 minutes. Great up to 2 points per 25 min, rough from 8, okay in between.
 const SIMPLE_GREAT_POINTS = 2;
 const SIMPLE_ROUGH_POINTS = 8;
@@ -23,11 +23,12 @@ const SIMPLE_POINTS_PER_MS = 25 * 60 * 1000; // shorter sessions count as 25 min
 // Export file format. Bump EXPORT_VERSION if the session fields ever change.
 // Version 2 added a category to each distraction. Version 3 allows the style
 // "ragebait". Version 4 allows endedBy "startOver". Version 5 allows the style
-// "firm". Version 1-4 files still import.
+// "firm". Version 6 allows distractions logged from the time away card
+// (source: "away", with a measured length). Version 1-5 files still import.
 const EXPORT_APP = "ConcenTraining";
 const EXPORT_TYPE = "session-history";
-const EXPORT_VERSION = 5;
-const IMPORT_VERSIONS = [1, 2, 3, 4, 5];
+const EXPORT_VERSION = 6;
+const IMPORT_VERSIONS = [1, 2, 3, 4, 5, 6];
 const IMPORT_MAX_BYTES = 5 * 1024 * 1024;
 
 // How a session can end, and what that says about its times (see saveFinishedSession):
@@ -51,10 +52,29 @@ const IMPORT_MAX_DISTRACTION_MS = 10 * 60 * 1000;
 // A tap in the last moment can be timestamped just after the timer ran out.
 const IMPORT_LATE_DISTRACTION_MS = 60 * 1000;
 
+// Time away (the card in app.js): an absence this long or longer is asked about, and
+// "Yes" logs it with source: "away", at: the moment the page was left, and (Advanced
+// mode) ms: the measured time in whole seconds. v6 imports check the length against it.
+const AWAY_MIN_MS = 15 * 1000;
+
+// The level (and so the reaction) of a time away distraction, from the lengths of the
+// Advanced buttons: a level starts at its button's length. Exactly 10 min is still 4,
+// more than 10 min is 5 (like "10+ min", which also asks continue or restart).
+// v6 imports check that an away distraction's level matches its length, so changing
+// these thresholds later needs a new EXPORT_VERSION (otherwise older v6 exports would
+// be rejected).
+function awayLevel(ms) {
+  if (ms > 10 * 60 * 1000) return 5;
+  if (ms >= 5 * 60 * 1000) return 4;
+  if (ms >= 2 * 60 * 1000) return 3;
+  if (ms >= 60 * 1000) return 2;
+  return 1;
+}
+
 // What caused a distraction. The id is what's saved; the label is what's shown.
 // A distraction without a picked category is saved with category: null.
 const DISTRACTION_CATEGORIES = [
-  { id: "phone", label: "Phone" },
+  { id: "phone", label: "Screen" }, // phone, other apps or tabs; also set by the time away card
   { id: "thoughts", label: "Thoughts" },
   { id: "noise", label: "Noise" },
   { id: "people", label: "People" },
@@ -65,7 +85,11 @@ const DISTRACTION_CATEGORIES = [
 const isCategory = (value) => DISTRACTION_CATEGORIES.some((category) => category.id === value);
 
 // Distractions saved before categories existed have no category field: they get null.
-const withCategory = (d) => ({ at: d.at, level: d.level, ms: d.ms, category: isCategory(d.category) ? d.category : null });
+// source is only kept when it's "away" (time away card); a manual tap has no source.
+const withCategory = (d) => ({
+  at: d.at, level: d.level, ms: d.ms, category: isCategory(d.category) ? d.category : null,
+  ...(d.source === "away" && { source: "away" }),
+});
 
 // Counts the categories in a list of distractions, most common first (a tie keeps
 // the order of DISTRACTION_CATEGORIES). Distractions without a category (null, or
@@ -125,6 +149,26 @@ function loadHistory() {
   }
 }
 
+// Whether this browser lets the site save anything right now: a tiny test write, removed at once.
+// Site data blocked (e.g. Chrome's "Don't allow sites to save data on your device") throws when
+// localStorage is touched, full storage throws on setItem: either way nothing stays behind, and
+// both count as "can't save". Storage that is only nearly full can pass this test and still
+// refuse a whole session; the summary's "Couldn't save" line covers that. Other tabs get a
+// storage event for this key, which their listeners ignore (they only watch the app's own keys).
+// Checked when index.html and history.html load, when a session starts, and when the page is
+// shown again (so the notes go away once site data is allowed).
+const STORAGE_TEST_KEY = "ct_storage_test";
+
+function storageWorks() {
+  try {
+    localStorage.setItem(STORAGE_TEST_KEY, "1");
+    localStorage.removeItem(STORAGE_TEST_KEY);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // Returns false if the browser refused to store it (storage full or blocked).
 function writeHistory(history) {
   try {
@@ -137,13 +181,14 @@ function writeHistory(history) {
 
 // Adds a finished session to the front of the history (newest first).
 // endedBy is worked out from the times ("timer" or "manual") unless it's given.
-// Returns true if the session is now in the saved history.
+// Returns "saved", "exists" (already in the saved history: same start time, nothing is written),
+// "short" (under HISTORY_MIN_MS: not saved on purpose) or "failed" (the browser refused to store it).
 function saveFinishedSession(session, endedBy) {
   const { elapsedMs, distractedMs, focusPercent } = sessionFocus(session);
-  if (elapsedMs < HISTORY_MIN_MS) return false;
+  if (elapsedMs < HISTORY_MIN_MS) return "short";
 
   const history = loadHistory();
-  if (history.some((entry) => entry.startedAt === session.startedAt)) return true; // already saved
+  if (history.some((entry) => entry.startedAt === session.startedAt)) return "exists";
 
   history.unshift({
     startedAt: session.startedAt,
@@ -160,22 +205,44 @@ function saveFinishedSession(session, endedBy) {
     distractions: session.distractions.map(withCategory),
   });
   history.length = Math.min(history.length, HISTORY_LIMIT);
-  return writeHistory(history); // if it fails the app keeps working, the session just isn't remembered
+  // If it fails the app keeps working, the session just isn't remembered (and the user is told).
+  return writeHistory(history) ? "saved" : "failed";
+}
+
+// Removes the session with this start time (Delete on the history page). The saved history is
+// read again right here, never taken from the page, so a session saved meanwhile in another tab
+// is kept. Returns "deleted", "missing" (it isn't in the saved history any more, e.g. deleted in
+// another tab: nothing is written) or "failed" (the browser refused to store it: nothing changed).
+function deleteFromHistory(startedAt) {
+  const history = loadHistory();
+  const kept = history.filter((entry) => entry.startedAt !== startedAt);
+  if (kept.length === history.length) return "missing";
+  return writeHistory(kept) ? "deleted" : "failed";
 }
 
 // ---------- iPhone storage ----------
 
+// True on an iPhone, iPad or iPod, in any browser or the Home Screen app. iPads in desktop
+// mode say they're a Mac, so a "Mac" with a touch screen counts as an iPad.
+function isIOS() {
+  const ua = navigator.userAgent;
+  return /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+}
+
+// True when the page runs as an installed app in its own window (the iPhone/iPad Home Screen app,
+// or an installed app on Android and desktop), not in a browser tab.
+function inHomeScreenApp() {
+  return navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
+}
+
 // True in Safari on an iPhone or iPad, but not in the Home Screen app. Safari can
 // erase a site's storage (history included) after 7 days without a visit; Home
-// Screen apps are exempt. iPads in desktop mode say they're a Mac, so a "Mac"
-// with a touch screen counts as an iPad. Chrome, Firefox, Edge, Opera and the
-// Google app on iOS add their own token; in-app browsers leave out "Safari".
+// Screen apps are exempt. Chrome, Firefox, Edge, Opera and the Google app on iOS
+// add their own token; in-app browsers leave out "Safari".
 function iosSafariNotInstalled() {
   const ua = navigator.userAgent;
-  const ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
   const safari = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS|GSA\//.test(ua);
-  const standalone = navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
-  return ios && safari && !standalone;
+  return isIOS() && safari && !inHomeScreenApp();
 }
 
 // ---------- export / import ----------
@@ -201,6 +268,8 @@ const isTime = (value) => Number.isFinite(value) && value >= 0;
 // distraction categories, so their distractions get category: null. Before
 // version 3 the only styles were "kind" and "strict", and "firm" exists from
 // version 5. Before version 4 the only end reasons were "timer" and "manual".
+// Before version 6 there are no away distractions: a source field is dropped and
+// every Advanced distraction needs a button length, exactly as those versions did.
 function cleanImportedSession(raw, version) {
   if (!raw || typeof raw !== "object") throw new Error("not a session");
 
@@ -231,7 +300,12 @@ function cleanImportedSession(raw, version) {
     if (version >= 2 && d.category !== null && !isCategory(d.category)) {
       throw new Error("unknown distraction category");
     }
-    return { at: d.at, level: d.level, ms: d.ms, category: version >= 2 ? d.category : null };
+    if (version >= 6 && Object.hasOwn(d, "source") && d.source !== "away") {
+      throw new Error("unknown distraction source");
+    }
+    const clean = { at: d.at, level: d.level, ms: d.ms, category: version >= 2 ? d.category : null };
+    if (version >= 6 && d.source === "away") clean.source = "away";
+    return clean;
   });
 
   // Do the numbers agree? The app's own calculation is the reference.
@@ -245,7 +319,14 @@ function cleanImportedSession(raw, version) {
   for (const d of distractions) {
     if (d.at < startedAt || d.at > endedAt + IMPORT_LATE_DISTRACTION_MS) throw new Error("distraction outside the session");
     if (mode === "simple" && d.ms !== 0) throw new Error("Simple distraction with a length");
-    if (mode === "advanced" && (d.ms < IMPORT_MIN_DISTRACTION_MS || d.ms > IMPORT_MAX_DISTRACTION_MS)) {
+    // Away: measured in whole seconds, at least AWAY_MIN_MS, never longer than the session.
+    // Its at (the moment the page was left) is inside the session like any other.
+    if (mode === "advanced" && d.source === "away") {
+      if (d.ms % 1000 !== 0 || d.ms < AWAY_MIN_MS || d.ms > elapsedMs) {
+        throw new Error("away distraction length out of range");
+      }
+      if (d.level !== awayLevel(d.ms)) throw new Error("away distraction level doesn't match its length");
+    } else if (mode === "advanced" && (d.ms < IMPORT_MIN_DISTRACTION_MS || d.ms > IMPORT_MAX_DISTRACTION_MS)) {
       throw new Error("Advanced distraction length out of range");
     }
   }
