@@ -550,10 +550,10 @@ personality, in one place (`GROUPS` and `personalityOf()`). A new character only
 
 | Group | Personality | How it reacts |
 |---|---|---|
-| `relaxed` (Grandma, Leader, Santa, Study Buddy, Coach, Meditation Guide), label "Relaxed" | `kind` | Happy you're back, cheers you on. Hops. |
+| `relaxed` (Grandma, Leader, Santa, Study Buddy, Study Partner, Coach, Meditation Guide), label "Relaxed" | `kind` | Happy you're back, cheers you on. Hops. |
 | `firm` (Professor, Librarian, Surgeon), label "Firm but fair" | `firm` | Patient, but expects your best. Never shouts or gets angry: disappointment instead. One slow, calm lean (never shakes); a small nod when you do well. |
-| `strict` (Boss, Soldier, Headmistress, Grandmaster) | `strict` | Stern when you drift off, angrier each level. Shakes. |
-| `ragebait` (Bodybuilder, Influencer) | `ragebait` | Annoying on purpose: mocking, more insulting each level. Cheeky head tilt. |
+| `strict` (Boss, Soldier, Headmistress, Grandmaster, Judge, Sensei) | `strict` | Stern when you drift off, angrier each level. Shakes. |
+| `ragebait` (Bodybuilder, Influencer, Your Phone) | `ragebait` | Annoying on purpose: mocking, more insulting each level. Cheeky head tilt. |
 
 The app always shows the group's label ("Relaxed", "Firm but fair", "Strict", "Ragebait"): on the
 character cards, in the session info line and in the history list. The personality (`kind`, `firm`, ...)
@@ -581,6 +581,17 @@ readers" above); when the art for a pose changes, check that its description sti
 A character can replace some of its personality's poses with its own (`poses` in its entry in
 `ART_LOOKS`, `public/js/placeholder-art.js`). Influencer does this for level4.
 
+Two more optional `ART_LOOKS` fields are for a character that isn't a person. `head` is drawn instead
+of the skin-coloured neck and face oval, and the eyes, brows and mouth go on top of it. `hands` is the
+colour of the hands that pose extras draw (pointing, clap, crossed arms, middle finger); by default
+it's the skin colour. Your Phone uses both: it *is* a smartphone, with its face on the screen (a
+cracked corner and two red notification dots, no numbers, since characters never show text), no
+neck, and arms and hands in a shade lighter than its case, so all nine ragebait poses work the same
+as for the others. The strict "red-faced" overlay only colours the default face oval.
+
+Held items sit in the `hand` layer and are hidden in poses that need both hands (clap, crossed arms).
+Judge holds a gavel there; strict poses only point with the other hand, so it shows in every pose.
+
 The ragebait poses:
 
 | Pose | Ragebait reaction |
@@ -589,7 +600,7 @@ The ragebait poses:
 | level1 | Side-eye: white eyes under a low lid, pupils pushed to the side, one eyebrow up, wide smug grin |
 | level2 | Eye-roll |
 | level3 | Wink and tongue out |
-| level4 | Laughing at you with a sarcastic slow clap. Influencer instead just laughs, with his phone still filming you from his hand |
+| level4 | Laughing at you with a sarcastic slow clap (Your Phone claps with its case-coloured hands). Influencer instead just laughs, with his phone still filming you from his hand |
 | level5 | Middle finger |
 | good | Grudging: arms crossed, half-closed eyes looking away, flat "meh" mouth, a small shrug. Never proud |
 | refocus | "Whatever, go on": bored half-closed eyes, one eyebrow up, flat "meh" mouth, a lazy point at the work. No insult |
@@ -1187,7 +1198,7 @@ popularity can be measured over the **last 30 days** and the paid selection rota
   It also returns `store`: `"live"` or `"test"` (see below). The numbers are at `/stats.html`,
   which says which store it's reading.
 - **One blob per character:** the key is the character id (`grandma`), the value is the picks per
-  day, e.g. `{ "days": { "2026-11-03": 5, "2026-11-04": 2 } }`. `/api/stats` reads the 16 blobs (15 characters and `custom`).
+  day, e.g. `{ "days": { "2026-11-03": 5, "2026-11-04": 2 } }`. `/api/stats` reads the 20 blobs (19 characters and `custom`).
 - **Picks at the same moment aren't lost:** `POST /api/picks` reads the character's blob together
   with its `etag` (an id of that exact version), adds 1 to today, and saves only if the blob is
   still that version (a conditional write: `onlyIfMatch`, or `onlyIfNew` for the very first pick).
@@ -1209,8 +1220,10 @@ popularity can be measured over the **last 30 days** and the paid selection rota
 - **Adding a character:** besides `public/js/data/characters.js`, add it with the same id to
   `CHARACTERS` in `netlify/lib/characters.mjs`, e.g. `{ id: "robot", name: "Robot" }`. Without that
   its picks are refused and it doesn't appear on `/stats.html`.
-- With 15 built-in characters the paid selection is active: the top 2 by recent picks (**Start session**
-  presses) are marked "(paid)" on `/stats.html`.
+- With 19 built-in characters the paid selection is active: the top 2 by recent picks (**Start
+  session** presses) are marked "(paid)" on `/stats.html` (19 × 10% = 1.9, rounded to 2; it becomes
+  3 at 25 built-in characters). New characters start with 0 picks. `"custom"` doesn't count here
+  (see above).
 - Settings (30 days, 10 characters, 10%) are constants at the top of `netlify/functions/stats.mjs`.
 - **Cost:** every pick and every stats load is one function call (web request + a short compute
   time, billed in Netlify credits). Blobs has no server that wakes up and no separate copy per

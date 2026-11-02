@@ -10,6 +10,7 @@ export const CHARACTERS = [
   { id: "leader", name: "Leader" },
   { id: "santa", name: "Santa" },
   { id: "study-buddy", name: "Study Buddy" },
+  { id: "study-partner", name: "Study Partner" },
   { id: "coach", name: "Coach" },
   { id: "meditation-guide", name: "Meditation Guide" },
   { id: "professor", name: "Professor" },
@@ -19,7 +20,10 @@ export const CHARACTERS = [
   { id: "soldier", name: "Soldier" },
   { id: "headmistress", name: "Headmistress" },
   { id: "grandmaster", name: "Grandmaster" },
+  { id: "judge", name: "Judge" },
+  { id: "sensei", name: "Sensei" },
   { id: "bodybuilder", name: "Bodybuilder" },
   { id: "influencer", name: "Influencer" },
+  { id: "your-phone", name: "Your Phone" },
   { id: "custom", name: "Custom characters", custom: true },
 ];
