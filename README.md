@@ -923,7 +923,7 @@ works online exactly as before.
   before), other sites, and `Range` requests.
 - **Works at the root and under a subpath:** every address above is relative to the service
   worker's scope (`self.registration.scope`, the folder `sw.js` is in). That's `/` on Netlify and
-  `/ConcenTraining/` on the [GitHub Pages test site](#github-pages-test-site-while-netlify-is-paused),
+  `/ConcenTraining/` on the [GitHub Pages backup test site](#github-pages-backup-test-site-optional),
   so there `/ConcenTraining/index.html` is saved as `/ConcenTraining/`. For the same reason every path
   in `public/` is relative (no leading `/`), including the `api/picks` and `api/stats` calls.
 - **Updates:** the browser checks `sw.js` on every visit (`netlify.toml` sends it with
@@ -993,7 +993,7 @@ once with a decent connection fixes it, because every online start refreshes all
 | `public/icons/` | Placeholder app icons: `icon.svg` and `icon-small.svg` (sources) and the PNGs rendered from them (Home Screen, Android, maskable) |
 | `public/favicon.ico` | Browser tab icon (placeholder) |
 | `netlify.toml` | Tells Netlify the site is in `public/`, and sends `sw.js` with `Cache-Control: no-cache` |
-| `.github/workflows/pages.yml` | Temporary: publishes `public/` to the GitHub Pages test site on every push to `main` (see [GitHub Pages test site](#github-pages-test-site-while-netlify-is-paused)) |
+| `.github/workflows/pages.yml` | Optional backup: publishes `public/` to the GitHub Pages test site on every push to `main` (see [GitHub Pages backup test site](#github-pages-backup-test-site-optional)) |
 | `package.json` | The one dependency the functions need (`@netlify/blobs`) |
 
 ## Adding real character artwork
@@ -1091,20 +1091,23 @@ created automatically by the first pick.
 `picks-live`. The test counts are shared by every preview and `main`, so they mix test runs; that's
 fine for checking that counting works.
 
-### GitHub Pages test site (while Netlify is paused)
+### GitHub Pages backup test site (optional)
 
-Netlify paused the account until about **2 November 2026** (usage limit), so right now there are no
-Deploy Previews and no `main` branch deploy. Until it's back:
+The normal way to test is the Netlify Deploy Preview of each pull request (and the `main` branch
+deploy after merging). The GitHub Pages site is a free backup copy of `main`, for example if Netlify
+pauses the account again (it did until 2 November 2026, after hitting the usage limit). You don't
+need it for everyday testing.
 
-- **Test site:** https://kantorhorvathambrus-source.github.io/ConcenTraining/, published from `main`.
+- **Backup site:** https://kantorhorvathambrus-source.github.io/ConcenTraining/, published from `main`.
 - **How it's published:** a GitHub Actions workflow (`.github/workflows/pages.yml`: a small file
   that tells GitHub to run steps on its own servers when something happens) uploads `public/` as it
   is, with no build step, on every push to `main`. It can also be started by hand: **Actions** tab →
   **Deploy to GitHub Pages** → **Run workflow**. The repo's Pages setting must stay on
   **Source: GitHub Actions**.
-- **Workflow:** pull requests into `main` are merged **without a Deploy Preview** and tested on the
-  GitHub Pages site afterwards. That's safe because `main` isn't the live site; the live site still
-  only changes through a `main` → `live` pull request (which also has to wait for Netlify).
+- **If Netlify is paused:** there are no Deploy Previews and no `main` branch deploy. Pull requests
+  into `main` can then be merged without a Deploy Preview and tested on the GitHub Pages site
+  afterwards. That's safe because `main` isn't the live site; the live site only changes through a
+  `main` → `live` pull request (which has to wait for Netlify).
 - **No backend there:** the Netlify Functions don't run on Pages, so `POST api/picks` gets a 404 and
   is ignored (no session is counted, the app works the same), and `stats.html` shows its
   "Couldn't load stats" message.
@@ -1113,4 +1116,5 @@ Deploy Previews and no `main` branch deploy. Until it's back:
   so the app, history and offline start work the same as on Netlify.
 - **Separate saved data:** it's a different address from the Netlify sites, so its history,
   settings and offline cache are separate too.
-- When Netlify is back, the workflow can stay or be deleted; it doesn't affect Netlify.
+- **Doesn't affect Netlify:** the workflow only publishes to GitHub Pages and can be deleted any
+  time without changing the Netlify sites.
