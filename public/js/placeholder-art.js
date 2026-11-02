@@ -1,4 +1,5 @@
 // Draws simple SVG stand-in art for characters that don't have real artwork yet.
+// The eyes, brows, mouths and extras here are shared with custom characters (avatar-art.js).
 // Every character gets all 9 poses in its own personality (see personalityOf in
 // characters.js), so the app is fully usable before the real images are finished.
 
@@ -288,6 +289,9 @@ const BROW_SHAPES = {
 };
 
 const EYE_Y = 102;
+// The built-in face: eye centres (x), eye size, brow thickness and how far the brows sit above
+// their usual place. Custom characters' faces change these (FACES in avatar-parts.js).
+const FACE_GEO = { eyeL: 78, eyeR: 122, eyeScale: 1, browWidth: 5, browDy: 0, tearDy: 0 };
 const LINE = `fill="none" stroke="#222" stroke-linecap="round"`;
 
 function drawEye(cx, type) {
@@ -330,12 +334,16 @@ function drawEye(cx, type) {
   }
 }
 
-function drawBrows(type, color) {
+// geo (optional, custom characters only, see avatar-art.js): where the eyes are and how thick the
+// brows are. Without it the brows are exactly the built-in characters' ones.
+function drawBrows(type, color, geo = FACE_GEO) {
   const [left, right] = Array.isArray(type) ? type : [type, type];
   const [leftOuter, leftInner] = BROW_SHAPES[left] || BROW_SHAPES.flat;
   const [rightOuter, rightInner] = BROW_SHAPES[right] || BROW_SHAPES.flat;
-  const style = `fill="none" stroke="${color}" stroke-width="5" stroke-linecap="round"`;
-  return `<path d="M66 ${leftOuter} L90 ${leftInner}" ${style}/><path d="M110 ${rightInner} L134 ${rightOuter}" ${style}/>`;
+  const dy = geo.browDy;
+  const style = `fill="none" stroke="${color}" stroke-width="${geo.browWidth}" stroke-linecap="round"`;
+  return `<path d="M${geo.eyeL - 12} ${leftOuter + dy} L${geo.eyeL + 12} ${leftInner + dy}" ${style}/>` +
+    `<path d="M${geo.eyeR - 12} ${rightInner + dy} L${geo.eyeR + 12} ${rightOuter + dy}" ${style}/>`;
 }
 
 function drawMouth(type) {
@@ -381,13 +389,14 @@ function drop(x, y) {
   return `<path d="M${x} ${y} Q${x - 6} ${y + 11} ${x} ${y + 14} Q${x + 6} ${y + 11} ${x} ${y}Z" fill="#7ec8ff"/>`;
 }
 
-// skin is the character's skin colour, for the hands.
+// skin is the character's skin colour, for the hands. geo (FACE_GEO by default) moves the blush
+// and the tears with the eyes of a custom character's face.
 const ART_EXTRAS = {
   sparkle: () => star(28, 56, 11) + star(172, 64, 9) + star(162, 28, 6),
-  blush: () => `<ellipse cx="66" cy="122" rx="10" ry="5" fill="#ff7aa2" fill-opacity="0.5"/>
-                <ellipse cx="134" cy="122" rx="10" ry="5" fill="#ff7aa2" fill-opacity="0.5"/>`,
+  blush: (skin, geo = FACE_GEO) => `<ellipse cx="${geo.eyeL - 12}" cy="122" rx="10" ry="5" fill="#ff7aa2" fill-opacity="0.5"/>
+                <ellipse cx="${geo.eyeR + 12}" cy="122" rx="10" ry="5" fill="#ff7aa2" fill-opacity="0.5"/>`,
   sweat: () => drop(160, 66),
-  tears: () => drop(72, 112) + drop(128, 112),
+  tears: (skin, geo = FACE_GEO) => drop(geo.eyeL - 6, 112 + geo.tearDy) + drop(geo.eyeR + 6, 112 + geo.tearDy),
   heart: () => `<path d="M164 66 C150 55 152 43 164 50 C176 43 178 55 164 66Z" fill="#ff4d6d"/>`,
   vein: () => `<g fill="none" stroke="#d62828" stroke-width="4" stroke-linecap="round">
                  <path d="M146 48 Q152 55 146 62"/><path d="M166 48 Q160 55 166 62"/>
@@ -438,7 +447,9 @@ const HAND_BUSY_EXTRAS = ["clap", "crossedArms"];
 const artCache = new Map();
 
 // Returns a data: URL for the given character and pose, drawn in the character's personality.
+// Custom characters are built from their look's layers instead (avatarArt in avatar-art.js).
 function placeholderArt(character, pose) {
+  if (character.custom) return avatarArt(character.look, personalityOf(character), pose);
   const key = `${character.id}/${pose}`;
   if (artCache.has(key)) return artCache.get(key);
 

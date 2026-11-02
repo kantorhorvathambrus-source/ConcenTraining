@@ -114,11 +114,12 @@ function remove(key) {
 // Sent to the Netlify Function in netlify/functions/picks.mjs. Fire-and-forget: if it fails
 // (offline, index.html opened as a local file, or the GitHub Pages test site, which has no
 // backend) the app works the same. Relative address, so it stays inside the app's own folder.
-function countCharacterPick(id) {
+// Every custom character counts as "custom": the user's own ids and names never leave the device.
+function countCharacterPick(character) {
   fetch("api/picks", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ characterId: id }),
+    body: JSON.stringify({ characterId: character.custom ? CUSTOM_PICK_ID : character.id }),
     keepalive: true,
   }).catch(() => {});
 }
@@ -143,7 +144,8 @@ delete prefs.style; // saved before personalities came from the character; dropp
 // hasn't been answered yet. Saved, so a reload still asks it.
 // leftAt: set while the page is hidden, cleared on return (see "time away"). Saved, so a page the
 // browser discarded in the background still asks after the reload. Never goes into the history.
-let session = null; // { characterId, style, mode, durationMs, startedAt, distractions: [], endedAt, restartPending, leftAt }
+// characterName: only for custom characters, so a renamed or deleted one keeps its name in old sessions.
+let session = null; // { characterId, characterName, style, mode, durationMs, startedAt, distractions: [], endedAt, restartPending, leftAt }
 let tickTimer = 0;
 let nextGoodAt = 0;
 let saveErrorNoteTimer = 0;
@@ -165,8 +167,17 @@ const motivation = { phase: null, index: 0, shown: false };
 // was hidden (in memory only).
 const away = { from: 0, ms: 0, open: false, yes: false, hiddenAt: 0 };
 
+// A built-in character, or one of the user's own (custom-characters.js) that exists right now.
+// null for anything else, e.g. a custom character deleted here or in another tab.
 function characterById(id) {
-  return CHARACTERS.find((c) => c.id === id) || null;
+  return CHARACTERS.find((c) => c.id === id) || customCharacterById(id);
+}
+
+// The character a session runs with. A custom character that was deleted meanwhile (here or in
+// another tab) is drawn with the default look and the name the session stored (ghostCharacter),
+// so the session keeps running and its summary still shows it.
+function sessionCharacter(s) {
+  return characterById(s.characterId) || (isCustomId(s.characterId) ? ghostCharacter(s.characterId, s.characterName, s.style) : null);
 }
 
 function showScreen(id) {
@@ -718,9 +729,9 @@ function dismissHomeScreenTip() {
 // scrolling down to Start session. Only for returning users: a saved character that still exists
 // and at least one session in the history. It always shows what Start session would start, so it
 // follows every change further down. hasHistory: checked when the setup screen is shown (and when
-// the history changes in another tab), not on every keystroke. characterId: the one whose image
-// is shown, so the image is only set again when the character changes.
-const quickStart = { hasHistory: false, characterId: null };
+// the history changes in another tab), not on every keystroke. artKey: the character (and, for a
+// custom one, its look) whose image is shown, so the image is only set again when that changes.
+const quickStart = { hasHistory: false, artKey: null };
 
 function refreshQuickStart() {
   quickStart.hasHistory = loadHistory().length > 0;
@@ -734,9 +745,10 @@ function updateQuickStart() {
   const card = $("#quickStart");
   card.hidden = !character || !quickStart.hasHistory;
   if (card.hidden) return;
-  if (quickStart.characterId !== character.id) {
+  const artKey = character.custom ? `${character.id}/${LOOK_FIELDS.map((f) => character.look[f]).join("|")}` : character.id;
+  if (quickStart.artKey !== artKey) {
     setPoseImage($("#quickStartImg"), character, "initial");
-    quickStart.characterId = character.id;
+    quickStart.artKey = artKey;
   }
   // No-break spaces (\u00a0): a narrow screen wraps after a "·", never before it or inside "25 min".
   $("#quickStartLine").textContent =
@@ -751,7 +763,10 @@ function onPageShow(event) {
   leaveReminder.unloading = false;
   if (!event.persisted) return;
   checkStorage(); // site data may have been allowed or blocked meanwhile
-  if (!$("#setupScreen").hidden) refreshQuickStart();
+  if (!$("#setupScreen").hidden) {
+    renderCustomList(); // characters made, edited or deleted on another page meanwhile
+    refreshQuickStart();
+  }
   checkSessionElsewhere();
 }
 
@@ -779,13 +794,174 @@ function renderCharacterList() {
     card.addEventListener("click", () => onCharacterTap(character));
     list.append(card);
   }
+  list.append(createCard());
+  renderCustomList();
+}
+
+// ---------- your own characters ----------
+
+// "Create your own": always the last card of the main grid. It opens the editor, unless the
+// user already has CUSTOM_LIMIT characters: then it says so and does nothing.
+// (While CUSTOM_PAID is false it's free for everyone and says "Free during launch".)
+function createCard() {
+  const card = document.createElement("button");
+  card.type = "button";
+  card.id = "createCard";
+  card.className = "char-card create-card";
+  const img = document.createElement("img");
+  img.alt = "";
+  img.src = createCardArt();
+  const name = document.createElement("span");
+  name.className = "char-name";
+  name.textContent = CUSTOM_TEXTS.createTitle;
+  const tagline = document.createElement("span");
+  tagline.className = "char-tagline";
+  card.append(img, name);
+  if (!CUSTOM_PAID) {
+    const badge = document.createElement("span");
+    badge.className = "badge badge-free";
+    badge.textContent = CUSTOM_TEXTS.freeBadge;
+    card.append(badge);
+  }
+  card.append(tagline);
+  updateCreateCard(card);
+  card.addEventListener("click", () => {
+    if (card.getAttribute("aria-disabled") !== "true") location.href = "avatar.html";
+  });
+  return card;
+}
+
+function updateCreateCard(card = $("#createCard")) {
+  if (!card) return;
+  const full = loadCustomCharacters().length >= CUSTOM_LIMIT;
+  card.querySelector(".char-tagline").textContent = full ? CUSTOM_TEXTS.limit : CUSTOM_TEXTS.createTagline;
+  if (full) card.setAttribute("aria-disabled", "true");
+  else card.removeAttribute("aria-disabled");
+}
+
+// "Your characters": the same cards as the main grid (picture, name, personality badge), each
+// with Edit and Delete under it. Every name is set as plain text, never as HTML. If focus was in
+// the list, it goes back to the same button of the same character after the rebuild.
+function renderCustomList() {
+  const list = $("#customList");
+  const focused = document.activeElement;
+  const refocus = list.contains(focused)
+    ? { id: focused.closest("[data-id]").dataset.id, role: focused.dataset.role }
+    : null;
+  list.innerHTML = "";
+  const characters = loadCustomCharacters();
+  $("#customSection").hidden = characters.length === 0;
+  for (const character of characters) {
+    const item = document.createElement("div");
+    item.className = "custom-item";
+    item.dataset.id = character.id;
+    item.classList.toggle("selected", prefs.characterId === character.id);
+
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "char-card";
+    card.dataset.id = character.id;
+    card.dataset.role = "select";
+    card.setAttribute("aria-pressed", String(prefs.characterId === character.id));
+    const img = document.createElement("img");
+    img.alt = "";
+    const name = document.createElement("span");
+    name.className = "char-name";
+    name.textContent = character.name;
+    const badge = document.createElement("span");
+    badge.className = `badge badge-${character.group}`;
+    badge.textContent = GROUPS[character.group].label;
+    card.append(img, name, badge);
+    setPoseImage(img, character, "initial");
+    card.addEventListener("click", () => onCharacterTap(character));
+
+    const actions = document.createElement("div");
+    actions.className = "custom-actions";
+    const edit = document.createElement("a");
+    edit.className = "btn compact";
+    edit.href = `avatar.html?id=${encodeURIComponent(character.id)}`;
+    edit.textContent = "Edit";
+    edit.dataset.role = "edit";
+    edit.setAttribute("aria-label", `Edit ${character.name}`);
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "btn compact";
+    remove.textContent = "Delete";
+    remove.dataset.role = "delete";
+    remove.setAttribute("aria-label", `Delete ${character.name}`);
+    remove.addEventListener("click", () => confirmDeleteCustom(character));
+    actions.append(edit, remove);
+
+    item.append(card, actions);
+    list.append(item);
+  }
+  updateCreateCard();
+  if (refocus) {
+    const item = list.querySelector(`.custom-item[data-id="${CSS.escape(refocus.id)}"]`);
+    const target = item && item.querySelector(`[data-role="${refocus.role}"]`);
+    if (target) target.focus({ preventScroll: true });
+    else focusAfterRemoval(refocus.id, characters);
+  }
+}
+
+// Focus goes to the next character's card (or the one before), or to "Create your own" if none is left.
+function focusAfterRemoval(removedId, before) {
+  const index = before.findIndex((c) => c.id === removedId);
+  const cards = $("#customList").querySelectorAll(".char-card");
+  const next = cards[Math.min(Math.max(index, 0), cards.length - 1)];
+  (next || $("#createCard")).focus({ preventScroll: true });
+}
+
+// Delete on a card: asks first. Past sessions stay in the history (with the name they stored).
+// The saved list is read again right here, so a character saved or edited in another tab meanwhile
+// is kept. If it was the chosen character, nothing is chosen any more (like a first visit).
+async function confirmDeleteCustom(character) {
+  $("#deleteCharacterTitle").textContent = `Delete ${character.name}?`;
+  if ((await ask($("#deleteCharacterDialog"))) !== "delete") return;
+  const before = loadCustomCharacters();
+  const kept = before.filter((c) => c.id !== character.id);
+  if (kept.length !== before.length && !saveCustomCharacters(kept)) return; // storage refused: nothing changed
+  if (prefs.characterId === character.id) savePrefs({ characterId: null });
+  renderCustomList();
+  focusAfterRemoval(character.id, before);
+  updateQuickStart();
+}
+
+// The custom characters changed in another tab (or the editor): the cards and Quick start follow.
+// A session running here keeps the character it started with. null: all storage was cleared.
+function onCustomStorage(event) {
+  if (event.key !== CUSTOM_KEY && event.key !== null) return;
+  if ($("#setupScreen").hidden) return;
+  renderCustomList();
+  updateQuickStart();
+}
+
+// Back from the editor after creating a character (./?picked=custom-…): it's picked like a tap on
+// its card (a ragebait one shows the warning first) and scrolled into view. The address is then
+// cleaned up, so a reload doesn't pick it again.
+function pickNewCharacter() {
+  const params = new URLSearchParams(location.search);
+  const id = params.get("picked");
+  if (id === null) return;
+  history.replaceState(null, "", location.pathname + location.hash);
+  const character = customCharacterById(id);
+  if (!character) return;
+  const card = $("#customList").querySelector(`.char-card[data-id="${CSS.escape(id)}"]`);
+  if (card) {
+    card.scrollIntoView({ block: "center" });
+    card.focus({ preventScroll: true });
+  }
+  onCharacterTap(character);
 }
 
 // Updates the selection in place: rebuilding the cards would move keyboard and screen reader
 // focus away from the card that was just tapped.
 function updateCharacterCards() {
-  $("#characterList").querySelectorAll(".char-card").forEach((card) => {
+  $("#characterStep").querySelectorAll(".char-card[data-id]").forEach((card) => {
     card.setAttribute("aria-pressed", String(card.dataset.id === prefs.characterId));
+  });
+  $("#customList").querySelectorAll(".custom-item").forEach((item) => {
+    item.classList.toggle("selected", item.dataset.id === prefs.characterId);
   });
 }
 
@@ -843,7 +1019,8 @@ function onQuickStartChange() {
 
 // Start session (fromQuickStart false) and Start on the Quick start card (true) both come here.
 async function onStartClick(fromQuickStart) {
-  if (!characterById(prefs.characterId)) {
+  const character = characterById(prefs.characterId);
+  if (!character) {
     const error = $("#characterError");
     error.hidden = false;
     error.textContent = "";
@@ -874,18 +1051,19 @@ async function onStartClick(fromQuickStart) {
     return;
   }
   if (session) return; // a quick second tap: already started
-  countCharacterPick(prefs.characterId); // here, not in startSession(): Start over is not a new choice
-  startSession(prefs.characterId, prefs.mode, prefs.minutes);
+  countCharacterPick(character); // here, not in startSession(): Start over is not a new choice
+  startSession(character, prefs.mode, prefs.minutes);
 }
 
 // ---------- session ----------
 
 // Start, Quick start and Start new session. Returns whether this browser can save (checkStorage):
 // if it can't, the new session's screen says so (after enterSession, which clears that line).
-function startSession(characterId, mode, minutes) {
+function startSession(character, mode, minutes) {
   session = {
-    characterId,
-    style: personalityOf(characterById(characterId)), // kept in the history
+    characterId: character.id,
+    ...(character.custom && { characterName: character.name }),
+    style: personalityOf(character), // kept in the history
     mode,
     durationMs: minutes * MIN,
     startedAt: Date.now(),
@@ -900,7 +1078,7 @@ function startSession(characterId, mode, minutes) {
 }
 
 function enterSession() {
-  const character = characterById(session.characterId);
+  const character = sessionCharacter(session);
   const options = session.mode === "advanced" ? ADVANCED_OPTIONS : SIMPLE_OPTIONS;
 
   $("#sessionInfo").textContent =
@@ -1228,13 +1406,14 @@ async function askContinueOrRestart() {
   session.restartPending = false;
   save(SESSION_KEY, session);
   if (answer === "restart") {
-    const { characterId, mode } = session;
+    const { mode } = session;
+    const character = sessionCharacter(session); // also if it was deleted in another tab meanwhile
     // The checkbox only matters here: "Continue" keeps the session running.
     const saved = canSave && $("#restartSave").checked ? saveFinishedSession({ ...session, endedAt: cutAt }, "startOver") : "";
     if (saved === "saved" || saved === "exists") requestPersistentStorage();
     // value(), not read(): Start new session's click already let it through, so it must never block here.
     // a waiting time away card is dropped with the old session
-    const canSaveNow = startSession(characterId, mode, restartPicker.value());
+    const canSaveNow = startSession(character, mode, restartPicker.value());
     // Only one line fits: if nothing can be saved at all, the new session's note (already shown by
     // startSession) also covers the lost first part.
     if (saved === "failed" && canSaveNow) showSaveErrorNote(RESTART_SAVE_ERROR);
@@ -1291,7 +1470,7 @@ const control = { hold: null, pending: null };
 // The session saved in ct_session_v1, if one is running (or ran out without being saved yet).
 function savedRunningSession() {
   const saved = load(SESSION_KEY, null);
-  return saved && !saved.endedAt && characterById(saved.characterId) ? saved : null;
+  return saved && !saved.endedAt && sessionCharacter(saved) ? saved : null;
 }
 
 // Resolves true once this tab holds the lock, false if another tab holds it. steal: take it from
@@ -1357,7 +1536,10 @@ function resumeSavedSession() {
   session = saved;
   // A session saved before personalities came from the character can hold any
   // style: it continues (and goes into the history) with the character's own.
-  session.style = personalityOf(characterById(saved.characterId));
+  // A custom character that still exists keeps its current name.
+  const character = sessionCharacter(saved);
+  session.style = personalityOf(character);
+  if (character.custom && !character.ghost) session.characterName = character.name;
   save(SESSION_KEY, session);
   if (Date.now() >= saved.startedAt + saved.durationMs) {
     onTimerRanOut(false);
@@ -1434,7 +1616,7 @@ function restoreSetupView() {
   if (!saved) return;
   window.scrollTo(0, saved.scrollY);
   const target = saved.cardId
-    ? $("#characterList").querySelector(`.char-card[data-id="${CSS.escape(saved.cardId)}"]`)
+    ? $("#characterStep").querySelector(`.char-card[data-id="${CSS.escape(saved.cardId)}"]`)
     : saved.focused;
   if (target && target.isConnected) target.focus({ preventScroll: true });
 }
@@ -1793,7 +1975,7 @@ async function askSaveLateSession(endedAt) {
   document.title = BASE_TITLE;
   showScreen("setupScreen");
 
-  const character = characterById(session.characterId);
+  const character = sessionCharacter(session);
   $("#lateText").textContent =
     `Your ${Math.round(session.durationMs / MIN)} min ${capitalize(session.mode)} session with ` +
     `${character.name} ended ${formatTimeAgo(Date.now() - endedAt)}.`;
@@ -1872,7 +2054,7 @@ function showMotivation() {
 // A short session only shows the title and the "not saved" note, in both modes.
 // saveFailed: the browser refused to store the session, so the summary says so.
 function renderSummary(saveFailed) {
-  const character = characterById(session.characterId);
+  const character = sessionCharacter(session);
   const result = sessionResult(session);
   const short = result === "short";
   const img = $("#summaryImg");
@@ -2018,10 +2200,17 @@ function init() {
   $("#continueHereButton").addEventListener("click", onContinueHereClick);
   window.addEventListener("storage", onStorage);
   window.addEventListener("storage", onHistoryStorage);
+  window.addEventListener("storage", onCustomStorage);
   window.addEventListener("pageshow", onPageShow);
   window.addEventListener("pagehide", () => (leaveReminder.unloading = true)); // see "leave reminder"
 
   checkStorage();
+  // Real images for custom characters' layers (AVATAR_PNG_FILES), once they're loaded.
+  loadAvatarPngs(() => {
+    renderCustomList();
+    quickStart.artKey = null;
+    updateQuickStart();
+  });
 
   // Resume a session that was running when the page was closed or reloaded,
   // unless another tab runs it (see "one tab at a time").
@@ -2030,6 +2219,7 @@ function init() {
     return;
   }
   showScreen("setupScreen");
+  pickNewCharacter();
 }
 
 init();

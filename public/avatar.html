@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Your Character · ConcenTraining</title>
+  <meta name="description" content="Design your own ConcenTraining character.">
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="css/style.css">
+  <!-- Home Screen / install support. Colors: --bg of the light and dark theme (css/style.css). -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#f6f3ee" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#17161b" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48">
+  <link rel="icon" href="icons/icon-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-title" content="ConcenTraining">
+</head>
+<body>
+  <!-- The character editor: avatar.html creates a character, avatar.html?id=custom-… edits one
+       (avatar.js). Nothing is saved until Save; Cancel, Back or leaving the page discards it. -->
+  <main class="app avatar-page">
+    <p class="avatar-back"><a href="./" id="backLink" class="back-link">← Back</a></p>
+    <h1 id="editorTitle">Create your character</h1>
+
+    <!-- Shown while the browser doesn't let the site save anything (avatar.js). The editor still
+         works; Save then says it couldn't save. Its text is set when it appears. -->
+    <p id="storageNote" class="error storage-warning" role="status" hidden></p>
+
+    <!-- Stays at the top of the screen while the options scroll under it. -->
+    <div class="avatar-preview">
+      <img id="previewImg" class="avatar-preview-img" alt="">
+      <div class="avatar-preview-actions">
+        <button id="previewButton" type="button" class="btn compact">Preview reactions</button>
+        <button id="randomizeButton" type="button" class="btn compact">Randomize</button>
+      </div>
+    </div>
+
+    <form id="editorForm" class="avatar-form" novalidate>
+      <section class="editor-section">
+        <h2><label for="nameInput">Name</label></h2>
+        <input id="nameInput" class="text-input" type="text" autocomplete="off" spellcheck="false"
+               aria-describedby="nameError">
+        <p id="nameError" class="error" hidden></p>
+      </section>
+
+      <!-- Create mode: pick it once. -->
+      <fieldset id="personalityPicker" class="editor-section">
+        <legend><h2>Personality</h2></legend>
+        <div id="personalityOptions" class="personality-options"></div>
+        <p class="muted small">You can't change this later.</p>
+      </fieldset>
+
+      <!-- Edit mode: read-only. -->
+      <section id="personalityFixed" class="editor-section" hidden>
+        <h2>Personality</h2>
+        <p><span id="personalityBadge" class="badge"></span></p>
+      </section>
+
+      <!-- One radio group per look option, built by avatar.js. -->
+      <div id="lookSections"></div>
+
+      <p id="saveError" class="error" role="alert" hidden></p>
+      <div class="editor-actions">
+        <button type="submit" class="btn primary">Save</button>
+        <button id="cancelButton" type="button" class="btn">Cancel</button>
+      </div>
+    </form>
+  </main>
+
+  <script src="js/data/characters.js"></script>
+  <script src="js/data/messages.js"></script>
+  <script src="js/placeholder-art.js"></script>
+  <script src="js/avatar-parts.js"></script>
+  <script src="js/avatar-art.js"></script>
+  <script src="js/custom-characters.js"></script>
+  <script src="js/history-store.js"></script>
+  <script src="js/avatar.js"></script>
+  <script src="js/sw-register.js"></script>
+</body>
+</html>

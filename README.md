@@ -45,7 +45,9 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   loads and real artwork fits the same slot. At 320 × 568 the header and the whole card fit on the
   first screen.
 - **Setup:** 1. pick a character, 2. a mode (Simple / Advanced), 3. a focus duration.
-  The character decides the personality (see below). Ragebait characters show a warning before
+  The character decides the personality (see below). The last card of step 1 is **Create your own**,
+  and characters you made appear under the grid in **Your characters** (see
+  [Custom characters](#custom-characters)). Ragebait characters show a warning before
   they can be selected. Selecting a card only updates which card is pressed (`aria-pressed`), so
   keyboard and screen reader focus stays on it, also after the ragebait warning (**Bring it on** or
   **Pick someone else**). Tapping Start session without a character shows "Pick a character first."
@@ -602,6 +604,148 @@ praise (that's `good`) and not a reaction to the distraction:
 | strict | Firm and neutral, "get on with it": narrowed eyes, level brows, flat mouth, pointing down at the work. No anger, vein or steam |
 | ragebait | Bored "whatever, go on": half-closed eyes, one eyebrow up, "meh" mouth, pointing down at the work. No middle finger, no insult |
 
+## Custom characters
+
+Users can design their own characters: pick the look from parts, give it a name, and pick its
+personality once. It's the one exception to "the personality comes from the character's group":
+the user picks it when creating the character, and from then on it belongs to that character.
+
+### On the setup screen
+
+- **Create your own** is always the last card of the main character grid: a grey figure with a
+  "?", the title, "Design your own character, with your own name." and, while `CUSTOM_PAID` is
+  `false`, the badge **Free during launch**. Tapping it opens the editor (`avatar.html`).
+- **Limit:** at most 10 characters (`CUSTOM_LIMIT` in `public/js/custom-characters.js`). With 10,
+  the card says "You can have up to 10 characters. Delete one to make a new one." instead of the
+  tagline, is marked `aria-disabled` and doesn't open the editor.
+- **Your characters:** a second grid under the main one, only shown once at least one exists.
+  Each card shows the character's calm pose, its name (always set as plain text, never as HTML),
+  its personality badge, and **Edit** / **Delete** (44 px tall; read out as "Edit Mia" / "Delete
+  Mia"). Tapping the card itself selects it exactly like a built-in character: the selection is
+  saved in `ct_prefs_v1` (`characterId`), Quick start and **Start session** use it, and a ragebait
+  character shows the ragebait warning first. A card is a frame holding the select button and the
+  Edit/Delete row, because a button can't contain other buttons.
+- **Delete** asks "Delete Mia? Your past sessions with this character stay in your history."
+  (**Cancel** / **Delete**). If it was the chosen character, nothing is chosen any more (like a
+  first visit, so Quick start hides). Focus moves to the next card, or to **Create your own**.
+- **Other tabs:** saving, editing or deleting in another tab (or in the editor) updates the cards
+  and Quick start at once (the `storage` event), and on a return from the back/forward cache.
+
+### The editor (`avatar.html`)
+
+`avatar.html` creates a character; `avatar.html?id=custom-…` edits one. It's a separate page (like
+`history.html`) with a **← Back** link, so leaving it in any way discards what wasn't saved.
+
+- **Preview:** at the top, staying on screen while the options scroll (`position: sticky`, at most
+  about a quarter of the screen height). **Preview reactions** shows the 9 poses of the chosen
+  personality one after another (1.2 s each), then the calm pose again. **Randomize** changes the
+  look only (never the name, the personality or the gender) and avoids combinations that look bad
+  together: sunglasses with a full beard, earrings with hair that covers the ears, a necklace on a
+  high collar (hoodie, turtleneck, puffer), facial hair on the Female body. The editor itself
+  allows every combination.
+- **Name:** required, 1–20 characters after trimming (an emoji or accented letter counts as one),
+  unique among your own characters ignoring case. A name like a built-in character's is fine.
+  Errors: "Give your character a name." / "Names can be up to 20 characters." / "You already have
+  a character with this name." Checked on **Save**, then live while typing.
+- **Personality:** Relaxed, Firm but fair, Strict or Ragebait (the built-in groups and their
+  expressions), Relaxed at the start, with "You can't change this later." When editing it's shown
+  as a read-only badge.
+- **Gender** (Female / Male) only sets the starting look and the shoulders; every hairstyle,
+  outfit and accessory works with both. While creating, until any other look option is changed,
+  switching gender also switches to that gender's starting look.
+- **Look options:** radio-button grids (arrow keys and screen readers work as with any radio
+  group), the chosen one with a coloured border and a check mark. Colours are swatches, the rest are
+  small drawings of the character with that option. Every option has a label for screen readers
+  (e.g. "Face 7: oval, button nose, smile lines").
+- **Save** reads the saved list again first, so the 10 limit and the name rule also hold if another
+  tab saved meanwhile. A new character is then picked on the setup screen (`./?picked=<id>`, which
+  runs the normal card tap: a ragebait character shows the warning first). **Cancel** goes back
+  without saving. If the browser doesn't let the site store data, the editor shows the same note
+  as the setup screen and still works; **Save** then says "Couldn't save your character. Your
+  browser isn't letting this site store data." Editing a character that another tab deleted
+  meanwhile says "This character was deleted in another tab, so it can't be saved."
+- **During a session:** the editor can only be opened from the setup screen, so not from a running
+  session in the same tab. In another tab it can: the running session keeps the character as it
+  was when it started, even if it's edited or deleted there.
+- **Speed:** a tap on an option redraws the preview and only the thumbnails whose drawing changed.
+  Each thumbnail shows the base of the look (gender, skin, hair colour, hairstyle, face) with its
+  own option, but no other accessories (the necklace thumbnails also show the outfit), so outfit,
+  eyewear, earrings and facial hair taps only redraw the preview. Thumbnails are inline SVG (much
+  quicker to update than one image each), and those more than 100 px off screen are drawn when they
+  scroll into view. Measured in Chromium at 360 × 780 with 4× CPU slowdown, with the tapped section
+  scrolled into view: a tap takes about 30–90 ms until everything on screen is redrawn (Randomize,
+  which changes every thumbnail: 80–120 ms). Redrawing all ~70 thumbnails as images took 370–1160 ms.
+
+### Sessions, history and stats
+
+- Sessions store the `characterId` and the personality as `style`, as always. Sessions with a
+  custom character also store its name (`characterName`, in `ct_session_v1` and the history
+  entry), so a renamed or deleted character's sessions still show a name. History and summary use
+  the character's current look and name if it still exists.
+- **Deleted characters:** old sessions show the stored name. A session that runs (or is resumed
+  after a reload) with a character deleted in another tab keeps running, drawn with the default
+  look and its stored name and style (`ghostCharacter`).
+- **Picks:** every custom character counts as `"custom"` in `POST /api/picks`; the user's own ids
+  and names never leave the device. See [Popularity stats](#popularity-stats-backend).
+- **Export:** the history export includes these sessions (with `characterName`), but not yet the
+  characters themselves.
+
+### Paid characters (plan for December)
+
+`CUSTOM_PAID` in `public/js/custom-characters.js` is `false`: custom characters are free for
+everyone and the Create card says **Free during launch**. When payments arrive (December), it
+becomes `true`, and then:
+
+- the Create card shows a lock and a **Paid** badge instead of "Free during launch", and tapping it
+  opens an unlock sheet instead of the editor (until unlocked);
+- **characters made during the free launch stay usable**: they keep working (select, edit, delete,
+  sessions) without paying;
+- `/stats.html` already lists custom characters as "always paid", outside the top ~10% ranking.
+
+No payment code exists yet.
+
+### Avatar art guide
+
+A custom character is drawn in layers (`public/js/avatar-art.js`), all on the **same 200 × 240
+canvas** as the built-in placeholders, with the same anchor points:
+
+| Anchor | Where |
+|---|---|
+| Eye line | y = 102 (eye centres x = 78 / 122, moved by up to 3 px towards or away from the nose by the face) |
+| Mouth | around y = 136 |
+| Head centre | (100, 105) |
+| Crown / chin | crown y = 38–53, chin y = 163–170, depending on the head shape |
+| Neck | y = 140–180 (28 px wide Female, 34 px Male) |
+| Shoulder line | y ≈ 172 |
+
+**Layers, back to front:** `hair-back`, `body`, `neck`, `outfit`, `necklace`, `ears`, `head`,
+`nose`, `marks`, `facial-hair`, `hair-front`, then the expression (eyes, brows, mouth: shared by
+every face, always SVG), `earrings`, `eyewear`, and the pose's extras (tears, hands…). Ears sit
+behind the head; facial hair and hair sit under the eyes and mouth, so the expression always shows.
+
+**Real images:** any layer can be a PNG with a transparent background, drawn on the full 200 × 240
+canvas (or a larger image with the same proportions, e.g. 800 × 960), at
+`public/assets/avatar/<category>/<id>.png`, for example `hair-front/bob.png`, `head/oval.png`,
+`outfit/hoodie.png`, `eyewear/aviators.png`. The ids are the ones in `public/js/avatar-parts.js`
+(`head/<round|oval|long|square|heart|wide>`, `ears/<small|medium|large>`, `body/<female|male>`, …).
+Add one line per file to `AVATAR_PNG_FILES` in `avatar-parts.js` (and the file to `PRECACHE` in
+`sw.js`): a listed file is used everywhere, anything not listed stays SVG, and nothing else
+changes (not the editor, not the saved data). Files are listed instead of looked up, so the app
+never requests ~150 files that don't exist.
+
+- **Hair** (`hair-back`, `hair-front`) is drawn for the reference head (crown y = 45, sides x = 46 and
+  154) and is moved and stretched by code to fit each head shape, exactly like the SVG hair.
+- **Outfits** are drawn for the wider Male shoulders. The code cuts them to the chosen body's
+  outline, except the area around the neck (x 70–130, y 140–200), where collars can rise.
+- **Tinted layers:** `body`, `neck`, `ears`, `head` and `nose` take the skin tone; `hair-back` and
+  `hair-front` the hair colour; `facial-hair` the darker brow shade of it. The code multiplies the
+  image by the colour (an SVG `feColorMatrix` filter), so one image works for every colour. Such an
+  image must be **greyscale**: the main colour area **white**, shading in greys (darker grey = deeper
+  shadow), outlines dark grey or black (they stay dark), transparent background. Other layers
+  (outfits, accessories, marks) keep their own colours.
+- **Very dark skin tones** (luminance under 0.12) give the eyes, brows and mouth a thin, soft light
+  outline, so the expression stays readable.
+
 ## Session history (`history.html`)
 
 Every finished session (timer ran out or **End session** pressed) that ran at least 1 minute is saved
@@ -694,12 +838,14 @@ page again after nothing happened draws nothing, and an Import only draws once (
 
 | Key | What's in it |
 |---|---|
-| `ct_session_v1` | The session that's running right now (removed when it ends). `restartPending: true` while the continue/restart question is unanswered; older saved sessions don't have it, which means `false`. `leftAt` (timestamp in ms): only while the page is hidden, for the time away card; missing means the page wasn't left. Never copied into the history |
+| `ct_session_v1` | The session that's running right now (removed when it ends). `characterName`: only with a custom character (its name when the session started). `restartPending: true` while the continue/restart question is unanswered; older saved sessions don't have it, which means `false`. `leftAt` (timestamp in ms): only while the page is hidden, for the time away card; missing means the page wasn't left. Never copied into the history |
 | `ct_history_v1` | Finished sessions, newest first, max. 1000 |
+| `ct_custom_characters_v1` | Characters made in the editor: `{ v: 1, characters: [ { id, name, personality, createdAt, look: { gender, skin, hairColor, hairStyle, face, outfit, eyewear, earrings, necklace, facialHair } } ] }`. `id` is `custom-` plus 10 random letters/digits, never reused (a new id also avoids every id in the history). `personality` is the style its sessions run in. Reading never fails: a broken entry is skipped (not the whole list), an unknown look value gets the default. See [Custom characters](#custom-characters) |
 | `ct_prefs_v1` | Last chosen character, mode and duration, plus `endSound` and `keepScreenOn` (the two setup checkboxes, `true`/`false`). Prefs saved before these existed get `true` for both. `leaveReminder`: the **Remind me if I leave the app** checkbox (see [Leave reminder](#leave-reminder)); prefs saved before it existed get `false`. `homeScreenTipDismissed`: `true` once **Got it** was tapped on the iPhone Home Screen tip. `persistRequested`: `true` once persistent storage was asked for (or skipped in Firefox), see [iPhone storage and the Home Screen app](#iphone-storage-and-the-home-screen-app). Prefs saved before these two existed get `false` for both. `howItWorksDismissed`: `true` once **Got it** was tapped on the How it works card; prefs saved before it existed get `false`, so the card shows once. A `style` value saved by older versions is ignored and dropped. Saved field by field (see [Several tabs](#several-tabs-one-tab-at-a-time)) |
 
 Each history entry: `startedAt`, `endedAt` (timestamps in ms), `endedBy` (`"timer"`/`"manual"`/`"startOver"`),
-`characterId`, `style` (the character's personality when the session ran: `"kind"`, `"firm"`,
+`characterId`, `characterName` (custom characters only, see [Custom characters](#custom-characters);
+built-in characters and older entries don't have it), `style` (the character's personality when the session ran: `"kind"`, `"firm"`,
 `"strict"` or `"ragebait"`; shown as its group label, e.g. "Relaxed" for `"kind"`), `mode`, `plannedMs`, `elapsedMs`, `distractedMs`, `focusPercent`
 (`null` in Simple mode) and `distractions` (`[{ at, level, ms, category }]`). `category` is
 `"phone"` (shown as "Screen": the phone, other apps or tabs; also what the time away card sets), `"thoughts"`, `"noise"`,
@@ -891,10 +1037,10 @@ the session or summary screens, or in dialogs. "← Back to the timer" at the to
 ## Offline use
 
 Once the app has been opened online, it also opens and works **without internet**: the setup
-screen, a full session, the summary and `history.html`. This is done by a **service worker**
+screen, a full session, the summary, `history.html` and the character editor. This is done by a **service worker**
 (`public/sw.js`): a small script the browser installs for the site, which sits between the pages
 and the network and can answer from saved copies when the network is down. It's registered by
-`public/js/sw-register.js`, loaded at the end of `index.html` and `history.html`. In a browser
+`public/js/sw-register.js`, loaded at the end of `index.html`, `history.html` and `avatar.html`. In a browser
 without service workers, or if registering fails (e.g. `index.html` opened as a local file), the app
 works online exactly as before.
 
@@ -936,6 +1082,9 @@ works online exactly as before.
   worker is installed, the first online visit saves a copy (as `/privacy` and `privacy.html`, see
   above), so it opens offline after that. Opened offline before any online visit, it shows the
   browser's offline page; Back works as usual.
+- **The character editor** (`avatar.html` and its scripts) is in the precache list, so characters can
+  be made and edited offline too (`avatar.html?id=…` is found under `avatar.html`: the `?query` is
+  ignored).
 - **Real character artwork** (`public/assets/...`) isn't in the precache list. Each image is saved
   the first time it loads online and is available offline after that.
 - **When you add, remove or rename a file the app needs at startup** (a page, CSS, a JS file, an
@@ -973,14 +1122,19 @@ once with a decent connection fixes it, because every online start refreshes all
 |---|---|
 | `public/index.html` | All screens (setup, session, summary, "open in another tab" notice) and dialogs |
 | `public/history.html` | Your finished sessions, streaks, time per week and focus trends |
+| `public/avatar.html` | The character editor (see [Custom characters](#custom-characters)) |
 | `public/privacy.html` | Privacy page: what stays on the device, what is sent to the server, hosting, your rights (no scripts) |
 | `public/stats.html` | Popularity table (reads `/api/stats`) |
 | `public/sw.js` | Service worker: offline start, network first with a 3-second fallback to the cache, precache list and cache version (see [Offline use](#offline-use)), and taps on the leave reminder notification |
-| `public/js/sw-register.js` | Registers `sw.js` from `index.html` and `history.html`; does nothing without service worker support |
+| `public/js/sw-register.js` | Registers `sw.js` from `index.html`, `history.html` and `avatar.html`; does nothing without service worker support |
 | `public/css/style.css` | Styling, light/dark mode, breathing and reaction animations |
 | `public/js/data/characters.js` | Character list, groups and the personality each group gives (`personalityOf`), art paths, pose descriptions for screen readers (`POSE_DESCRIPTIONS`) |
 | `public/js/data/messages.js` | Motivation messages, summary titles, Simple-mode summary messages per result, and the "can't save" notes (also loaded by `history.html`) |
-| `public/js/placeholder-art.js` | Built-in placeholder drawings (kind, firm, strict and ragebait faces, plus each character's look) for characters without real art |
+| `public/js/placeholder-art.js` | Built-in placeholder drawings (kind, firm, strict and ragebait faces, plus each character's look) for characters without real art; its eyes, brows, mouths and extras are shared with custom characters |
+| `public/js/avatar-parts.js` | Custom characters' look options (skin tones, hair colours, hairstyles, the 20 faces, outfits, accessories), how each is drawn, starting looks, Randomize, and `AVATAR_PNG_FILES` |
+| `public/js/avatar-art.js` | Draws a custom character from its layers (SVG, or listed PNGs with skin/hair tint) |
+| `public/js/custom-characters.js` | Saving and reading `ct_custom_characters_v1`, name rules, the 10 limit, `CUSTOM_PAID`, stand-in for deleted characters (used by all three pages) |
+| `public/js/avatar.js` | The editor on `avatar.html` |
 | `public/js/app.js` | Timer, reaction engine, distraction category picker, Undo, disabled Advanced lengths, time away card, leave reminder notification, motivation rotation, end chime, screen wake lock and the "screen may turn off" note, summary, How it works card, iPhone Home Screen tip, persistent storage request, one tab at a time (Web Locks) |
 | `public/js/history-store.js` | Saving/loading history, focus % and summary result (with their thresholds), distraction categories, export/import checks, iPhone/iPad and iPhone Safari checks, the "can this browser save?" test (`storageWorks`) (used by both pages) |
 | `public/js/history.js` | Streaks, weekly time and focus charts, time of day, distraction categories, session list and backup buttons on `history.html` |
@@ -1022,12 +1176,18 @@ Counts are stored per character per day (UTC) in **Netlify Blobs** (a simple key
 on Netlify: the functions save and read named pieces of data, with no database server running), so
 popularity can be measured over the **last 30 days** and the paid selection rotates as tastes change.
 
-- `GET /api/stats` returns every character's recent and all-time picks, plus `paidCharacterIds`:
-  empty until there are at least 10 characters, then the top ~10% by recent picks.
+- `GET /api/stats` returns every built-in character's recent and all-time picks, plus
+  `paidCharacterIds`: empty until there are at least 10 built-in characters, then the top ~10% by
+  recent picks.
+- **Custom characters** all count under one id, `"custom"` (in `netlify/lib/characters.mjs` with
+  `custom: true`): the app never sends the user's own ids or names. They're always paid, so
+  `"custom"` is left out of the ranking and of the character count, and comes separately as
+  `customPicks: { recentPicks, totalPicks }`. `/stats.html` shows it in its own table, "Custom
+  characters (always paid)".
   It also returns `store`: `"live"` or `"test"` (see below). The numbers are at `/stats.html`,
   which says which store it's reading.
 - **One blob per character:** the key is the character id (`grandma`), the value is the picks per
-  day, e.g. `{ "days": { "2026-11-03": 5, "2026-11-04": 2 } }`. `/api/stats` reads the 15 blobs.
+  day, e.g. `{ "days": { "2026-11-03": 5, "2026-11-04": 2 } }`. `/api/stats` reads the 16 blobs (15 characters and `custom`).
 - **Picks at the same moment aren't lost:** `POST /api/picks` reads the character's blob together
   with its `etag` (an id of that exact version), adds 1 to today, and saves only if the blob is
   still that version (a conditional write: `onlyIfMatch`, or `onlyIfNew` for the very first pick).
@@ -1049,7 +1209,7 @@ popularity can be measured over the **last 30 days** and the paid selection rota
 - **Adding a character:** besides `public/js/data/characters.js`, add it with the same id to
   `CHARACTERS` in `netlify/lib/characters.mjs`, e.g. `{ id: "robot", name: "Robot" }`. Without that
   its picks are refused and it doesn't appear on `/stats.html`.
-- With 15 characters the paid selection is active: the top 2 by recent picks (**Start session**
+- With 15 built-in characters the paid selection is active: the top 2 by recent picks (**Start session**
   presses) are marked "(paid)" on `/stats.html`.
 - Settings (30 days, 10 characters, 10%) are constants at the top of `netlify/functions/stats.mjs`.
 - **Cost:** every pick and every stats load is one function call (web request + a short compute
