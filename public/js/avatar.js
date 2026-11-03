@@ -7,11 +7,15 @@
 const $ = (selector) => document.querySelector(selector);
 
 // The look sections, in order. view: how the thumbnails are drawn (avatar-art.js AVATAR_VIEWS);
-// swatch: a colour instead of a drawing; text: plain text buttons.
-const LOOK_SECTIONS = [
+// swatch: a colour instead of a drawing; text: plain text buttons. The first three are the same for
+// both genders; the others show only the chosen gender's options (and are built again when the
+// gender changes). A section with no options for a gender (facial hair for women) isn't shown.
+const SHARED_SECTIONS = [
   { field: "gender", title: "Gender", kind: "text" },
   { field: "skin", title: "Skin tone", kind: "swatch" },
   { field: "hairColor", title: "Hair colour", kind: "swatch" },
+];
+const GENDER_SECTIONS = [
   { field: "hairStyle", title: "Hairstyle", view: "head" },
   { field: "face", title: "Face", view: "head" },
   { field: "outfit", title: "Outfit", view: "full" },
@@ -29,17 +33,23 @@ const PERSONALITIES = ["kind", "firm", "strict", "ragebait"];
 // Each redrawn picture costs the browser several ms on a slow phone: see "Speed" in the README.
 const THUMB_BASE = ["gender", "skin", "hairColor", "hairStyle", "face"];
 const THUMB_EXTRA = { necklace: ["outfit"] };
-const THUMB_PLAIN = { outfit: "tshirt", eyewear: "none", earrings: "none", necklace: "none", facialHair: "none" };
+
+// The plain parts a thumbnail shows for what it doesn't show: a T-shirt and no accessories.
+function thumbPlain(gender) {
+  const first = (field) => (lookOptions(field, gender)[0] || { id: DEFAULT_LOOKS[gender][field] }).id;
+  return {
+    outfit: gender === "male" ? "m-tshirt" : "w-tshirt",
+    eyewear: first("eyewear"), earrings: first("earrings"), necklace: first("necklace"), facialHair: first("facialHair"),
+  };
+}
 const PREVIEW_POSE_MS = 1200; // Preview reactions: how long each pose shows
 
-// editing: the saved character being edited (null: creating). touched: a look option other than
-// Gender was changed (or Randomize tapped): until then, Gender also switches to that gender's
-// starting look. triedSave: the name is checked live after the first Save that failed on it.
+// editing: the saved character being edited (null: creating). triedSave: the name is checked live
+// after the first Save that failed on it.
 const editor = {
   editing: null,
   look: defaultLook(),
   personality: "kind",
-  touched: false,
   triedSave: false,
   previewTimer: 0,
   // key: what the thumbnail should show now (see thumbKey), drawn: what it shows.
@@ -61,7 +71,7 @@ function showPose(pose) {
 }
 
 function thumbLook(field, id) {
-  const look = { ...THUMB_PLAIN };
+  const look = thumbPlain(editor.look.gender);
   for (const base of [...THUMB_BASE, ...(THUMB_EXTRA[field] || [])]) look[base] = editor.look[base];
   look[field] = id;
   return look;
@@ -91,6 +101,7 @@ function showThumb(thumb) {
 
 // 100px above and below the screen count as near, so a normal scroll finds them ready.
 function observeThumbs() {
+  if (editor.observer) editor.observer.disconnect();
   if (!("IntersectionObserver" in window)) return;
   const byBox = new Map(editor.thumbs.map((thumb) => [thumb.box, thumb]));
   editor.observer = new IntersectionObserver(
@@ -107,7 +118,7 @@ function observeThumbs() {
 }
 
 function syncChecked() {
-  for (const section of LOOK_SECTIONS) {
+  for (const section of [...SHARED_SECTIONS, ...GENDER_SECTIONS]) {
     document.querySelectorAll(`input[name="${section.field}"]`).forEach((input) => {
       input.checked = input.value === editor.look[section.field];
     });
@@ -135,51 +146,79 @@ function optionLabel(name, value, checked) {
   return { label, input };
 }
 
+function optionVisual(section, option, label) {
+  const visual = document.createElement("span");
+  visual.className = "option-visual";
+  label.append(visual);
+  if (section.kind === "text") {
+    visual.textContent = option.label;
+    return;
+  }
+  if (section.kind === "swatch") {
+    const swatch = document.createElement("span");
+    swatch.className = "option-swatch";
+    swatch.style.background = option.color;
+    visual.append(swatch);
+  } else {
+    const box = document.createElement("span");
+    box.className = `option-img option-img-${section.view}`;
+    visual.append(box);
+    editor.thumbs.push({
+      field: section.field, id: option.id, view: section.view, box,
+      prefix: `t${editor.thumbs.length}-`, key: "", drawn: "", near: false,
+    });
+  }
+  const name = document.createElement("span");
+  name.className = "visually-hidden";
+  name.textContent = option.label;
+  label.append(name);
+}
+
+// One section: a fieldset with a radio button per option. The funny faces get their own "Funny"
+// heading at the end of the Face section (still the same radio group).
+function buildSection(section, container) {
+  const options = lookOptions(section.field, editor.look.gender);
+  if (options.length === 0) return;
+  const fieldset = document.createElement("fieldset");
+  fieldset.className = "editor-section";
+  const legend = document.createElement("legend");
+  const heading = document.createElement("h2");
+  heading.textContent = section.title;
+  legend.append(heading);
+  const grid = document.createElement("div");
+  grid.className = `option-grid option-grid-${section.kind || section.view}`;
+  for (const option of options) {
+    if (option.funny && !grid.querySelector(".option-group-title")) {
+      const title = document.createElement("h3");
+      title.className = "option-group-title";
+      title.textContent = "Funny";
+      grid.append(title);
+    }
+    const { label, input } = optionLabel(section.field, option.id, editor.look[section.field] === option.id);
+    optionVisual(section, option, label);
+    input.addEventListener("change", () => onLookChange(section.field, option.id));
+    grid.append(label);
+  }
+  fieldset.append(legend, grid);
+  container.append(fieldset);
+}
+
 function buildLookSections() {
   const container = $("#lookSections");
-  for (const section of LOOK_SECTIONS) {
-    const fieldset = document.createElement("fieldset");
-    fieldset.className = "editor-section";
-    const legend = document.createElement("legend");
-    const heading = document.createElement("h2");
-    heading.textContent = section.title;
-    legend.append(heading);
-    const grid = document.createElement("div");
-    grid.className = `option-grid option-grid-${section.kind || section.view}`;
+  for (const section of SHARED_SECTIONS) buildSection(section, container);
+  const genderSections = document.createElement("div");
+  genderSections.id = "genderSections";
+  container.append(genderSections);
+  buildGenderSections();
+}
 
-    for (const option of LOOK_OPTIONS[section.field]) {
-      const { label, input } = optionLabel(section.field, option.id, editor.look[section.field] === option.id);
-      const visual = document.createElement("span");
-      visual.className = "option-visual";
-      label.append(visual);
-      if (section.kind === "text") {
-        visual.textContent = option.label;
-      } else {
-        if (section.kind === "swatch") {
-          const swatch = document.createElement("span");
-          swatch.className = "option-swatch";
-          swatch.style.background = option.color;
-          visual.append(swatch);
-        } else {
-          const box = document.createElement("span");
-          box.className = `option-img option-img-${section.view}`;
-          visual.append(box);
-          editor.thumbs.push({
-            field: section.field, id: option.id, view: section.view, box,
-            prefix: `t${editor.thumbs.length}-`, key: "", drawn: "", near: false,
-          });
-        }
-        const name = document.createElement("span");
-        name.className = "visually-hidden";
-        name.textContent = option.label;
-        label.append(name);
-      }
-      input.addEventListener("change", () => onLookChange(section.field, option.id));
-      grid.append(label);
-    }
-    fieldset.append(legend, grid);
-    container.append(fieldset);
-  }
+// The chosen gender's sections (again after a gender change), with their thumbnails.
+function buildGenderSections() {
+  const container = $("#genderSections");
+  container.innerHTML = "";
+  editor.thumbs = [];
+  for (const section of GENDER_SECTIONS) buildSection(section, container);
+  observeThumbs();
 }
 
 function buildPersonalityOptions() {
@@ -202,20 +241,22 @@ function buildPersonalityOptions() {
 
 // ---------- changes ----------
 
+// A gender change (also when editing) starts again from that gender's starting look: the two
+// genders have different lists. The name and personality stay.
 function onLookChange(field, id) {
-  if (field === "gender" && !editor.editing && !editor.touched) {
+  if (field === "gender") {
+    if (id === editor.look.gender) return;
     editor.look = defaultLook(id);
+    buildGenderSections();
     syncChecked();
   } else {
     editor.look = { ...editor.look, [field]: id };
-    if (field !== "gender") editor.touched = true;
   }
   redraw();
 }
 
 function onRandomize() {
   editor.look = randomLook(editor.look.gender);
-  editor.touched = true;
   syncChecked();
   redraw();
 }
@@ -347,7 +388,6 @@ function init() {
   }
 
   buildLookSections();
-  observeThumbs();
   redraw();
   loadAvatarPngs(() => {
     for (const thumb of editor.thumbs) thumb.drawn = "";

@@ -1672,6 +1672,13 @@ a {
 }
 
 /* A thumbnail: inline SVG (avatar.js), with the proportions of its view (AVATAR_VIEWS). */
+/* "Funny" before the funny faces, across the whole grid. */
+.option-group-title {
+  grid-column: 1 / -1;
+  margin: 10px 0 0;
+  font-size: 1rem;
+}
+
 .option-img {
   display: block;
   width: 100%;
@@ -1684,7 +1691,7 @@ a {
 }
 
 .option-img-head {
-  aspect-ratio: 168 / 178;
+  aspect-ratio: 184 / 204;
 }
 
 .option-img-full {

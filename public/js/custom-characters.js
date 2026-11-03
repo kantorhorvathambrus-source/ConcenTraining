@@ -4,7 +4,7 @@
 // ct_custom_characters_v1 = { v: 1, characters: [ { id, name, personality, createdAt, look } ] }
 //   id: "custom-" + random letters and digits, never reused. personality: the style a session with
 //   the character runs in ("kind", "firm", "strict" or "ragebait"), picked once when it's created.
-//   look: see LOOK_OPTIONS in avatar-parts.js.
+//   look: see LOOK_FIELDS and GENDER_OPTIONS in avatar-parts.js (the lists differ per gender).
 // Reading never throws: a broken entry is skipped (not the whole list), unknown look values get
 // the default (cleanLook).
 

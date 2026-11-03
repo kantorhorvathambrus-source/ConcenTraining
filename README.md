@@ -650,10 +650,10 @@ the user picks it when creating the character, and from then on it belongs to th
 - **Preview:** at the top, staying on screen while the options scroll (`position: sticky`, at most
   about a quarter of the screen height). **Preview reactions** shows the 9 poses of the chosen
   personality one after another (1.2 s each), then the calm pose again. **Randomize** changes the
-  look only (never the name, the personality or the gender) and avoids combinations that look bad
+  look only (never the name, the personality or the gender), using only the chosen gender's
+  options, picks a funny face only about 1 time in 10, and avoids combinations that look bad
   together: sunglasses with a full beard, earrings with hair that covers the ears, a necklace on a
-  high collar (hoodie, turtleneck, puffer), facial hair on the Female body. The editor itself
-  allows every combination.
+  high collar (hoodie, turtleneck, puffer, track jacket). The editor itself allows every combination.
 - **Name:** required, 1–20 characters after trimming (an emoji or accented letter counts as one),
   unique among your own characters ignoring case. A name like a built-in character's is fine.
   Errors: "Give your character a name." / "Names can be up to 20 characters." / "You already have
@@ -661,13 +661,35 @@ the user picks it when creating the character, and from then on it belongs to th
 - **Personality:** Relaxed, Firm but fair, Strict or Ragebait (the built-in groups and their
   expressions), Relaxed at the start, with "You can't change this later." When editing it's shown
   as a read-only badge.
-- **Gender** (Female / Male) only sets the starting look and the shoulders; every hairstyle,
-  outfit and accessory works with both. While creating, until any other look option is changed,
-  switching gender also switches to that gender's starting look.
+- **Gender** (Female / Male): the two genders are fully separate. Each has its own faces,
+  hairstyles, outfits, eyewear, earrings and necklaces (ids start with `w-` or `m-`), and only men
+  have facial hair (the section isn't shown for women). Only skin tone, hair colour and the funny
+  faces are shared. Switching gender, also when editing, starts again from that gender's starting
+  look; the name and personality stay.
+- **What each gender gets** (`avatar-parts.js`):
+
+  | | Women | Men |
+  |---|---|---|
+  | Faces | 22 (10 kept from the first version, 12 new young, attractive faces with lashes and/or lip tint) | 22 (10 kept, 12 new young, attractive faces with defined jaws) |
+  | Funny faces (shared, "Funny" group at the end of Face) | Huge chin, Tiny head with giant ears, Very long face, Buck teeth, Unibrow, Potato nose, Long pointy nose, Giant cheeks, Wide face with tiny features, Huge eyes | same |
+  | Hairstyles | 17: Pixie cut, Short layered cut, Chin-length bob with volume, Short soft perm, Sleek bob, Side-swept lob, Shoulder length, Long straight, Long waves, Long curls, Curly afro, High bun, Low bun, High ponytail, Two braids, Side braid, Half-up | 15: Buzz cut, Shaved, Short crop, Crew cut, Side part, Quiff, Slicked back, Textured fringe, Low fade, Short curls, Curly top fade, Afro, Shoulder length, Man bun, Long tied back |
+  | Outfits | 20 | 20 (T-shirt, hoodie, sweater, turtleneck, denim jacket, lab coat, puffer, striped top and tank top exist in both lists, with their own ids and colours) |
+  | Eyewear | None; cat-eye, round thin-frame and oversized glasses; oversized, cat-eye and round sunglasses | None; rectangle, browline and round wire glasses; aviator, wayfarer and sport sunglasses |
+  | Earrings | None, studs, hoops, drops | None, small stud, small hoop, double studs |
+  | Necklace | None, thin chain, pendant, pearls | None, chain, thick chain, dog tag |
+  | Facial hair | – | None, stubble, moustache, full beard, goatee, short boxed beard |
+
+- **Faces** change the head shape and features, never the expression: the eyes, brows and mouth
+  of every pose stay the shared ones, so every face works in all 9 poses of all 4 personalities.
+  Lashes are 2 small strokes at each eye's outer corner, placed per eye drawing (open, closed,
+  happy, wide, teary, narrow, bored, side, side-glance, rolled, squeezed) and scaled with the eye.
+  Lip tint draws the mouth's line in a soft rose. The funny features follow the pose too: buck
+  teeth hang from the top of whatever mouth the pose draws, a unibrow joins the brows' inner ends,
+  and "tiny features" shrink the eyes, brows, nose and mouth together.
 - **Look options:** radio-button grids (arrow keys and screen readers work as with any radio
   group), the chosen one with a coloured border and a check mark. Colours are swatches, the rest are
   small drawings of the character with that option. Every option has a label for screen readers
-  (e.g. "Face 7: oval, button nose, smile lines").
+  (e.g. "Face 16: heart-shaped, soft nose, lashes, lip tint" or "Funny face 6: potato nose").
 - **Save** reads the saved list again first, so the 10 limit and the name rule also hold if another
   tab saved meanwhile. A new character is then picked on the setup screen (`./?picked=<id>`, which
   runs the normal card tap: a ragebait character shows the warning first). **Cancel** goes back
@@ -682,10 +704,11 @@ the user picks it when creating the character, and from then on it belongs to th
   Each thumbnail shows the base of the look (gender, skin, hair colour, hairstyle, face) with its
   own option, but no other accessories (the necklace thumbnails also show the outfit), so outfit,
   eyewear, earrings and facial hair taps only redraw the preview. Thumbnails are inline SVG (much
-  quicker to update than one image each), and those more than 100 px off screen are drawn when they
-  scroll into view. Measured in Chromium at 360 × 780 with 4× CPU slowdown, with the tapped section
-  scrolled into view: a tap takes about 30–90 ms until everything on screen is redrawn (Randomize,
-  which changes every thumbnail: 80–120 ms). Redrawing all ~70 thumbnails as images took 370–1160 ms.
+  quicker to update than one image each), those more than 100 px off screen are drawn when they
+  scroll into view, and only the chosen gender's sections exist. Measured in Chromium at 360 × 780
+  with 4× CPU slowdown, with the tapped section scrolled into view: a tap on an option takes
+  21–92 ms until everything on screen is redrawn, Randomize 65–91 ms, and a gender switch (which
+  builds that gender's sections again) 39–63 ms. Redrawing all thumbnails as images took 370–1160 ms.
 
 ### Sessions, history and stats
 
@@ -725,27 +748,43 @@ canvas** as the built-in placeholders, with the same anchor points:
 | Eye line | y = 102 (eye centres x = 78 / 122, moved by up to 3 px towards or away from the nose by the face) |
 | Mouth | around y = 136 |
 | Head centre | (100, 105) |
-| Crown / chin | crown y = 38–53, chin y = 163–170, depending on the head shape |
+| Temple line | y = 105: the head's widest point above the cheeks; everything above it is half an ellipse |
+| Crown / chin | crown y = 40–54 (funny heads 26–60), chin y = 164–172 (funny heads up to 197), depending on the head |
 | Neck | y = 140–180 (28 px wide Female, 34 px Male) |
 | Shoulder line | y ≈ 172 |
 
+**Heads** are built from a few numbers (`buildHead` in `avatar-parts.js`): crown height, width at
+the temples, cheekbones, jaw corner, chin width and height, and how angular the jaw is. Above the
+temple line every head is half an ellipse centred at (100, 105); all the differences (soft or
+defined jaw, high cheekbones, pointed or square chin) are below it.
+
 **Layers, back to front:** `hair-back`, `body`, `neck`, `outfit`, `necklace`, `ears`, `head`,
-`nose`, `marks`, `facial-hair`, `hair-front`, then the expression (eyes, brows, mouth: shared by
-every face, always SVG), `earrings`, `eyewear`, and the pose's extras (tears, hands…). Ears sit
-behind the head; facial hair and hair sit under the eyes and mouth, so the expression always shows.
+`marks`, `facial-hair`, `eyewear-arms`, `hair-front`, then the face (`nose` and the expression:
+eyes with lashes, brows, mouth with lip tint, buck teeth, blush and tears; the expression is
+shared by every face and always SVG), `earrings`, `eyewear`, and the pose's other extras (sweat,
+steam, hands…). Ears sit behind the head; facial hair and hair sit under the eyes and mouth, so the
+expression always shows; glasses arms go under the hair and the lenses over it. Giant ears (a
+funny face) are drawn over the hair.
 
 **Real images:** any layer can be a PNG with a transparent background, drawn on the full 200 × 240
 canvas (or a larger image with the same proportions, e.g. 800 × 960), at
-`public/assets/avatar/<category>/<id>.png`, for example `hair-front/bob.png`, `head/oval.png`,
-`outfit/hoodie.png`, `eyewear/aviators.png`. The ids are the ones in `public/js/avatar-parts.js`
-(`head/<round|oval|long|square|heart|wide>`, `ears/<small|medium|large>`, `body/<female|male>`, …).
+`public/assets/avatar/<category>/<id>.png`, for example `hair-front/w-sleek-bob.png`,
+`head/m-square.png`, `outfit/w-wrap-dress.png`, `eyewear/m-aviators.png` (the lenses) and
+`eyewear-arms/m-aviators.png` (the arms). The ids are the ones in `public/js/avatar-parts.js`:
+heads `w-…`, `m-…` and `fun-…` (`HEAD_SHAPES`), `ears/<small|medium|large|giant>`,
+`body/<female|male>`, `nose/<button|petite|defined|…>`, and the option ids of each gender's lists.
 Add one line per file to `AVATAR_PNG_FILES` in `avatar-parts.js` (and the file to `PRECACHE` in
 `sw.js`): a listed file is used everywhere, anything not listed stays SVG, and nothing else
 changes (not the editor, not the saved data). Files are listed instead of looked up, so the app
-never requests ~150 files that don't exist.
+never requests hundreds of files that don't exist.
 
-- **Hair** (`hair-back`, `hair-front`) is drawn for the reference head (crown y = 45, sides x = 46 and
-  154) and is moved and stretched by code to fit each head shape, exactly like the SVG hair.
+- **Hair** (`hair-back`, `hair-front`) is drawn for the reference head: an ellipse centred at
+  (100, 105), 54 wide each side (x = 46 to 154 at y = 105), crown at y = 45. The code scales it
+  around the temple line onto each head's ellipse (`hairTransform`), exactly like the SVG hair, so
+  a hairline drawn on the reference head fits every head. The hair's outer edge must lie a little
+  outside that ellipse and its hairline inside it, so no skin shows between them. Keep fringes above
+  y ≈ 70 between x = 62 and 138, so the brows stay visible. Mark a hairstyle `coversEars` when its
+  front covers the ears: studs are then hidden, hoops and drops still hang below the hair.
 - **Outfits** are drawn for the wider Male shoulders. The code cuts them to the chosen body's
   outline, except the area around the neck (x 70–130, y 140–200), where collars can rise.
 - **Tinted layers:** `body`, `neck`, `ears`, `head` and `nose` take the skin tone; `hair-back` and
@@ -754,8 +793,9 @@ never requests ~150 files that don't exist.
   image must be **greyscale**: the main colour area **white**, shading in greys (darker grey = deeper
   shadow), outlines dark grey or black (they stay dark), transparent background. Other layers
   (outfits, accessories, marks) keep their own colours.
-- **Very dark skin tones** (luminance under 0.12) give the eyes, brows and mouth a thin, soft light
-  outline, so the expression stays readable.
+- **Very dark skin tones** (8–10, luminance under 0.12) draw the lines of the eyes, brows and mouth
+  in pure black and 15% thicker, open mouths in a brighter red, and dark brows pure black, so the
+  expression stays readable without an outline. Eye whites stay as they are.
 
 ## Session history (`history.html`)
 
@@ -1142,7 +1182,7 @@ once with a decent connection fixes it, because every online start refreshes all
 | `public/js/data/characters.js` | Character list, groups and the personality each group gives (`personalityOf`), art paths, pose descriptions for screen readers (`POSE_DESCRIPTIONS`) |
 | `public/js/data/messages.js` | Motivation messages, summary titles, Simple-mode summary messages per result, and the "can't save" notes (also loaded by `history.html`) |
 | `public/js/placeholder-art.js` | Built-in placeholder drawings (kind, firm, strict and ragebait faces, plus each character's look) for characters without real art; its eyes, brows, mouths and extras are shared with custom characters |
-| `public/js/avatar-parts.js` | Custom characters' look options (skin tones, hair colours, hairstyles, the 20 faces, outfits, accessories), how each is drawn, starting looks, Randomize, and `AVATAR_PNG_FILES` |
+| `public/js/avatar-parts.js` | Custom characters' parts: head shapes (`buildHead`), each gender's faces, hairstyles, outfits and accessories, the shared skin tones, hair colours and funny faces, how each is drawn, starting looks, Randomize, and `AVATAR_PNG_FILES` |
 | `public/js/avatar-art.js` | Draws a custom character from its layers (SVG, or listed PNGs with skin/hair tint) |
 | `public/js/custom-characters.js` | Saving and reading `ct_custom_characters_v1`, name rules, the 10 limit, `CUSTOM_PAID`, stand-in for deleted characters (used by all three pages) |
 | `public/js/avatar.js` | The editor on `avatar.html` |
