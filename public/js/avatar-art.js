@@ -81,6 +81,32 @@ function hairTransform(head) {
   return `translate(100 ${cy}) scale(${sx.toFixed(3)} ${sy.toFixed(3)}) translate(-100 -${HEAD_CY})`;
 }
 
+// The hair that falls below the temples (backFall / frontFall): scaled to the head's width like the
+// rest, but not stretched in height. Like in the first version, on a head taller than the reference
+// it moves up with the crown (at most 7 px, what the first version's long head did), so it falls
+// to the same length.
+const HAIR_FALL_MAX_LIFT = 7;
+
+function hairFallTransform(head) {
+  const cy = head.cy || HEAD_CY;
+  const sx = head.halfW / HAIR_REF.halfW;
+  const lift = Math.max(Math.min(head.top - HAIR_REF.top, 0), -HAIR_FALL_MAX_LIFT);
+  const y = HEAD_CY + Math.min(cy - HEAD_CY, lift);
+  if (sx === 1 && y === HEAD_CY) return "";
+  return `translate(100 ${y}) scale(${sx.toFixed(3)} 1) translate(-100 -${HEAD_CY})`;
+}
+
+// A hair layer: the part on the head plus (long styles) the part that falls. A PNG replaces both
+// and is placed like the part on the head.
+function hairLayer(category, style, cap, fall, head, colors) {
+  const capSvg = cap ? cap(colors) : "";
+  if (!fall || avatarPngData.has(`${category}/${style.id}`)) {
+    return avatarLayer(category, style.id, capSvg, hairTransform(head), "hair");
+  }
+  const wrap = (svg, transform) => (transform ? `<g transform="${transform}">${svg}</g>` : svg);
+  return wrap(capSvg, hairTransform(head)) + wrap(fall(colors), hairFallTransform(head));
+}
+
 function drawEars(head, ears, skin, shade) {
   const ear = earGeometry(head, ears);
   return [-1, 1].map((s) => {
@@ -184,7 +210,6 @@ function avatarSvg(rawLook, personality, pose, view = "full") {
     light: mixColor(hair, "#ffffff", 0.35),
     fade: mixColor(hair, skin, 0.5),
   };
-  const hairMove = hairTransform(head);
   const lashColor = dark ? "#000" : "#222";
   const eye = (cx, type) => {
     const inner = drawEye(cx, type) + (face.lashes ? drawLashes(cx, type, lashColor) : "");
@@ -225,7 +250,7 @@ function avatarSvg(rawLook, personality, pose, view = "full") {
   }
 
   const parts = [
-    avatarLayer("hair-back", hairStyle.id, hairStyle.back ? hairStyle.back(hairColors) : "", hairMove, "hair"),
+    hairLayer("hair-back", hairStyle, hairStyle.back, hairStyle.backFall, head, hairColors),
     avatarLayer("body", p.gender.id, `<path d="${p.gender.body}" fill="${skin}"/>`, "", "skin"),
     avatarLayer("neck", p.gender.id, `<rect x="${100 - nw / 2}" y="140" width="${nw}" height="40" fill="${skin}"/>`, "", "skin"),
     outfitPng
@@ -238,7 +263,7 @@ function avatarSvg(rawLook, personality, pose, view = "full") {
     face.marks.map((mark) => avatarLayer("marks", mark, MARKS[mark].draw(geo, skinShade))).join(""),
     p.facialHair ? avatarLayer("facial-hair", p.facialHair.id, p.facialHair.draw(brow, head), "", "brow") : "",
     avatarLayer("eyewear-arms", p.eyewear.id, p.eyewear.arms(geo, head.halfW)),
-    avatarLayer("hair-front", hairStyle.id, hairStyle.front(hairColors), hairMove, "hair"),
+    hairLayer("hair-front", hairStyle, hairStyle.front, hairStyle.frontFall, head, hairColors),
     // Giant ears (a funny face) stick out of any hair, so they're drawn over it.
     face.earsOnTop ? ears : "",
     faceGroup,

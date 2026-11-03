@@ -162,7 +162,6 @@ const HEAD_SHAPES = {
   "m-long-oval": { label: "long oval", top: 40, halfW: 51, cheekW: 50, cheekY: 124, jawW: 38, jawY: 155, chinW: 13, chinY: 167, chinDrop: 4, sharp: 0.1 },
   "m-round": { label: "round", top: 47, halfW: 56, cheekW: 56, cheekY: 120, jawW: 44, jawY: 148, chinW: 15, chinY: 160, chinDrop: 5, sharp: 0 },
   "m-egg": { label: "egg-shaped", top: 44, halfW: 56, cheekW: 53, cheekY: 120, jawW: 37, jawY: 150, chinW: 11, chinY: 163, chinDrop: 4, sharp: 0 },
-  "m-soft-heart": { label: "soft heart-shaped", top: 45, halfW: 55, cheekW: 52, cheekY: 118, jawW: 36, jawY: 150, chinW: 11, chinY: 164, chinDrop: 3, sharp: 0.15 },
   "m-diamond": { label: "high cheekbones", top: 46, halfW: 51, cheekW: 55, cheekY: 116, jawW: 40, jawY: 150, chinW: 12, chinY: 164, chinDrop: 3, sharp: 0.15 },
   "m-wide": { label: "wide", top: 51, halfW: 59, cheekW: 59, cheekY: 120, jawW: 44, jawY: 149, chinW: 16, chinY: 160, chinDrop: 4, sharp: 0 },
   "m-square": { label: "square jaw", top: 47, halfW: 55, cheekW: 55, cheekY: 120, jawW: 48, jawY: 150, chinW: 20, chinY: 164, chinDrop: 2, sharp: 0.35 },
@@ -370,7 +369,9 @@ function faceGeometry(face) {
 // Drawn for the reference head: ellipse centred at (100, 105), 54 wide each side, crown y = 45.
 // c: { hair, shade (darker), light (lighter), fade (hair mixed with skin, for faded sides) }.
 // back is drawn behind the head and body, front over the head (but under the eyes, brows and
-// mouth, so the expression always shows). coversEars: the front covers the ears (studs are then
+// mouth, so the expression always shows). Long styles also have backFall / frontFall: the hair
+// that falls below the temples. It's scaled to the head's width but never stretched in height, so
+// it always falls straight to the same length, like in the first version. coversEars: the front covers the ears (studs are then
 // hidden, and Randomize leaves earrings out).
 // Rules: the front's outer edge lies outside the head outline and its hairline inside it, so no
 // skin shows between them; fringes stay above y ≈ 70 between x 62 and 138 (the brows).
@@ -461,31 +462,38 @@ const WOMEN_HAIR = [
   },
   {
     id: "w-lob", label: "Side-swept lob", coversEars: true,
-    back: (c) => `<path d="M34 112 Q30 36 100 32 Q170 36 166 112 L172 176 Q150 184 100 182 Q50 184 28 176Z" fill="${c.hair}"/>`,
-    front: (c) => `<path d="${cap(59, 65, 100, "L152 100 Q150 74 132 62 Q100 60 76 68 Q60 76 54 92 Q50 98 48 100")}" fill="${c.hair}"/>
-                   <path d="M132 62 Q98 62 70 78 Q56 88 52 104 Q58 80 82 66 Q104 56 132 56Z" fill="${c.shade}" fill-opacity="0.4"/>
-                   ${curtains(92, 176, c, 4)}`,
+    back: (c) => `<path d="M34 112 Q30 36 100 32 Q170 36 166 112Z" fill="${c.hair}"/>`,
+    backFall: (c) => `<path d="M34.7 104 L165.3 104 L166 112 L172 176 Q156 186 138 176 L136 120 L64 120 L62 176 Q44 186 28 176 L34 112Z" fill="${c.hair}"/>`,
+    front: (c) => `<path d="M46 104 Q40 38 100 36 Q160 38 154 104 Q150 74 132 62 Q100 60 76 68 Q60 76 54 92 Q50 98 46 104Z" fill="${c.hair}"/>
+                   <path d="M132 62 Q98 62 70 78 Q56 88 52 104 Q58 80 82 66 Q104 56 132 56Z" fill="${c.shade}" fill-opacity="0.4"/>`,
+    frontFall: (c) => curtains(92, 176, c, 4),
   },
+  // The first version's shape: a full, high crown and two straight panels that frame the face
+  // from outside and fall to the shoulders, with a gap beside the neck.
   {
     id: "w-shoulder", label: "Shoulder length", coversEars: true,
-    back: (c) => `<path d="M36 112 Q32 36 100 34 Q168 36 164 112 L170 184 Q150 194 100 190 Q50 194 30 184Z" fill="${c.hair}"/>`,
-    front: (c) => `<path d="${cap(58, 64, 104, "L152 104 Q150 76 128 64 Q96 76 62 66 Q52 80 48 104")}" fill="${c.hair}"/>
-                   ${curtains(92, 180, c)}
+    back: (c) => `<path d="M36 112 Q32 38 100 34 Q168 38 164 112Z" fill="${c.hair}"/>`,
+    backFall: (c) => `<path d="M36.7 104 L163.3 104 L164 112 L170 184 Q152 194 136 182 L136 120 L64 120 L64 182 Q48 194 30 184 L36 112Z" fill="${c.hair}"/>`,
+    front: (c) => `<path d="M46 104 Q40 40 100 38 Q160 40 154 104 Q150 74 128 64 Q96 76 62 66 Q52 80 46 104Z" fill="${c.hair}"/>
                    <path d="M62 66 Q96 74 128 64" fill="none" stroke="${c.shade}" stroke-width="2"/>`,
+    frontFall: (c) => `<path d="M46 92 Q38 140 40 178 Q50 186 60 176 Q54 130 58 98Z M154 92 Q162 140 160 178 Q150 186 140 176 Q146 130 142 98Z" fill="${c.hair}"/>`,
   },
   {
     id: "w-long-straight", label: "Long straight", coversEars: true,
-    back: (c) => `<path d="M34 112 Q30 34 100 32 Q170 34 166 112 L172 240 L28 240Z" fill="${c.hair}"/>`,
-    front: (c) => `${CENTER_PART(c)}${curtains(92, 236, c)}
-                   <path d="M50 130 L50 222 M150 130 L150 222" stroke="${c.shade}" stroke-width="2" stroke-linecap="round"/>`,
+    back: (c) => `<path d="M34 112 Q30 36 100 32 Q170 36 166 112Z" fill="${c.hair}"/>`,
+    backFall: (c) => `<path d="M34.7 104 L165.3 104 L166 112 L172 240 L134 240 L134 120 L66 120 L66 240 L28 240 L34 112Z" fill="${c.hair}"/>`,
+    front: (c) => `<path d="M46 104 Q42 40 100 38 Q158 40 154 104 Q150 66 104 58 L100 50 L96 58 Q50 66 46 104Z" fill="${c.hair}"/>`,
+    frontFall: (c) => `<path d="M46 92 Q36 150 40 236 L60 236 Q56 150 58 100Z M154 92 Q164 150 160 236 L140 236 Q144 150 142 100Z" fill="${c.hair}"/>
+                       <path d="M50 130 L50 220 M150 130 L150 220" stroke="${c.shade}" stroke-width="2" stroke-linecap="round"/>`,
   },
   {
     id: "w-long-waves", label: "Long waves", coversEars: true,
-    back: (c) => `<path d="M32 112 Q28 34 100 32 Q172 34 168 112 Q180 140 168 168 Q182 196 170 228 L176 240 L24 240 L30 228 Q18 196 32 168 Q20 140 32 112Z" fill="${c.hair}"/>`,
-    front: (c) => `<path d="${cap(58, 64, 104, "L152 104 Q150 78 134 66 Q114 58 94 60 L90 52 Q80 60 66 66 Q52 78 48 104")}" fill="${c.hair}"/>
-                   <path d="M45 92 Q34 116 44 140 Q32 166 44 192 Q34 214 42 236 L60 232 Q54 212 60 192 Q50 166 60 140 Q52 116 59 96Z
-                            M155 92 Q166 116 156 140 Q168 166 156 192 Q166 214 158 236 L140 232 Q146 212 140 192 Q150 166 140 140 Q148 116 141 96Z" fill="${c.hair}"/>
-                   <path d="M52 140 Q46 166 54 190 M148 140 Q154 166 146 190" fill="none" stroke="${c.shade}" stroke-width="2"/>`,
+    back: (c) => `<path d="M32 112 Q28 34 100 32 Q172 34 168 112Z" fill="${c.hair}"/>`,
+    backFall: (c) => `<path d="M32.7 104 L167.3 104 L168 112 Q180 140 168 168 Q182 196 170 228 L176 240 L134 240 L134 120 L66 120 L66 240 L24 240 L30 228 Q18 196 32 168 Q20 140 32 112Z" fill="${c.hair}"/>`,
+    front: (c) => `<path d="M46 104 Q40 38 100 36 Q160 38 154 104 Q150 78 134 66 Q114 58 94 60 L90 52 Q80 60 66 66 Q52 78 46 104Z" fill="${c.hair}"/>`,
+    frontFall: (c) => `<path d="M45 92 Q34 116 44 140 Q32 166 44 192 Q34 214 42 236 L60 232 Q54 212 60 192 Q50 166 60 140 Q52 116 59 96Z
+                                M155 92 Q166 116 156 140 Q168 166 156 192 Q166 214 158 236 L140 232 Q146 212 140 192 Q150 166 140 140 Q148 116 141 96Z" fill="${c.hair}"/>
+                       <path d="M52 140 Q46 166 54 190 M148 140 Q154 166 146 190" fill="none" stroke="${c.shade}" stroke-width="2"/>`,
   },
   {
     id: "w-long-curls", label: "Long curls", coversEars: true,
@@ -533,8 +541,10 @@ const WOMEN_HAIR = [
   {
     id: "w-half-up", label: "Half-up", coversEars: true,
     back: (c) => `<circle cx="100" cy="34" r="13" fill="${c.hair}" stroke="${c.shade}" stroke-width="2"/>
-                  <path d="M34 112 Q30 34 100 32 Q170 34 166 112 L172 232 L28 232Z" fill="${c.hair}"/>`,
-    front: (c) => `${SLEEK_CAP(c)}${curtains(96, 228, c)}`,
+                  <path d="M34 112 Q30 34 100 32 Q170 34 166 112Z" fill="${c.hair}"/>`,
+    backFall: (c) => `<path d="M34.7 104 L165.3 104 L166 112 L172 232 L134 232 L134 120 L66 120 L66 232 L28 232 L34 112Z" fill="${c.hair}"/>`,
+    front: (c) => SLEEK_CAP(c),
+    frontFall: (c) => curtains(96, 228, c),
   },
 ];
 

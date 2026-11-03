@@ -785,7 +785,13 @@ never requests hundreds of files that don't exist.
   (100, 105), 54 wide each side (x = 46 to 154 at y = 105), crown at y = 45. The code scales it
   around the temple line onto each head's ellipse (`hairTransform`), exactly like the SVG hair, so
   a hairline drawn on the reference head fits every head. The hair's outer edge must lie a little
-  outside that ellipse and its hairline inside it, so no skin shows between them. Keep fringes above
+  outside that ellipse and its hairline inside it, so no skin shows between them. Long women's
+  styles (shoulder length, side-swept lob, long straight, long waves, half-up) also have a "fall":
+  the hair below the temples, drawn as two panels with a gap beside the neck, so the hair frames the
+  face from outside. The fall is scaled to the head's width but never stretched in height, and on a
+  head taller than the reference it moves up with the crown (at most 7 px), as in the first
+  version (`hairFallTransform`), so it always falls straight to the same length. A PNG for such a
+  style replaces both parts and is placed like the hair on the head. Keep fringes above
   y ≈ 70 between x = 62 and 138, so the brows stay visible. Mark a hairstyle `coversEars` when its
   front covers the ears: studs are then hidden, hoops and drops still hang below the hair.
 - **Outfits** are drawn for the wider Male shoulders. The code cuts them to the chosen body's
