@@ -143,15 +143,22 @@ const HEAD_SHAPES = {
   "w-soft-long": { label: "long", top: 40, halfW: 50, cheekW: 50, cheekY: 124, jawW: 38, jawY: 156, chinW: 13, chinY: 169, chinDrop: 3, sharp: 0 },
   "w-soft-square": { label: "soft square", top: 47, halfW: 54, cheekW: 54, cheekY: 122, jawW: 46, jawY: 150, chinW: 18, chinY: 163, chinDrop: 2, sharp: 0.3 },
   "w-petite": { label: "petite", top: 48, halfW: 50, cheekW: 50, cheekY: 118, jawW: 36, jawY: 148, chinW: 11, chinY: 162, chinDrop: 3, sharp: 0 },
-  // Male: defined jaws.
-  "m-oval": { label: "oval", top: 44, halfW: 53, cheekW: 53, cheekY: 122, jawW: 42, jawY: 152, chinW: 17, chinY: 165, chinDrop: 2, sharp: 0.2 },
-  "m-round": { label: "round", top: 47, halfW: 56, cheekW: 57, cheekY: 120, jawW: 48, jawY: 150, chinW: 20, chinY: 163, chinDrop: 3, sharp: 0 },
-  "m-square": { label: "square", top: 47, halfW: 55, cheekW: 55, cheekY: 120, jawW: 52, jawY: 151, chinW: 24, chinY: 165, chinDrop: 1, sharp: 0.7 },
-  "m-rectangle": { label: "long", top: 40, halfW: 52, cheekW: 52, cheekY: 124, jawW: 49, jawY: 156, chinW: 22, chinY: 169, chinDrop: 1, sharp: 0.7 },
-  "m-diamond": { label: "high cheekbones", top: 46, halfW: 52, cheekW: 56, cheekY: 116, jawW: 42, jawY: 152, chinW: 15, chinY: 166, chinDrop: 1, sharp: 0.5 },
-  "m-v-jaw": { label: "V-shaped jaw", top: 45, halfW: 55, cheekW: 55, cheekY: 118, jawW: 44, jawY: 150, chinW: 16, chinY: 167, chinDrop: 1, sharp: 0.6 },
-  "m-wide": { label: "wide", top: 52, halfW: 59, cheekW: 59, cheekY: 120, jawW: 52, jawY: 150, chinW: 22, chinY: 162, chinDrop: 2, sharp: 0.3 },
-  // Funny.
+  // Male: mostly oval and round, close to the built-in characters' simple oval head (an ellipse 54
+  // wide and 60 tall): the jaw clearly narrower than the temples, a small rounded chin. Only square
+  // and rectangle have a strong jaw, and even those keep rounded corners.
+  "m-oval": { label: "oval", top: 45, halfW: 53, cheekW: 52, cheekY: 122, jawW: 40, jawY: 150, chinW: 13, chinY: 162, chinDrop: 4, sharp: 0.1 },
+  "m-long-oval": { label: "long oval", top: 40, halfW: 51, cheekW: 50, cheekY: 124, jawW: 38, jawY: 155, chinW: 13, chinY: 167, chinDrop: 4, sharp: 0.1 },
+  "m-round": { label: "round", top: 47, halfW: 56, cheekW: 56, cheekY: 120, jawW: 44, jawY: 148, chinW: 15, chinY: 160, chinDrop: 5, sharp: 0 },
+  "m-egg": { label: "egg-shaped", top: 44, halfW: 56, cheekW: 53, cheekY: 120, jawW: 37, jawY: 150, chinW: 11, chinY: 163, chinDrop: 4, sharp: 0 },
+  "m-soft-heart": { label: "soft heart-shaped", top: 45, halfW: 55, cheekW: 52, cheekY: 118, jawW: 36, jawY: 150, chinW: 11, chinY: 164, chinDrop: 3, sharp: 0.15 },
+  "m-diamond": { label: "high cheekbones", top: 46, halfW: 51, cheekW: 55, cheekY: 116, jawW: 40, jawY: 150, chinW: 12, chinY: 164, chinDrop: 3, sharp: 0.15 },
+  "m-wide": { label: "wide", top: 51, halfW: 59, cheekW: 59, cheekY: 120, jawW: 44, jawY: 149, chinW: 16, chinY: 160, chinDrop: 4, sharp: 0 },
+  "m-square": { label: "square jaw", top: 47, halfW: 55, cheekW: 55, cheekY: 120, jawW: 48, jawY: 150, chinW: 20, chinY: 164, chinDrop: 2, sharp: 0.35 },
+  "m-rectangle": { label: "long, strong jaw", top: 41, halfW: 52, cheekW: 52, cheekY: 124, jawW: 45, jawY: 155, chinW: 18, chinY: 168, chinDrop: 2, sharp: 0.35 },
+  // Funny. The first three are the blocky shapes some funny faces were made with (kept as they were).
+  "fun-round": { label: "round", top: 47, halfW: 56, cheekW: 57, cheekY: 120, jawW: 48, jawY: 150, chinW: 20, chinY: 163, chinDrop: 3, sharp: 0 },
+  "fun-square": { label: "square", top: 47, halfW: 55, cheekW: 55, cheekY: 120, jawW: 52, jawY: 151, chinW: 24, chinY: 165, chinDrop: 1, sharp: 0.7 },
+  "fun-oval": { label: "oval", top: 44, halfW: 53, cheekW: 53, cheekY: 122, jawW: 42, jawY: 152, chinW: 17, chinY: 165, chinDrop: 2, sharp: 0.2 },
   "fun-huge-chin": { label: "huge chin", top: 47, halfW: 52, cheekW: 50, cheekY: 122, jawW: 42, jawY: 160, chinW: 34, chinY: 186, chinDrop: 6, sharp: 0.3 },
   "fun-tiny": { label: "tiny head", top: 60, halfW: 45, cheekW: 45, cheekY: 118, jawW: 37, jawY: 146, chinW: 14, chinY: 160, chinDrop: 3, sharp: 0 },
   "fun-very-long": { label: "very long", top: 26, halfW: 50, cheekW: 49, cheekY: 128, jawW: 40, jawY: 172, chinW: 16, chinY: 194, chinDrop: 3, sharp: 0 },
@@ -272,29 +279,30 @@ const FEMALE_FACES = [
   ["w-heart", "small", "petite", "large", "wide", "thin", [], { lashes: true }],
 ];
 
+// At most 4 faces on the two strong-jaw shapes (square, rectangle); the rest are oval or round.
 const MALE_FACES = [
   ["m-round", "medium", "button", "medium", "normal", "medium", []],
   ["m-round", "large", "wide", "small", "wide", "thick", ["dimples"]],
   ["m-oval", "medium", "straight", "medium", "normal", "medium", []],
-  ["m-oval", "large", "long", "small", "normal", "thick", ["moleCheek"]],
-  ["m-rectangle", "medium", "long", "small", "close", "medium", []],
+  ["m-long-oval", "large", "long", "small", "normal", "thick", ["moleCheek"]],
+  ["m-long-oval", "medium", "long", "small", "close", "medium", []],
   ["m-rectangle", "large", "straight", "medium", "normal", "thick", ["smileLines"]],
   ["m-square", "medium", "wide", "medium", "wide", "thick", []],
-  ["m-square", "large", "straight", "small", "normal", "thick", ["dimples"]],
+  ["m-egg", "large", "straight", "small", "normal", "thick", ["dimples"]],
   ["m-wide", "large", "wide", "medium", "wide", "medium", ["rosy"]],
   ["m-wide", "small", "straight", "small", "close", "thin", ["smileLines"]],
-  ["m-square", "medium", "defined", "large", "normal", "thick", []],
+  ["m-oval", "medium", "defined", "large", "normal", "thick", []],
   ["m-diamond", "medium", "defined", "large", "wide", "medium", []],
-  ["m-v-jaw", "small", "smallStraight", "large", "normal", "medium", []],
-  ["m-oval", "medium", "defined", "mediumPlus", "normal", "thick", []],
+  ["m-soft-heart", "small", "smallStraight", "large", "normal", "medium", []],
+  ["m-egg", "medium", "defined", "mediumPlus", "normal", "thick", []],
   ["m-rectangle", "medium", "smallStraight", "large", "normal", "thick", []],
-  ["m-square", "small", "softTip", "large", "wide", "medium", []],
+  ["m-round", "small", "softTip", "large", "wide", "medium", []],
   ["m-diamond", "medium", "smallStraight", "large", "normal", "thick", []],
-  ["m-oval", "small", "defined", "large", "wide", "medium", []],
-  ["m-v-jaw", "medium", "defined", "mediumPlus", "normal", "thick", []],
+  ["m-long-oval", "small", "defined", "large", "wide", "medium", []],
+  ["m-soft-heart", "medium", "defined", "mediumPlus", "normal", "thick", []],
   ["m-square", "medium", "smallStraight", "large", "normal", "medium", []],
   ["m-oval", "medium", "softTip", "large", "normal", "thick", []],
-  ["m-rectangle", "small", "defined", "large", "wide", "medium", []],
+  ["m-egg", "small", "defined", "large", "wide", "medium", []],
 ];
 
 // Silly on purpose, never mean. Shared by both genders. name: shown in the label.
@@ -302,13 +310,13 @@ const FUNNY_FACES = [
   ["Huge chin", "fun-huge-chin", "medium", "long", "medium", "normal", "medium", []],
   ["Tiny head, giant ears", "fun-tiny", "giant", "button", "small", "close", "thin", [], { earsOnTop: true }],
   ["Very long face", "fun-very-long", "medium", "long", "medium", "normal", "thin", []],
-  ["Buck teeth", "m-round", "medium", "button", "medium", "normal", "medium", [], { buckTeeth: true }],
-  ["Unibrow", "m-square", "medium", "wide", "medium", "normal", "thick", [], { unibrow: true }],
-  ["Potato nose", "m-round", "medium", "potato", "small", "normal", "medium", []],
-  ["Long pointy nose", "m-oval", "medium", "pointy", "medium", "normal", "medium", []],
+  ["Buck teeth", "fun-round", "medium", "button", "medium", "normal", "medium", [], { buckTeeth: true }],
+  ["Unibrow", "fun-square", "medium", "wide", "medium", "normal", "thick", [], { unibrow: true }],
+  ["Potato nose", "fun-round", "medium", "potato", "small", "normal", "medium", []],
+  ["Long pointy nose", "fun-oval", "medium", "pointy", "medium", "normal", "medium", []],
   ["Giant cheeks", "fun-giant-cheeks", "small", "button", "small", "close", "thin", ["rosy"]],
   ["Wide face, tiny features", "fun-extra-wide", "medium", "petite", "medium", "normal", "thin", [], { featureScale: 0.72 }],
-  ["Huge eyes", "m-oval", "medium", "petite", "huge", "wide", "thin", []],
+  ["Huge eyes", "fun-oval", "medium", "petite", "huge", "wide", "thin", []],
 ];
 
 function makeFace(id, label, [head, ears, nose, eyeSize, eyeSpacing, brows, marks, features = {}]) {
