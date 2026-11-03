@@ -670,7 +670,7 @@ the user picks it when creating the character, and from then on it belongs to th
 
   | | Women | Men |
   |---|---|---|
-  | Faces | 22 (10 kept from the first version, 12 new young, attractive faces with lashes and/or lip tint) | 22 (10 kept, 12 new young, attractive faces). Mostly oval or round heads (oval, long oval, round, egg, soft heart, high cheekbones, wide), like the built-in characters' simple oval head: the jaw clearly narrower than the temples and a small rounded chin. Only 4 faces use the two strong-jaw shapes (square jaw, long strong jaw), and those keep rounded corners |
+  | Faces | 22 (10 kept from the first version, 12 new young, attractive faces with lashes and/or lip tint; 4 of them on the model-like long oval head) | 22 (10 kept, 12 new young, attractive faces). Mostly oval or round heads (oval, long oval, round, egg, high cheekbones, wide), like the built-in characters' simple oval head: the jaw clearly narrower than the temples and a small rounded chin. 8 of the 12 new faces and the default face use the model-like long oval head. Only 4 faces use the two strong-jaw shapes (square jaw, long strong jaw), and those keep rounded corners |
   | Funny faces (shared, "Funny" group at the end of Face) | Huge chin, Tiny head with giant ears, Very long face, Buck teeth, Unibrow, Potato nose, Long pointy nose, Giant cheeks, Wide face with tiny features, Huge eyes | same |
   | Hairstyles | 17: Pixie cut, Short layered cut, Chin-length bob with volume, Short soft perm, Sleek bob, Side-swept lob, Shoulder length, Long straight, Long waves, Long curls, Curly afro, High bun, Low bun, High ponytail, Two braids, Side braid, Half-up | 15: Buzz cut, Shaved, Short crop, Crew cut, Side part, Quiff, Slicked back, Textured fringe, Low fade, Short curls, Curly top fade, Afro, Shoulder length, Man bun, Long tied back |
   | Outfits | 20 | 20 (T-shirt, hoodie, sweater, turtleneck, denim jacket, lab coat, puffer, striped top and tank top exist in both lists, with their own ids and colours) |
@@ -756,7 +756,10 @@ canvas** as the built-in placeholders, with the same anchor points:
 **Heads** are built from a few numbers (`buildHead` in `avatar-parts.js`): crown height, width at
 the temples, cheekbones, jaw corner, chin width and height, and how angular the jaw is. Above the
 temple line every head is half an ellipse centred at (100, 105); all the differences (soft or
-strong or narrow jaw, high cheekbones, pointed or square chin) are below it.
+strong or narrow jaw, high cheekbones, pointed or square chin) are below it. A head with
+`ellipse: true` is an exact ellipse instead (centre y `cy`, half-width `halfW`, crown `top`): the
+model-like long oval (`m-model`, `w-model`) is the first version's "long" head, an ellipse 50 wide
+and 66 tall centred at y = 104. Hair is anchored to its centre the same way.
 
 **Layers, back to front:** `hair-back`, `body`, `neck`, `outfit`, `necklace`, `ears`, `head`,
 `marks`, `facial-hair`, `eyewear-arms`, `hair-front`, then the face (`nose` and the expression:

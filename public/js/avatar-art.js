@@ -70,13 +70,15 @@ function avatarLayer(category, id, svg, transform, tint) {
   return transform ? `<g transform="${transform}">${inner}</g>` : inner;
 }
 
-// Hair is drawn for the reference head (crown y = 45, temples x = 46 / 154 at y = 105): scaled
-// around the temple line so it lies exactly on this head's upper ellipse.
+// Hair is drawn for the reference head (crown y = 45, temples x = 46 / 154 at y = 105): moved to
+// this head's ellipse centre (y = 105, or cy for an exact-ellipse head) and scaled, so it lies
+// exactly on this head's upper ellipse.
 function hairTransform(head) {
+  const cy = head.cy || HEAD_CY;
   const sx = head.halfW / HAIR_REF.halfW;
-  const sy = (HEAD_CY - head.top) / (HEAD_CY - HAIR_REF.top);
-  if (sx === 1 && sy === 1) return "";
-  return `translate(100 ${HEAD_CY}) scale(${sx.toFixed(3)} ${sy.toFixed(3)}) translate(-100 -${HEAD_CY})`;
+  const sy = (cy - head.top) / (HEAD_CY - HAIR_REF.top);
+  if (sx === 1 && sy === 1 && cy === HEAD_CY) return "";
+  return `translate(100 ${cy}) scale(${sx.toFixed(3)} ${sy.toFixed(3)}) translate(-100 -${HEAD_CY})`;
 }
 
 function drawEars(head, ears, skin, shade) {

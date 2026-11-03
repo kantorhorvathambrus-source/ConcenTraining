@@ -97,12 +97,20 @@ const HAIR_REF = { top: 45, halfW: 54 }; // the head hair is drawn for
 
 const fmt = (n) => Math.round(n * 10) / 10;
 
+function ellipsePath(cx, cy, rx, ry) {
+  return `M${cx - rx} ${cy} A${rx} ${ry} 0 1 0 ${cx + rx} ${cy} A${rx} ${ry} 0 1 0 ${cx - rx} ${cy}Z`;
+}
+
 // A head outline from a few numbers (all half-widths, measured from x = 100):
 //   top: crown y. halfW: width at the temples (y = HEAD_CY).
 //   cheekW / cheekY: cheekbones. jawW / jawY: jaw corner. chinW / chinY: the chin's corners,
 //   chinDrop: how far the chin's middle hangs below them. sharp (0–1): how angular the jaw is.
 // Above the temples it's half an ellipse (where the hair sits); the face's character is all below.
+// A head with ellipse: true is an exact ellipse instead: centred at (100, cy), halfW wide each side,
+// from the crown (top) to the chin (cy + (cy - top)). Its top half is the same kind of oval, so
+// hair is anchored to it the same way (hairTransform uses cy). chinW: how wide a beard's chin part is.
 function buildHead(p) {
+  if (p.ellipse) return { ...p, path: ellipsePath(100, p.cy, p.halfW, p.cy - p.top), chin: p.cy + (p.cy - p.top) };
   const right = [
     [p.halfW, HEAD_CY],
     [p.cheekW, p.cheekY],
@@ -142,10 +150,14 @@ const HEAD_SHAPES = {
   "w-diamond": { label: "high cheekbones", top: 46, halfW: 51, cheekW: 55, cheekY: 116, jawW: 36, jawY: 150, chinW: 10, chinY: 165, chinDrop: 3, sharp: 0 },
   "w-soft-long": { label: "long", top: 40, halfW: 50, cheekW: 50, cheekY: 124, jawW: 38, jawY: 156, chinW: 13, chinY: 169, chinDrop: 3, sharp: 0 },
   "w-soft-square": { label: "soft square", top: 47, halfW: 54, cheekW: 54, cheekY: 122, jawW: 46, jawY: 150, chinW: 18, chinY: 163, chinDrop: 2, sharp: 0.3 },
+  // The first version's "long" head, exactly (an ellipse 50 wide and 66 tall, centred at y = 104).
+  "w-model": { label: "long oval, model-like", ellipse: true, cy: 104, top: 38, halfW: 50, chinW: 14 },
   "w-petite": { label: "petite", top: 48, halfW: 50, cheekW: 50, cheekY: 118, jawW: 36, jawY: 148, chinW: 11, chinY: 162, chinDrop: 3, sharp: 0 },
   // Male: mostly oval and round, close to the built-in characters' simple oval head (an ellipse 54
   // wide and 60 tall): the jaw clearly narrower than the temples, a small rounded chin. Only square
   // and rectangle have a strong jaw, and even those keep rounded corners.
+  // The first version's "long" head, exactly (same outline as w-model).
+  "m-model": { label: "long oval, model-like", ellipse: true, cy: 104, top: 38, halfW: 50, chinW: 14 },
   "m-oval": { label: "oval", top: 45, halfW: 53, cheekW: 52, cheekY: 122, jawW: 40, jawY: 150, chinW: 13, chinY: 162, chinDrop: 4, sharp: 0.1 },
   "m-long-oval": { label: "long oval", top: 40, halfW: 51, cheekW: 50, cheekY: 124, jawW: 38, jawY: 155, chinW: 13, chinY: 167, chinDrop: 4, sharp: 0.1 },
   "m-round": { label: "round", top: 47, halfW: 56, cheekW: 56, cheekY: 120, jawW: 44, jawY: 148, chinW: 15, chinY: 160, chinDrop: 5, sharp: 0 },
@@ -266,20 +278,21 @@ const FEMALE_FACES = [
   ["w-heart", "medium", "button", "medium", "normal", "medium", ["freckles"]],
   ["w-heart", "medium", "straight", "small", "close", "thin", ["dimples", "rosy"]],
   ["w-heart", "small", "petite", "large", "normal", "thin", [], { lashes: true, lip: true }],
-  ["w-soft-oval", "small", "smallStraight", "large", "wide", "medium", [], { lashes: true, lip: true }],
+  ["w-model", "small", "smallStraight", "large", "wide", "medium", [], { lashes: true, lip: true }],
   ["w-diamond", "small", "petite", "large", "normal", "thin", [], { lashes: true }],
   ["w-petite", "small", "softTip", "large", "wide", "thin", [], { lashes: true, lip: true }],
-  ["w-soft-oval", "small", "petite", "mediumPlus", "normal", "medium", [], { lashes: true }],
+  ["w-model", "small", "petite", "mediumPlus", "normal", "medium", [], { lashes: true }],
   ["w-heart", "small", "softTip", "large", "normal", "medium", [], { lashes: true, lip: true }],
-  ["w-diamond", "small", "smallStraight", "large", "wide", "thin", [], { lashes: true, lip: true }],
+  ["w-model", "small", "smallStraight", "large", "wide", "thin", [], { lashes: true, lip: true }],
   ["w-soft-round", "small", "petite", "large", "normal", "thin", [], { lashes: true, lip: true }],
   ["w-soft-long", "small", "smallStraight", "mediumPlus", "normal", "medium", [], { lashes: true }],
   ["w-petite", "small", "petite", "large", "normal", "medium", [], { lip: true }],
-  ["w-soft-oval", "small", "softTip", "large", "normal", "thick", [], { lashes: true, lip: true }],
+  ["w-model", "small", "softTip", "large", "normal", "thick", [], { lashes: true, lip: true }],
   ["w-heart", "small", "petite", "large", "wide", "thin", [], { lashes: true }],
 ];
 
 // At most 4 faces on the two strong-jaw shapes (square, rectangle); the rest are oval or round.
+// 8 of the 12 new faces (and the default, face 11) use the model-like long oval.
 const MALE_FACES = [
   ["m-round", "medium", "button", "medium", "normal", "medium", []],
   ["m-round", "large", "wide", "small", "wide", "thick", ["dimples"]],
@@ -291,18 +304,18 @@ const MALE_FACES = [
   ["m-egg", "large", "straight", "small", "normal", "thick", ["dimples"]],
   ["m-wide", "large", "wide", "medium", "wide", "medium", ["rosy"]],
   ["m-wide", "small", "straight", "small", "close", "thin", ["smileLines"]],
-  ["m-oval", "medium", "defined", "large", "normal", "thick", []],
+  ["m-model", "medium", "defined", "large", "normal", "thick", []],
   ["m-diamond", "medium", "defined", "large", "wide", "medium", []],
-  ["m-soft-heart", "small", "smallStraight", "large", "normal", "medium", []],
-  ["m-egg", "medium", "defined", "mediumPlus", "normal", "thick", []],
+  ["m-model", "small", "smallStraight", "large", "normal", "medium", []],
+  ["m-model", "medium", "defined", "mediumPlus", "normal", "thick", []],
   ["m-rectangle", "medium", "smallStraight", "large", "normal", "thick", []],
   ["m-round", "small", "softTip", "large", "wide", "medium", []],
-  ["m-diamond", "medium", "smallStraight", "large", "normal", "thick", []],
-  ["m-long-oval", "small", "defined", "large", "wide", "medium", []],
-  ["m-soft-heart", "medium", "defined", "mediumPlus", "normal", "thick", []],
+  ["m-model", "medium", "smallStraight", "large", "normal", "thick", []],
+  ["m-model", "small", "defined", "large", "wide", "medium", []],
+  ["m-model", "medium", "defined", "mediumPlus", "normal", "thick", []],
   ["m-square", "medium", "smallStraight", "large", "normal", "medium", []],
-  ["m-oval", "medium", "softTip", "large", "normal", "thick", []],
-  ["m-egg", "small", "defined", "large", "wide", "medium", []],
+  ["m-model", "medium", "softTip", "large", "normal", "thick", []],
+  ["m-model", "small", "defined", "large", "wide", "medium", []],
 ];
 
 // Silly on purpose, never mean. Shared by both genders. name: shown in the label.
