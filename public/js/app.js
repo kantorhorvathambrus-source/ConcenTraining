@@ -168,16 +168,22 @@ const motivation = { phase: null, index: 0, shown: false };
 const away = { from: 0, ms: 0, open: false, yes: false, hiddenAt: 0 };
 
 // A built-in character, or one of the user's own (custom-characters.js) that exists right now.
-// null for anything else, e.g. a custom character deleted here or in another tab.
+// null for anything else, e.g. a custom character deleted here or in another tab, or any custom
+// character while CUSTOM_CHARACTERS_ENABLED is false (a saved choice of one is then like no choice).
 function characterById(id) {
-  return CHARACTERS.find((c) => c.id === id) || customCharacterById(id);
+  return CHARACTERS.find((c) => c.id === id) || (CUSTOM_CHARACTERS_ENABLED ? customCharacterById(id) : null);
 }
 
 // The character a session runs with. A custom character that was deleted meanwhile (here or in
 // another tab) is drawn with the default look and the name the session stored (ghostCharacter),
-// so the session keeps running and its summary still shows it.
+// so the session keeps running and its summary still shows it. A session that was already running
+// with a custom character also keeps it while CUSTOM_CHARACTERS_ENABLED is false.
 function sessionCharacter(s) {
-  return characterById(s.characterId) || (isCustomId(s.characterId) ? ghostCharacter(s.characterId, s.characterName, s.style) : null);
+  return (
+    characterById(s.characterId) ||
+    customCharacterById(s.characterId) ||
+    (isCustomId(s.characterId) ? ghostCharacter(s.characterId, s.characterName, s.style) : null)
+  );
 }
 
 function showScreen(id) {
@@ -794,7 +800,7 @@ function renderCharacterList() {
     card.addEventListener("click", () => onCharacterTap(character));
     list.append(card);
   }
-  list.append(createCard());
+  if (CUSTOM_CHARACTERS_ENABLED) list.append(createCard());
   renderCustomList();
 }
 
@@ -842,8 +848,14 @@ function updateCreateCard(card = $("#createCard")) {
 // "Your characters": the same cards as the main grid (picture, name, personality badge), each
 // with Edit and Delete under it. Every name is set as plain text, never as HTML. If focus was in
 // the list, it goes back to the same button of the same character after the rebuild.
+// Never shown while CUSTOM_CHARACTERS_ENABLED is false.
 function renderCustomList() {
   const list = $("#customList");
+  if (!CUSTOM_CHARACTERS_ENABLED) {
+    list.innerHTML = "";
+    $("#customSection").hidden = true;
+    return;
+  }
   const focused = document.activeElement;
   const refocus = list.contains(focused)
     ? { id: focused.closest("[data-id]").dataset.id, role: focused.dataset.role }
@@ -944,6 +956,7 @@ function pickNewCharacter() {
   const id = params.get("picked");
   if (id === null) return;
   history.replaceState(null, "", location.pathname + location.hash);
+  if (!CUSTOM_CHARACTERS_ENABLED) return;
   const character = customCharacterById(id);
   if (!character) return;
   const card = $("#customList").querySelector(`.char-card[data-id="${CSS.escape(id)}"]`);

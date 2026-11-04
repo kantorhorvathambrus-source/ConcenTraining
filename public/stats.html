@@ -54,6 +54,8 @@
     <p><a href="./" class="back-link">← Back to the timer</a></p>
   </main>
 
+  <!-- Only for CUSTOM_CHARACTERS_ENABLED: the custom line is left out while it's false. -->
+  <script src="js/custom-characters.js"></script>
   <script>
     "use strict";
 
@@ -91,8 +93,9 @@
           : `No paid characters yet: that starts once there are at least 10 built-in characters.`;
         document.getElementById("statsTable").hidden = false;
 
-        // Older backends (before custom characters) don't send it.
-        if (stats.customPicks) {
+        // Older backends (before custom characters) don't send it. Not shown while custom
+        // characters are switched off (the backend still counts "custom").
+        if (stats.customPicks && CUSTOM_CHARACTERS_ENABLED) {
           document.getElementById("customRecentHeader").textContent = `Last ${stats.recentDays} days`;
           document.getElementById("customRecent").textContent = stats.customPicks.recentPicks;
           document.getElementById("customTotal").textContent = stats.customPicks.totalPicks;
