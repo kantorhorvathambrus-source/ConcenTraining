@@ -359,6 +359,12 @@ function onCancel() {
 // ---------- start-up ----------
 
 function init() {
+  // The feature is switched off (CUSTOM_CHARACTERS_ENABLED in custom-characters.js): back to the app.
+  if (!CUSTOM_CHARACTERS_ENABLED) {
+    document.querySelector("main").hidden = true;
+    location.replace("./");
+    return;
+  }
   const id = new URLSearchParams(location.search).get("id");
   if (id) {
     const character = customCharacterById(id);

@@ -45,7 +45,8 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   loads and real artwork fits the same slot. At 320 × 568 the header and the whole card fit on the
   first screen.
 - **Setup:** 1. pick a character, 2. a mode (Simple / Advanced), 3. a focus duration.
-  The character decides the personality (see below). The last card of step 1 is **Create your own**,
+  The character decides the personality (see below). While custom characters are switched on
+  (`CUSTOM_CHARACTERS_ENABLED`, off for launch), the last card of step 1 is **Create your own**,
   and characters you made appear under the grid in **Your characters** (see
   [Custom characters](#custom-characters)). Ragebait characters show a warning before
   they can be selected. Selecting a card only updates which card is pressed (`aria-pressed`), so
@@ -621,6 +622,34 @@ Users can design their own characters: pick the look from parts, give it a name,
 personality once. It's the one exception to "the personality comes from the character's group":
 the user picks it when creating the character, and from then on it belongs to that character.
 
+### The switch (`CUSTOM_CHARACTERS_ENABLED`)
+
+The whole feature is behind one switch, `CUSTOM_CHARACTERS_ENABLED` at the top of
+`public/js/custom-characters.js`. It is **`false` for launch**. Everything below describes the
+feature as it works with the switch set to `true`.
+
+While it's `false`:
+
+- **Setup screen:** there's no **Create your own** card and no **Your characters** section, so the
+  main grid has only the 19 built-in characters. `./?picked=custom-…` (the editor's way back
+  after Save) does nothing.
+- **A saved choice of a custom character** (`characterId` in `ct_prefs_v1`) counts as no choice,
+  like a first visit: no card is selected, Quick start doesn't show, and **Start session** says
+  "Pick a character first." The saved choice isn't changed, so switching the feature on again
+  brings it back.
+- **The editor** (`avatar.html`, also `avatar.html?id=custom-…`) goes straight back to the app.
+- **`/stats.html`** leaves out the "Custom characters (always paid)" table. The backend is
+  unchanged: `POST /api/picks` still accepts `"custom"`, and `/api/stats` still returns
+  `customPicks`.
+- **Saved data stays:** `ct_custom_characters_v1` is neither read for the picker nor deleted. The
+  history still shows the names of sessions with custom characters (their current name, or the
+  name the session stored).
+- **A session that's already running** with a custom character (started while the switch was on)
+  keeps running with that character after a reload.
+
+To switch the feature on, set it to `true`. Nothing else needs to change: no saved data, no
+backend, no service worker version (the file's name stays the same).
+
 ### On the setup screen
 
 - **Create your own** is always the last card of the main character grid: a grey figure with a
@@ -722,7 +751,9 @@ the user picks it when creating the character, and from then on it belongs to th
 - **Picks:** every custom character counts as `"custom"` in `POST /api/picks`; the user's own ids
   and names never leave the device. See [Popularity stats](#popularity-stats-backend).
 - **Export:** the history export includes these sessions (with `characterName`), but not yet the
-  characters themselves.
+  characters themselves. That's part 2 of custom characters, which waits until the feature is
+  switched on. Each character's `look` is exported and imported as a whole and goes through
+  `cleanLook`, so look fields added later (and older files without them) work without extra code.
 
 ### Paid characters (plan for December)
 
@@ -1193,7 +1224,7 @@ once with a decent connection fixes it, because every online start refreshes all
 | `public/js/placeholder-art.js` | Built-in placeholder drawings (kind, firm, strict and ragebait faces, plus each character's look) for characters without real art; its eyes, brows, mouths and extras are shared with custom characters |
 | `public/js/avatar-parts.js` | Custom characters' parts: head shapes (`buildHead`), each gender's faces, hairstyles, outfits and accessories, the shared skin tones, hair colours and funny faces, how each is drawn, starting looks, Randomize, and `AVATAR_PNG_FILES` |
 | `public/js/avatar-art.js` | Draws a custom character from its layers (SVG, or listed PNGs with skin/hair tint) |
-| `public/js/custom-characters.js` | Saving and reading `ct_custom_characters_v1`, name rules, the 10 limit, `CUSTOM_PAID`, stand-in for deleted characters (used by all three pages) |
+| `public/js/custom-characters.js` | Saving and reading `ct_custom_characters_v1`, name rules, the 10 limit, `CUSTOM_PAID`, the feature switch `CUSTOM_CHARACTERS_ENABLED`, stand-in for deleted characters (used by all three pages and `stats.html`) |
 | `public/js/avatar.js` | The editor on `avatar.html` |
 | `public/js/app.js` | Timer, reaction engine, distraction category picker, Undo, disabled Advanced lengths, time away card, leave reminder notification, motivation rotation, end chime, screen wake lock and the "screen may turn off" note, summary, How it works card, iPhone Home Screen tip, persistent storage request, one tab at a time (Web Locks) |
 | `public/js/history-store.js` | Saving/loading history, focus % and summary result (with their thresholds), distraction categories, export/import checks, iPhone/iPad and iPhone Safari checks, the "can this browser save?" test (`storageWorks`) (used by both pages) |
@@ -1243,7 +1274,8 @@ popularity can be measured over the **last 30 days** and the paid selection rota
   `custom: true`): the app never sends the user's own ids or names. They're always paid, so
   `"custom"` is left out of the ranking and of the character count, and comes separately as
   `customPicks: { recentPicks, totalPicks }`. `/stats.html` shows it in its own table, "Custom
-  characters (always paid)".
+  characters (always paid)", but only while `CUSTOM_CHARACTERS_ENABLED` is `true` (it loads
+  `js/custom-characters.js` for that).
   It also returns `store`: `"live"` or `"test"` (see below). The numbers are at `/stats.html`,
   which says which store it's reading.
 - **One blob per character:** the key is the character id (`grandma`), the value is the picks per

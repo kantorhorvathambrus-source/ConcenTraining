@@ -15,6 +15,13 @@ const CUSTOM_NAME_MAX = 20;
 // names never leave the device.
 const CUSTOM_PICK_ID = "custom";
 
+// The switch for the whole feature. false (for launch): no "Create your own" card and no "Your
+// characters" section on the setup screen, avatar.html goes back to the app, stats.html leaves out
+// the custom line, and a saved choice of a custom character counts as no choice (like a first
+// visit). Saved characters are kept as they are, the history still shows their sessions' names, and
+// POST /api/picks still accepts "custom". true: everything works as described in the README.
+const CUSTOM_CHARACTERS_ENABLED = false;
+
 // Custom characters will be paid (from December). While this is false they're free for everyone
 // and the Create card says "Free during launch". Characters made while it's false stay usable
 // after the switch (see "Custom characters" in the README).
