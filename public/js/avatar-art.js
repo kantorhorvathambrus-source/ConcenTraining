@@ -2,15 +2,18 @@
 // The expression (eyes, brows, mouth, extras) is the shared one from placeholder-art.js, so every
 // face works in all 9 poses of all 4 personalities.
 //
-// Layers, back to front:
-//   hair-back, body (skin), neck, outfit (inside the body's outline, plus its collar), necklace,
-//   ears, head, nose, marks, facial hair, eyewear-arms, hair-front, the face (eyes with lashes,
-//   brows, unibrow, mouth with lip tint and buck teeth, blush and tears), earrings, eyewear,
-//   the other extras (sparkle, sweat, steam, the hands…).
-// Ears sit behind the head, facial hair and hair under the eyes and mouth (so the expression
-// always shows), glasses arms under the hair and the lenses over it. Any layer listed in
-// AVATAR_PNG_FILES is drawn from its PNG instead of SVG (avatarLayer); skin and hair layers are
-// coloured by code (tintFilter).
+// Layers, back to front (costume layers from avatar-costumes.js marked *):
+//   *back, hair-back, body (skin), neck, outfit or *costume-outfit (inside the body's outline,
+//   plus its collar), *back-front, necklace, *headwear-back, ears, head, marks, *mask-paint,
+//   facial hair, *costume-beard, eyewear-arms, hair-front, giant ears, *ears-horns (ears),
+//   *costume-outfit-head, *ears-horns (on top), *headwear, the face (*the openings of a costume
+//   that covers the head, *mask, nose, eyes with lashes, brows, unibrow, mouth with lip tint and
+//   buck teeth, blush and tears, *mask-over), earrings, eyewear, *held, *pet, the other extras
+//   (sparkle, sweat, steam, the hands…).
+// Ears sit behind the head, facial hair, hair and headwear under the eyes and mouth (so the
+// expression always shows), glasses arms under the hair and the lenses over it. Hair above a hat's
+// band is hidden. Any layer listed in AVATAR_PNG_FILES is drawn from its PNG instead of SVG
+// (avatarLayer); skin and hair layers are coloured by code (tintFilter).
 
 // Images loaded from AVATAR_PNG_FILES, as data: URLs (an SVG shown in an <img> can't load other
 // files, so they're written into it).
@@ -60,13 +63,14 @@ function tintFilter(id, hex) {
 }
 
 // One layer: its PNG if there is one, otherwise the SVG. transform and tint ("skin", "hair" or
-// "brow") apply to both.
-function avatarLayer(category, id, svg, transform, tint) {
+// "brow") apply to both, and so does clip (a clipPath id, inside the transform).
+function avatarLayer(category, id, svg, transform, tint, clip) {
   const png = avatarPngData.get(`${category}/${id}`);
-  const inner = png
+  let inner = png
     ? `<image href="${png}" width="200" height="240"${tint ? ` filter="url(#tint-${tint})"` : ""}/>`
     : svg;
   if (!inner) return "";
+  if (clip) inner = `<g clip-path="url(#${clip})">${inner}</g>`;
   return transform ? `<g transform="${transform}">${inner}</g>` : inner;
 }
 
@@ -97,15 +101,52 @@ function hairFallTransform(head) {
 }
 
 // A hair layer: the part on the head plus (long styles) the part that falls. A PNG replaces both
-// and is placed like the part on the head.
-function hairLayer(category, style, cap, fall, head, colors) {
+// and is placed like the part on the head. clip: under a hat, the clipPath that hides the hair above
+// its band (the part on the head only: the fall starts below the temples).
+function hairLayer(category, style, cap, fall, head, colors, clip) {
   const capSvg = cap ? cap(colors) : "";
   if (!fall || avatarPngData.has(`${category}/${style.id}`)) {
-    return avatarLayer(category, style.id, capSvg, hairTransform(head), "hair");
+    return avatarLayer(category, style.id, capSvg, hairTransform(head), "hair", clip);
   }
   const wrap = (svg, transform) => (transform ? `<g transform="${transform}">${svg}</g>` : svg);
-  return wrap(capSvg, hairTransform(head)) + wrap(fall(colors), hairFallTransform(head));
+  const clipped = clip && capSvg ? `<g clip-path="url(#${clip})">${capSvg}</g>` : capSvg;
+  return wrap(clipped, hairTransform(head)) + wrap(fall(colors), hairFallTransform(head));
 }
+
+// ---------- costumes (avatar-costumes.js) ----------
+
+// Where a headwear item sits. "head": like hair. "upright": its band on this head's band line, as
+// wide as the head there, never stretched taller, and flattened only as much as needed to stay
+// inside the picture (its top at y ≥ 2). "none": drawn straight onto the canvas.
+function hatTransform(head, item) {
+  const fit = item.fit || "head";
+  if (fit === "none") return "";
+  if (fit === "head") return hairTransform(head);
+  const cy = head.cy || HEAD_CY;
+  const sx = head.halfW / HAIR_REF.halfW;
+  const sy = (cy - head.top) / (HEAD_CY - HAIR_REF.top);
+  const band = cy + (item.band - HEAD_CY) * sy;
+  const syFit = item.height ? Math.min(sx, (band - 2) / item.height) : sx;
+  return `translate(100 ${fmt(band)}) scale(${sx.toFixed(3)} ${syFit.toFixed(3)}) translate(-100 -${item.band})`;
+}
+
+// The parts of a look's costume: each field's item, or null for None.
+function costumeParts(look) {
+  const parts = {};
+  if (typeof COSTUME_FIELDS === "undefined") return parts;
+  for (const field of COSTUME_FIELDS) {
+    const item = optionById(field, look[field]);
+    parts[field] = item && item !== COSTUME_OPTIONS[field][0] ? item : null;
+  }
+  return parts;
+}
+
+// Where the shoulders are: the left one's outer edge at y ≈ 189 (epaulettes, straps) and the right
+// one's top (pets).
+const SHOULDERS = {
+  female: { shoulderX: 53, shoulder: { x: 152, y: 192 } },
+  male: { shoulderX: 33, shoulder: { x: 164, y: 186 } },
+};
 
 function drawEars(head, ears, skin, shade) {
   const ear = earGeometry(head, ears);
@@ -185,10 +226,13 @@ function lookParts(look) {
     earrings: optionById("earrings", look.earrings, gender),
     necklace: optionById("necklace", look.necklace, gender),
     facialHair: optionById("facialHair", look.facialHair, gender),
+    costume: costumeParts(look),
   };
 }
 
 // The SVG markup of a look in a personality's pose. view: a key of AVATAR_VIEWS.
+// Costume layers are only added when the look has them, so a look without a costume is drawn
+// exactly as before costumes existed.
 function avatarSvg(rawLook, personality, pose, view = "full") {
   const look = cleanLook(rawLook);
   const p = lookParts(look);
@@ -210,6 +254,27 @@ function avatarSvg(rawLook, personality, pose, view = "full") {
     light: mixColor(hair, "#ffffff", 0.35),
     fade: mixColor(hair, skin, 0.5),
   };
+
+  // The costume (all null without one) and what it changes about the rest.
+  const { headwear, mask, earsHorns, costumeBeard, costumeOutfit, back, held, pet } = p.costume;
+  const hidesHair = (headwear && headwear.hair === "hide") || (costumeOutfit && costumeOutfit.hidesHair);
+  const hatClip = !hidesHair && headwear && headwear.hair !== "keep" && headwear.band ? "hatHairClip" : "";
+  const coversHead = (headwear && headwear.coversHead) || (costumeOutfit && costumeOutfit.coversHead);
+  const hidesEarrings = coversHead || (headwear && headwear.hidesEarrings);
+  const costumeEars = earsHorns && earsHorns.kind === "ears" ? earsHorns : null;
+  const topEars = earsHorns && earsHorns.kind !== "ears" ? earsHorns : null;
+  const handBusy = extras.some((name) => HAND_BUSY_EXTRAS.includes(name));
+  const ctx = {
+    skin, skinShade, hair: hairColors, brow, geo, head, face, gender: p.gender.id, nw,
+    ear: earGeometry(head, face.ears), mouth: expression.mouth,
+    ...(SHOULDERS[p.gender.id] || SHOULDERS.female),
+  };
+  const costumeLayer = (category, item, part, transform, tint, clip) =>
+    item && (item[part] || avatarPngData.has(`${category}/${item.id}`))
+      ? avatarLayer(category, item.id, item[part] ? item[part](ctx) : "", transform, tint, clip)
+      : "";
+  const add = (markup) => (markup ? [markup] : []);
+
   const lashColor = dark ? "#000" : "#222";
   const eye = (cx, type) => {
     const inner = drawEye(cx, type) + (face.lashes ? drawLashes(cx, type, lashColor) : "");
@@ -227,17 +292,28 @@ function avatarSvg(rawLook, personality, pose, view = "full") {
     ${face.buckTeeth ? drawBuckTeeth(expression.mouth, "#222") : ""}
     ${extras.filter((name) => FACE_EXTRAS.includes(name)).map((name) => ART_EXTRAS[name](skin, geo)).join("")}`;
   if (dark) features = darkSkinFace(features);
-  const nose = avatarLayer("nose", face.nose, NOSES[face.nose].draw(skinShade, skin), "", "skin");
+  const nose = coversHead ? "" : avatarLayer("nose", face.nose, NOSES[face.nose].draw(skinShade, skin), "", "skin");
+  // On the face, under the nose and the expression: the openings of whatever covers the head, and
+  // masks. Over it: fangs, eye patches, a clown nose.
+  const faceUnder =
+    costumeLayer("headwear-face", headwear, "face") +
+    costumeLayer("costume-outfit-face", costumeOutfit, "face") +
+    costumeLayer("mask", mask, "under");
+  const faceOver = costumeLayer("mask-over", mask, "over");
+  const faceInner = `${faceUnder}${nose}${features}${faceOver}`;
   // Smaller features (a funny face): nose, eyes, brows and mouth shrink around the face's middle.
-  const faceGroup = face.featureScale
-    ? `<g transform="translate(100 118) scale(${face.featureScale}) translate(-100 -118)">${nose}${features}</g>`
-    : `${nose}${features}`;
+  const featureTransform = face.featureScale ? `translate(100 118) scale(${face.featureScale}) translate(-100 -118)` : "";
+  const faceGroup = featureTransform ? `<g transform="${featureTransform}">${faceInner}</g>` : faceInner;
+  const paint = costumeLayer("mask-paint", mask, "paint", featureTransform);
 
-  const outfitColors = { skin, nw };
-  const outfitPng = avatarPngData.has(`outfit/${outfit.id}`);
+  // The costume outfit is drawn instead of the outfit.
+  const shownOutfit = costumeOutfit || outfit;
+  const outfitCategory = costumeOutfit ? "costume-outfit" : "outfit";
+  const outfitColors = costumeOutfit ? { skin, nw, gender: p.gender.id, shoulderX: ctx.shoulderX } : { skin, nw };
+  const outfitPng = avatarPngData.has(`${outfitCategory}/${shownOutfit.id}`);
   // Hair that covers the ears hides studs; hoops and drops hang below it and stay visible.
-  const earringsShown = !(hairStyle.coversEars && p.earrings.stud);
-  const ears = avatarLayer("ears", face.ears, drawEars(head, face.ears, skin, skinShade), "", "skin");
+  const earringsShown = !hidesEarrings && !(hairStyle.coversEars && p.earrings.stud);
+  const ears = costumeEars ? "" : avatarLayer("ears", face.ears, drawEars(head, face.ears, skin, skinShade), "", "skin");
 
   const defs = [
     `<clipPath id="headClip"><path d="${head.path}"/></clipPath>`,
@@ -245,30 +321,45 @@ function avatarSvg(rawLook, personality, pose, view = "full") {
     // A PNG outfit includes its collar, so it may also cover the area around the neck.
     outfitPng ? `<clipPath id="outfitClip"><path d="${p.gender.body}"/><rect x="70" y="140" width="60" height="60"/></clipPath>` : "",
   ];
+  // Under a hat, the hair above its band is hidden (in the hair's own coordinates).
+  if (hatClip) defs.push(`<clipPath id="hatHairClip"><rect x="-200" y="${headwear.band}" width="600" height="600"/></clipPath>`);
   if (avatarPngData.size > 0) {
     defs.push(tintFilter("tint-skin", skin), tintFilter("tint-hair", hair), tintFilter("tint-brow", brow));
   }
 
+  const hatPlace = headwear ? hatTransform(head, headwear) : "";
   const parts = [
-    hairLayer("hair-back", hairStyle, hairStyle.back, hairStyle.backFall, head, hairColors),
+    ...add(costumeLayer("back", back, "back")),
+    hidesHair ? "" : hairLayer("hair-back", hairStyle, hairStyle.back, hairStyle.backFall, head, hairColors, hatClip),
     avatarLayer("body", p.gender.id, `<path d="${p.gender.body}" fill="${skin}"/>`, "", "skin"),
     avatarLayer("neck", p.gender.id, `<rect x="${100 - nw / 2}" y="140" width="${nw}" height="40" fill="${skin}"/>`, "", "skin"),
     outfitPng
-      ? `<g clip-path="url(#outfitClip)">${avatarLayer("outfit", outfit.id, "")}</g>`
-      : `<g clip-path="url(#bodyClip)">${outfit.body(outfitColors)}</g>${outfit.collar ? outfit.collar(outfitColors) : ""}`,
+      ? `<g clip-path="url(#outfitClip)">${avatarLayer(outfitCategory, shownOutfit.id, "")}</g>`
+      : `<g clip-path="url(#bodyClip)">${shownOutfit.body(outfitColors)}</g>${shownOutfit.collar ? shownOutfit.collar(outfitColors) : ""}`,
+    ...add(costumeLayer("back-front", back, "front")),
     avatarLayer("necklace", p.necklace.id, p.necklace.draw(nw)),
+    ...add(costumeLayer("headwear-back", headwear, "behind", hatPlace)),
     face.earsOnTop ? "" : ears,
     avatarLayer("head", face.head, `<path d="${head.path}" fill="${skin}"/>`, "", "skin"),
     extras.includes("red") ? `<path d="${head.path}" fill="#ff2d2d" fill-opacity="0.3"/>` : "",
     face.marks.map((mark) => avatarLayer("marks", mark, MARKS[mark].draw(geo, skinShade))).join(""),
+    ...add(paint && `<g clip-path="url(#headClip)">${paint}</g>`),
     p.facialHair ? avatarLayer("facial-hair", p.facialHair.id, p.facialHair.draw(brow, head), "", "brow") : "",
+    ...add(costumeLayer("costume-beard", costumeBeard, "draw", "", costumeBeard && costumeBeard.color === "hair" ? "brow" : "")),
     avatarLayer("eyewear-arms", p.eyewear.id, p.eyewear.arms(geo, head.halfW)),
-    hairLayer("hair-front", hairStyle, hairStyle.front, hairStyle.frontFall, head, hairColors),
+    hidesHair ? "" : hairLayer("hair-front", hairStyle, hairStyle.front, hairStyle.frontFall, head, hairColors, hatClip),
     // Giant ears (a funny face) stick out of any hair, so they're drawn over it.
     face.earsOnTop ? ears : "",
+    ...add(costumeLayer("ears-horns", costumeEars, "draw", "", "skin")),
+    ...add(costumeLayer("costume-outfit-head", costumeOutfit, "head")),
+    ...add(costumeLayer("ears-horns", topEars, "draw", hairTransform(head))),
+    ...add(costumeLayer("headwear", headwear, "draw", hatPlace)),
     faceGroup,
     earringsShown ? avatarLayer("earrings", p.earrings.id, p.earrings.draw(earGeometry(head, face.ears))) : "",
     avatarLayer("eyewear", p.eyewear.id, p.eyewear.draw(geo, head.halfW)),
+    // Held items are in the left hand, which poses with both hands busy (clap, crossed arms) need.
+    ...add(handBusy ? "" : costumeLayer("held", held, "draw")),
+    ...add(pet ? costumeLayer("pet", pet, "draw", `translate(${ctx.shoulder.x - 162} ${ctx.shoulder.y - 190})`) : ""),
     extras.filter((name) => ART_EXTRAS[name] && !FACE_EXTRAS.includes(name)).map((name) => ART_EXTRAS[name](skin, geo)).join(""),
   ];
 
@@ -291,7 +382,7 @@ function avatarArt(look, personality, pose, view = "full") {
 
 // The ids inside one drawing (clip paths and filters). Two drawings in the same page would share
 // them, so a drawing put straight into a page gets its own prefix (avatarInlineSvg).
-const AVATAR_SVG_IDS = /(id="|url\(#)(headClip|bodyClip|outfitClip|tint-skin|tint-hair|tint-brow)\b/g;
+const AVATAR_SVG_IDS = /(id="|url\(#)(headClip|bodyClip|outfitClip|hatHairClip|tint-skin|tint-hair|tint-brow)\b/g;
 
 // The same drawing as SVG markup to put straight into the page (the editor's thumbnails): much
 // quicker for the browser to update than a separate image each. Hidden from screen readers.

@@ -1,5 +1,6 @@
 // The parts a custom character's look is built from (the editor's options), and how each one is
-// drawn as SVG. avatar-art.js puts them together in layers; see "Avatar art guide" in the README.
+// drawn as SVG. Costumes (headwear, masks, costume outfits, held items…) are in avatar-costumes.js,
+// which adds its fields to LOOK_FIELDS, SHARED_OPTIONS and DEFAULT_LOOKS. avatar-art.js puts them together in layers; see "Avatar art guide" in the README.
 //
 // Female and male looks are fully separate: every shape list (faces, hairstyles, outfits, eyewear,
 // earrings, necklaces, facial hair) exists per gender, with ids that start with "w-" or "m-". Only
@@ -70,7 +71,16 @@ const SKIN_TONES = [
   { id: "tone8", label: "Skin tone 8: brown", color: "#794b30" },
   { id: "tone9", label: "Skin tone 9: dark brown", color: "#5e3924" },
   { id: "tone10", label: "Skin tone 10: very dark brown", color: "#45291b" },
+  // Fantasy colours (costumes), under their own "Fantasy" heading in the editor.
+  { id: "fantasy-green", label: "Fantasy skin 1: green", color: "#86c06c", fantasy: true },
+  { id: "fantasy-blue", label: "Fantasy skin 2: blue", color: "#7ea6dc", fantasy: true },
+  { id: "fantasy-purple", label: "Fantasy skin 3: purple", color: "#a88ad6", fantasy: true },
+  { id: "fantasy-grey", label: "Fantasy skin 4: grey", color: "#a9adb3", fantasy: true },
+  { id: "fantasy-red", label: "Fantasy skin 5: red", color: "#d8746a", fantasy: true },
+  { id: "fantasy-gold", label: "Fantasy skin 6: gold", color: "#ddb653", fantasy: true },
 ];
+const NATURAL_SKIN_TONES = SKIN_TONES.filter((tone) => !tone.fantasy);
+const FANTASY_SKIN_TONES = SKIN_TONES.filter((tone) => tone.fantasy);
 
 const HAIR_COLORS = [
   { id: "black", label: "Black", color: "#1c1a19" },
@@ -1030,7 +1040,8 @@ function randomLook(gender) {
   const necklace = !outfit.highCollar && randomChance(male ? 0.15 : 0.35) ? randomItem(options.necklace.slice(1)) : options.necklace[0];
   return {
     gender,
-    skin: randomItem(SKIN_TONES).id,
+    // A fantasy colour only about 1 in 20 times.
+    skin: randomItem(randomChance(0.05) ? FANTASY_SKIN_TONES : NATURAL_SKIN_TONES).id,
     // The bold colour only now and then.
     hairColor: randomChance(0.08) ? "blue" : randomItem(HAIR_COLORS.slice(0, -1)).id,
     hairStyle: hairStyle.id,
