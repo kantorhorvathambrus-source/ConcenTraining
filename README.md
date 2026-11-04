@@ -45,8 +45,8 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   loads and real artwork fits the same slot. At 320 × 568 the header and the whole card fit on the
   first screen.
 - **Setup:** 1. pick a character, 2. a mode (Simple / Advanced), 3. a focus duration.
-  The character decides the personality (see below). While custom characters are switched on
-  (`CUSTOM_CHARACTERS_ENABLED`, off for launch), the last card of step 1 is **Create your own**,
+  The character decides the personality (see below). While custom characters are on
+  (`CUSTOM_CHARACTERS_ENABLED`, off for launch, but always on on Netlify's test sites), the last card of step 1 is **Create your own**,
   and characters you made appear under the grid in **Your characters** (see
   [Custom characters](#custom-characters)). Ragebait characters show a warning before
   they can be selected. Selecting a card only updates which card is pressed (`aria-pressed`), so
@@ -626,9 +626,17 @@ the user picks it when creating the character, and from then on it belongs to th
 
 The whole feature is behind one switch, `CUSTOM_CHARACTERS_ENABLED` at the top of
 `public/js/custom-characters.js`. It is **`false` for launch**. Everything below describes the
-feature as it works with the switch set to `true`.
+feature as it works while it's on.
 
-While it's `false`:
+**Where it's on:** the switch decides on the production site (concentraining.netlify.app and any
+later custom domain), on the GitHub Pages backup, on `localhost` and under `netlify dev`. On
+Netlify's test sites custom characters are **always on**, whatever the switch says, so they can be
+tried on a phone: every Deploy Preview (the hostname starts with `deploy-preview-`, e.g.
+`deploy-preview-54--concentraining.netlify.app`) and the main branch deploy (it starts with
+`main--`: `main--concentraining.netlify.app`). The code checks `CUSTOM_CHARACTERS_ON`
+(`CUSTOM_CHARACTERS_ENABLED` or one of those hostnames), never the switch alone.
+
+While they're off:
 
 - **Setup screen:** there's no **Create your own** card and no **Your characters** section, so the
   main grid has only the 19 built-in characters. `./?picked=custom-…` (the editor's way back
@@ -644,7 +652,7 @@ While it's `false`:
 - **Saved data stays:** `ct_custom_characters_v1` is neither read for the picker nor deleted. The
   history still shows the names of sessions with custom characters (their current name, or the
   name the session stored).
-- **A session that's already running** with a custom character (started while the switch was on)
+- **A session that's already running** with a custom character (started while they were on)
   keeps running with that character after a reload.
 
 To switch the feature on, set it to `true`. Nothing else needs to change: no saved data, no
@@ -1224,7 +1232,7 @@ once with a decent connection fixes it, because every online start refreshes all
 | `public/js/placeholder-art.js` | Built-in placeholder drawings (kind, firm, strict and ragebait faces, plus each character's look) for characters without real art; its eyes, brows, mouths and extras are shared with custom characters |
 | `public/js/avatar-parts.js` | Custom characters' parts: head shapes (`buildHead`), each gender's faces, hairstyles, outfits and accessories, the shared skin tones, hair colours and funny faces, how each is drawn, starting looks, Randomize, and `AVATAR_PNG_FILES` |
 | `public/js/avatar-art.js` | Draws a custom character from its layers (SVG, or listed PNGs with skin/hair tint) |
-| `public/js/custom-characters.js` | Saving and reading `ct_custom_characters_v1`, name rules, the 10 limit, `CUSTOM_PAID`, the feature switch `CUSTOM_CHARACTERS_ENABLED`, stand-in for deleted characters (used by all three pages and `stats.html`) |
+| `public/js/custom-characters.js` | Saving and reading `ct_custom_characters_v1`, name rules, the 10 limit, `CUSTOM_PAID`, the feature switch `CUSTOM_CHARACTERS_ENABLED` (and `CUSTOM_CHARACTERS_ON`, which is also true on Netlify's test sites), stand-in for deleted characters (used by all three pages and `stats.html`) |
 | `public/js/avatar.js` | The editor on `avatar.html` |
 | `public/js/app.js` | Timer, reaction engine, distraction category picker, Undo, disabled Advanced lengths, time away card, leave reminder notification, motivation rotation, end chime, screen wake lock and the "screen may turn off" note, summary, How it works card, iPhone Home Screen tip, persistent storage request, one tab at a time (Web Locks) |
 | `public/js/history-store.js` | Saving/loading history, focus % and summary result (with their thresholds), distraction categories, export/import checks, iPhone/iPad and iPhone Safari checks, the "can this browser save?" test (`storageWorks`) (used by both pages) |
@@ -1274,8 +1282,8 @@ popularity can be measured over the **last 30 days** and the paid selection rota
   `custom: true`): the app never sends the user's own ids or names. They're always paid, so
   `"custom"` is left out of the ranking and of the character count, and comes separately as
   `customPicks: { recentPicks, totalPicks }`. `/stats.html` shows it in its own table, "Custom
-  characters (always paid)", but only while `CUSTOM_CHARACTERS_ENABLED` is `true` (it loads
-  `js/custom-characters.js` for that).
+  characters (always paid)", but only while custom characters are on (`CUSTOM_CHARACTERS_ON`; it
+  loads `js/custom-characters.js` for that), so on Deploy Previews and the main branch deploy too.
   It also returns `store`: `"live"` or `"test"` (see below). The numbers are at `/stats.html`,
   which says which store it's reading.
 - **One blob per character:** the key is the character id (`grandma`), the value is the picks per

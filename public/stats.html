@@ -54,7 +54,7 @@
     <p><a href="./" class="back-link">← Back to the timer</a></p>
   </main>
 
-  <!-- Only for CUSTOM_CHARACTERS_ENABLED: the custom line is left out while it's false. -->
+  <!-- Only for CUSTOM_CHARACTERS_ON: the custom line is left out while custom characters are off. -->
   <script src="js/custom-characters.js"></script>
   <script>
     "use strict";
@@ -95,7 +95,7 @@
 
         // Older backends (before custom characters) don't send it. Not shown while custom
         // characters are switched off (the backend still counts "custom").
-        if (stats.customPicks && CUSTOM_CHARACTERS_ENABLED) {
+        if (stats.customPicks && CUSTOM_CHARACTERS_ON) {
           document.getElementById("customRecentHeader").textContent = `Last ${stats.recentDays} days`;
           document.getElementById("customRecent").textContent = stats.customPicks.recentPicks;
           document.getElementById("customTotal").textContent = stats.customPicks.totalPicks;

@@ -359,8 +359,8 @@ function onCancel() {
 // ---------- start-up ----------
 
 function init() {
-  // The feature is switched off (CUSTOM_CHARACTERS_ENABLED in custom-characters.js): back to the app.
-  if (!CUSTOM_CHARACTERS_ENABLED) {
+  // Custom characters are off (CUSTOM_CHARACTERS_ON in custom-characters.js): back to the app.
+  if (!CUSTOM_CHARACTERS_ON) {
     document.querySelector("main").hidden = true;
     location.replace("./");
     return;
