@@ -195,6 +195,9 @@ function saveFinishedSession(session, endedBy) {
     endedAt: session.endedAt,
     endedBy: endedBy || (session.endedAt >= session.startedAt + session.durationMs ? "timer" : "manual"),
     characterId: session.characterId,
+    // Custom characters only: the name when the session ran, so a renamed or deleted character's
+    // sessions still show a name. Built-in characters and older entries don't have it.
+    ...(typeof session.characterName === "string" && { characterName: session.characterName }),
     style: session.style,
     mode: session.mode,
     plannedMs: session.durationMs,

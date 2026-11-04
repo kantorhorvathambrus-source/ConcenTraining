@@ -1,5 +1,5 @@
 // Service worker: lets the app start and run without internet once it has been opened online.
-// Registered by js/sw-register.js from index.html and history.html. See "Offline use" in the README.
+// Registered by js/sw-register.js from index.html, history.html and avatar.html. See "Offline use" in the README.
 //
 // Strategy: network first. Online, every file comes from the network (so people always get the
 // newest version) and a copy is saved in the cache. Offline, or when the network hasn't answered
@@ -15,19 +15,25 @@
 
 // Bump CACHE_VERSION whenever PRECACHE changes (a startup file added, removed or renamed).
 // On activate every older "concentraining-" cache is deleted.
-const CACHE_VERSION = 3;
+const CACHE_VERSION = 4;
 const CACHE_PREFIX = "concentraining-";
 const CACHE_NAME = `${CACHE_PREFIX}v${CACHE_VERSION}`;
 
-// Everything needed to open index.html, run a session to the summary and open history.html offline.
+// Everything needed to open index.html, run a session to the summary, and open history.html and the
+// character editor (avatar.html) offline.
 // stats.html stays online-only (it needs api/stats anyway). index.html is saved as the scope (cacheKey).
 const PRECACHE = [
   "index.html",
   "history.html",
+  "avatar.html",
   "css/style.css",
   "js/data/characters.js",
   "js/data/messages.js",
   "js/placeholder-art.js",
+  "js/avatar-parts.js",
+  "js/avatar-art.js",
+  "js/custom-characters.js",
+  "js/avatar.js",
   "js/history-store.js",
   "js/app.js",
   "js/history.js",

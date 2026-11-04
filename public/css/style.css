@@ -229,9 +229,11 @@ input:focus-visible {
 
 /* ---------- setup: characters ---------- */
 
+/* minmax(0, 1fr): with large text (200%) at 320px, a long word wraps inside its card instead of
+   making the grid wider than the screen. */
 .character-list {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -251,7 +253,13 @@ input:focus-visible {
 
 .char-card img {
   width: 96px;
+  max-width: 100%;
   height: auto;
+}
+
+.char-card {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .char-card[aria-pressed="true"] {
@@ -295,6 +303,84 @@ input:focus-visible {
 
 .badge-ragebait {
   background: var(--ragebait);
+}
+
+/* "Create your own" (always the last card of the main grid) and "Your characters" below it.
+   A custom card is a frame holding the select button (a .char-card without its own border) and
+   the Edit / Delete row: a button can't contain other buttons. */
+.create-card img {
+  opacity: 0.9;
+}
+
+.create-card[aria-disabled="true"] {
+  cursor: default;
+  box-shadow: none;
+}
+
+.create-card[aria-disabled="true"]:active {
+  transform: none;
+}
+
+.badge-free {
+  background: var(--primary);
+  color: var(--primary-text);
+}
+
+.custom-section {
+  margin-top: 24px;
+}
+
+.custom-section h3 {
+  font-size: 1.05rem;
+  margin: 0 0 12px;
+}
+
+.custom-item {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  min-width: 0;
+  transition: border-color 0.15s;
+}
+
+.custom-item.selected {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, var(--surface));
+}
+
+.custom-item .char-card {
+  flex: 1;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding-bottom: 6px;
+}
+
+/* The name is the user's own text: long words break instead of widening the card. */
+.custom-item .char-name {
+  overflow-wrap: anywhere;
+}
+
+.custom-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 8px 10px;
+}
+
+.custom-actions .btn {
+  flex: 1 1 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: var(--text);
+  font-size: 0.9rem;
 }
 
 /* ---------- setup: choices ---------- */
@@ -1427,6 +1513,256 @@ a {
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+/* ---------- character editor (avatar.html) ---------- */
+
+.avatar-back {
+  margin: 0 0 4px;
+}
+
+.avatar-page h1 {
+  font-size: 1.6rem;
+}
+
+/* The preview stays at the top while the options scroll under it. Its height follows the screen,
+   so a short (or landscape) phone keeps most of its height for the options. */
+.avatar-preview {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 -16px 20px;
+  padding: 8px 16px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.avatar-preview-img {
+  flex: 0 0 auto;
+  width: clamp(72px, 32%, 150px);
+  height: auto;
+  max-height: 26vh;
+  max-height: 26svh;
+  aspect-ratio: 200 / 240;
+  object-fit: contain;
+}
+
+/* The buttons take the rest of the row; with large text a long word may break rather than push
+   the page wider than the screen. */
+.avatar-preview-actions {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.avatar-preview-actions .btn {
+  padding-left: 10px;
+  padding-right: 10px;
+  overflow-wrap: anywhere;
+}
+
+.editor-section {
+  border: none;
+  margin: 0 0 24px;
+  padding: 0;
+  min-width: 0;
+}
+
+.editor-section legend {
+  padding: 0;
+}
+
+.editor-section .small {
+  margin: 8px 0 0;
+}
+
+.text-input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+}
+
+.text-input[aria-invalid="true"] {
+  border-color: var(--error);
+}
+
+/* Radio-style grids: the real radio button is invisible (but focusable, so arrow keys and screen
+   readers work as usual) and its picture or text is drawn next to it. */
+.option-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(68px, 1fr));
+  gap: 8px;
+}
+
+.option-grid-swatch {
+  grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+}
+
+.option-grid-text {
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+}
+
+.option-grid-full {
+  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+}
+
+.option {
+  position: relative;
+  display: block;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.option-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+}
+
+.option-visual {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  height: 100%;
+  padding: 4px;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.option-input:checked + .option-visual {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, var(--surface));
+}
+
+/* A check mark in the corner of the picked option, so it isn't marked by colour alone. */
+.option-input:checked + .option-visual::after {
+  content: "";
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--primary) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5 10.5 L8.5 14 L15 6.5' fill='none' stroke='white' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 100% no-repeat;
+}
+
+.option-input:focus-visible + .option-visual {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* A thumbnail: inline SVG (avatar.js), with the proportions of its view (AVATAR_VIEWS). */
+/* "Funny" before the funny faces, across the whole grid. */
+.option-group-title {
+  grid-column: 1 / -1;
+  margin: 10px 0 0;
+  font-size: 1rem;
+}
+
+.option-img {
+  display: block;
+  width: 100%;
+}
+
+.option-img svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.option-img-head {
+  aspect-ratio: 184 / 204;
+}
+
+.option-img-full {
+  aspect-ratio: 200 / 240;
+}
+
+.option-swatch {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+.personality-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* The personality badges keep their group colour, picked or not (they'd get the plain option
+   background otherwise). The picked one gets a ring and the check mark. */
+.personality-option .option-visual {
+  padding: 8px 16px;
+  font-size: 0.95rem;
+  color: #fff;
+  border: 2px solid transparent;
+}
+
+.personality-option .option-visual.badge-relaxed,
+.personality-option .option-input:checked + .option-visual.badge-relaxed {
+  background: var(--relaxed);
+}
+
+.personality-option .option-visual.badge-firm,
+.personality-option .option-input:checked + .option-visual.badge-firm {
+  background: var(--firm);
+}
+
+.personality-option .option-visual.badge-strict,
+.personality-option .option-input:checked + .option-visual.badge-strict {
+  background: var(--strict);
+}
+
+.personality-option .option-visual.badge-ragebait,
+.personality-option .option-input:checked + .option-visual.badge-ragebait {
+  background: var(--ragebait);
+}
+
+.personality-option .option-input:checked + .option-visual {
+  border-color: var(--surface);
+  box-shadow: 0 0 0 3px var(--text);
+}
+
+.personality-option .option-input:checked + .option-visual::after {
+  background-color: var(--text);
+}
+
+.editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.editor-actions .btn {
+  flex: 1 1 140px;
+}
+
+#saveError {
+  margin: 0 0 12px;
 }
 
 /* ---------- small screens ---------- */
