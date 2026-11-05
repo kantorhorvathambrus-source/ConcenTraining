@@ -693,12 +693,12 @@ backend, no service worker version (the file's name stays the same).
   combinations that look bad together: sunglasses with a full beard, earrings with hair that covers
   the ears, a necklace on a high collar (hoodie, turtleneck, puffer, track jacket, and high-collared
   costumes), and costume items that clash. The editor itself allows every combination.
-- **Groups:** under Name and Personality, the look options are in 4 groups that open and close
-  with a tap on their title (`<details>`), in this order: **Base** (gender, skin tone, hair colour,
-  face, hairstyle) and **Costumes** (the presets) are open at the start; **Clothes** (outfit,
-  costume outfit, back) and **Accessories** (headwear, masks and face, ears and horns, eyewear,
-  earrings, necklace, costume beard, facial hair, held item, shoulder pet) are closed. A group's
-  options are only built the first time it's opened.
+- **Groups:** under Name and Personality, the look options are in 4 groups, in this order:
+  **Base** (gender, skin tone, hair colour, face, hairstyle), **Costumes** (the presets),
+  **Clothes** (outfit, costume outfit, back) and **Accessories** (headwear, masks and face, ears
+  and horns, eyewear, earrings, necklace, costume beard, facial hair, held item, shoulder pet).
+  All four are open when the editor opens; a tap on a group's title closes it (and opens it
+  again), `<details>`. A group's options are only built while it's open.
 - **Name:** required, 1–20 characters after trimming (an emoji or accented letter counts as one),
   unique among your own characters ignoring case. A name like a built-in character's is fine.
   Errors: "Give your character a name." / "Names can be up to 20 characters." / "You already have
@@ -751,41 +751,57 @@ backend, no service worker version (the file's name stays the same).
   Each thumbnail shows the base of the look (gender, skin, hair colour, hairstyle, face) with its
   own option, but no other accessories and no costume (the necklace thumbnails also show the
   outfit; the presets show their costume on that base), so outfit, eyewear, earrings, facial hair
-  and costume item taps only redraw the preview. Thumbnails are inline SVG (much quicker to update
-  than one image each). Those visible on screen are drawn at once, those up to 100 px above or
-  below it right after the next frame, the rest when they scroll into view; a closed group's
-  thumbnails are never drawn, and only the chosen gender's sections exist. Randomize shows the new
-  preview first and redraws the thumbnails right after that frame.
-  A costume theme chip (see [Costumes](#costumes)) only shows another grid: its thumbnails are
-  drawn the first time they're on screen for the current look, so going back to a theme seen
-  before costs almost nothing. A thumbnail's key (what it shows) is built from the few fields it
-  depends on, so checking ~350 thumbnails after a tap stays cheap. Measured in Chromium at
-  360 × 780 with 4× CPU slowdown, 7 taps each, with the tapped section scrolled into view (the
-  first number: until the next frame shows the tap's result; the second: until every thumbnail on
-  screen is redrawn; the medians of two runs, then the slowest tap). Timings in the test container
-  vary from run to run, so part A (`main` before part B) was measured alternately with this
-  version on the same machine:
+  and costume item taps only redraw the preview. A thumbnail's key (what it shows) is built from
+  the few fields it depends on, so checking ~350 thumbnails after a tap stays cheap. Thumbnails
+  are inline SVG (much quicker to update than one image each), without the spaces between tags.
+  - **What gets drawn when:** thumbnails on screen are drawn at once, those up to 100 px above or
+    below it right after the next frame, the rest when they scroll into view; a closed group's
+    thumbnails are never drawn, and only the chosen gender's sections exist.
+  - **Randomize** shows the new preview first and redraws the thumbnails on screen right after
+    that frame. The ones just off screen are drawn when the browser is idle, a few at a time, or
+    the moment one scrolls onto the screen. A **gender switch** draws the rebuilt sections'
+    thumbnails on screen at once (no empty boxes), and the rest the same way.
+  - **Off-screen sections aren't rendered:** each section of options has `content-visibility:
+    auto`, so the browser doesn't style, lay out or paint it while it's off screen (with every
+    group open the page has ~2,000 elements). Until a section has been drawn once, its height is
+    an estimate from its number of options (`contain-intrinsic-size`); then the browser keeps its
+    real height. Content on screen doesn't move when sections above it are drawn for the first
+    time.
+  - **Theme chips:** a chip (see [Costumes](#costumes)) only shows another grid: its thumbnails
+    are drawn the first time they're on screen for the current look, so going back to a theme
+    seen before costs almost nothing.
 
-  | Tap | Base and Costumes open | All 4 groups open | Part A, same machine |
-  |---|---|---|---|
-  | Costume theme chip, first time | 34–46 / 36–46 ms (slowest 57) | 48–54 / 61–65 ms (slowest 104) | – |
-  | Costume theme chip, seen before | 20–27 / 20–28 ms (slowest 35) | – | – |
-  | Costume preset | 20–21 / 20–22 ms (slowest 54) | – | 18–25 / 19–26 ms (slowest 62) |
-  | Face | 23–24 / 23–26 ms (slowest 37) | 28–31 / 30–35 ms (slowest 66) | 24–30 / 24–31 ms |
-  | Hairstyle | 34–41 / 39–47 ms (slowest 68) | – | 37–54 / 43–66 ms |
-  | Skin tone | 48–50 / 50–54 ms (slowest 71) | – | 50–51 / 56 ms |
-  | Headwear, costume outfit or held item | – | 33–39 / 35–41 ms (slowest 68) | 28–36 / 29–37 ms |
-  | Randomize | 44–45 / 51 ms (slowest 76) | 98–101 / 114–117 ms (slowest 193), headwear on screen | 43–46 / 52–54 ms; all open 71–75 / 83–92 ms |
-  | Gender switch (builds that gender's sections again) | – | 69–78 / 109 ms (slowest 170) | 62–66 / 103–111 ms |
-  | Opening Clothes the first time | 29–32 / 29–33 ms (slowest 67) | – | 28–34 / 32–35 ms |
-  | Opening Accessories the first time (5 taps) | 19–61 / 74–96 ms | – | 20–41 / 56–67 ms |
+  Measured in Chromium at 360 × 780 with 4× CPU slowdown, 7 taps each, with the tapped section
+  scrolled into view. The first number: until the frame that shows the tap's result. The second:
+  until every thumbnail on screen is redrawn. Medians of two runs, then the slowest tap. Timings in
+  the test container vary from run to run, so the version just before these changes was measured
+  alternately with this one on the same machine:
 
-  Randomize with every group open does the same work as in part A (about 7 ms of script and
-  25–30 ms to update the thumbnails on screen, measured step by step on both); the difference in
-  the table is run-to-run noise. Before costumes (part 1): a tap on an option 21–92 ms, Randomize
-  65–91 ms, gender switch 39–63 ms. Redrawing all thumbnails as images took 370–1160 ms. Almost all
-  of the time is the browser drawing the thumbnails on screen (about 4 ms each on a slow phone);
-  building their drawings takes about 0.2 ms each.
+  | Tap (all 4 groups open, as when the editor opens) | Now | Before |
+  |---|---|---|
+  | Costume theme chip | 43–52 / 60–62 ms (slowest 77 / 128) | 73–87 / 93–96 ms |
+  | Costume preset | 45–50 / 52–60 ms (slowest 70 / 87) | 52–53 / 53 ms |
+  | Face | 33–37 / 37–41 ms (slowest 52 / 57) | 43–46 / 46–49 ms |
+  | Hairstyle | 49–54 / 77–82 ms (slowest 75 / 102) | 53–61 / 76–84 ms |
+  | Skin tone | 65–77 / 82–96 ms (slowest 91 / 109) | 79–80 / 91–95 ms |
+  | Headwear, costume outfit or held item | 47–63 / 51–66 ms (slowest 85 / 91) | 46–61 / 49–63 ms |
+  | Randomize, Base on screen | 55–60 / 116–126 ms (slowest 70 / 153) | 83–89 / 135–141 ms (slowest 120 / 170) |
+  | Randomize, headwear on screen | 58–62 / 127–128 ms (slowest 75 / 159) | 99–100 / 179–185 ms (slowest 160 / 251) |
+  | Gender switch | 94–146 / 115–172 ms (slowest 214 / 242) | 91–107 / 143–188 ms (slowest 171 / 289) |
+
+  With only Base and Costumes open: Randomize 30–34 / 80–87 ms, gender switch 72–74 / 87–90 ms
+  (before: 36–37 / 83–90 ms and 36–38 / 75 ms; the gender switch's first frame used to show the
+  rebuilt sections with empty thumbnail boxes for a moment, now it shows them drawn). Opening the
+  editor with all four groups open: the page is ready (DOMContentLoaded) after 176–243 ms and every
+  thumbnail on screen is drawn after 249–325 ms (about 350 thumbnails built, most of them drawn
+  only when scrolled to).
+
+  Earlier versions measured the first number until after the work a tap left for after that
+  frame; measured that way, Randomize is now 92–98 ms (before 118–153 ms). Part A: a tap 18–108
+  ms. Before costumes (part 1): a tap on an option 21–92 ms, Randomize 65–91 ms, gender switch
+  39–63 ms. Redrawing all thumbnails as images took 370–1160 ms. Almost all of the time is the
+  browser parsing, styling and painting the thumbnails on screen (several ms each on a slow
+  phone); building their drawings takes about 0.2 ms each.
 
 ### Costumes
 
@@ -840,6 +856,23 @@ sports face guard.
   removes the costume beard; every other costume item stays.
 - **The costume outfit** is drawn instead of the outfit. The outfit choice is kept and comes back
   when the costume outfit is set to None.
+- **A pick takes off what would hide it:** when you pick an option that a costume item covers,
+  that costume item is set to None at once, silently, so your pick shows (`uncoverFor` in
+  `avatar-costumes.js`). This also works when you tap the option that's already chosen (and with
+  Space on it). Picking a field's None (no facial hair, no eyewear…) takes nothing off. The rules:
+
+  | You pick | Taken off |
+  |---|---|
+  | An outfit | the costume outfit |
+  | A hairstyle | anything that hides the hair completely: the hoods (plain, dwarf, ninja-style, bear, dinosaur), the knight helmet, the pharaoh-style headdress, the judge's wig, the pumpkin and robot heads (`hair: "hide"`), the ghost sheet and the mummy wraps (`hidesHair`). Hats that only cover the top of the hair stay. |
+  | Facial hair | the costume beard, and anything over the lower face (the pumpkin and robot heads, the ninja-style hood with its mask) |
+  | A necklace | a high-collared costume outfit, or the ghost sheet |
+  | Eyewear | a covering head (pumpkin, robot, ghost sheet) or a mask that clashes with glasses (eye patch, monocle, star-shaped glasses, plague doctor mask) |
+  | Earrings | anything that hides them: the hoods, the knight helmet, the pharaoh-style headdress, the judge's wig, the covering heads, the mummy wraps |
+
+  Everything else stays, and the preset dot and the thumbnails update as usual (after Pirate, a
+  T-shirt takes off only the pirate coat; the dot goes, because the look is no longer exactly
+  Pirate).
 - **Hats over hair:** each hat has a band height. The hair above it is hidden and only its sides
   and back show, so every hat fits every hairstyle and head, including the funny faces. Tall hats
   (witch, wizard, top hat…) are as wide as the head at the band and are flattened only as much as

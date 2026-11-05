@@ -32,15 +32,15 @@ const SECTIONS = {
   pet: { field: "pet", title: "Shoulder pet", view: "full" },
 };
 
-// The editor's collapsible groups (<details>), in order. Base and Costumes are open at the start.
-// A group's sections are only built the first time it's opened, and only the thumbnails of open
-// groups are drawn (a closed group's thumbnails are never on screen).
+// The editor's collapsible groups (<details>), in order. All four are open at the start; tapping a
+// group's title closes it. A group's sections are only built the first time it's open, and only
+// thumbnails on or near the screen are drawn (a closed group's thumbnails are never on screen).
 const EDITOR_GROUPS = [
   { id: "base", title: "Base", open: true, sections: ["gender", "skin", "hairColor", "face", "hairStyle"] },
   { id: "costumes", title: "Costumes", open: true, presets: true, sections: [] },
-  { id: "clothes", title: "Clothes", sections: ["outfit", "costumeOutfit", "back"] },
+  { id: "clothes", title: "Clothes", open: true, sections: ["outfit", "costumeOutfit", "back"] },
   {
-    id: "accessories", title: "Accessories",
+    id: "accessories", title: "Accessories", open: true,
     sections: ["headwear", "mask", "earsHorns", "eyewear", "earrings", "necklace", "costumeBeard", "facialHair", "held", "pet"],
   },
 ];
@@ -81,6 +81,7 @@ const editor = {
   thumbs: [],
   observer: null,
   laterToken: null, // the latest batch of thumbnails just off screen (updateThumbs)
+  waiting: new Set(), // thumbnails just off screen left for later (drawThumbs), drawn when idle or scrolled to
   themeToken: null, // the same for a theme switch (onTheme)
   built: new Set(),
   // The costume theme whose presets are shown (in memory only, Fantasy at the start), and per
@@ -123,7 +124,8 @@ function thumbKey(thumb) {
 // when they scroll into view (showThumb), so a tap never waits for ~70 drawings at once. Those
 // actually visible (below the preview, which stays at the top) are drawn at once; the ones just
 // above or below the screen right after the next frame, so the tap's result shows sooner.
-function updateThumbs() {
+// lazy (Randomize, a gender switch: every thumbnail changes): see drawThumbs.
+function updateThumbs(lazy = false) {
   const changed = [];
   for (const thumb of editor.thumbs) {
     thumb.key = thumbKey(thumb);
@@ -131,12 +133,15 @@ function updateThumbs() {
     if (!editor.observer) showThumb(thumb);
     else if (thumb.near) changed.push(thumb);
   }
-  drawThumbs(changed, "laterToken");
+  drawThumbs(changed, "laterToken", lazy);
 }
 
 // Draws thumbnails: those visible on screen at once, the others right after the next frame
-// (unless a newer batch of the same kind, tokenName, replaced them meanwhile).
-function drawThumbs(changed, tokenName) {
+// (unless a newer batch of the same kind, tokenName, replaced them meanwhile). lazy: the others
+// only while the browser is idle, a few at a time, or the moment one scrolls onto the screen
+// (editor.waiting, drawWaitingOnScreen), so Randomize and a gender switch with every group open
+// only draw what's on screen.
+function drawThumbs(changed, tokenName, lazy = false) {
   if (changed.length === 0) return;
   // All positions first, then all drawings (reading a position after a drawing would make the
   // browser lay out the page again each time).
@@ -145,22 +150,66 @@ function drawThumbs(changed, tokenName) {
     const rect = thumb.box.getBoundingClientRect();
     return rect.bottom > top && rect.top < window.innerHeight;
   });
+  const now = changed.filter((thumb, i) => visible[i]);
   const later = changed.filter((thumb, i) => !visible[i]);
-  changed.forEach((thumb, i) => visible[i] && showThumb(thumb));
+  now.forEach(showThumb);
   if (later.length === 0) return;
   const token = (editor[tokenName] = {});
-  requestAnimationFrame(() =>
-    setTimeout(() => {
-      if (editor[tokenName] === token) later.forEach(showThumb);
-    }, 0)
-  );
+  if (!lazy) {
+    requestAnimationFrame(() =>
+      setTimeout(() => {
+        if (editor[tokenName] === token) later.forEach(showThumb);
+      }, 0)
+    );
+    return;
+  }
+  for (const thumb of later) editor.waiting.add(thumb);
+  drawWaitingWhenIdle();
+}
+
+// The waiting thumbnails, a few at a time while the browser has nothing else to do.
+let idleQueued = false;
+function drawWaitingWhenIdle() {
+  if (idleQueued || editor.waiting.size === 0) return;
+  idleQueued = true;
+  const idle = window.requestIdleCallback || ((fn) => setTimeout(() => fn({ timeRemaining: () => 8 }), 150));
+  idle((deadline) => {
+    idleQueued = false;
+    for (const thumb of editor.waiting) {
+      editor.waiting.delete(thumb);
+      // Not if its section was built again meanwhile (a gender switch).
+      if (!thumb.box.isConnected) continue;
+      showThumb(thumb);
+      if (deadline.timeRemaining() < 4) break;
+    }
+    drawWaitingWhenIdle();
+  });
+}
+
+// On scroll: the waiting thumbnails that are now on screen, at once (only those few are checked).
+let scrollQueued = false;
+function drawWaitingOnScreen() {
+  if (scrollQueued || editor.waiting.size === 0) return;
+  scrollQueued = true;
+  requestAnimationFrame(() => {
+    scrollQueued = false;
+    const onScreen = [...editor.waiting].filter((thumb) => {
+      const rect = thumb.box.getBoundingClientRect();
+      return rect.height > 0 && rect.bottom > 0 && rect.top < window.innerHeight;
+    });
+    for (const thumb of onScreen) {
+      editor.waiting.delete(thumb);
+      showThumb(thumb);
+    }
+  });
 }
 
 function showThumb(thumb) {
   if (thumb.drawn === thumb.key) return;
   thumb.drawn = thumb.key;
-  // Our own drawing, with no user text in it.
-  thumb.box.innerHTML = avatarInlineSvg(thumbLook(thumb), editor.personality, "initial", thumb.view, thumb.prefix);
+  // Our own drawing, with no user text in it. The spaces between its tags would only be extra
+  // nodes for the browser to build.
+  thumb.box.innerHTML = avatarInlineSvg(thumbLook(thumb), editor.personality, "initial", thumb.view, thumb.prefix).replace(/>\s+</g, "><");
 }
 
 // 100px above and below the screen count as near, so a normal scroll finds them ready.
@@ -191,18 +240,19 @@ function syncChecked() {
 
 // thumbsLater: the thumbnails are drawn right after the next frame, so the new preview shows at
 // once (Randomize changes the base of every thumbnail on screen, which takes a slow phone ~100 ms).
-function redraw(thumbsLater = false) {
+// lazy: thumbnails just off screen are drawn when the browser is idle (drawThumbs); Randomize is.
+function redraw(thumbsLater = false, lazy = thumbsLater) {
   stopPreview();
   showPose("initial");
   updateThemeDots();
   if (!thumbsLater) {
-    updateThumbs();
+    updateThumbs(lazy);
     return;
   }
   const token = (editor.laterToken = {});
   requestAnimationFrame(() =>
     setTimeout(() => {
-      if (editor.laterToken === token) updateThumbs();
+      if (editor.laterToken === token) updateThumbs(true);
     }, 0)
   );
 }
@@ -265,6 +315,9 @@ function optionGroupTitle(option) {
 // a gender change can rebuild it there).
 function buildSection(section) {
   section.box.innerHTML = "";
+  // Built again (a gender switch): its new thumbnails are near the screen if the old ones were, so
+  // the ones on screen are drawn at once instead of after the observer's next report.
+  const wasNear = editor.thumbs.some((thumb) => thumb.field === section.field && thumb.near);
   editor.thumbs = editor.thumbs.filter((thumb) => thumb.field !== section.field);
   const options = lookOptions(section.field, editor.look.gender);
   if (options.length === 0) return;
@@ -288,11 +341,24 @@ function buildSection(section) {
     groupTitle = title;
     const { label, input } = optionLabel(section.field, option.id, editor.look[section.field] === option.id);
     optionVisual(section, option, label);
+    // A click too: tapping the option that's already chosen fires no change event, but still
+    // takes off a costume item that hides it (onLookChange). Space on the chosen one fires no
+    // click either, so it's handled here for keyboard users.
     input.addEventListener("change", () => onLookChange(section.field, option.id));
+    input.addEventListener("click", () => onLookChange(section.field, option.id));
+    input.addEventListener("keydown", (event) => {
+      if (event.key === " " && input.checked) onLookChange(section.field, option.id);
+    });
     grid.append(label);
   }
   fieldset.append(legend, grid);
   section.box.append(fieldset);
+  if (wasNear) for (const thumb of editor.thumbs) if (thumb.field === section.field) thumb.near = true;
+  // Its height before the browser has drawn it (off screen, see .editor-section-box): about 4
+  // thumbnails per row. Once drawn, the browser remembers the real height.
+  const perRow = section.kind === "swatch" ? 5 : section.kind === "text" ? 2 : 4;
+  const rowHeight = section.kind === "swatch" ? 56 : section.kind === "text" ? 52 : section.view === "full" ? 112 : 92;
+  section.box.style.containIntrinsicSize = `auto ${56 + Math.ceil(options.length / perRow) * rowHeight}px`;
 }
 
 // One costume button: a picture of the costume on this character, and its name. Buttons, not
@@ -385,6 +451,7 @@ function buildGroup(group) {
   for (const field of group.sections) {
     const section = SECTIONS[field];
     section.box = document.createElement("div");
+    section.box.className = "editor-section-box";
     group.body.append(section.box);
     buildSection(section);
   }
@@ -444,16 +511,24 @@ function buildPersonalityOptions() {
 
 // A gender change (also when editing) starts again from that gender's starting look: the two
 // genders have different lists. The name, personality and costume items (shared by both) stay,
-// except a costume beard when switching to Female.
+// except a costume beard when switching to Female. Any other pick takes off the costume items
+// that would hide it (uncoverFor: e.g. an outfit takes off the costume outfit), silently, so the
+// pick shows. A pick that changes nothing (the change event after the click) does nothing.
 function onLookChange(field, id) {
   if (field === "gender") {
     if (id === editor.look.gender) return;
     editor.look = { ...defaultLook(id), ...costumeOf(editor.look, id) };
     buildGenderSections();
     syncChecked();
-  } else {
-    editor.look = { ...editor.look, [field]: id };
+    // The rebuilt sections' thumbnails on screen at once (no empty boxes), the rest when idle.
+    redraw(false, true);
+    return;
   }
+  const next = uncoverFor(editor.look, field, id);
+  if (LOOK_FIELDS.every((name) => next[name] === editor.look[name])) return;
+  const tookOff = COSTUME_FIELDS.some((name) => next[name] !== editor.look[name]);
+  editor.look = next;
+  if (tookOff) syncChecked();
   redraw();
 }
 
@@ -626,6 +701,7 @@ function init() {
   $("#nameInput").addEventListener("input", onNameInput);
   $("#previewButton").addEventListener("click", startPreview);
   $("#randomizeButton").addEventListener("click", onRandomize);
+  window.addEventListener("scroll", drawWaitingOnScreen, { passive: true });
   $("#editorForm").addEventListener("submit", onSave);
   $("#cancelButton").addEventListener("click", onCancel);
 }

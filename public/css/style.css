@@ -1692,6 +1692,13 @@ a {
   hyphens: auto;
 }
 
+/* A section of look options off screen isn't styled, laid out or painted at all (with every
+   group open the page has ~2,000 elements; Randomize would otherwise redo them all). Its height
+   until then comes from contain-intrinsic-size (avatar.js), then from its last real height. */
+.editor-section-box {
+  content-visibility: auto;
+}
+
 /* "No costume" on its own row, above the theme chips. */
 .preset-grid-none {
   margin-bottom: 12px;

@@ -2142,6 +2142,42 @@ function costumeOf(look, gender) {
   return costume;
 }
 
+// ---------- picks that a costume item would hide ----------
+// When the user picks an option that a costume item covers, that costume item is taken off
+// (silently), so the pick shows: per field, which worn costume items hide a pick in it. Picking a
+// field's None (no facial hair, no eyewear…) takes nothing off.
+
+const hasClash = (item, tag) => (item.clashes || []).includes(tag);
+
+const UNCOVER_RULES = {
+  // The costume outfit is drawn instead of the outfit.
+  outfit: (item, field) => field === "costumeOutfit",
+  // Hoods, helmets, the pumpkin and robot heads, the ghost sheet, the mummy wraps…
+  hairStyle: (item) => item.hair === "hide" || Boolean(item.hidesHair),
+  facialHair: (item, field) => field === "costumeBeard" || hasClash(item, "facialHair"),
+  // A high-collared costume outfit (and the ghost sheet).
+  necklace: (item) => hasClash(item, "necklace"),
+  // A covering head, or a mask that clashes with glasses (eye patch, monocle, star glasses…).
+  eyewear: (item) => hasClash(item, "eyewear"),
+  earrings: (item) => Boolean(item.hidesEarrings || item.coversHead) || hasClash(item, "earrings"),
+};
+
+// The look after picking id in field, with every costume item that would hide it set to None.
+function uncoverFor(look, field, id) {
+  const rule = UNCOVER_RULES[field];
+  const result = { ...look, [field]: id };
+  if (!rule) return result;
+  const options = lookOptions(field, look.gender);
+  const isNone = !["outfit", "hairStyle"].includes(field) && options.length > 0 && options[0].id === id;
+  if (isNone) return result;
+  for (const costumeField of COSTUME_FIELDS) {
+    const none = COSTUME_OPTIONS[costumeField][0];
+    const item = optionById(costumeField, look[costumeField]);
+    if (item && item !== none && rule(item, costumeField)) result[costumeField] = none.id;
+  }
+  return result;
+}
+
 // ---------- clashes ----------
 
 // The tags of everything in a look: its costume items' tags plus the base look's own.
