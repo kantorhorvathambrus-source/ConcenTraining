@@ -283,7 +283,8 @@ function avatarSvg(rawLook, personality, pose, view = "full") {
       : `<g transform="translate(${cx} ${EYE_Y}) scale(${geo.eyeScale}) translate(${-cx} ${-EYE_Y})">${inner}</g>`;
   };
   let mouth = drawMouth(expression.mouth);
-  if (face.lip) mouth = mouth.replace(/stroke="#222"/g, `stroke="${dark ? "#5e1a2a" : "#a8465a"}"`);
+  // Lip tint, except on a cloth over the mouth (the ninja-style mask), where it wouldn't show.
+  if (face.lip && !(headwear && headwear.mouthOnCloth)) mouth = mouth.replace(/stroke="#222"/g, `stroke="${dark ? "#5e1a2a" : "#a8465a"}"`);
   let features = `${drawBrows(expression.brows, brow, geo)}
     ${face.unibrow ? drawUnibrow(expression.brows, brow, geo) : ""}
     ${eye(geo.eyeL, leftEye)}

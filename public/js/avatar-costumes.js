@@ -89,21 +89,26 @@ function bandsBetween(inner, outer, y0, y1, count, fill) {
 
 // A hood around the face (fit: "none"): the outside, with the face opening cut out. opening:
 // how far below the crown the opening starts. tip: a pointed top (the dwarf hood), x of the tip.
-function hoodShape(head, { pad = 15, opening = 8, chinPad = 2, tip = 0 } = {}) {
+// drop: how far below the chin the hood's sides reach (a shorter one doesn't lie on the shoulders).
+// topPad: the room over the crown (pad by default; smaller for a hood that's snug on top).
+function hoodShape(head, { pad = 15, opening = 8, chinPad = 2, tip = 0, drop = 34, topPad = pad } = {}) {
   const w = faceHalfW(head);
   const cy = head.cy || HEAD_CY;
   const top = tip
     ? `Q${fmt(100 - w - pad + 2)} ${fmt(head.top - 6)} ${tip} ${fmt(Math.max(4, head.top - 30))} Q${fmt(100 + w + pad - 6)} ${fmt(head.top - 4)} ${fmt(100 + w + pad)} ${cy}`
-    : `A${fmt(w + pad)} ${fmt(cy - head.top + pad)} 0 0 1 ${fmt(100 + w + pad)} ${cy}`;
+    : `A${fmt(w + pad)} ${fmt(cy - head.top + topPad)} 0 0 1 ${fmt(100 + w + pad)} ${cy}`;
   const oTop = head.top + opening;
   const oBottom = head.chin + chinPad;
   const hole = ellipsePath(100, (oTop + oBottom) / 2, w - 3, (oBottom - oTop) / 2);
   return {
-    outer: `M${fmt(100 - w - pad - 3)} ${fmt(head.chin + 34)} L${fmt(100 - w - pad)} ${cy} ${top} L${fmt(100 + w + pad + 3)} ${fmt(head.chin + 34)} Q100 ${fmt(head.chin + 50)} ${fmt(100 - w - pad - 3)} ${fmt(head.chin + 34)}Z`,
+    outer: `M${fmt(100 - w - pad - 3)} ${fmt(head.chin + drop)} L${fmt(100 - w - pad)} ${cy} ${top} L${fmt(100 + w + pad + 3)} ${fmt(head.chin + drop)} Q100 ${fmt(head.chin + drop + 16)} ${fmt(100 - w - pad - 3)} ${fmt(head.chin + drop)}Z`,
     hole,
     inside: ellipsePath(100, (oTop + oBottom) / 2 + 2, w + 4, (oBottom - oTop) / 2 + 6),
   };
 }
+// The ninja-style hood: tight around the head, opening from the brows, ending under the chin.
+// Wide enough at the sides to cover large ears, snug over the crown.
+const NINJA_HOOD = { pad: 11, topPad: 3, opening: 26, chinPad: 4, drop: 10 };
 const hoodDraw = (shape, fill, line) => `<path d="${shape.outer} ${shape.hole}" fill="${fill}" fill-rule="evenodd"/>
   <path d="${shape.hole}" fill="none" stroke="${line}" stroke-width="3"/>`;
 
@@ -130,6 +135,8 @@ const quadAt = (p0, p1, p2, t) => [
 //     over the hair. face(ctx): openings drawn under the eyes and mouth, in canvas coordinates
 //     (moved with a funny face's smaller features).
 //   coversHead: covers the whole head (the nose isn't drawn). hidesEarrings: earrings aren't drawn.
+//   mouthOnCloth: the mouth is drawn on cloth (the ninja-style mask), so a face's lip tint is left
+//     out there: the plain dark line reads on it.
 
 const NO_HEADWEAR = { id: "c-no-headwear", label: "No headwear", draw: () => "" };
 
@@ -606,13 +613,41 @@ const HEADWEAR = [
       <circle cx="150" cy="74" r="6" fill="#a93226"/>`,
   },
   {
-    id: "c-ninja-hood", label: "Ninja-style hood", fit: "none", hair: "hide", hidesEarrings: true, tags: ["hat"], clashes: ["ears", "earrings"],
-    behind: ({ head }) => `<path d="${hoodShape(head, { pad: 10, opening: 26, chinPad: 4 }).inside}" fill="#121216"/>`,
-    draw: ({ head }) => {
-      const shape = hoodShape(head, { pad: 10, opening: 26, chinPad: 4 });
-      const y = head.top + 22;
+    // Clearly ninja-style, not a head covering: a tight hood, a cloth mask across the nose and
+    // cheeks (below the eyes; the shared mouth is drawn on it, so the cloth is a lighter slate than
+    // the hood) and a red headband knotted at the side. The nose isn't drawn (coversHead), and the
+    // mouth is drawn in its plain dark line even on a face with lip tint (mouthOnCloth), which
+    // wouldn't show on the cloth.
+    id: "c-ninja-hood", label: "Ninja-style hood with face mask", fit: "none", hair: "hide", coversHead: true, hidesEarrings: true, mouthOnCloth: true,
+    tags: ["hat"], clashes: ["ears", "earrings", "mask", "beard", "facialHair"],
+    behind: ({ head }) => `<path d="${hoodShape(head, NINJA_HOOD).inside}" fill="#121216"/>`,
+    draw: ({ head, geo }) => {
+      const shape = hoodShape(head, NINJA_HOOD);
+      const w = faceHalfW(head);
+      const cy = head.cy || HEAD_CY;
+      // The mask: the face opening below a line just under the eyes, with a small rise at the nose.
+      const oTop = head.top + NINJA_HOOD.opening;
+      const oBottom = head.chin + NINJA_HOOD.chinPad;
+      const ocy = (oTop + oBottom) / 2;
+      const rx = w - 1;
+      const ry = (oBottom - oTop) / 2 + 2;
+      const y0 = EYE_Y + 12 * geo.eyeScale + 3;
+      const dx = rx * Math.sqrt(Math.max(0, 1 - ((y0 - ocy) / ry) ** 2));
+      const mask = `M${fmt(100 - dx)} ${fmt(y0)} Q100 ${fmt(y0 - 6)} ${fmt(100 + dx)} ${fmt(y0)} A${fmt(rx)} ${fmt(ry)} 0 ${y0 < ocy ? 1 : 0} 1 ${fmt(100 - dx)} ${fmt(y0)}Z`;
+      // The headband: across the forehead on the hood, knotted on the right with two short tails.
+      const pad = NINJA_HOOD.pad;
+      const yb = oTop - 7;
+      const bx = (w + pad) * Math.sqrt(Math.max(0, 1 - ((cy - yb) / (cy - head.top + NINJA_HOOD.topPad)) ** 2));
+      const kx = 100 + bx - 2;
+      const ky = yb + 3;
       return `${hoodDraw(shape, "#26262c", "#141418")}
-        <path d="M${fmt(100 - faceHalfW(head) - 8)} ${fmt(y + 4)} Q100 ${fmt(y - 6)} ${fmt(100 + faceHalfW(head) + 8)} ${fmt(y + 4)}" fill="none" stroke="#3a3a44" stroke-width="5"/>`;
+        <path d="${mask}" fill="#687083"/>
+        <path d="M${fmt(100 - dx + 2)} ${fmt(y0 + 1)} Q100 ${fmt(y0 - 5)} ${fmt(100 + dx - 2)} ${fmt(y0 + 1)}" fill="none" stroke="#838ba0" stroke-width="3"/>
+        <path d="M${fmt(100 - dx * 0.7)} ${fmt(y0 + 30)} Q${fmt(100 - dx * 0.5)} ${fmt(y0 + 18)} ${fmt(100 - dx * 0.25)} ${fmt(y0 + 12)} M${fmt(100 + dx * 0.7)} ${fmt(y0 + 30)} Q${fmt(100 + dx * 0.5)} ${fmt(y0 + 18)} ${fmt(100 + dx * 0.25)} ${fmt(y0 + 12)}" fill="none" stroke="#565d6e" stroke-width="2" stroke-linecap="round"/>
+        <path d="M${fmt(100 - bx + 2)} ${fmt(yb + 3)} Q100 ${fmt(yb - 6)} ${fmt(kx)} ${fmt(ky)}" fill="none" stroke="#a3262a" stroke-width="7" stroke-linecap="round"/>
+        <path d="M${fmt(kx)} ${fmt(ky)} Q${fmt(kx + 10)} ${fmt(ky + 2)} ${fmt(kx + 17)} ${fmt(ky + 12)} L${fmt(kx + 11)} ${fmt(ky + 15)} Q${fmt(kx + 6)} ${fmt(ky + 8)} ${fmt(kx)} ${fmt(ky + 4)}Z
+                 M${fmt(kx)} ${fmt(ky + 2)} Q${fmt(kx + 6)} ${fmt(ky + 10)} ${fmt(kx + 7)} ${fmt(ky + 22)} L${fmt(kx + 1)} ${fmt(ky + 22)} Q${fmt(kx + 1)} ${fmt(ky + 12)} ${fmt(kx - 2)} ${fmt(ky + 6)}Z" fill="#a3262a" stroke="#7a1c1f" stroke-width="1.2" stroke-linejoin="round"/>
+        <ellipse cx="${fmt(kx)}" cy="${fmt(ky + 1)}" rx="5" ry="4.5" fill="#8e1f23" stroke="#7a1c1f" stroke-width="1.2"/>`;
     },
   },
   {

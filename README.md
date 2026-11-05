@@ -797,7 +797,7 @@ shared by both genders and starts with None.
 
 | Category (look field) | Items |
 |---|---|
-| Headwear (`headwear`, 54) | Bicorne (general's hat), tricorne (pirate hat), Santa-style hat, witch hat, wizard hat, crown, tiara, jester hat, knight helmet (open face), top hat, cowboy hat, captain's hat, chef's toque, graduation cap, hood, pumpkin head, halo, flower crown, beret, party hat, beanie, headphones, bowler hat, sailor hat. B: elf hat, dwarf hood, Viking-style helmet (no horns), laurel wreath, pharaoh-style headdress, musketeer-style hat with feather, coronet, steampunk top hat with goggles, scientist goggles, police-style cap, firefighter helmet, astronaut helmet (a glass bubble, the hair shows inside), deerstalker, explorer's hat, ringmaster's top hat, plague doctor hat, pilot cap, surgical cap, judge's wig, straw hat, sun hat, baseball cap (backwards), black knit cap, bandana, ninja-style hood (face open), ballet bun ribbon, bunny ears, bear hood, dinosaur hood, robot head (covers the head, with glowing openings) |
+| Headwear (`headwear`, 54) | Bicorne (general's hat), tricorne (pirate hat), Santa-style hat, witch hat, wizard hat, crown, tiara, jester hat, knight helmet (open face), top hat, cowboy hat, captain's hat, chef's toque, graduation cap, hood, pumpkin head, halo, flower crown, beret, party hat, beanie, headphones, bowler hat, sailor hat. B: elf hat, dwarf hood, Viking-style helmet (no horns), laurel wreath, pharaoh-style headdress, musketeer-style hat with feather, coronet, steampunk top hat with goggles, scientist goggles, police-style cap, firefighter helmet, astronaut helmet (a glass bubble, the hair shows inside), deerstalker, explorer's hat, ringmaster's top hat, plague doctor hat, pilot cap, surgical cap, judge's wig, straw hat, sun hat, baseball cap (backwards), black knit cap, bandana, ninja-style hood with a cloth face mask and a red headband knotted at the side, ballet bun ribbon, bunny ears, bear hood, dinosaur hood, robot head (covers the head, with glowing openings) |
 | Masks and face (`mask`, 22) | Masquerade mask, plain white mask, skull mask, superhero eye mask, eye patch, monocle, fake moustache, curly villain moustache, vampire fangs, friendly clown face paint, skeleton face paint, glitter. B: plague doctor mask (light, with a short beak that stops above the mouth), mummy bandages, witch nose with wart, long wooden nose, tiger stripes face paint, butterfly face paint, star-shaped glasses, carrot nose, bunny nose and whiskers, cat-burglar eye mask |
 | Costume beard (`costumeBeard`, 8) | Santa-style white beard, long wizard beard, pirate beard (in the hair colour), fake beard on a string. B: dwarf braided beard, Viking-style beard, musketeer-style moustache and pointed beard (all three in the hair colour), red pointed beard |
 | Ears and horns (`earsHorns`, 11) | Elf ears, devil horns, cat ears (in the hair colour), unicorn horn, antennae. B: ram horns, wolf ears, fairy ears, small horns, bear ears, dragon horns |
@@ -851,7 +851,10 @@ sports face guard.
   the mummy wraps hide the hair completely (and earrings).
 - **The face always reads:** masks, face paint, beards, hats, the pumpkin and robot heads, the
   ghost sheet and the mummy wraps are all drawn under the shared eyes, brows and mouth, so all 9
-  poses of all 4 personalities still show. Openings in masks show skin (the pumpkin's glow yellow,
+  poses of all 4 personalities still show. The ninja-style mask covers the nose and cheeks below
+  the eyes; the mouth is drawn on the cloth, in its plain dark line even on a face with lip tint
+  (`mouthOnCloth`), and the cloth is a lighter slate than the hood so it reads. Openings in masks
+  show skin (the pumpkin's glow yellow,
   the robot's light cyan, the ghost's light blue), never black, so closed eyes stay visible. Masks
   around the brows are light (the plague doctor mask) so dark brows read on them. Fangs hang from
   whatever mouth the pose draws. Fake noses (witch, wooden, carrot, bunny) and the plague doctor
@@ -865,7 +868,8 @@ sports face guard.
 - **Clashes:** items that don't go together are marked in the data (`tags` / `clashes`), e.g.
   horns, ears on top or bunny ears with a hat or helmet, the pumpkin head, the robot head or the
   ghost sheet with any hat, mask, beard or glasses, a monocle, eye patch, star-shaped glasses or
-  the plague doctor mask with glasses, the mummy wraps with ears, horns or earrings, a
+  the plague doctor mask with glasses, the ninja-style hood (it has its own face mask) with
+  another mask, a costume beard or facial hair, the mummy wraps with ears, horns or earrings, a
   high-collared costume with a necklace. (One headwear at a time, so a helmet never meets another
   hat.) **Randomize** never picks clashing items and adds each kind of costume item only about 1
   time in 8; the editor still allows everything.
@@ -990,8 +994,10 @@ never requests hundreds of files that don't exist.
     above the band. Hoods, the knight helmet, the pumpkin and robot heads, the astronaut helmet
     and the pharaoh-style headdress (`fit: "none"`) are drawn from the head's own numbers
     (crown, temples, chin), straight onto the canvas (`hoodShape` in `avatar-costumes.js` builds
-    a hood with its face opening for any head). Something that covers the whole head gives
-    openings for the eyes and mouth in a light colour (`face(ctx)`) and isn't given a nose.
+    a hood with its face opening for any head; `drop` and `topPad` make one shorter and snugger, like
+    the ninja-style hood). Something that covers the whole head gives openings for the eyes and
+    mouth in a light colour (`face(ctx)`) and isn't given a nose (`coversHead`; the ninja-style
+    hood uses it too, since its cloth mask covers the nose).
   - **Face and mask area:** x ≈ 56–144, y ≈ 56–166, around the eyes (y = 102, x = 78 / 122, moved
     by the face) and the mouth (y ≈ 125–150). Masks and face paint follow the eye positions and
     size in SVG; a PNG mask is drawn for the default eye positions. Leave the eyes and the mouth
