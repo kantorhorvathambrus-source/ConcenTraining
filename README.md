@@ -1432,6 +1432,60 @@ JavaScript error, so the app doesn't start properly or a button doesn't work. Sa
 (the localStorage keys never change, and older code ignores fields it doesn't know). Reloading
 once with a decent connection fixes it, because every online start refreshes all the files.
 
+## Layout (screen sizes)
+
+Only `index.html` (the setup and session screens) changes with the screen size. The editor,
+history, stats and privacy pages keep one column of at most 600px everywhere. All of it is CSS
+(media queries at the end of `style.css`); no JavaScript decides the layout.
+
+| Screen | Layout |
+|---|---|
+| Portrait phones, and portrait tablets of any size (even 1024x1366) | One column, at most 600px wide. This is the original layout and doesn't change. |
+| 900px wide or more **and** landscape (laptops, desktops, landscape tablets) | Two columns, at most 1200px in total, centred |
+| Landscape **and** under 500px tall (landscape phones, any width) | Two columns, compact |
+
+The media query for two columns is
+`(min-width: 900px) and (orientation: landscape), (orientation: landscape) and (max-height: 500px)`.
+
+**Why these breakpoints.** A focus timer is often used on a laptop while studying or working, and
+in landscape on phones and tablets. A 600px column uses about a third of a laptop screen, and on a
+landscape phone the height is the tight dimension, so the old layout needed scrolling during a session.
+900px is where two columns have room. A landscape phone is never more than about 450px tall,
+and a landscape tablet or laptop window is taller than 500px, so "under 500px tall" picks out phones.
+A portrait tablet keeps the single column: it has plenty of height, and one column reads better there.
+
+**Session screen, two columns.** The character is on the left with the info line ("Grandma ·
+Relaxed · Simple · 25 min") and any notes above it. The timer, "Got distracted?" and its buttons,
+the motivation card and the Motivate me / End session bar are on the right, vertically centred. In
+`index.html` these two groups are wrapped in `.session-side` and `.session-main`; in portrait the
+wrappers are `display: contents` (they make no box), so the single column lays out exactly as
+without them. The character fills the left column's height (the screen height minus the page's
+padding; `svh`, with `vh` as the fallback for older browsers) and is scaled with
+`object-fit: contain`: whatever the art's aspect ratio, it fits inside the box and is never cropped
+or stretched. It's anchored at the bottom, where the reaction animations pivot. The timer is bigger
+than on a phone.
+
+**Landscape phones (compact).** Everything on the right is tighter (smaller timer, 44px buttons,
+less spacing), so the timer, both rows of distraction buttons and the bottom bar fit in about
+250px of height without scrolling. A 740x360 phone in Chrome with the address bar showing has about
+265px. Advanced mode keeps its 7 lengths on two rows (at least 4 per row). The category picker
+("What distracted you?") and the motivation card don't fit under the buttons there, so they float
+over the lower part of the character column instead. The picker only appears after the
+reaction has played, the timer, distraction buttons and Undo stay visible, and if both are open the
+picker is on top. The bottom bar isn't sticky here (everything fits), and Motivate me doesn't
+scroll the page (`scrollMotivationIntoView` skips it when the card is beside the bar, not above it).
+Dialogs get less padding, and anything taller than the screen (step 2 of the continue/restart
+dialog on the smallest phones) scrolls inside the dialog.
+
+**Setup screen, two columns.** Step 1 (the character grid) uses the full width (up to 1200px), with
+as many cards per row as fit at 150px or more each: 7 on a typical laptop (3 rows for 20 cards),
+5 on a landscape phone. Everything else on the setup screen (header, Quick start, the tip cards, steps 2
+and 3, the settings and Start session) keeps the 600px column, centred, so lines of text stay short.
+The summary and the "open in another tab" notice also keep the 600px column.
+
+**Rotating the phone** during a session only switches CSS: nothing is reset, nothing is saved again,
+and the timer keeps counting from the start time as always.
+
 ## Files
 
 | File | What's in it |
@@ -1443,7 +1497,7 @@ once with a decent connection fixes it, because every online start refreshes all
 | `public/stats.html` | Popularity table (reads `/api/stats`) |
 | `public/sw.js` | Service worker: offline start, network first with a 3-second fallback to the cache, precache list and cache version (see [Offline use](#offline-use)), and taps on the leave reminder notification |
 | `public/js/sw-register.js` | Registers `sw.js` from `index.html`, `history.html` and `avatar.html`; does nothing without service worker support |
-| `public/css/style.css` | Styling, light/dark mode, breathing and reaction animations |
+| `public/css/style.css` | Styling, light/dark mode, breathing and reaction animations, the wide and landscape layout (see [Layout](#layout-screen-sizes)) |
 | `public/js/data/characters.js` | Character list, groups and the personality each group gives (`personalityOf`), art paths, pose descriptions for screen readers (`POSE_DESCRIPTIONS`) |
 | `public/js/data/messages.js` | Motivation messages, summary titles, Simple-mode summary messages per result, and the "can't save" notes (also loaded by `history.html`) |
 | `public/js/placeholder-art.js` | Built-in placeholder drawings (kind, firm, strict and ragebait faces, plus each character's look) for characters without real art; its eyes, brows, mouths and extras are shared with custom characters |
@@ -1482,6 +1536,8 @@ public/assets/characters/grandma/refocus.png
 Then set `artPath: "assets/characters/grandma"` (relative to `public/`) for that character in `public/js/data/characters.js`
 (and `artExt` if you use `.webp` or `.jpg`). Any missing image falls back to the placeholder drawing,
 so you can add them one by one. Use the same canvas size for all poses so blinking doesn't make the image jump.
+Any portrait aspect ratio works: on wide and landscape screens the session image is scaled to fit
+the space left (`object-fit: contain`), never cropped or stretched (see [Layout](#layout-screen-sizes)).
 
 ## Popularity stats (backend)
 

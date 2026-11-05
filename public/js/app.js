@@ -2047,8 +2047,13 @@ function onMotivateClick() {
 
 // On short screens the card opens under the sticky bottom bar, so scroll it up
 // just far enough to sit 12px above the bar (which is taller while the picker is open).
+// Not on landscape phones, where the card sits beside the bar, over the character column
+// ("Layout (screen sizes)" in the README): there is nothing to scroll past.
 function scrollMotivationIntoView() {
-  const overlap = $("#motivationCard").getBoundingClientRect().bottom - ($(".session-bar").getBoundingClientRect().top - 12);
+  const card = $("#motivationCard").getBoundingClientRect();
+  const bar = $(".session-bar").getBoundingClientRect();
+  if (card.right <= bar.left || card.left >= bar.right) return;
+  const overlap = card.bottom - (bar.top - 12);
   if (overlap > 0) window.scrollBy({ top: overlap, behavior: "smooth" });
 }
 
