@@ -32,12 +32,12 @@ const SECTIONS = {
   pet: { field: "pet", title: "Shoulder pet", view: "full" },
 };
 
-// The editor's collapsible groups (<details>), in order. Costumes and Base are open at the start.
+// The editor's collapsible groups (<details>), in order. Base and Costumes are open at the start.
 // A group's sections are only built the first time it's opened, and only the thumbnails of open
 // groups are drawn (a closed group's thumbnails are never on screen).
 const EDITOR_GROUPS = [
-  { id: "costumes", title: "Costumes", open: true, presets: true, sections: [] },
   { id: "base", title: "Base", open: true, sections: ["gender", "skin", "hairColor", "face", "hairStyle"] },
+  { id: "costumes", title: "Costumes", open: true, presets: true, sections: [] },
   { id: "clothes", title: "Clothes", sections: ["outfit", "costumeOutfit", "back"] },
   {
     id: "accessories", title: "Accessories",
@@ -81,7 +81,12 @@ const editor = {
   thumbs: [],
   observer: null,
   laterToken: null, // the latest batch of thumbnails just off screen (updateThumbs)
+  themeToken: null, // the same for a theme switch (onTheme)
   built: new Set(),
+  // The costume theme whose presets are shown (in memory only, Fantasy at the start), and per
+  // theme: its preset grid and the dot marking the theme of the costume being worn.
+  theme: COSTUME_THEMES[0].id,
+  themes: new Map(),
 };
 
 // ---------- drawing ----------
@@ -105,9 +110,12 @@ function thumbLook(thumb) {
   return look;
 }
 
+// What a thumbnail shows, as text: everything thumbLook uses (the base fields it copies, except its
+// own field, which it replaces with its option; its option or preset; the personality), without
+// building the look (every tap does this for every thumbnail).
 function thumbKey(thumb) {
-  const look = thumbLook(thumb);
-  return `${LOOK_FIELDS.map((field) => look[field]).join("|")}/${editor.personality}`;
+  const fields = [...THUMB_BASE, ...(THUMB_EXTRA[thumb.field] || [])].filter((field) => field !== thumb.field);
+  return `${fields.map((field) => editor.look[field]).join("|")}/${thumb.preset ? thumb.preset.id : thumb.id}/${editor.personality}`;
 }
 
 // Every thumbnail shows its option in the chosen personality's calm pose. Only thumbnails whose
@@ -123,6 +131,12 @@ function updateThumbs() {
     if (!editor.observer) showThumb(thumb);
     else if (thumb.near) changed.push(thumb);
   }
+  drawThumbs(changed, "laterToken");
+}
+
+// Draws thumbnails: those visible on screen at once, the others right after the next frame
+// (unless a newer batch of the same kind, tokenName, replaced them meanwhile).
+function drawThumbs(changed, tokenName) {
   if (changed.length === 0) return;
   // All positions first, then all drawings (reading a position after a drawing would make the
   // browser lay out the page again each time).
@@ -134,10 +148,10 @@ function updateThumbs() {
   const later = changed.filter((thumb, i) => !visible[i]);
   changed.forEach((thumb, i) => visible[i] && showThumb(thumb));
   if (later.length === 0) return;
-  const token = (editor.laterToken = {});
+  const token = (editor[tokenName] = {});
   requestAnimationFrame(() =>
     setTimeout(() => {
-      if (editor.laterToken === token) later.forEach(showThumb);
+      if (editor[tokenName] === token) later.forEach(showThumb);
     }, 0)
   );
 }
@@ -180,6 +194,7 @@ function syncChecked() {
 function redraw(thumbsLater = false) {
   stopPreview();
   showPose("initial");
+  updateThemeDots();
   if (!thumbsLater) {
     updateThumbs();
     return;
@@ -280,34 +295,86 @@ function buildSection(section) {
   section.box.append(fieldset);
 }
 
-// Costumes: "No costume" and one button per preset, each showing the costume on this character.
-// Buttons, not options: after a preset, every item can still be changed on its own.
+// One costume button: a picture of the costume on this character, and its name. Buttons, not
+// options: after a preset, every item can still be changed on its own.
+function presetButton(preset) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "preset";
+  const box = document.createElement("span");
+  box.className = "option-img option-img-full";
+  const label = document.createElement("span");
+  label.className = "preset-label";
+  label.textContent = preset.label;
+  button.append(box, label);
+  // Read out as "Put on the costume: Pirate" ("No costume" as it is).
+  if (preset !== NO_COSTUME_PRESET) {
+    button.setAttribute("aria-label", `Put on the costume: ${preset.label}${preset.description ? `, ${preset.description}` : ""}`);
+  }
+  button.addEventListener("click", () => onPreset(preset));
+  addThumb(box, { field: "preset", preset, view: "full" });
+  return button;
+}
+
+// Costumes: "No costume" (always shown), the theme chips (one radio group: Fantasy, Horror,
+// History, Jobs, Fun) and the chosen theme's presets. Every theme's grid is built at once but only
+// the chosen one is shown, so its thumbnails stay drawn when switching back. A dot marks the theme
+// of the costume being worn (updateThemeDots).
 function buildPresets(container) {
   editor.thumbs = editor.thumbs.filter((thumb) => !thumb.preset);
+  editor.themes.clear();
   const intro = document.createElement("p");
   intro.className = "muted small";
   intro.textContent = "Tap a costume to put it on. You can still change every part.";
-  const grid = document.createElement("div");
-  grid.className = "preset-grid";
-  for (const preset of [NO_COSTUME_PRESET, ...COSTUME_PRESETS]) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "preset";
-    const box = document.createElement("span");
-    box.className = "option-img option-img-full";
-    const label = document.createElement("span");
-    label.className = "preset-label";
-    label.textContent = preset.label;
-    button.append(box, label);
-    // Read out as "Put on the costume: Pirate" ("No costume" as it is).
-    if (preset !== NO_COSTUME_PRESET) {
-      button.setAttribute("aria-label", `Put on the costume: ${preset.label}${preset.description ? `, ${preset.description}` : ""}`);
-    }
-    button.addEventListener("click", () => onPreset(preset));
-    addThumb(box, { field: "preset", preset, view: "full" });
-    grid.append(button);
+  const none = document.createElement("div");
+  none.className = "preset-grid preset-grid-none";
+  none.append(presetButton(NO_COSTUME_PRESET));
+
+  const picker = document.createElement("fieldset");
+  picker.className = "theme-picker";
+  const legend = document.createElement("legend");
+  legend.className = "visually-hidden";
+  legend.textContent = "Costume theme";
+  const chips = document.createElement("div");
+  chips.className = "theme-chips";
+  picker.append(legend, chips);
+  const grids = [];
+  for (const theme of COSTUME_THEMES) {
+    const { label, input } = optionLabel("costumeTheme", theme.id, theme.id === editor.theme);
+    label.className = "theme-chip";
+    input.className = "theme-input";
+    const text = document.createElement("span");
+    text.className = "theme-chip-text";
+    text.textContent = theme.label;
+    const dot = document.createElement("span");
+    dot.className = "theme-dot";
+    dot.setAttribute("aria-hidden", "true");
+    text.append(dot);
+    label.append(text);
+    input.addEventListener("change", () => onTheme(theme.id));
+    chips.append(label);
+
+    const grid = document.createElement("div");
+    grid.className = "preset-grid";
+    grid.hidden = theme.id !== editor.theme;
+    for (const preset of COSTUME_PRESETS) if (preset.theme === theme.id) grid.append(presetButton(preset));
+    grids.push(grid);
+    editor.themes.set(theme.id, { grid, dot, input, label: theme.label });
   }
-  container.append(intro, grid);
+  container.append(intro, none, picker, ...grids);
+  updateThemeDots();
+}
+
+// The dot on the theme of the costume being worn, if it's one of the presets. Screen readers
+// hear it as "Horror, current costume".
+function updateThemeDots() {
+  if (editor.themes.size === 0) return;
+  const worn = wornPreset(editor.look);
+  for (const [id, { dot, input, label }] of editor.themes) {
+    const on = Boolean(worn && worn.theme === id);
+    dot.hidden = !on;
+    input.setAttribute("aria-label", on ? `${label}, current costume` : label);
+  }
 }
 
 // A group's sections, the first time it's opened.
@@ -376,11 +443,12 @@ function buildPersonalityOptions() {
 // ---------- changes ----------
 
 // A gender change (also when editing) starts again from that gender's starting look: the two
-// genders have different lists. The name, personality and costume items (shared by both) stay.
+// genders have different lists. The name, personality and costume items (shared by both) stay,
+// except a costume beard when switching to Female.
 function onLookChange(field, id) {
   if (field === "gender") {
     if (id === editor.look.gender) return;
-    editor.look = { ...defaultLook(id), ...costumeOf(editor.look) };
+    editor.look = { ...defaultLook(id), ...costumeOf(editor.look, id) };
     buildGenderSections();
     syncChecked();
   } else {
@@ -395,6 +463,18 @@ function onPreset(preset) {
   editor.look = applyCostumePreset(editor.look, preset);
   syncChecked();
   redraw();
+}
+
+// Another costume theme: only its presets are shown. Their keys are current (updateThumbs keeps
+// every thumbnail's key up to date), so only the ones not drawn yet for this look are drawn: those
+// on screen in this tap, the others right after it. They count as near the screen at once (the
+// observer only reports them after the next frame).
+function onTheme(id) {
+  editor.theme = id;
+  for (const [themeId, { grid }] of editor.themes) grid.hidden = themeId !== id;
+  const shown = editor.thumbs.filter((thumb) => thumb.preset && thumb.preset.theme === id);
+  for (const thumb of shown) thumb.near = true;
+  drawThumbs(shown.filter((thumb) => thumb.drawn !== thumb.key), "themeToken");
 }
 
 // Randomize keeps the gender; costume items come rarely and never clash (randomCostume).

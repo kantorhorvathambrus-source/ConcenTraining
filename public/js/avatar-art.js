@@ -260,7 +260,7 @@ function avatarSvg(rawLook, personality, pose, view = "full") {
   const hidesHair = (headwear && headwear.hair === "hide") || (costumeOutfit && costumeOutfit.hidesHair);
   const hatClip = !hidesHair && headwear && headwear.hair !== "keep" && headwear.band ? "hatHairClip" : "";
   const coversHead = (headwear && headwear.coversHead) || (costumeOutfit && costumeOutfit.coversHead);
-  const hidesEarrings = coversHead || (headwear && headwear.hidesEarrings);
+  const hidesEarrings = coversHead || (headwear && headwear.hidesEarrings) || (costumeOutfit && costumeOutfit.hidesEarrings);
   const costumeEars = earsHorns && earsHorns.kind === "ears" ? earsHorns : null;
   const topEars = earsHorns && earsHorns.kind !== "ears" ? earsHorns : null;
   const handBusy = extras.some((name) => HAND_BUSY_EXTRAS.includes(name));
