@@ -45,8 +45,8 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   loads and real artwork fits the same slot. At 320 × 568 the header and the whole card fit on the
   first screen.
 - **Setup:** 1. pick a character, 2. a mode (Simple / Advanced), 3. a focus duration.
-  The character decides the personality (see below). While custom characters are switched on
-  (`CUSTOM_CHARACTERS_ENABLED`, off for launch), the last card of step 1 is **Create your own**,
+  The character decides the personality (see below). While custom characters are on
+  (`CUSTOM_CHARACTERS_ENABLED`, off for launch, but always on on Netlify's test sites), the last card of step 1 is **Create your own**,
   and characters you made appear under the grid in **Your characters** (see
   [Custom characters](#custom-characters)). Ragebait characters show a warning before
   they can be selected. Selecting a card only updates which card is pressed (`aria-pressed`), so
@@ -626,9 +626,17 @@ the user picks it when creating the character, and from then on it belongs to th
 
 The whole feature is behind one switch, `CUSTOM_CHARACTERS_ENABLED` at the top of
 `public/js/custom-characters.js`. It is **`false` for launch**. Everything below describes the
-feature as it works with the switch set to `true`.
+feature as it works while it's on.
 
-While it's `false`:
+**Where it's on:** the switch decides on the production site (concentraining.netlify.app and any
+later custom domain), on the GitHub Pages backup, on `localhost` and under `netlify dev`. On
+Netlify's test sites custom characters are **always on**, whatever the switch says, so they can be
+tried on a phone: every Deploy Preview (the hostname starts with `deploy-preview-`, e.g.
+`deploy-preview-54--concentraining.netlify.app`) and the main branch deploy (it starts with
+`main--`: `main--concentraining.netlify.app`). The code checks `CUSTOM_CHARACTERS_ON`
+(`CUSTOM_CHARACTERS_ENABLED` or one of those hostnames), never the switch alone.
+
+While they're off:
 
 - **Setup screen:** there's no **Create your own** card and no **Your characters** section, so the
   main grid has only the 19 built-in characters. `./?picked=custom-…` (the editor's way back
@@ -644,7 +652,7 @@ While it's `false`:
 - **Saved data stays:** `ct_custom_characters_v1` is neither read for the picker nor deleted. The
   history still shows the names of sessions with custom characters (their current name, or the
   name the session stored).
-- **A session that's already running** with a custom character (started while the switch was on)
+- **A session that's already running** with a custom character (started while they were on)
   keeps running with that character after a reload.
 
 To switch the feature on, set it to `true`. Nothing else needs to change: no saved data, no
@@ -680,9 +688,17 @@ backend, no service worker version (the file's name stays the same).
   about a quarter of the screen height). **Preview reactions** shows the 9 poses of the chosen
   personality one after another (1.2 s each), then the calm pose again. **Randomize** changes the
   look only (never the name, the personality or the gender), using only the chosen gender's
-  options, picks a funny face only about 1 time in 10, and avoids combinations that look bad
-  together: sunglasses with a full beard, earrings with hair that covers the ears, a necklace on a
-  high collar (hoodie, turtleneck, puffer, track jacket). The editor itself allows every combination.
+  options, picks a funny face only about 1 time in 10 and a fantasy skin colour about 1 time in 20,
+  adds each kind of costume item only about 1 time in 8 (see [Costumes](#costumes)), and avoids
+  combinations that look bad together: sunglasses with a full beard, earrings with hair that covers
+  the ears, a necklace on a high collar (hoodie, turtleneck, puffer, track jacket, and high-collared
+  costumes), and costume items that clash. The editor itself allows every combination.
+- **Groups:** under Name and Personality, the look options are in 4 groups that open and close
+  with a tap on their title (`<details>`): **Costumes** (the presets) and **Base** (gender, skin
+  tone, hair colour, face, hairstyle) are open at the start; **Clothes** (outfit, costume outfit,
+  back) and **Accessories** (headwear, masks and face, ears and horns, eyewear, earrings,
+  necklace, costume beard, facial hair, held item, shoulder pet) are closed. A group's options are
+  only built the first time it's opened.
 - **Name:** required, 1–20 characters after trimming (an emoji or accented letter counts as one),
   unique among your own characters ignoring case. A name like a built-in character's is fine.
   Errors: "Give your character a name." / "Names can be up to 20 characters." / "You already have
@@ -693,8 +709,8 @@ backend, no service worker version (the file's name stays the same).
 - **Gender** (Female / Male): the two genders are fully separate. Each has its own faces,
   hairstyles, outfits, eyewear, earrings and necklaces (ids start with `w-` or `m-`), and only men
   have facial hair (the section isn't shown for women). Only skin tone, hair colour and the funny
-  faces are shared. Switching gender, also when editing, starts again from that gender's starting
-  look; the name and personality stay.
+  faces are shared, and every costume item. Switching gender, also when editing, starts again from
+  that gender's starting look; the name, the personality and the costume items stay.
 - **What each gender gets** (`avatar-parts.js`):
 
   | | Women | Men |
@@ -719,6 +735,7 @@ backend, no service worker version (the file's name stays the same).
   group), the chosen one with a coloured border and a check mark. Colours are swatches, the rest are
   small drawings of the character with that option. Every option has a label for screen readers
   (e.g. "Face 16: heart-shaped, soft nose, lashes, lip tint" or "Funny face 6: potato nose").
+  Skin tone ends with a **Fantasy** group: green, blue, purple, grey, red and gold.
 - **Save** reads the saved list again first, so the 10 limit and the name rule also hold if another
   tab saved meanwhile. A new character is then picked on the setup screen (`./?picked=<id>`, which
   runs the normal card tap: a ragebait character shows the warning first). **Cancel** goes back
@@ -731,13 +748,90 @@ backend, no service worker version (the file's name stays the same).
   was when it started, even if it's edited or deleted there.
 - **Speed:** a tap on an option redraws the preview and only the thumbnails whose drawing changed.
   Each thumbnail shows the base of the look (gender, skin, hair colour, hairstyle, face) with its
-  own option, but no other accessories (the necklace thumbnails also show the outfit), so outfit,
-  eyewear, earrings and facial hair taps only redraw the preview. Thumbnails are inline SVG (much
-  quicker to update than one image each), those more than 100 px off screen are drawn when they
-  scroll into view, and only the chosen gender's sections exist. Measured in Chromium at 360 × 780
-  with 4× CPU slowdown, with the tapped section scrolled into view: a tap on an option takes
-  21–92 ms until everything on screen is redrawn, Randomize 65–91 ms, and a gender switch (which
-  builds that gender's sections again) 39–63 ms. Redrawing all thumbnails as images took 370–1160 ms.
+  own option, but no other accessories and no costume (the necklace thumbnails also show the
+  outfit; the presets show their costume on that base), so outfit, eyewear, earrings, facial hair
+  and costume item taps only redraw the preview. Thumbnails are inline SVG (much quicker to update
+  than one image each). Those visible on screen are drawn at once, those up to 100 px above or
+  below it right after the next frame, the rest when they scroll into view; a closed group's
+  thumbnails are never drawn, and only the chosen gender's sections exist. Randomize shows the new
+  preview first and redraws the thumbnails right after that frame. Measured in Chromium at
+  360 × 780 with 4× CPU slowdown, with the tapped section scrolled into view (the first number:
+  until the next frame shows the tap's result; the second: until every thumbnail on screen is
+  redrawn):
+
+  | Tap | Costumes and Base open | All 4 groups open |
+  |---|---|---|
+  | Face, hairstyle or skin tone | 14–45 / 15–47 ms | 37–65 / 40–74 ms |
+  | Costume preset | 21–56 / 27–57 ms | – |
+  | Costume outfit, headwear or held item | – | 28–63 / 28–68 ms |
+  | Randomize | 31–51 / 74–116 ms | 55–66 / 125–170 ms (headwear on screen) |
+  | Gender switch (builds that gender's sections again) | – | 52–91 / 58–94 ms |
+  | Opening Clothes / Accessories the first time | 38 / 66 ms, 33 / 114 ms | – |
+
+  Before costumes (part 1): a tap on an option 21–92 ms, Randomize 65–91 ms, gender switch
+  39–63 ms. Redrawing all thumbnails as images took 370–1160 ms. Almost all of the time is the
+  browser drawing the thumbnails on screen (about 4 ms each on a slow phone); building their
+  drawings takes about 0.2 ms each.
+
+### Costumes
+
+Custom characters can wear costumes, to build ideas like a Napoleon-style general, a pirate, a
+witch or a masked figure. Everything is in `public/js/avatar-costumes.js`, as data: every list is
+shared by both genders and starts with None.
+
+| Category (look field) | Items (part A of 2; part B adds about as many again) |
+|---|---|
+| Headwear (`headwear`, 24) | Bicorne (general's hat), tricorne (pirate hat), Santa-style hat, witch hat, wizard hat, crown, tiara, jester hat, knight helmet (open face), top hat, cowboy hat, captain's hat, chef's toque, graduation cap, hood, pumpkin head, halo, flower crown, beret, party hat, beanie, headphones, bowler hat, sailor hat |
+| Masks and face (`mask`, 12) | Masquerade mask, plain white mask, skull mask, superhero eye mask, eye patch, monocle, fake moustache, curly villain moustache, vampire fangs, friendly clown face paint, skeleton face paint, glitter |
+| Costume beard (`costumeBeard`, 4) | Santa-style white beard, long wizard beard, pirate beard (in the hair colour), fake beard on a string |
+| Ears and horns (`earsHorns`, 5) | Elf ears, devil horns, cat ears (in the hair colour), unicorn horn, antennae |
+| Costume outfit (`costumeOutfit`, 22) | General's coat with epaulettes and sash, pirate coat, knight armour, king's robe and queen's gown with ermine, prince outfit, princess dress, Santa-style suit, witch dress, wizard robe, vampire suit with high cape collar, ghost sheet, superhero suit, chef's jacket, doctor's scrubs, firefighter jacket, pilot uniform, judge's robe, butler's tailcoat, cowboy shirt and vest, sailor suit, pumpkin costume |
+| Back (`back`, 5) | Cape, royal cloak, angel wings, bat wings, backpack |
+| Held item (`held`, 12) | Magic wand, wizard staff, scepter, lantern, telescope, book, broom, Santa's sack, gift box, candle, balloon, coffee cup |
+| Shoulder pet (`pet`, 3) | Parrot, owl, black cat |
+
+Plus 6 **fantasy skin colours** (green, blue, purple, grey, red, gold) after the 10 natural tones.
+
+- **Presets** (the **Costumes** group, first in the editor): **No costume** and 10 costumes:
+  Pirate, General (Napoleon-style), Santa-style, Witch, Wizard, Knight, King, Queen, Vampire,
+  Ghost. Each is a small picture of that costume on your character's current face and hair. A tap
+  sets every costume field (the preset's items, None for the rest) and, for Santa-style and
+  Vampire, the hair colour (white, black). It never changes the name, personality, gender, face,
+  hairstyle, outfit, eyewear, earrings, necklace or facial hair, and every item can still be
+  changed afterwards. Read out as "Put on the costume: Pirate".
+- **The costume outfit** is drawn instead of the outfit. The outfit choice is kept and comes back
+  when the costume outfit is set to None.
+- **Hats over hair:** each hat has a band height. The hair above it is hidden and only its sides
+  and back show, so every hat fits every hairstyle and head, including the funny faces. Tall hats
+  (witch, wizard, top hat…) are as wide as the head at the band and are flattened only as much as
+  needed to stay inside the picture on the tallest head. Crowns, the tiara, the party hat, the halo,
+  the flower crown and headphones sit on the hair instead. The hood, the knight helmet, the pumpkin
+  head and the ghost sheet hide the hair completely (and earrings).
+- **The face always reads:** masks, face paint, beards, hats, the pumpkin head and the ghost sheet
+  are all drawn under the shared eyes, brows and mouth, so all 9 poses of all 4 personalities
+  still show. Openings in masks show skin (the pumpkin's glow yellow, the ghost's light blue),
+  never black, so closed eyes stay visible. Fangs hang from whatever mouth the pose draws. The eye
+  patch is the one item that covers an eye; the other eye, the brows and the mouth carry the
+  expression.
+- **Held items** are in the left hand (on the viewer's left), drawn with the character's own hand.
+  They're hidden in the two poses that need both hands (ragebait's slow clap and crossed arms,
+  `HAND_BUSY_EXTRAS`). Pointing uses the other hand.
+- **Shoulder pets** sit on the right shoulder, where each body's shoulder is. In the pointing poses
+  the hand is drawn in front of the pet.
+- **Clashes:** items that don't go together are marked in the data (`tags` / `clashes`), e.g.
+  horns or cat ears with a hat, the pumpkin head or the ghost sheet with any hat, mask, beard or
+  glasses, a monocle or eye patch with glasses, a high-collared costume with a necklace.
+  **Randomize** never picks clashing items; the editor still allows everything.
+- **Tone:** costumes may be spooky (skulls, masks, a hood, dark outfits) but there are no weapons,
+  no blood and no gore; nothing copied from a film, book, brand or logo; no real person's portrait
+  ("Napoleon-style" is a generic bicorne and general's coat); and nothing that mocks a real
+  culture, religion or ethnicity.
+- **Saved data:** the 8 fields are optional in `ct_custom_characters_v1`'s look. A character
+  saved before costumes has none of them and gets None; an unknown value also gets None.
+- **Adding an item:** one entry in its list in `avatar-costumes.js` (an `id` starting with `c-`,
+  never reused, a `label`, and an SVG drawing or a listed PNG; see the
+  [Avatar art guide](#avatar-art-guide)). Nothing else needs to change. A preset is one entry in
+  `COSTUME_PRESETS`.
 
 ### Sessions, history and stats
 
@@ -792,13 +886,17 @@ strong or narrow jaw, high cheekbones, pointed or square chin) are below it. A h
 model-like long oval (`m-model`, `w-model`) is the first version's "long" head, an ellipse 50 wide
 and 66 tall centred at y = 104. Hair is anchored to its centre the same way.
 
-**Layers, back to front:** `hair-back`, `body`, `neck`, `outfit`, `necklace`, `ears`, `head`,
-`marks`, `facial-hair`, `eyewear-arms`, `hair-front`, then the face (`nose` and the expression:
-eyes with lashes, brows, mouth with lip tint, buck teeth, blush and tears; the expression is
-shared by every face and always SVG), `earrings`, `eyewear`, and the pose's other extras (sweat,
-steam, hands…). Ears sit behind the head; facial hair and hair sit under the eyes and mouth, so the
-expression always shows; glasses arms go under the hair and the lenses over it. Giant ears (a
-funny face) are drawn over the hair.
+**Layers, back to front** (costume layers in italics): *`back`*, `hair-back`, `body`, `neck`,
+`outfit` or *`costume-outfit`*, *`back-front`*, `necklace`, *`headwear-back`*, `ears`, `head`,
+`marks`, *`mask-paint`*, `facial-hair`, *`costume-beard`*, `eyewear-arms`, `hair-front`, giant
+ears, *`ears-horns`* (elf ears), *`costume-outfit-head`*, *`ears-horns`* (on top of the head),
+*`headwear`*, then the face (*`headwear-face`* and *`costume-outfit-face`*: openings, *`mask`*,
+`nose` and the expression: eyes with lashes, brows, mouth with lip tint, buck teeth, blush and
+tears; the expression is shared by every face and always SVG; then *`mask-over`*), `earrings`,
+`eyewear`, *`held`*, *`pet`*, and the pose's other extras (sweat, steam, hands…). Ears sit behind
+the head; facial hair, hair, masks and hats sit under the eyes and mouth, so the expression always
+shows; glasses arms go under the hair and the lenses over it. Giant ears (a funny face) are drawn
+over the hair. Without a costume, the drawing is exactly the same as before costumes existed.
 
 **Real images:** any layer can be a PNG with a transparent background, drawn on the full 200 × 240
 canvas (or a larger image with the same proportions, e.g. 800 × 960), at
@@ -833,6 +931,32 @@ never requests hundreds of files that don't exist.
   image must be **greyscale**: the main colour area **white**, shading in greys (darker grey = deeper
   shadow), outlines dark grey or black (they stay dark), transparent background. Other layers
   (outfits, accessories, marks) keep their own colours.
+- **Costume anchors** (`avatar-costumes.js` explains each list's fields):
+  - **Hat band:** headwear is drawn for the reference head (like hair) with its band at a height
+    of its own, usually y = 66–74, and must cover the head above it (the hair above the band is
+    hidden). `fit: "head"` hats hug the head and are moved and scaled like hair: they may reach at
+    most 18 px above the crown (y ≥ 27). `fit: "upright"` hats (tall ones) give their `height`
+    above the band. Hoods, the knight helmet and the pumpkin head (`fit: "none"`) are drawn from
+    the head's own numbers (crown, temples, chin), straight onto the canvas.
+  - **Face and mask area:** x ≈ 56–144, y ≈ 56–166, around the eyes (y = 102, x = 78 / 122, moved
+    by the face) and the mouth (y ≈ 125–150). Masks and face paint follow the eye positions and
+    size in SVG; a PNG mask is drawn for the default eye positions. Leave the eyes and the mouth
+    open (skin, or a light colour), never black.
+  - **Ears and horns:** elf-type ears at the ears (`earGeometry`, y ≈ 106), top items on the
+    reference head's crown (y ≥ 27).
+  - **Hand:** the left fist is at x = 24–62, y = 200–224 (some items move it: the lantern, the
+    broom and Santa's sack hold it higher, x ≈ 21–62, y ≈ 148–184). Held items may reach from y ≈ 20 (staff,
+    balloon) to the bottom, at x ≈ 0–80.
+  - **Shoulder:** pets are drawn sitting on (162, 190) and moved onto the body's right shoulder:
+    Female (152, 192), Male (164, 186). Keep them within x ≈ 140–190, y ≈ 125–195.
+  - **Back:** behind the body and the hair, x 0–200, y ≈ 60–240 (wings reach up beside the head).
+    Their front part (clasps, straps) goes over the outfit; the shoulders' outer edges are at
+    x ≈ 53 / 147 (Female) and 33 / 167 (Male) at y ≈ 189.
+  - **Costume outfits** are drawn like outfits (for the Male shoulders, cut to the body's outline,
+    collars free around the neck).
+  - **PNG names** are `<layer>/<id>.png` with the layers above, e.g. `headwear/c-witch-hat.png`,
+    `held/c-broom.png`, `costume-outfit/c-pirate-coat.png`. A PNG headwear is placed on the band
+    like the SVG one. A costume item with no SVG drawing is still offered once its PNG is listed.
 - **Very dark skin tones** (8–10, luminance under 0.12) draw the lines of the eyes, brows and mouth
   in pure black and 15% thicker, open mouths in a brighter red, and dark brows pure black, so the
   expression stays readable without an outline. Eye whites stay as they are.
@@ -931,7 +1055,7 @@ page again after nothing happened draws nothing, and an Import only draws once (
 |---|---|
 | `ct_session_v1` | The session that's running right now (removed when it ends). `characterName`: only with a custom character (its name when the session started). `restartPending: true` while the continue/restart question is unanswered; older saved sessions don't have it, which means `false`. `leftAt` (timestamp in ms): only while the page is hidden, for the time away card; missing means the page wasn't left. Never copied into the history |
 | `ct_history_v1` | Finished sessions, newest first, max. 1000 |
-| `ct_custom_characters_v1` | Characters made in the editor: `{ v: 1, characters: [ { id, name, personality, createdAt, look: { gender, skin, hairColor, hairStyle, face, outfit, eyewear, earrings, necklace, facialHair } } ] }`. `id` is `custom-` plus 10 random letters/digits, never reused (a new id also avoids every id in the history). `personality` is the style its sessions run in. Reading never fails: a broken entry is skipped (not the whole list), an unknown look value gets the default. See [Custom characters](#custom-characters) |
+| `ct_custom_characters_v1` | Characters made in the editor: `{ v: 1, characters: [ { id, name, personality, createdAt, look: { gender, skin, hairColor, hairStyle, face, outfit, eyewear, earrings, necklace, facialHair, headwear, mask, earsHorns, costumeBeard, costumeOutfit, back, held, pet } } ] }`. The 8 costume fields are optional: characters saved before costumes don't have them, which means None. `id` is `custom-` plus 10 random letters/digits, never reused (a new id also avoids every id in the history). `personality` is the style its sessions run in. Reading never fails: a broken entry is skipped (not the whole list), an unknown look value gets the default. See [Custom characters](#custom-characters) |
 | `ct_prefs_v1` | Last chosen character, mode and duration, plus `endSound` and `keepScreenOn` (the two setup checkboxes, `true`/`false`). Prefs saved before these existed get `true` for both. `leaveReminder`: the **Remind me if I leave the app** checkbox (see [Leave reminder](#leave-reminder)); prefs saved before it existed get `false`. `homeScreenTipDismissed`: `true` once **Got it** was tapped on the iPhone Home Screen tip. `persistRequested`: `true` once persistent storage was asked for (or skipped in Firefox), see [iPhone storage and the Home Screen app](#iphone-storage-and-the-home-screen-app). Prefs saved before these two existed get `false` for both. `howItWorksDismissed`: `true` once **Got it** was tapped on the How it works card; prefs saved before it existed get `false`, so the card shows once. A `style` value saved by older versions is ignored and dropped. Saved field by field (see [Several tabs](#several-tabs-one-tab-at-a-time)) |
 
 Each history entry: `startedAt`, `endedAt` (timestamps in ms), `endedBy` (`"timer"`/`"manual"`/`"startOver"`),
@@ -1223,8 +1347,9 @@ once with a decent connection fixes it, because every online start refreshes all
 | `public/js/data/messages.js` | Motivation messages, summary titles, Simple-mode summary messages per result, and the "can't save" notes (also loaded by `history.html`) |
 | `public/js/placeholder-art.js` | Built-in placeholder drawings (kind, firm, strict and ragebait faces, plus each character's look) for characters without real art; its eyes, brows, mouths and extras are shared with custom characters |
 | `public/js/avatar-parts.js` | Custom characters' parts: head shapes (`buildHead`), each gender's faces, hairstyles, outfits and accessories, the shared skin tones, hair colours and funny faces, how each is drawn, starting looks, Randomize, and `AVATAR_PNG_FILES` |
+| `public/js/avatar-costumes.js` | Costumes: every costume list (headwear, masks, beards, ears and horns, costume outfits, back, held items, pets) and how each is drawn, clashes, Randomize's costume part, and the costume presets |
 | `public/js/avatar-art.js` | Draws a custom character from its layers (SVG, or listed PNGs with skin/hair tint) |
-| `public/js/custom-characters.js` | Saving and reading `ct_custom_characters_v1`, name rules, the 10 limit, `CUSTOM_PAID`, the feature switch `CUSTOM_CHARACTERS_ENABLED`, stand-in for deleted characters (used by all three pages and `stats.html`) |
+| `public/js/custom-characters.js` | Saving and reading `ct_custom_characters_v1`, name rules, the 10 limit, `CUSTOM_PAID`, the feature switch `CUSTOM_CHARACTERS_ENABLED` (and `CUSTOM_CHARACTERS_ON`, which is also true on Netlify's test sites), stand-in for deleted characters (used by all three pages and `stats.html`) |
 | `public/js/avatar.js` | The editor on `avatar.html` |
 | `public/js/app.js` | Timer, reaction engine, distraction category picker, Undo, disabled Advanced lengths, time away card, leave reminder notification, motivation rotation, end chime, screen wake lock and the "screen may turn off" note, summary, How it works card, iPhone Home Screen tip, persistent storage request, one tab at a time (Web Locks) |
 | `public/js/history-store.js` | Saving/loading history, focus % and summary result (with their thresholds), distraction categories, export/import checks, iPhone/iPad and iPhone Safari checks, the "can this browser save?" test (`storageWorks`) (used by both pages) |
@@ -1274,8 +1399,8 @@ popularity can be measured over the **last 30 days** and the paid selection rota
   `custom: true`): the app never sends the user's own ids or names. They're always paid, so
   `"custom"` is left out of the ranking and of the character count, and comes separately as
   `customPicks: { recentPicks, totalPicks }`. `/stats.html` shows it in its own table, "Custom
-  characters (always paid)", but only while `CUSTOM_CHARACTERS_ENABLED` is `true` (it loads
-  `js/custom-characters.js` for that).
+  characters (always paid)", but only while custom characters are on (`CUSTOM_CHARACTERS_ON`; it
+  loads `js/custom-characters.js` for that), so on Deploy Previews and the main branch deploy too.
   It also returns `store`: `"live"` or `"test"` (see below). The numbers are at `/stats.html`,
   which says which store it's reading.
 - **One blob per character:** the key is the character id (`grandma`), the value is the picks per

@@ -169,15 +169,16 @@ const away = { from: 0, ms: 0, open: false, yes: false, hiddenAt: 0 };
 
 // A built-in character, or one of the user's own (custom-characters.js) that exists right now.
 // null for anything else, e.g. a custom character deleted here or in another tab, or any custom
-// character while CUSTOM_CHARACTERS_ENABLED is false (a saved choice of one is then like no choice).
+// character while custom characters are off (CUSTOM_CHARACTERS_ON): a saved choice of one is then
+// like no choice.
 function characterById(id) {
-  return CHARACTERS.find((c) => c.id === id) || (CUSTOM_CHARACTERS_ENABLED ? customCharacterById(id) : null);
+  return CHARACTERS.find((c) => c.id === id) || (CUSTOM_CHARACTERS_ON ? customCharacterById(id) : null);
 }
 
 // The character a session runs with. A custom character that was deleted meanwhile (here or in
 // another tab) is drawn with the default look and the name the session stored (ghostCharacter),
 // so the session keeps running and its summary still shows it. A session that was already running
-// with a custom character also keeps it while CUSTOM_CHARACTERS_ENABLED is false.
+// with a custom character also keeps it while custom characters are off.
 function sessionCharacter(s) {
   return (
     characterById(s.characterId) ||
@@ -800,7 +801,7 @@ function renderCharacterList() {
     card.addEventListener("click", () => onCharacterTap(character));
     list.append(card);
   }
-  if (CUSTOM_CHARACTERS_ENABLED) list.append(createCard());
+  if (CUSTOM_CHARACTERS_ON) list.append(createCard());
   renderCustomList();
 }
 
@@ -848,10 +849,10 @@ function updateCreateCard(card = $("#createCard")) {
 // "Your characters": the same cards as the main grid (picture, name, personality badge), each
 // with Edit and Delete under it. Every name is set as plain text, never as HTML. If focus was in
 // the list, it goes back to the same button of the same character after the rebuild.
-// Never shown while CUSTOM_CHARACTERS_ENABLED is false.
+// Never shown while custom characters are off (CUSTOM_CHARACTERS_ON).
 function renderCustomList() {
   const list = $("#customList");
-  if (!CUSTOM_CHARACTERS_ENABLED) {
+  if (!CUSTOM_CHARACTERS_ON) {
     list.innerHTML = "";
     $("#customSection").hidden = true;
     return;
@@ -956,7 +957,7 @@ function pickNewCharacter() {
   const id = params.get("picked");
   if (id === null) return;
   history.replaceState(null, "", location.pathname + location.hash);
-  if (!CUSTOM_CHARACTERS_ENABLED) return;
+  if (!CUSTOM_CHARACTERS_ON) return;
   const character = customCharacterById(id);
   if (!character) return;
   const card = $("#customList").querySelector(`.char-card[data-id="${CSS.escape(id)}"]`);

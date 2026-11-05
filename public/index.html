@@ -80,7 +80,7 @@
         <h2 id="characterStepTitle" tabindex="-1">1. Choose your character</h2>
         <p id="characterError" class="error" role="alert" hidden>Pick a character first.</p>
         <!-- The built-in characters, then "Create your own" (always last, renderCharacterList in app.js;
-             only while CUSTOM_CHARACTERS_ENABLED is true). -->
+             only while custom characters are on, CUSTOM_CHARACTERS_ON). -->
         <div id="characterList" class="character-list"></div>
         <!-- Characters made in the editor (avatar.html). Only shown once there is at least one. -->
         <section id="customSection" class="custom-section" aria-labelledby="customTitle" hidden>
@@ -317,6 +317,7 @@
   <script src="js/data/messages.js"></script>
   <script src="js/placeholder-art.js"></script>
   <script src="js/avatar-parts.js"></script>
+  <script src="js/avatar-costumes.js"></script>
   <script src="js/avatar-art.js"></script>
   <script src="js/custom-characters.js"></script>
   <script src="js/history-store.js"></script>

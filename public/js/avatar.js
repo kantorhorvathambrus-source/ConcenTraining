@@ -6,46 +6,70 @@
 
 const $ = (selector) => document.querySelector(selector);
 
-// The look sections, in order. view: how the thumbnails are drawn (avatar-art.js AVATAR_VIEWS);
-// swatch: a colour instead of a drawing; text: plain text buttons. The first three are the same for
-// both genders; the others show only the chosen gender's options (and are built again when the
-// gender changes). A section with no options for a gender (facial hair for women) isn't shown.
-const SHARED_SECTIONS = [
-  { field: "gender", title: "Gender", kind: "text" },
-  { field: "skin", title: "Skin tone", kind: "swatch" },
-  { field: "hairColor", title: "Hair colour", kind: "swatch" },
-];
-const GENDER_SECTIONS = [
-  { field: "hairStyle", title: "Hairstyle", view: "head" },
-  { field: "face", title: "Face", view: "head" },
-  { field: "outfit", title: "Outfit", view: "full" },
-  { field: "eyewear", title: "Eyewear", view: "head" },
-  { field: "earrings", title: "Earrings", view: "head" },
-  { field: "necklace", title: "Necklace", view: "full" },
-  { field: "facialHair", title: "Facial hair", view: "head" },
+// The look sections. view: how the thumbnails are drawn (avatar-art.js AVATAR_VIEWS); swatch: a
+// colour instead of a drawing; text: plain text buttons. perGender: the chosen gender's own list
+// (built again when the gender changes); the others are shared by both genders, like every costume
+// list (avatar-costumes.js). A section with no options for a gender (facial hair for women) isn't
+// shown.
+const SECTIONS = {
+  gender: { field: "gender", title: "Gender", kind: "text" },
+  skin: { field: "skin", title: "Skin tone", kind: "swatch" },
+  hairColor: { field: "hairColor", title: "Hair colour", kind: "swatch" },
+  face: { field: "face", title: "Face", view: "head", perGender: true },
+  hairStyle: { field: "hairStyle", title: "Hairstyle", view: "head", perGender: true },
+  outfit: { field: "outfit", title: "Outfit", view: "full", perGender: true },
+  costumeOutfit: { field: "costumeOutfit", title: "Costume outfit", view: "full" },
+  back: { field: "back", title: "Back", view: "full" },
+  headwear: { field: "headwear", title: "Headwear", view: "head" },
+  mask: { field: "mask", title: "Masks and face", view: "head" },
+  earsHorns: { field: "earsHorns", title: "Ears and horns", view: "head" },
+  eyewear: { field: "eyewear", title: "Eyewear", view: "head", perGender: true },
+  earrings: { field: "earrings", title: "Earrings", view: "head", perGender: true },
+  necklace: { field: "necklace", title: "Necklace", view: "full", perGender: true },
+  costumeBeard: { field: "costumeBeard", title: "Costume beard", view: "head" },
+  facialHair: { field: "facialHair", title: "Facial hair", view: "head", perGender: true },
+  held: { field: "held", title: "Held item", view: "full" },
+  pet: { field: "pet", title: "Shoulder pet", view: "full" },
+};
+
+// The editor's collapsible groups (<details>), in order. Costumes and Base are open at the start.
+// A group's sections are only built the first time it's opened, and only the thumbnails of open
+// groups are drawn (a closed group's thumbnails are never on screen).
+const EDITOR_GROUPS = [
+  { id: "costumes", title: "Costumes", open: true, presets: true, sections: [] },
+  { id: "base", title: "Base", open: true, sections: ["gender", "skin", "hairColor", "face", "hairStyle"] },
+  { id: "clothes", title: "Clothes", sections: ["outfit", "costumeOutfit", "back"] },
+  {
+    id: "accessories", title: "Accessories",
+    sections: ["headwear", "mask", "earsHorns", "eyewear", "earrings", "necklace", "costumeBeard", "facialHair", "held", "pet"],
+  },
 ];
 
 const PERSONALITIES = ["kind", "firm", "strict", "ragebait"];
 
 // What a thumbnail shows besides its own option: the base of the look (so every option is seen on
-// this character), but no other accessories. So picking an outfit, eyewear, earrings or facial
-// hair only redraws the preview (and an outfit the necklace thumbnails, which show it).
+// this character), but no other accessories or costume items. So picking an outfit, eyewear,
+// earrings, facial hair or a costume item only redraws the preview (and an outfit the necklace
+// thumbnails, which show it). Costume presets show their costume on the same base.
 // Each redrawn picture costs the browser several ms on a slow phone: see "Speed" in the README.
 const THUMB_BASE = ["gender", "skin", "hairColor", "hairStyle", "face"];
 const THUMB_EXTRA = { necklace: ["outfit"] };
 
-// The plain parts a thumbnail shows for what it doesn't show: a T-shirt and no accessories.
+// The plain parts a thumbnail shows for what it doesn't show: a T-shirt, no accessories and no
+// costume.
 function thumbPlain(gender) {
   const first = (field) => (lookOptions(field, gender)[0] || { id: DEFAULT_LOOKS[gender][field] }).id;
-  return {
+  const plain = {
     outfit: gender === "male" ? "m-tshirt" : "w-tshirt",
     eyewear: first("eyewear"), earrings: first("earrings"), necklace: first("necklace"), facialHair: first("facialHair"),
   };
+  for (const field of COSTUME_FIELDS) plain[field] = first(field);
+  return plain;
 }
 const PREVIEW_POSE_MS = 1200; // Preview reactions: how long each pose shows
 
 // editing: the saved character being edited (null: creating). triedSave: the name is checked live
-// after the first Save that failed on it.
+// after the first Save that failed on it. built: the groups whose sections exist (by id).
 const editor = {
   editing: null,
   look: defaultLook(),
@@ -53,8 +77,11 @@ const editor = {
   triedSave: false,
   previewTimer: 0,
   // key: what the thumbnail should show now (see thumbKey), drawn: what it shows.
-  thumbs: [], // { field, id, view, box, prefix, key, drawn, near (on or near the screen) }
+  // { field, id (or preset), view, box, prefix, key, drawn, near (on or near the screen) }
+  thumbs: [],
   observer: null,
+  laterToken: null, // the latest batch of thumbnails just off screen (updateThumbs)
+  built: new Set(),
 };
 
 // ---------- drawing ----------
@@ -70,33 +97,56 @@ function showPose(pose) {
   img.alt = describePose(previewCharacter(), pose);
 }
 
-function thumbLook(field, id) {
+function thumbLook(thumb) {
   const look = thumbPlain(editor.look.gender);
-  for (const base of [...THUMB_BASE, ...(THUMB_EXTRA[field] || [])]) look[base] = editor.look[base];
-  look[field] = id;
+  for (const base of [...THUMB_BASE, ...(THUMB_EXTRA[thumb.field] || [])]) look[base] = editor.look[base];
+  if (thumb.preset) return applyCostumePreset(look, thumb.preset);
+  look[thumb.field] = thumb.id;
   return look;
 }
 
 function thumbKey(thumb) {
-  const look = thumbLook(thumb.field, thumb.id);
+  const look = thumbLook(thumb);
   return `${LOOK_FIELDS.map((field) => look[field]).join("|")}/${editor.personality}`;
 }
 
 // Every thumbnail shows its option in the chosen personality's calm pose. Only thumbnails whose
 // inputs changed are drawn again, and only those on (or near) the screen: the others are drawn
-// when they scroll into view (showThumb), so a tap never waits for ~70 drawings at once.
+// when they scroll into view (showThumb), so a tap never waits for ~70 drawings at once. Those
+// actually visible (below the preview, which stays at the top) are drawn at once; the ones just
+// above or below the screen right after the next frame, so the tap's result shows sooner.
 function updateThumbs() {
+  const changed = [];
   for (const thumb of editor.thumbs) {
     thumb.key = thumbKey(thumb);
-    if (thumb.near || !editor.observer) showThumb(thumb);
+    if (thumb.drawn === thumb.key) continue;
+    if (!editor.observer) showThumb(thumb);
+    else if (thumb.near) changed.push(thumb);
   }
+  if (changed.length === 0) return;
+  // All positions first, then all drawings (reading a position after a drawing would make the
+  // browser lay out the page again each time).
+  const top = $(".avatar-preview").getBoundingClientRect().bottom;
+  const visible = changed.map((thumb) => {
+    const rect = thumb.box.getBoundingClientRect();
+    return rect.bottom > top && rect.top < window.innerHeight;
+  });
+  const later = changed.filter((thumb, i) => !visible[i]);
+  changed.forEach((thumb, i) => visible[i] && showThumb(thumb));
+  if (later.length === 0) return;
+  const token = (editor.laterToken = {});
+  requestAnimationFrame(() =>
+    setTimeout(() => {
+      if (editor.laterToken === token) later.forEach(showThumb);
+    }, 0)
+  );
 }
 
 function showThumb(thumb) {
   if (thumb.drawn === thumb.key) return;
   thumb.drawn = thumb.key;
   // Our own drawing, with no user text in it.
-  thumb.box.innerHTML = avatarInlineSvg(thumbLook(thumb.field, thumb.id), editor.personality, "initial", thumb.view, thumb.prefix);
+  thumb.box.innerHTML = avatarInlineSvg(thumbLook(thumb), editor.personality, "initial", thumb.view, thumb.prefix);
 }
 
 // 100px above and below the screen count as near, so a normal scroll finds them ready.
@@ -118,17 +168,28 @@ function observeThumbs() {
 }
 
 function syncChecked() {
-  for (const section of [...SHARED_SECTIONS, ...GENDER_SECTIONS]) {
+  for (const section of Object.values(SECTIONS)) {
     document.querySelectorAll(`input[name="${section.field}"]`).forEach((input) => {
       input.checked = input.value === editor.look[section.field];
     });
   }
 }
 
-function redraw() {
+// thumbsLater: the thumbnails are drawn right after the next frame, so the new preview shows at
+// once (Randomize changes the base of every thumbnail on screen, which takes a slow phone ~100 ms).
+function redraw(thumbsLater = false) {
   stopPreview();
   showPose("initial");
-  updateThumbs();
+  if (!thumbsLater) {
+    updateThumbs();
+    return;
+  }
+  const token = (editor.laterToken = {});
+  requestAnimationFrame(() =>
+    setTimeout(() => {
+      if (editor.laterToken === token) updateThumbs();
+    }, 0)
+  );
 }
 
 // ---------- building the form ----------
@@ -144,6 +205,12 @@ function optionLabel(name, value, checked) {
   input.className = "option-input";
   label.append(input);
   return { label, input };
+}
+
+// A new thumbnail (drawn later, see updateThumbs). Each has its own id prefix for its SVG's ids.
+let thumbCount = 0;
+function addThumb(box, props) {
+  editor.thumbs.push({ ...props, box, prefix: `t${thumbCount++}-`, key: "", drawn: "", near: false });
 }
 
 function optionVisual(section, option, label) {
@@ -163,10 +230,7 @@ function optionVisual(section, option, label) {
     const box = document.createElement("span");
     box.className = `option-img option-img-${section.view}`;
     visual.append(box);
-    editor.thumbs.push({
-      field: section.field, id: option.id, view: section.view, box,
-      prefix: `t${editor.thumbs.length}-`, key: "", drawn: "", near: false,
-    });
+    addThumb(box, { field: section.field, id: option.id, view: section.view });
   }
   const name = document.createElement("span");
   name.className = "visually-hidden";
@@ -174,50 +238,120 @@ function optionVisual(section, option, label) {
   label.append(name);
 }
 
-// One section: a fieldset with a radio button per option. The funny faces get their own "Funny"
-// heading at the end of the Face section (still the same radio group).
-function buildSection(section, container) {
+// The heading before a group of options inside a section (the same radio group): "Funny" before
+// the funny faces, "Fantasy" before the fantasy skin colours.
+function optionGroupTitle(option) {
+  if (option.funny) return "Funny";
+  if (option.fantasy) return "Fantasy";
+  return "";
+}
+
+// One section: a fieldset with a radio button per option, inside its box (which stays in place, so
+// a gender change can rebuild it there).
+function buildSection(section) {
+  section.box.innerHTML = "";
+  editor.thumbs = editor.thumbs.filter((thumb) => thumb.field !== section.field);
   const options = lookOptions(section.field, editor.look.gender);
   if (options.length === 0) return;
   const fieldset = document.createElement("fieldset");
   fieldset.className = "editor-section";
   const legend = document.createElement("legend");
-  const heading = document.createElement("h2");
+  const heading = document.createElement("h3");
   heading.textContent = section.title;
   legend.append(heading);
   const grid = document.createElement("div");
   grid.className = `option-grid option-grid-${section.kind || section.view}`;
+  let groupTitle = "";
   for (const option of options) {
-    if (option.funny && !grid.querySelector(".option-group-title")) {
-      const title = document.createElement("h3");
-      title.className = "option-group-title";
-      title.textContent = "Funny";
-      grid.append(title);
+    const title = optionGroupTitle(option);
+    if (title && title !== groupTitle) {
+      const h = document.createElement("h4");
+      h.className = "option-group-title";
+      h.textContent = title;
+      grid.append(h);
     }
+    groupTitle = title;
     const { label, input } = optionLabel(section.field, option.id, editor.look[section.field] === option.id);
     optionVisual(section, option, label);
     input.addEventListener("change", () => onLookChange(section.field, option.id));
     grid.append(label);
   }
   fieldset.append(legend, grid);
-  container.append(fieldset);
+  section.box.append(fieldset);
+}
+
+// Costumes: "No costume" and one button per preset, each showing the costume on this character.
+// Buttons, not options: after a preset, every item can still be changed on its own.
+function buildPresets(container) {
+  editor.thumbs = editor.thumbs.filter((thumb) => !thumb.preset);
+  const intro = document.createElement("p");
+  intro.className = "muted small";
+  intro.textContent = "Tap a costume to put it on. You can still change every part.";
+  const grid = document.createElement("div");
+  grid.className = "preset-grid";
+  for (const preset of [NO_COSTUME_PRESET, ...COSTUME_PRESETS]) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "preset";
+    const box = document.createElement("span");
+    box.className = "option-img option-img-full";
+    const label = document.createElement("span");
+    label.className = "preset-label";
+    label.textContent = preset.label;
+    button.append(box, label);
+    // Read out as "Put on the costume: Pirate" ("No costume" as it is).
+    if (preset !== NO_COSTUME_PRESET) {
+      button.setAttribute("aria-label", `Put on the costume: ${preset.label}${preset.description ? `, ${preset.description}` : ""}`);
+    }
+    button.addEventListener("click", () => onPreset(preset));
+    addThumb(box, { field: "preset", preset, view: "full" });
+    grid.append(button);
+  }
+  container.append(intro, grid);
+}
+
+// A group's sections, the first time it's opened.
+function buildGroup(group) {
+  if (editor.built.has(group.id)) return;
+  editor.built.add(group.id);
+  if (group.presets) buildPresets(group.body);
+  for (const field of group.sections) {
+    const section = SECTIONS[field];
+    section.box = document.createElement("div");
+    group.body.append(section.box);
+    buildSection(section);
+  }
+  observeThumbs();
+  updateThumbs();
 }
 
 function buildLookSections() {
   const container = $("#lookSections");
-  for (const section of SHARED_SECTIONS) buildSection(section, container);
-  const genderSections = document.createElement("div");
-  genderSections.id = "genderSections";
-  container.append(genderSections);
-  buildGenderSections();
+  for (const group of EDITOR_GROUPS) {
+    const details = document.createElement("details");
+    details.className = "editor-group";
+    details.open = Boolean(group.open);
+    const summary = document.createElement("summary");
+    const heading = document.createElement("h2");
+    heading.textContent = group.title;
+    summary.append(heading);
+    group.body = document.createElement("div");
+    group.body.className = "editor-group-body";
+    details.append(summary, group.body);
+    details.addEventListener("toggle", () => {
+      if (details.open) buildGroup(group);
+    });
+    container.append(details);
+    if (details.open) buildGroup(group);
+  }
 }
 
-// The chosen gender's sections (again after a gender change), with their thumbnails.
+// The chosen gender's sections again (after a gender change), in the groups built so far.
 function buildGenderSections() {
-  const container = $("#genderSections");
-  container.innerHTML = "";
-  editor.thumbs = [];
-  for (const section of GENDER_SECTIONS) buildSection(section, container);
+  for (const group of EDITOR_GROUPS) {
+    if (!editor.built.has(group.id)) continue;
+    for (const field of group.sections) if (SECTIONS[field].perGender) buildSection(SECTIONS[field]);
+  }
   observeThumbs();
 }
 
@@ -242,11 +376,11 @@ function buildPersonalityOptions() {
 // ---------- changes ----------
 
 // A gender change (also when editing) starts again from that gender's starting look: the two
-// genders have different lists. The name and personality stay.
+// genders have different lists. The name, personality and costume items (shared by both) stay.
 function onLookChange(field, id) {
   if (field === "gender") {
     if (id === editor.look.gender) return;
-    editor.look = defaultLook(id);
+    editor.look = { ...defaultLook(id), ...costumeOf(editor.look) };
     buildGenderSections();
     syncChecked();
   } else {
@@ -255,10 +389,19 @@ function onLookChange(field, id) {
   redraw();
 }
 
-function onRandomize() {
-  editor.look = randomLook(editor.look.gender);
+// A costume preset: its items (None for the other costume fields), and its skin or hair colour if
+// it has one.
+function onPreset(preset) {
+  editor.look = applyCostumePreset(editor.look, preset);
   syncChecked();
   redraw();
+}
+
+// Randomize keeps the gender; costume items come rarely and never clash (randomCostume).
+function onRandomize() {
+  editor.look = randomCostume(randomLook(editor.look.gender));
+  syncChecked();
+  redraw(true);
 }
 
 // Preview reactions: every pose of the chosen personality once, then back to the calm one.
@@ -359,8 +502,8 @@ function onCancel() {
 // ---------- start-up ----------
 
 function init() {
-  // The feature is switched off (CUSTOM_CHARACTERS_ENABLED in custom-characters.js): back to the app.
-  if (!CUSTOM_CHARACTERS_ENABLED) {
+  // Custom characters are off (CUSTOM_CHARACTERS_ON in custom-characters.js): back to the app.
+  if (!CUSTOM_CHARACTERS_ON) {
     document.querySelector("main").hidden = true;
     location.replace("./");
     return;

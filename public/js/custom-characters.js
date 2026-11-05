@@ -20,7 +20,23 @@ const CUSTOM_PICK_ID = "custom";
 // the custom line, and a saved choice of a custom character counts as no choice (like a first
 // visit). Saved characters are kept as they are, the history still shows their sessions' names, and
 // POST /api/picks still accepts "custom". true: everything works as described in the README.
+// This is what the production site (and any later custom domain) follows.
 const CUSTOM_CHARACTERS_ENABLED = false;
+
+// Netlify's test sites always have custom characters on, whatever the switch says, so they can be
+// tried on a phone: Deploy Previews (deploy-preview-53--concentraining.netlify.app) and the main
+// branch deploy (main--concentraining.netlify.app).
+const CUSTOM_CHARACTERS_TEST_SITE = (() => {
+  try {
+    const host = location.hostname;
+    return host.startsWith("deploy-preview-") || host.startsWith("main--");
+  } catch {
+    return false;
+  }
+})();
+
+// Whether custom characters are on in this page: every check in the app uses this.
+const CUSTOM_CHARACTERS_ON = CUSTOM_CHARACTERS_ENABLED || CUSTOM_CHARACTERS_TEST_SITE;
 
 // Custom characters will be paid (from December). While this is false they're free for everyone
 // and the Create card says "Free during launch". Characters made while it's false stay usable

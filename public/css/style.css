@@ -1581,6 +1581,116 @@ a {
   margin: 8px 0 0;
 }
 
+.editor-section legend h3 {
+  margin: 0 0 10px;
+  font-size: 1.05rem;
+  line-height: 1.2;
+}
+
+/* The editor's groups (Costumes, Base, Clothes, Accessories): a tap on the title opens or closes
+   one. The arrow turns when it's open. */
+.editor-group {
+  margin: 0 0 12px;
+  border-top: 1px solid var(--border);
+}
+
+.editor-group > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  padding: 8px 0;
+  cursor: pointer;
+  list-style: none;
+}
+
+.editor-group > summary::-webkit-details-marker {
+  display: none;
+}
+
+.editor-group > summary h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.editor-group > summary::after {
+  content: "";
+  flex: 0 0 auto;
+  width: 11px;
+  height: 11px;
+  margin: 0 6px 4px 0;
+  border-right: 2.5px solid var(--text);
+  border-bottom: 2.5px solid var(--text);
+  transform: rotate(45deg);
+  transition: transform 0.15s;
+}
+
+.editor-group[open] > summary::after {
+  margin-bottom: -4px;
+  transform: rotate(-135deg);
+}
+
+.editor-group > summary:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+.editor-group-body {
+  padding-top: 4px;
+}
+
+.editor-group-body > .small {
+  margin: 0 0 10px;
+}
+
+/* Costume presets: buttons with a picture and a name. The columns get wider with larger text, so
+   a name breaks between words, not inside one. */
+.preset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(max(76px, 4em), 1fr));
+  gap: 8px;
+  margin: 0 0 24px;
+}
+
+.preset {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 4px 4px 6px;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .preset:hover {
+    border-color: var(--primary);
+  }
+}
+
+.preset:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.preset-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
 .text-input {
   width: 100%;
   min-height: 44px;
@@ -1682,6 +1792,9 @@ a {
 .option-img {
   display: block;
   width: 100%;
+  /* A redrawn thumbnail can't change anything else on the page, so the browser only lays out and
+     paints that box again (much quicker when Randomize redraws every thumbnail on screen). */
+  contain: layout paint style;
 }
 
 .option-img svg {
@@ -1823,5 +1936,9 @@ a {
   .char-img,
   .stage {
     animation: none !important;
+  }
+
+  .editor-group > summary::after {
+    transition: none;
   }
 }
