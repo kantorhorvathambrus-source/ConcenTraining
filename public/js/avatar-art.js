@@ -260,7 +260,7 @@ function avatarSvg(rawLook, personality, pose, view = "full") {
   const hidesHair = (headwear && headwear.hair === "hide") || (costumeOutfit && costumeOutfit.hidesHair);
   const hatClip = !hidesHair && headwear && headwear.hair !== "keep" && headwear.band ? "hatHairClip" : "";
   const coversHead = (headwear && headwear.coversHead) || (costumeOutfit && costumeOutfit.coversHead);
-  const hidesEarrings = coversHead || (headwear && headwear.hidesEarrings);
+  const hidesEarrings = coversHead || (headwear && headwear.hidesEarrings) || (costumeOutfit && costumeOutfit.hidesEarrings);
   const costumeEars = earsHorns && earsHorns.kind === "ears" ? earsHorns : null;
   const topEars = earsHorns && earsHorns.kind !== "ears" ? earsHorns : null;
   const handBusy = extras.some((name) => HAND_BUSY_EXTRAS.includes(name));
@@ -283,7 +283,8 @@ function avatarSvg(rawLook, personality, pose, view = "full") {
       : `<g transform="translate(${cx} ${EYE_Y}) scale(${geo.eyeScale}) translate(${-cx} ${-EYE_Y})">${inner}</g>`;
   };
   let mouth = drawMouth(expression.mouth);
-  if (face.lip) mouth = mouth.replace(/stroke="#222"/g, `stroke="${dark ? "#5e1a2a" : "#a8465a"}"`);
+  // Lip tint, except on a cloth over the mouth (the ninja-style mask), where it wouldn't show.
+  if (face.lip && !(headwear && headwear.mouthOnCloth)) mouth = mouth.replace(/stroke="#222"/g, `stroke="${dark ? "#5e1a2a" : "#a8465a"}"`);
   let features = `${drawBrows(expression.brows, brow, geo)}
     ${face.unibrow ? drawUnibrow(expression.brows, brow, geo) : ""}
     ${eye(geo.eyeL, leftEye)}

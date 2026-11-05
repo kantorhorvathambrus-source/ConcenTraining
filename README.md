@@ -693,12 +693,12 @@ backend, no service worker version (the file's name stays the same).
   combinations that look bad together: sunglasses with a full beard, earrings with hair that covers
   the ears, a necklace on a high collar (hoodie, turtleneck, puffer, track jacket, and high-collared
   costumes), and costume items that clash. The editor itself allows every combination.
-- **Groups:** under Name and Personality, the look options are in 4 groups that open and close
-  with a tap on their title (`<details>`): **Costumes** (the presets) and **Base** (gender, skin
-  tone, hair colour, face, hairstyle) are open at the start; **Clothes** (outfit, costume outfit,
-  back) and **Accessories** (headwear, masks and face, ears and horns, eyewear, earrings,
-  necklace, costume beard, facial hair, held item, shoulder pet) are closed. A group's options are
-  only built the first time it's opened.
+- **Groups:** under Name and Personality, the look options are in 4 groups, in this order:
+  **Base** (gender, skin tone, hair colour, face, hairstyle), **Costumes** (the presets),
+  **Clothes** (outfit, costume outfit, back) and **Accessories** (headwear, masks and face, ears
+  and horns, eyewear, earrings, necklace, costume beard, facial hair, held item, shoulder pet).
+  All four are open when the editor opens; a tap on a group's title closes it (and opens it
+  again), `<details>`. A group's options are only built while it's open.
 - **Name:** required, 1–20 characters after trimming (an emoji or accented letter counts as one),
   unique among your own characters ignoring case. A name like a built-in character's is fine.
   Errors: "Give your character a name." / "Names can be up to 20 characters." / "You already have
@@ -710,7 +710,8 @@ backend, no service worker version (the file's name stays the same).
   hairstyles, outfits, eyewear, earrings and necklaces (ids start with `w-` or `m-`), and only men
   have facial hair (the section isn't shown for women). Only skin tone, hair colour and the funny
   faces are shared, and every costume item. Switching gender, also when editing, starts again from
-  that gender's starting look; the name, the personality and the costume items stay.
+  that gender's starting look; the name, the personality and the costume items stay, except a
+  costume beard when switching to Female (it can still be added by hand in Accessories).
 - **What each gender gets** (`avatar-parts.js`):
 
   | | Women | Men |
@@ -750,28 +751,57 @@ backend, no service worker version (the file's name stays the same).
   Each thumbnail shows the base of the look (gender, skin, hair colour, hairstyle, face) with its
   own option, but no other accessories and no costume (the necklace thumbnails also show the
   outfit; the presets show their costume on that base), so outfit, eyewear, earrings, facial hair
-  and costume item taps only redraw the preview. Thumbnails are inline SVG (much quicker to update
-  than one image each). Those visible on screen are drawn at once, those up to 100 px above or
-  below it right after the next frame, the rest when they scroll into view; a closed group's
-  thumbnails are never drawn, and only the chosen gender's sections exist. Randomize shows the new
-  preview first and redraws the thumbnails right after that frame. Measured in Chromium at
-  360 × 780 with 4× CPU slowdown, with the tapped section scrolled into view (the first number:
-  until the next frame shows the tap's result; the second: until every thumbnail on screen is
-  redrawn):
+  and costume item taps only redraw the preview. A thumbnail's key (what it shows) is built from
+  the few fields it depends on, so checking ~350 thumbnails after a tap stays cheap. Thumbnails
+  are inline SVG (much quicker to update than one image each), without the spaces between tags.
+  - **What gets drawn when:** thumbnails on screen are drawn at once, those up to 100 px above or
+    below it right after the next frame, the rest when they scroll into view; a closed group's
+    thumbnails are never drawn, and only the chosen gender's sections exist.
+  - **Randomize** shows the new preview first and redraws the thumbnails on screen right after
+    that frame. The ones just off screen are drawn when the browser is idle, a few at a time, or
+    the moment one scrolls onto the screen. A **gender switch** draws the rebuilt sections'
+    thumbnails on screen at once (no empty boxes), and the rest the same way.
+  - **Off-screen sections aren't rendered:** each section of options has `content-visibility:
+    auto`, so the browser doesn't style, lay out or paint it while it's off screen (with every
+    group open the page has ~2,000 elements). Until a section has been drawn once, its height is
+    an estimate from its number of options (`contain-intrinsic-size`); then the browser keeps its
+    real height. Content on screen doesn't move when sections above it are drawn for the first
+    time.
+  - **Theme chips:** a chip (see [Costumes](#costumes)) only shows another grid: its thumbnails
+    are drawn the first time they're on screen for the current look, so going back to a theme
+    seen before costs almost nothing.
 
-  | Tap | Costumes and Base open | All 4 groups open |
+  Measured in Chromium at 360 × 780 with 4× CPU slowdown, 7 taps each, with the tapped section
+  scrolled into view. The first number: until the frame that shows the tap's result. The second:
+  until every thumbnail on screen is redrawn. Medians of two runs, then the slowest tap. Timings in
+  the test container vary from run to run, so the version just before these changes was measured
+  alternately with this one on the same machine:
+
+  | Tap (all 4 groups open, as when the editor opens) | Now | Before |
   |---|---|---|
-  | Face, hairstyle or skin tone | 14–45 / 15–47 ms | 37–65 / 40–74 ms |
-  | Costume preset | 21–56 / 27–57 ms | – |
-  | Costume outfit, headwear or held item | – | 28–63 / 28–68 ms |
-  | Randomize | 31–51 / 74–116 ms | 55–66 / 125–170 ms (headwear on screen) |
-  | Gender switch (builds that gender's sections again) | – | 52–91 / 58–94 ms |
-  | Opening Clothes / Accessories the first time | 38 / 66 ms, 33 / 114 ms | – |
+  | Costume theme chip | 43–52 / 60–62 ms (slowest 77 / 128) | 73–87 / 93–96 ms |
+  | Costume preset | 45–50 / 52–60 ms (slowest 70 / 87) | 52–53 / 53 ms |
+  | Face | 33–37 / 37–41 ms (slowest 52 / 57) | 43–46 / 46–49 ms |
+  | Hairstyle | 49–54 / 77–82 ms (slowest 75 / 102) | 53–61 / 76–84 ms |
+  | Skin tone | 65–77 / 82–96 ms (slowest 91 / 109) | 79–80 / 91–95 ms |
+  | Headwear, costume outfit or held item | 47–63 / 51–66 ms (slowest 85 / 91) | 46–61 / 49–63 ms |
+  | Randomize, Base on screen | 55–60 / 116–126 ms (slowest 70 / 153) | 83–89 / 135–141 ms (slowest 120 / 170) |
+  | Randomize, headwear on screen | 58–62 / 127–128 ms (slowest 75 / 159) | 99–100 / 179–185 ms (slowest 160 / 251) |
+  | Gender switch | 94–146 / 115–172 ms (slowest 214 / 242) | 91–107 / 143–188 ms (slowest 171 / 289) |
 
-  Before costumes (part 1): a tap on an option 21–92 ms, Randomize 65–91 ms, gender switch
+  With only Base and Costumes open: Randomize 30–34 / 80–87 ms, gender switch 72–74 / 87–90 ms
+  (before: 36–37 / 83–90 ms and 36–38 / 75 ms; the gender switch's first frame used to show the
+  rebuilt sections with empty thumbnail boxes for a moment, now it shows them drawn). Opening the
+  editor with all four groups open: the page is ready (DOMContentLoaded) after 176–243 ms and every
+  thumbnail on screen is drawn after 249–325 ms (about 350 thumbnails built, most of them drawn
+  only when scrolled to).
+
+  Earlier versions measured the first number until after the work a tap left for after that
+  frame; measured that way, Randomize is now 92–98 ms (before 118–153 ms). Part A: a tap 18–108
+  ms. Before costumes (part 1): a tap on an option 21–92 ms, Randomize 65–91 ms, gender switch
   39–63 ms. Redrawing all thumbnails as images took 370–1160 ms. Almost all of the time is the
-  browser drawing the thumbnails on screen (about 4 ms each on a slow phone); building their
-  drawings takes about 0.2 ms each.
+  browser parsing, styling and painting the thumbnails on screen (several ms each on a slow
+  phone); building their drawings takes about 0.2 ms each.
 
 ### Costumes
 
@@ -779,59 +809,117 @@ Custom characters can wear costumes, to build ideas like a Napoleon-style genera
 witch or a masked figure. Everything is in `public/js/avatar-costumes.js`, as data: every list is
 shared by both genders and starts with None.
 
-| Category (look field) | Items (part A of 2; part B adds about as many again) |
+202 items (87 from part A, 115 from part B, marked "B:"):
+
+| Category (look field) | Items |
 |---|---|
-| Headwear (`headwear`, 24) | Bicorne (general's hat), tricorne (pirate hat), Santa-style hat, witch hat, wizard hat, crown, tiara, jester hat, knight helmet (open face), top hat, cowboy hat, captain's hat, chef's toque, graduation cap, hood, pumpkin head, halo, flower crown, beret, party hat, beanie, headphones, bowler hat, sailor hat |
-| Masks and face (`mask`, 12) | Masquerade mask, plain white mask, skull mask, superhero eye mask, eye patch, monocle, fake moustache, curly villain moustache, vampire fangs, friendly clown face paint, skeleton face paint, glitter |
-| Costume beard (`costumeBeard`, 4) | Santa-style white beard, long wizard beard, pirate beard (in the hair colour), fake beard on a string |
-| Ears and horns (`earsHorns`, 5) | Elf ears, devil horns, cat ears (in the hair colour), unicorn horn, antennae |
-| Costume outfit (`costumeOutfit`, 22) | General's coat with epaulettes and sash, pirate coat, knight armour, king's robe and queen's gown with ermine, prince outfit, princess dress, Santa-style suit, witch dress, wizard robe, vampire suit with high cape collar, ghost sheet, superhero suit, chef's jacket, doctor's scrubs, firefighter jacket, pilot uniform, judge's robe, butler's tailcoat, cowboy shirt and vest, sailor suit, pumpkin costume |
-| Back (`back`, 5) | Cape, royal cloak, angel wings, bat wings, backpack |
-| Held item (`held`, 12) | Magic wand, wizard staff, scepter, lantern, telescope, book, broom, Santa's sack, gift box, candle, balloon, coffee cup |
-| Shoulder pet (`pet`, 3) | Parrot, owl, black cat |
+| Headwear (`headwear`, 54) | Bicorne (general's hat), tricorne (pirate hat), Santa-style hat, witch hat, wizard hat, crown, tiara, jester hat, knight helmet (open face), top hat, cowboy hat, captain's hat, chef's toque, graduation cap, hood, pumpkin head, halo, flower crown, beret, party hat, beanie, headphones, bowler hat, sailor hat. B: elf hat, dwarf hood, Viking-style helmet (no horns), laurel wreath, pharaoh-style headdress, musketeer-style hat with feather, coronet, steampunk top hat with goggles, scientist goggles, police-style cap, firefighter helmet, astronaut helmet (a glass bubble, the hair shows inside), deerstalker, explorer's hat, ringmaster's top hat, plague doctor hat, pilot cap, surgical cap, judge's wig, straw hat, sun hat, baseball cap (backwards), black knit cap, bandana, ninja-style hood with a cloth face mask and a red headband knotted at the side, ballet bun ribbon, bunny ears, bear hood, dinosaur hood, robot head (covers the head, with glowing openings) |
+| Masks and face (`mask`, 22) | Masquerade mask, plain white mask, skull mask, superhero eye mask, eye patch, monocle, fake moustache, curly villain moustache, vampire fangs, friendly clown face paint, skeleton face paint, glitter. B: plague doctor mask (light, with a short beak that stops above the mouth), mummy bandages, witch nose with wart, long wooden nose, tiger stripes face paint, butterfly face paint, star-shaped glasses, carrot nose, bunny nose and whiskers, cat-burglar eye mask |
+| Costume beard (`costumeBeard`, 8) | Santa-style white beard, long wizard beard, pirate beard (in the hair colour), fake beard on a string. B: dwarf braided beard, Viking-style beard, musketeer-style moustache and pointed beard (all three in the hair colour), red pointed beard |
+| Ears and horns (`earsHorns`, 11) | Elf ears, devil horns, cat ears (in the hair colour), unicorn horn, antennae. B: ram horns, wolf ears, fairy ears, small horns, bear ears, dragon horns |
+| Costume outfit (`costumeOutfit`, 54) | General's coat with epaulettes and sash, pirate coat, knight armour, king's robe and queen's gown with ermine, prince outfit, princess dress, Santa-style suit, witch dress, wizard robe, vampire suit with high cape collar, ghost sheet, superhero suit, chef's jacket, doctor's scrubs, firefighter jacket, pilot uniform, judge's robe, butler's tailcoat, cowboy shirt and vest, sailor suit, pumpkin costume. B: toga-style robe, Viking-style tunic with fur, pharaoh-style collar and robe, musketeer-style tunic, elf outfit, fairy dress, dwarf tunic, angel robe, red devil suit, jester suit, scarecrow outfit, mummy wraps (also wrap the head, face open), skeleton suit, long dark hooded cloak, astronaut suit, robot suit, alien costume, detective trench coat, mad scientist coat, explorer shirt, steampunk vest, ninja-style black outfit, ballerina tutu, ringmaster jacket, rock star leather jacket, striped burglar shirt, snowman costume, bunny onesie, bear onesie, dinosaur onesie, clown suit, dragon tamer leather vest |
+| Back (`back`, 11) | Cape, royal cloak, angel wings, bat wings, backpack. B: fairy wings, butterfly wings, dragon wings, jetpack, turtle shell, satchel |
+| Held item (`held`, 34) | Magic wand, wizard staff, scepter, lantern, telescope, book, broom, Santa's sack, gift box, candle, balloon, coffee cup. B: map, quill, crystal ball, flag (a plain pennant, no country's flag), trophy, pumpkin basket, Easter basket, umbrella, magnifying glass, potion flask, wrench, electric guitar and game controller (made-up shapes, no brand), microphone, lasso, ringmaster's cane, clipboard, wooden spoon, gavel, loot sack, compass, serving tray with cloche |
+| Shoulder pet (`pet`, 8) | Parrot, owl, black cat. B: small dragon, raven, frog with a crown, white mouse, small robot |
 
 Plus 6 **fantasy skin colours** (green, blue, purple, grey, red, gold) after the 10 natural tones.
+Left out on purpose: a trident (a weapon), a monk-style hood (religious dress), a respirator and a
+sports face guard.
 
-- **Presets** (the **Costumes** group, first in the editor): **No costume** and 10 costumes:
-  Pirate, General (Napoleon-style), Santa-style, Witch, Wizard, Knight, King, Queen, Vampire,
-  Ghost. Each is a small picture of that costume on your character's current face and hair. A tap
-  sets every costume field (the preset's items, None for the rest) and, for Santa-style and
-  Vampire, the hair colour (white, black). It never changes the name, personality, gender, face,
-  hairstyle, outfit, eyewear, earrings, necklace or facial hair, and every item can still be
-  changed afterwards. Read out as "Put on the costume: Pirate".
+- **Presets** (the **Costumes** group, right after Base): **No costume**, always shown first, then
+  a row of 5 **theme chips** and a grid with only the chosen theme's presets. 55 presets:
+
+  | Theme | Presets |
+  |---|---|
+  | Fantasy (14) | Witch, Wizard, King, Queen, Elf, Dwarf, Fairy, Angel, Devil, Dragon tamer, Prince, Princess, Jester, Scarecrow |
+  | Horror (7) | Vampire, Ghost, Skeleton, Mummy, Masked figure, Plague doctor, Pumpkin head |
+  | History (7) | Pirate, General (Napoleon-style), Knight, Viking, Roman emperor-style, Pharaoh-style, Musketeer-style noble |
+  | Jobs (14) | Astronaut, Detective, Mad scientist, Doctor, Chef, Firefighter, Pilot, Sailor, Ship's captain, Judge, Butler, Explorer, Circus ringmaster, Ballerina |
+  | Fun (13) | Santa-style, Superhero, Robot, Alien, Cowboy, Steampunk inventor, Ninja-style, Rock star, Gamer, Easter bunny, Snowman, Cat burglar, Friendly clown |
+
+  Each is a small picture of that costume on your character's current face and hair. A tap sets
+  every costume field (the preset's items, None for the rest) and, for Santa-style and Vampire,
+  the hair colour (white, black), for Alien the skin (green). It never changes the name,
+  personality, gender, face, hairstyle, outfit, eyewear, earrings, necklace or facial hair, and
+  every item can still be changed afterwards. Read out as "Put on the costume: Pirate".
+- **Theme chips:** Fantasy, Horror, History, Jobs, Fun: one radio group (arrow keys and screen
+  readers work as with any radio group; its name is "Costume theme"), Fantasy chosen at the start.
+  The chosen theme is only kept in memory (nothing is stored), so the editor always opens on
+  Fantasy. The chips wrap onto more lines when they don't fit; there's no sideways-scrolling row.
+  A small **dot** marks the chip of the theme of the costume being worn, when it is exactly one of
+  the presets (every costume item as that preset sets it; the skin and hair colour don't count);
+  screen readers hear that chip as "Horror, current costume". No two presets set the same items,
+  for either gender, so the dot is never ambiguous.
+- **Beards and gender:** on a female look, no preset adds a costume beard (Pirate, Santa-style,
+  Wizard, Dwarf, Viking, Musketeer-style noble), and the female preset pictures show none. Male
+  looks keep them. A costume beard can still be added by hand in Accessories. Switching to Female
+  removes the costume beard; every other costume item stays.
 - **The costume outfit** is drawn instead of the outfit. The outfit choice is kept and comes back
   when the costume outfit is set to None.
+- **A pick takes off what would hide it:** when you pick an option that a costume item covers,
+  that costume item is set to None at once, silently, so your pick shows (`uncoverFor` in
+  `avatar-costumes.js`). This also works when you tap the option that's already chosen (and with
+  Space on it). Picking a field's None (no facial hair, no eyewear…) takes nothing off. The rules:
+
+  | You pick | Taken off |
+  |---|---|
+  | An outfit | the costume outfit |
+  | A hairstyle | anything that hides the hair completely: the hoods (plain, dwarf, ninja-style, bear, dinosaur), the knight helmet, the pharaoh-style headdress, the judge's wig, the pumpkin and robot heads (`hair: "hide"`), the ghost sheet and the mummy wraps (`hidesHair`). Hats that only cover the top of the hair stay. |
+  | Facial hair | the costume beard, and anything over the lower face (the pumpkin and robot heads, the ninja-style hood with its mask) |
+  | A necklace | a high-collared costume outfit, or the ghost sheet |
+  | Eyewear | a covering head (pumpkin, robot, ghost sheet) or a mask that clashes with glasses (eye patch, monocle, star-shaped glasses, plague doctor mask) |
+  | Earrings | anything that hides them: the hoods, the knight helmet, the pharaoh-style headdress, the judge's wig, the covering heads, the mummy wraps |
+
+  Everything else stays, and the preset dot and the thumbnails update as usual (after Pirate, a
+  T-shirt takes off only the pirate coat; the dot goes, because the look is no longer exactly
+  Pirate).
 - **Hats over hair:** each hat has a band height. The hair above it is hidden and only its sides
   and back show, so every hat fits every hairstyle and head, including the funny faces. Tall hats
   (witch, wizard, top hat…) are as wide as the head at the band and are flattened only as much as
-  needed to stay inside the picture on the tallest head. Crowns, the tiara, the party hat, the halo,
-  the flower crown and headphones sit on the hair instead. The hood, the knight helmet, the pumpkin
-  head and the ghost sheet hide the hair completely (and earrings).
-- **The face always reads:** masks, face paint, beards, hats, the pumpkin head and the ghost sheet
-  are all drawn under the shared eyes, brows and mouth, so all 9 poses of all 4 personalities
-  still show. Openings in masks show skin (the pumpkin's glow yellow, the ghost's light blue),
-  never black, so closed eyes stay visible. Fangs hang from whatever mouth the pose draws. The eye
-  patch is the one item that covers an eye; the other eye, the brows and the mouth carry the
-  expression.
+  needed to stay inside the picture on the tallest head. Crowns, the coronet, the tiara, the party
+  hat, the halo, the flower crown, the laurel wreath, headphones, scientist goggles, the ballet bun
+  ribbon, bunny ears and the astronaut helmet sit on the hair instead (the hair shows inside the
+  bubble). The hoods (plain, dwarf, ninja-style, bear, dinosaur), the knight helmet, the
+  pharaoh-style headdress, the judge's wig, the pumpkin head, the robot head, the ghost sheet and
+  the mummy wraps hide the hair completely (and earrings).
+- **The face always reads:** masks, face paint, beards, hats, the pumpkin and robot heads, the
+  ghost sheet and the mummy wraps are all drawn under the shared eyes, brows and mouth, so all 9
+  poses of all 4 personalities still show. The ninja-style mask covers the nose and cheeks below
+  the eyes; the mouth is drawn on the cloth, in its plain dark line even on a face with lip tint
+  (`mouthOnCloth`), and the cloth is a lighter slate than the hood so it reads. Openings in masks
+  show skin (the pumpkin's glow yellow,
+  the robot's light cyan, the ghost's light blue), never black, so closed eyes stay visible. Masks
+  around the brows are light (the plague doctor mask) so dark brows read on them. Fangs hang from
+  whatever mouth the pose draws. Fake noses (witch, wooden, carrot, bunny) and the plague doctor
+  beak stop above the mouth and stay between the eyes. The eye patch is the one item that covers
+  an eye; the other eye, the brows and the mouth carry the expression.
 - **Held items** are in the left hand (on the viewer's left), drawn with the character's own hand.
   They're hidden in the two poses that need both hands (ragebait's slow clap and crossed arms,
   `HAND_BUSY_EXTRAS`). Pointing uses the other hand.
 - **Shoulder pets** sit on the right shoulder, where each body's shoulder is. In the pointing poses
   the hand is drawn in front of the pet.
 - **Clashes:** items that don't go together are marked in the data (`tags` / `clashes`), e.g.
-  horns or cat ears with a hat, the pumpkin head or the ghost sheet with any hat, mask, beard or
-  glasses, a monocle or eye patch with glasses, a high-collared costume with a necklace.
-  **Randomize** never picks clashing items; the editor still allows everything.
-- **Tone:** costumes may be spooky (skulls, masks, a hood, dark outfits) but there are no weapons,
-  no blood and no gore; nothing copied from a film, book, brand or logo; no real person's portrait
-  ("Napoleon-style" is a generic bicorne and general's coat); and nothing that mocks a real
-  culture, religion or ethnicity.
-- **Saved data:** the 8 fields are optional in `ct_custom_characters_v1`'s look. A character
-  saved before costumes has none of them and gets None; an unknown value also gets None.
+  horns, ears on top or bunny ears with a hat or helmet, the pumpkin head, the robot head or the
+  ghost sheet with any hat, mask, beard or glasses, a monocle, eye patch, star-shaped glasses or
+  the plague doctor mask with glasses, the ninja-style hood (it has its own face mask) with
+  another mask, a costume beard or facial hair, the mummy wraps with ears, horns or earrings, a
+  high-collared costume with a necklace. (One headwear at a time, so a helmet never meets another
+  hat.) **Randomize** never picks clashing items and adds each kind of costume item only about 1
+  time in 8; the editor still allows everything.
+- **Tone:** costumes may be spooky (skulls, masks, a hood, dark outfits, mummy bandages) but there
+  are no weapons, no blood and no gore; nothing copied from a film, book, brand or logo (the
+  masked figure is a plain white mask with a long dark hooded cloak; the guitar and controller are
+  made-up shapes); no real person's portrait ("Napoleon-style" is a generic bicorne and general's
+  coat; "Pharaoh-style" is plain gold and blue stripes, with no symbols); nothing that mocks a real
+  culture, religion or ethnicity; and no sacred dress.
+- **Saved data:** the 8 fields are optional in `ct_custom_characters_v1`'s look (part B only adds
+  item ids, no fields). A character saved before costumes has none of them and gets None; an
+  unknown value also gets None.
 - **Adding an item:** one entry in its list in `avatar-costumes.js` (an `id` starting with `c-`,
   never reused, a `label`, and an SVG drawing or a listed PNG; see the
   [Avatar art guide](#avatar-art-guide)). Nothing else needs to change. A preset is one entry in
-  `COSTUME_PRESETS`.
+  `COSTUME_PRESETS`, with a `theme` from `COSTUME_THEMES` and items that no other preset uses
+  exactly.
 
 ### Sessions, history and stats
 
@@ -936,24 +1024,37 @@ never requests hundreds of files that don't exist.
     of its own, usually y = 66–74, and must cover the head above it (the hair above the band is
     hidden). `fit: "head"` hats hug the head and are moved and scaled like hair: they may reach at
     most 18 px above the crown (y ≥ 27). `fit: "upright"` hats (tall ones) give their `height`
-    above the band. Hoods, the knight helmet and the pumpkin head (`fit: "none"`) are drawn from
-    the head's own numbers (crown, temples, chin), straight onto the canvas.
+    above the band. Hoods, the knight helmet, the pumpkin and robot heads, the astronaut helmet
+    and the pharaoh-style headdress (`fit: "none"`) are drawn from the head's own numbers
+    (crown, temples, chin), straight onto the canvas (`hoodShape` in `avatar-costumes.js` builds
+    a hood with its face opening for any head; `drop` and `topPad` make one shorter and snugger, like
+    the ninja-style hood). Something that covers the whole head gives openings for the eyes and
+    mouth in a light colour (`face(ctx)`) and isn't given a nose (`coversHead`; the ninja-style
+    hood uses it too, since its cloth mask covers the nose).
   - **Face and mask area:** x ≈ 56–144, y ≈ 56–166, around the eyes (y = 102, x = 78 / 122, moved
     by the face) and the mouth (y ≈ 125–150). Masks and face paint follow the eye positions and
     size in SVG; a PNG mask is drawn for the default eye positions. Leave the eyes and the mouth
-    open (skin, or a light colour), never black.
+    open (skin, or a light colour), never black, and keep anything over the face (`over`: fake
+    noses, the plague doctor beak) between x ≈ 90 and 112 above the eyes' lower edge, or below
+    the eyes (y ≥ 106), ending above the mouth (y ≤ 124). Something around the brows must be
+    light, so dark brows still read on it.
   - **Ears and horns:** elf-type ears at the ears (`earGeometry`, y ≈ 106), top items on the
     reference head's crown (y ≥ 27).
   - **Hand:** the left fist is at x = 24–62, y = 200–224 (some items move it: the lantern, the
-    broom and Santa's sack hold it higher, x ≈ 21–62, y ≈ 148–184). Held items may reach from y ≈ 20 (staff,
-    balloon) to the bottom, at x ≈ 0–80.
+    broom, the sacks and the baskets hold it higher, x ≈ 21–62, y ≈ 148–184; the serving tray
+    sits on it at y ≈ 176; the guitar's hand is at x ≈ 4–42, y ≈ 150). Held items may reach from
+    y ≈ 20 (staff, balloon) to the bottom, at x ≈ 0–80, but nothing tall may lean in over the
+    face (x > 70 above y ≈ 150): the guitar's neck leans out to the left.
   - **Shoulder:** pets are drawn sitting on (162, 190) and moved onto the body's right shoulder:
     Female (152, 192), Male (164, 186). Keep them within x ≈ 140–190, y ≈ 125–195.
   - **Back:** behind the body and the hair, x 0–200, y ≈ 60–240 (wings reach up beside the head).
-    Their front part (clasps, straps) goes over the outfit; the shoulders' outer edges are at
-    x ≈ 53 / 147 (Female) and 33 / 167 (Male) at y ≈ 189.
+    Their front part (clasps, straps, the satchel at the right hip) goes over the outfit; the
+    shoulders' outer edges are at x ≈ 53 / 147 (Female) and 33 / 167 (Male) at y ≈ 189
+    (`ctx.shoulderX`: the jetpack's tanks are placed by it, so they show beside either body).
   - **Costume outfits** are drawn like outfits (for the Male shoulders, cut to the body's outline,
-    collars free around the neck).
+    collars free around the neck). Collar parts that reach the shoulders (fur, scales, spikes)
+    use `c.shoulderX` so they fit the narrower Female shoulders too. One that wraps the head
+    (mummy wraps) sets `hidesHair` and `hidesEarrings` and draws the head part in `head(ctx)`.
   - **PNG names** are `<layer>/<id>.png` with the layers above, e.g. `headwear/c-witch-hat.png`,
     `held/c-broom.png`, `costume-outfit/c-pirate-coat.png`. A PNG headwear is placed on the band
     like the SVG one. A costume item with no SVG drawing is still offered once its PNG is listed.
