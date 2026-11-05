@@ -2057,6 +2057,55 @@ function scrollMotivationIntoView() {
   if (overlap > 0) window.scrollBy({ top: overlap, behavior: "smooth" });
 }
 
+// ---------- landscape phones: card and picker above the character ----------
+
+// On landscape phones (the "compact" layout in style.css and "Layout (screen sizes)" in the
+// README) the category picker and the motivation card go to the top of the character column,
+// picker first, and the character shrinks to the height that's left, so it stays whole.
+// In the HTML they stay where portrait needs them (the card under the buttons, the picker in the
+// sticky bottom bar), so CSS alone can't put them in the other column's flow. This measures them
+// and tells the CSS: the class side-stacked, --stack-top (where the first one starts),
+// --stack-picker (the picker's space, so the card starts under it) and --stack-reserve (the
+// space the character leaves above itself).
+// If the character would be shorter than STACK_MIN_CHARACTER_PX, nothing is stacked and both float
+// over the lower part of the character instead. Only the left column changes: the timer and
+// buttons never move. ResizeObserver runs before the screen is painted, so nothing flickers.
+const COMPACT_LANDSCAPE = "(orientation: landscape) and (max-height: 500px)";
+const STACK_GAP_PX = 6;
+const STACK_MIN_CHARACTER_PX = 96;
+
+function updateSideStack() {
+  const screen = $("#sessionScreen");
+  const side = $(".session-side");
+  const picker = $("#categoryPicker");
+  const card = $("#motivationCard");
+  const saveError = $("#saveErrorNote");
+  const pickerSpace = picker.hidden ? 0 : picker.offsetHeight + STACK_GAP_PX;
+  const cardSpace = card.hidden ? 0 : card.offsetHeight + STACK_GAP_PX;
+  const reserve = pickerSpace + cardSpace;
+  // The info line and the screen note are hidden while stacked; a save error stays on top.
+  const errorSpace = saveError.hidden ? 0 : saveError.offsetHeight + 4;
+  const stack =
+    reserve > 0 &&
+    matchMedia(COMPACT_LANDSCAPE).matches &&
+    side.clientHeight - errorSpace - reserve >= STACK_MIN_CHARACTER_PX;
+  screen.classList.toggle("side-stacked", stack);
+  screen.style.setProperty("--stack-top", `${side.offsetTop + errorSpace}px`);
+  screen.style.setProperty("--stack-picker", `${pickerSpace}px`);
+  screen.style.setProperty("--stack-reserve", `${reserve}px`);
+}
+
+// Runs whenever the picker or the card opens, closes or changes height (a new message), the
+// save error comes or goes, and when the column changes size (rotating the phone). Without
+// ResizeObserver (old browsers) they keep floating over the character.
+function initSideStack() {
+  if (typeof ResizeObserver !== "function") return;
+  const observer = new ResizeObserver(updateSideStack);
+  for (const el of [$(".session-side"), $("#categoryPicker"), $("#motivationCard"), $("#saveErrorNote")]) {
+    observer.observe(el);
+  }
+}
+
 function showMotivation() {
   const message = MOTIVATION[motivation.phase][motivation.index];
   motivation.shown = true;
@@ -2172,7 +2221,8 @@ function init() {
   initLeaveReminder();
   cancelLeaveReminder(); // e.g. its tap reopened the app after the browser discarded the page
   buildCategoryButtons();
-  setupPicker = durationPicker($("#setupDuration"), prefs.minutes);
+  initSideStack();
+  setupPicker =durationPicker($("#setupDuration"), prefs.minutes);
   // Capture phase, so the count goes up before the press moves focus (see pressCount).
   for (const type of ["pointerdown", "keydown"]) document.addEventListener(type, () => pressCount++, true);
 

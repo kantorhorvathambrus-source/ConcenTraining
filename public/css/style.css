@@ -2112,8 +2112,7 @@ a {
 /* Landscape phones: height is the tight dimension. Everything is tighter, so the timer, both rows
    of distraction buttons and the bottom bar fit without scrolling in about 250px (a 740x360 phone
    in Chrome with the address bar showing has about 265px). The category picker and the motivation
-   card float over the lower part of the character column instead of pushing the buttons down;
-   the picker appears only after the reaction has played. */
+   card go in the character column instead of pushing the buttons down (see below). */
 @media (orientation: landscape) and (max-height: 500px) {
   .app-timer {
     padding-top: 8px;
@@ -2184,8 +2183,13 @@ a {
     padding-bottom: 10px;
   }
 
-  /* Over the bottom of the character column (40% wide, see grid-template-columns above). The
-     picker sits on top of the motivation card if both are open. */
+  /* The category picker and the motivation card live in the character column (40% wide, see
+     grid-template-columns above), not under the buttons. Normally they're stacked at the top of
+     it, picker first, and the character shrinks to the height that's left (side-stacked, set by
+     updateSideStack in app.js, which measures them). The info line and the screen note make
+     room while they're open; the character grows back when they close.
+     Fallback (the character would be under 96px tall, or no ResizeObserver): they float over
+     the lower part of the character, the picker on top of the card. */
   .category-picker,
   .motivation-card {
     position: absolute;
@@ -2201,6 +2205,44 @@ a {
 
   .category-picker {
     z-index: 2;
+  }
+
+  #sessionScreen.side-stacked .category-picker {
+    top: var(--stack-top);
+    bottom: auto;
+  }
+
+  #sessionScreen.side-stacked .motivation-card {
+    top: calc(var(--stack-top) + var(--stack-picker));
+    bottom: auto;
+  }
+
+  #sessionScreen.side-stacked #sessionInfo,
+  #sessionScreen.side-stacked #screenNote {
+    display: none;
+  }
+
+  #sessionScreen.side-stacked .session-side .stage {
+    margin-top: var(--stack-reserve);
+  }
+
+  /* Both a little smaller and tighter, so the character keeps more of the column. The tap targets
+     stay 44px. */
+  .motivation-card {
+    padding: 8px 44px 8px 12px;
+    font-size: 0.9375rem;
+  }
+
+  .motivation-card p {
+    margin-top: 2px;
+  }
+
+  .category-picker {
+    padding: 2px 8px 8px;
+  }
+
+  .category-head {
+    margin: 0 -4px 2px 0;
   }
 
   /* Three buttons per row (two rows) on most phones, so the picker stays below the info line;

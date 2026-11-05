@@ -1468,12 +1468,31 @@ than on a phone.
 **Landscape phones (compact).** Everything on the right is tighter (smaller timer, 44px buttons,
 less spacing), so the timer, both rows of distraction buttons and the bottom bar fit in about
 250px of height without scrolling. A 740x360 phone in Chrome with the address bar showing has about
-265px. Advanced mode keeps its 7 lengths on two rows (at least 4 per row). The category picker
-("What distracted you?") and the motivation card don't fit under the buttons there, so they float
-over the lower part of the character column instead. The picker only appears after the
-reaction has played, the timer, distraction buttons and Undo stay visible, and if both are open the
-picker is on top. The bottom bar isn't sticky here (everything fits), and Motivate me doesn't
-scroll the page (`scrollMotivationIntoView` skips it when the card is beside the bar, not above it).
+265px. Advanced mode keeps its 7 lengths on two rows (at least 4 per row). The bottom bar isn't
+sticky here (everything fits), and Motivate me doesn't scroll the page (`scrollMotivationIntoView`
+skips it when the card is beside the bar, not above it).
+
+**Picker and motivation card on landscape phones.** The category picker ("What distracted you?")
+and the motivation card don't fit under the buttons, so they go in the character column instead:
+
+- **Stacked (normally).** They go at the top of the column, the picker first if both are open, and
+  the character shrinks to the height that's left. It keeps its aspect ratio and stays anchored at
+  the bottom, so the whole character and its reaction stay visible, just smaller. The info line and
+  the "screen may turn off" note are hidden while either is open, to make room; a save error stays
+  on top. When they close, the character grows back. Only the left column changes: the timer and
+  the buttons never move.
+- **Fallback.** If the character would be shorter than 96px (`STACK_MIN_CHARACTER_PX`), they float
+  over the lower part of the character instead, the picker on top of the card. In practice that's
+  only with both open on phones about 340px tall or less (e.g. 740x340). Both fit stacked on
+  844x390 and 915x412.
+
+In the HTML the card is under the buttons and the picker is in the sticky bottom bar, because
+portrait needs them there. CSS can't put them in the other column's flow, so `updateSideStack`
+in `app.js` measures them (a ResizeObserver, which reruns whenever either opens, closes or changes
+height, and when the phone rotates) and gives the CSS their heights. It does nothing outside
+compact landscape. Without ResizeObserver (very old browsers) they always float. The card's
+text is a little smaller there, and the picker and card have a little less padding; every tap
+target is still 44px.
 Dialogs get less padding, and anything taller than the screen (step 2 of the continue/restart
 dialog on the smallest phones) scrolls inside the dialog.
 
@@ -1506,7 +1525,7 @@ and the timer keeps counting from the start time as always.
 | `public/js/avatar-art.js` | Draws a custom character from its layers (SVG, or listed PNGs with skin/hair tint) |
 | `public/js/custom-characters.js` | Saving and reading `ct_custom_characters_v1`, name rules, the 10 limit, `CUSTOM_PAID`, the feature switch `CUSTOM_CHARACTERS_ENABLED` (and `CUSTOM_CHARACTERS_ON`, which is also true on Netlify's test sites), stand-in for deleted characters (used by all three pages and `stats.html`) |
 | `public/js/avatar.js` | The editor on `avatar.html` |
-| `public/js/app.js` | Timer, reaction engine, distraction category picker, Undo, disabled Advanced lengths, time away card, leave reminder notification, motivation rotation, end chime, screen wake lock and the "screen may turn off" note, summary, How it works card, iPhone Home Screen tip, persistent storage request, one tab at a time (Web Locks) |
+| `public/js/app.js` | Timer, reaction engine, distraction category picker, Undo, disabled Advanced lengths, time away card, leave reminder notification, motivation rotation, the picker and card stacking on landscape phones (`updateSideStack`), end chime, screen wake lock and the "screen may turn off" note, summary, How it works card, iPhone Home Screen tip, persistent storage request, one tab at a time (Web Locks) |
 | `public/js/history-store.js` | Saving/loading history, focus % and summary result (with their thresholds), distraction categories, export/import checks, iPhone/iPad and iPhone Safari checks, the "can this browser save?" test (`storageWorks`) (used by both pages) |
 | `public/js/history.js` | Streaks, weekly time and focus charts, time of day, distraction categories, session list and backup buttons on `history.html` |
 | `netlify/functions/picks.mjs` | `POST /api/picks`: counts one session started with a character |
