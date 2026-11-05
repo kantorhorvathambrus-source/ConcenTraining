@@ -1271,9 +1271,20 @@ function schedulePicker(distraction, button) {
 
 // Announced only when it appears, not when it was already open (after Keep going). Polite, like
 // the reaction's line, so it's read after that one, not over it. Focus stays where it is.
+// On landscape phones the picker takes the distraction buttons' place and wins over the motivation
+// card (they'd share that place): the card closes when the picker opens. If focus was on what the
+// picker now covers (the distraction button just pressed, or the card), it moves to Skip, the
+// picker's first control, so it isn't lost; closing the picker brings it back to that button.
 function showPicker(closeInMs) {
-  if ($("#categoryPicker").hidden) announce(PICKER_ANNOUNCEMENT);
-  $("#categoryPicker").hidden = false;
+  const box = $("#categoryPicker");
+  const card = $("#motivationCard");
+  const compact = box.hidden && isCompactLandscape();
+  const coveredFocus =
+    compact && ($(".distraction").contains(document.activeElement) || card.contains(document.activeElement));
+  if (compact) card.hidden = true;
+  if (box.hidden) announce(PICKER_ANNOUNCEMENT);
+  box.hidden = false;
+  if (coveredFocus) $("#skipCategoryButton").focus({ preventScroll: true });
   picker.closesAt = Date.now() + closeInMs;
   picker.hideTimer = setTimeout(() => closePicker(true), closeInMs);
 }
@@ -1309,6 +1320,8 @@ function pickCategory(id) {
 // Focus inside it (a category or Skip was tapped) goes back to the distraction button that was
 // tapped, or to the heading above the buttons if that one is disabled now (Advanced mode), so
 // it isn't lost. Before the restart question, so focus comes back there when that closes.
+// On landscape phones, if the motivation card is open (it waited under the picker), the buttons
+// stay covered by it, so focus goes to the card's × instead.
 function closePicker(thenAsk) {
   clearTimeout(picker.showTimer);
   clearTimeout(picker.hideTimer);
@@ -1318,7 +1331,12 @@ function closePicker(thenAsk) {
   if (announcer.text === PICKER_ANNOUNCEMENT) clearAnnouncement();
   if (hadFocus) {
     const button = picker.returnFocus;
-    const target = button && button.isConnected && !button.disabled ? button : $("#distractionPrompt");
+    const covered = isCompactLandscape() && !$("#motivationCard").hidden;
+    const target = covered
+      ? $("#motivationClose")
+      : button && button.isConnected && !button.disabled
+        ? button
+        : $("#distractionPrompt");
     target.focus({ preventScroll: true });
   }
   picker.distraction = null;
@@ -2047,63 +2065,45 @@ function onMotivateClick() {
 
 // On short screens the card opens under the sticky bottom bar, so scroll it up
 // just far enough to sit 12px above the bar (which is taller while the picker is open).
-// Not on landscape phones, where the card sits beside the bar, over the character column
-// ("Layout (screen sizes)" in the README): there is nothing to scroll past.
+// Not on landscape phones: there the card takes the distraction buttons' place, above the bar.
 function scrollMotivationIntoView() {
-  const card = $("#motivationCard").getBoundingClientRect();
-  const bar = $(".session-bar").getBoundingClientRect();
-  if (card.right <= bar.left || card.left >= bar.right) return;
-  const overlap = card.bottom - (bar.top - 12);
+  if (isCompactLandscape()) return;
+  const overlap = $("#motivationCard").getBoundingClientRect().bottom - ($(".session-bar").getBoundingClientRect().top - 12);
   if (overlap > 0) window.scrollBy({ top: overlap, behavior: "smooth" });
 }
 
-// ---------- landscape phones: card and picker above the character ----------
+// ---------- landscape phones ----------
 
-// On landscape phones (the "compact" layout in style.css and "Layout (screen sizes)" in the
-// README) the category picker and the motivation card go to the top of the character column,
-// picker first, and the character shrinks to the height that's left, so it stays whole.
-// In the HTML they stay where portrait needs them (the card under the buttons, the picker in the
-// sticky bottom bar), so CSS alone can't put them in the other column's flow. This measures them
-// and tells the CSS: the class side-stacked, --stack-top (where the first one starts),
-// --stack-picker (the picker's space, so the card starts under it) and --stack-reserve (the
-// space the character leaves above itself).
-// If the character would be shorter than STACK_MIN_CHARACTER_PX, nothing is stacked and both float
-// over the lower part of the character instead. Only the left column changes: the timer and
-// buttons never move. ResizeObserver runs before the screen is painted, so nothing flickers.
-const COMPACT_LANDSCAPE = "(orientation: landscape) and (max-height: 500px)";
-const STACK_GAP_PX = 6;
-const STACK_MIN_CHARACTER_PX = 96;
+// The compact layout in style.css ("Layout (screen sizes)" in the README): the category picker
+// and the motivation card take the distraction buttons' place in the right column, so only one
+// of them can be seen at a time. The layout itself is CSS; these only cover what CSS can't:
+// which one wins (showPicker), where focus goes (closePicker) and the card's text size.
+const COMPACT_LANDSCAPE = matchMedia("(orientation: landscape) and (max-height: 500px)");
 
-function updateSideStack() {
-  const screen = $("#sessionScreen");
-  const side = $(".session-side");
-  const picker = $("#categoryPicker");
-  const card = $("#motivationCard");
-  const saveError = $("#saveErrorNote");
-  const pickerSpace = picker.hidden ? 0 : picker.offsetHeight + STACK_GAP_PX;
-  const cardSpace = card.hidden ? 0 : card.offsetHeight + STACK_GAP_PX;
-  const reserve = pickerSpace + cardSpace;
-  // The info line and the screen note are hidden while stacked; a save error stays on top.
-  const errorSpace = saveError.hidden ? 0 : saveError.offsetHeight + 4;
-  const stack =
-    reserve > 0 &&
-    matchMedia(COMPACT_LANDSCAPE).matches &&
-    side.clientHeight - errorSpace - reserve >= STACK_MIN_CHARACTER_PX;
-  screen.classList.toggle("side-stacked", stack);
-  screen.style.setProperty("--stack-top", `${side.offsetTop + errorSpace}px`);
-  screen.style.setProperty("--stack-picker", `${pickerSpace}px`);
-  screen.style.setProperty("--stack-reserve", `${reserve}px`);
+function isCompactLandscape() {
+  return COMPACT_LANDSCAPE.matches;
 }
 
-// Runs whenever the picker or the card opens, closes or changes height (a new message), the
-// save error comes or goes, and when the column changes size (rotating the phone). Without
-// ResizeObserver (old browsers) they keep floating over the character.
-function initSideStack() {
-  if (typeof ResizeObserver !== "function") return;
-  const observer = new ResizeObserver(updateSideStack);
-  for (const el of [$(".session-side"), $("#categoryPicker"), $("#motivationCard"), $("#saveErrorNote")]) {
-    observer.observe(el);
+// The card is exactly the size of the distraction buttons' block there. If its message doesn't
+// fit, the text gets a step smaller (fit-1, then fit-2 in style.css); if even that doesn't
+// fit, the card scrolls inside itself. Never the other way round: it can't push the bar down.
+const CARD_FIT_STEPS = ["fit-1", "fit-2"];
+
+function fitMotivationCard() {
+  const card = $("#motivationCard");
+  card.classList.remove(...CARD_FIT_STEPS);
+  if (card.hidden || !isCompactLandscape()) return;
+  for (const step of CARD_FIT_STEPS) {
+    if (card.scrollHeight <= card.clientHeight) return;
+    card.classList.remove(...CARD_FIT_STEPS);
+    card.classList.add(step);
   }
+}
+
+// Again whenever the card's size changes: rotating the phone, or a new message (showMotivation).
+function initMotivationFit() {
+  if (typeof ResizeObserver === "function") new ResizeObserver(fitMotivationCard).observe($("#motivationCard"));
+  if (typeof COMPACT_LANDSCAPE.addEventListener === "function") COMPACT_LANDSCAPE.addEventListener("change", fitMotivationCard);
 }
 
 function showMotivation() {
@@ -2113,6 +2113,7 @@ function showMotivation() {
   $("#motivationBadge").dataset.type = message.type;
   $("#motivationText").textContent = message.text;
   $("#motivationCard").hidden = false;
+  fitMotivationCard();
 }
 
 // ---------- summary ----------
@@ -2221,8 +2222,8 @@ function init() {
   initLeaveReminder();
   cancelLeaveReminder(); // e.g. its tap reopened the app after the browser discarded the page
   buildCategoryButtons();
-  initSideStack();
-  setupPicker =durationPicker($("#setupDuration"), prefs.minutes);
+  initMotivationFit();
+  setupPicker = durationPicker($("#setupDuration"), prefs.minutes);
   // Capture phase, so the count goes up before the press moves focus (see pressCount).
   for (const type of ["pointerdown", "keydown"]) document.addEventListener(type, () => pressCount++, true);
 
