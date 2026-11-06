@@ -171,16 +171,19 @@ function formatSessionLength(entry) {
 // One line about a session, for the delete dialog: "Grandma · Advanced · Mon 20 Oct · 14:05 · 25 min".
 function formatSessionSummary(entry) {
   return [
-    characterName(entry.characterId),
+    characterName(entry),
     capitalize(entry.mode),
     formatSessionDate(entry.startedAt),
     formatSessionLength(entry),
   ].join(" · ");
 }
 
-function characterName(id) {
-  const character = CHARACTERS.find((c) => c.id === id);
-  return character ? character.name : id;
+// A built-in character's name, a custom character's current name, or (for a deleted or renamed-away
+// custom character, or one made on another device) the name the session stored. Shown as plain text.
+function characterName(entry) {
+  const character = CHARACTERS.find((c) => c.id === entry.characterId) || customCharacterById(entry.characterId);
+  if (character) return character.name;
+  return typeof entry.characterName === "string" && entry.characterName ? entry.characterName : entry.characterId;
 }
 
 function capitalize(text) {
@@ -444,7 +447,7 @@ function renderSessionList(history) {
         <div class="muted small session-item-meta"></div>
       </div>
       <div class="session-item-focus"></div>`;
-    item.querySelector("strong").textContent = characterName(entry.characterId);
+    item.querySelector("strong").textContent = characterName(entry);
     item.querySelector(".session-item-mode").textContent = `${capitalize(entry.mode)} · ${styleLabel(entry.style)}`;
     if (entry.endedBy === "startOver") {
       const tag = document.createElement("span");
@@ -475,7 +478,7 @@ function renderSessionList(history) {
       button.textContent = "Delete";
       button.setAttribute(
         "aria-label",
-        `Delete session: ${characterName(entry.characterId)}, ${formatSessionDate(entry.startedAt).replace(" · ", ", ")}`
+        `Delete session: ${characterName(entry)}, ${formatSessionDate(entry.startedAt).replace(" · ", ", ")}`
       );
       button.dataset.startedAt = entry.startedAt;
       button.dataset.summary = formatSessionSummary(entry);
@@ -537,7 +540,8 @@ function historySource() {
   } catch {
     // storage blocked: loadHistory sees an empty history, so does this
   }
-  return `${dayKey(new Date())}|${canSave}|${saved}`;
+  // The custom characters too: a rename or delete in another tab changes the names shown.
+  return `${dayKey(new Date())}|${canSave}|${saved}|${readCustomRaw()}`;
 }
 
 // The page keeps showing what it drew, so it's drawn again when the history (or canSave) may have changed
@@ -761,7 +765,8 @@ function init() {
     if (button) confirmDelete(button);
   });
   window.addEventListener("storage", (event) => {
-    if (event.key === HISTORY_KEY || event.key === null) refreshInBackground(); // null: all storage was cleared
+    // null: all storage was cleared. CUSTOM_KEY: a custom character renamed or deleted elsewhere.
+    if (event.key === HISTORY_KEY || event.key === CUSTOM_KEY || event.key === null) refreshInBackground();
   });
   window.addEventListener("pageshow", (event) => {
     if (event.persisted) recheckAndRefresh();

@@ -39,9 +39,23 @@
     </table>
 
     <p id="paidNote" class="muted"></p>
+
+    <!-- Every character users made themselves, counted together (never by their own names). -->
+    <table id="customTable" class="stats-table" hidden>
+      <thead>
+        <tr>
+          <th scope="col">Custom characters (always paid)</th>
+          <th scope="col" id="customRecentHeader">Last 30 days</th>
+          <th scope="col">All time</th>
+        </tr>
+      </thead>
+      <tbody><tr><td>All custom characters</td><td id="customRecent"></td><td id="customTotal"></td></tr></tbody>
+    </table>
     <p><a href="./" class="back-link">← Back to the timer</a></p>
   </main>
 
+  <!-- Only for CUSTOM_CHARACTERS_ON: the custom line is left out while custom characters are off. -->
+  <script src="js/custom-characters.js"></script>
   <script>
     "use strict";
 
@@ -76,8 +90,17 @@
 
         document.getElementById("paidNote").textContent = stats.paidCharacterIds.length
           ? `Paid right now: the top ${stats.paidCharacterIds.length} by the last ${stats.recentDays} days.`
-          : `No paid characters yet: that starts once there are at least 10 characters.`;
+          : `No paid characters yet: that starts once there are at least 10 built-in characters.`;
         document.getElementById("statsTable").hidden = false;
+
+        // Older backends (before custom characters) don't send it. Not shown while custom
+        // characters are switched off (the backend still counts "custom").
+        if (stats.customPicks && CUSTOM_CHARACTERS_ON) {
+          document.getElementById("customRecentHeader").textContent = `Last ${stats.recentDays} days`;
+          document.getElementById("customRecent").textContent = stats.customPicks.recentPicks;
+          document.getElementById("customTotal").textContent = stats.customPicks.totalPicks;
+          document.getElementById("customTable").hidden = false;
+        }
         status.hidden = true;
       } catch (error) {
         status.textContent = `Couldn't load stats (${error.message}). They only work on the deployed Netlify site.`;

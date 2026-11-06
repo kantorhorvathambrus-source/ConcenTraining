@@ -16,7 +16,8 @@
   <meta name="apple-mobile-web-app-title" content="ConcenTraining">
 </head>
 <body>
-  <main class="app">
+  <!-- app-timer: on wide and landscape screens this page grows to 1200px ("Layout" in the README). -->
+  <main class="app app-timer">
 
     <!-- ========== SETUP ========== -->
     <section id="setupScreen" class="screen" hidden>
@@ -79,7 +80,14 @@
       <div class="step" id="characterStep">
         <h2 id="characterStepTitle" tabindex="-1">1. Choose your character</h2>
         <p id="characterError" class="error" role="alert" hidden>Pick a character first.</p>
+        <!-- The built-in characters, then "Create your own" (always last, renderCharacterList in app.js;
+             only while custom characters are on, CUSTOM_CHARACTERS_ON). -->
         <div id="characterList" class="character-list"></div>
+        <!-- Characters made in the editor (avatar.html). Only shown once there is at least one. -->
+        <section id="customSection" class="custom-section" aria-labelledby="customTitle" hidden>
+          <h3 id="customTitle">Your characters</h3>
+          <div id="customList" class="character-list"></div>
+        </section>
       </div>
 
       <div class="step">
@@ -131,57 +139,64 @@
 
     <!-- ========== SESSION ========== -->
     <section id="sessionScreen" class="screen" hidden>
-      <!-- Gets focus when a session starts, so a screen reader reads it (focusScreenStart in app.js). -->
-      <p id="sessionInfo" class="session-info muted" tabindex="-1"></p>
-      <!-- Shown while the chime is on but the screen isn't being kept on (updateScreenNote in app.js). -->
-      <p id="screenNote" class="screen-note muted" role="status" hidden>Your screen may turn off. If it does, you won't hear the chime.</p>
-      <!-- Shown when a session starts while the browser doesn't let the site save anything, or when
-           Start new session couldn't save the abandoned part (showSaveErrorNote in app.js). -->
-      <p id="saveErrorNote" class="screen-note error" role="status" hidden></p>
+      <!-- Two wrappers for the two-column layout on wide and landscape screens: the character side
+           and the controls. In portrait they are display: contents (no box of their own), so the
+           screen lays out exactly as without them ("Layout" in the README). -->
+      <div class="session-side">
+        <!-- Gets focus when a session starts, so a screen reader reads it (focusScreenStart in app.js). -->
+        <p id="sessionInfo" class="session-info muted" tabindex="-1"></p>
+        <!-- Shown while the chime is on but the screen isn't being kept on (updateScreenNote in app.js). -->
+        <p id="screenNote" class="screen-note muted" role="status" hidden>Your screen may turn off. If it does, you won't hear the chime.</p>
+        <!-- Shown when a session starts while the browser doesn't let the site save anything, or when
+             Start new session couldn't save the abandoned part (showSaveErrorNote in app.js). -->
+        <p id="saveErrorNote" class="screen-note error" role="status" hidden></p>
 
-      <div id="sessionStage" class="stage">
-        <img id="sessionImg" class="char-img" alt="">
-      </div>
-
-      <div class="timer-block">
-        <div id="timer" class="timer">00:00</div>
-        <div class="progress" aria-hidden="true"><div id="progressBar" class="progress-bar"></div></div>
-      </div>
-
-      <div class="distraction">
-        <h2 id="distractionPrompt" tabindex="-1"></h2>
-        <div id="distractionButtons" class="distraction-buttons"></div>
-      </div>
-
-      <div id="motivationCard" class="motivation-card" aria-live="polite" hidden>
-        <span id="motivationBadge" class="motivation-badge"></span>
-        <p id="motivationText"></p>
-        <button id="motivationClose" type="button" class="icon-btn" aria-label="Hide message">×</button>
-      </div>
-
-      <!-- Screen readers only: reads the reaction, the category picker and Undo out once (announce in
-           app.js). Polite, so it waits until the screen reader is done talking and never cuts in. -->
-      <p id="announcer" class="visually-hidden" aria-live="polite" aria-atomic="true"></p>
-
-      <div class="session-bar">
-        <!-- In the sticky bottom bar so it's on screen wherever you've scrolled.
-             Shown after each distraction until a category or Skip is tapped; closes silently
-             after PICKER_AUTO_CLOSE_MS if neither happens (app.js). -->
-        <div id="categoryPicker" class="category-picker" role="group" aria-labelledby="categoryPrompt" hidden>
-          <div class="category-head">
-            <p id="categoryPrompt" class="category-prompt">What distracted you?</p>
-            <button id="skipCategoryButton" type="button" class="skip-btn">Skip</button>
-          </div>
-          <div id="categoryButtons" class="category-buttons"></div>
+        <div id="sessionStage" class="stage">
+          <img id="sessionImg" class="char-img" alt="">
         </div>
-        <button id="motivateButton" type="button" class="btn primary">Motivate me</button>
-        <!-- Takes Motivate me's place (same cell, same size) for UNDO_WINDOW_MS after each
-             distraction tap (app.js), so nothing on the screen moves and End session is always
-             there. The seconds left are hidden from screen readers: the button is just "Undo". -->
-        <button id="undoButton" type="button" class="btn undo-btn" hidden>
-          Undo<span class="undo-seconds" aria-hidden="true"> · <span id="undoSeconds">5</span></span>
-        </button>
-        <button id="endButton" type="button" class="btn">End session</button>
+      </div>
+
+      <div class="session-main">
+        <div class="timer-block">
+          <div id="timer" class="timer">00:00</div>
+          <div class="progress" aria-hidden="true"><div id="progressBar" class="progress-bar"></div></div>
+        </div>
+
+        <div class="distraction">
+          <h2 id="distractionPrompt" tabindex="-1"></h2>
+          <div id="distractionButtons" class="distraction-buttons"></div>
+        </div>
+
+        <div id="motivationCard" class="motivation-card" aria-live="polite" hidden>
+          <span id="motivationBadge" class="motivation-badge"></span>
+          <p id="motivationText"></p>
+          <button id="motivationClose" type="button" class="icon-btn" aria-label="Hide message">×</button>
+        </div>
+
+        <!-- Screen readers only: reads the reaction, the category picker and Undo out once (announce in
+             app.js). Polite, so it waits until the screen reader is done talking and never cuts in. -->
+        <p id="announcer" class="visually-hidden" aria-live="polite" aria-atomic="true"></p>
+
+        <div class="session-bar">
+          <!-- In the sticky bottom bar so it's on screen wherever you've scrolled.
+               Shown after each distraction until a category or Skip is tapped; closes silently
+               after PICKER_AUTO_CLOSE_MS if neither happens (app.js). -->
+          <div id="categoryPicker" class="category-picker" role="group" aria-labelledby="categoryPrompt" hidden>
+            <div class="category-head">
+              <p id="categoryPrompt" class="category-prompt">What distracted you?</p>
+              <button id="skipCategoryButton" type="button" class="skip-btn">Skip</button>
+            </div>
+            <div id="categoryButtons" class="category-buttons"></div>
+          </div>
+          <button id="motivateButton" type="button" class="btn primary">Motivate me</button>
+          <!-- Takes Motivate me's place (same cell, same size) for UNDO_WINDOW_MS after each
+               distraction tap (app.js), so nothing on the screen moves and End session is always
+               there. The seconds left are hidden from screen readers: the button is just "Undo". -->
+          <button id="undoButton" type="button" class="btn undo-btn" hidden>
+            Undo<span class="undo-seconds" aria-hidden="true"> · <span id="undoSeconds">5</span></span>
+          </button>
+          <button id="endButton" type="button" class="btn">End session</button>
+        </div>
       </div>
     </section>
 
@@ -224,6 +239,18 @@
       <div class="dialog-actions">
         <button value="cancel" class="btn">Pick someone else</button>
         <button value="ok" class="btn primary">Bring it on</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Delete on a "Your characters" card (confirmDeleteCustom in app.js). The title gets the name. -->
+  <dialog id="deleteCharacterDialog" aria-labelledby="deleteCharacterTitle" aria-describedby="deleteCharacterText">
+    <form method="dialog">
+      <h2 id="deleteCharacterTitle"></h2>
+      <p id="deleteCharacterText">Your past sessions with this character stay in your history.</p>
+      <div class="dialog-actions">
+        <button value="cancel" class="btn">Cancel</button>
+        <button value="delete" class="btn danger">Delete</button>
       </div>
     </form>
   </dialog>
@@ -297,6 +324,10 @@
   <script src="js/data/characters.js"></script>
   <script src="js/data/messages.js"></script>
   <script src="js/placeholder-art.js"></script>
+  <script src="js/avatar-parts.js"></script>
+  <script src="js/avatar-costumes.js"></script>
+  <script src="js/avatar-art.js"></script>
+  <script src="js/custom-characters.js"></script>
   <script src="js/history-store.js"></script>
   <script src="js/app.js"></script>
   <script src="js/sw-register.js"></script>

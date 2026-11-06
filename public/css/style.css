@@ -229,9 +229,11 @@ input:focus-visible {
 
 /* ---------- setup: characters ---------- */
 
+/* minmax(0, 1fr): with large text (200%) at 320px, a long word wraps inside its card instead of
+   making the grid wider than the screen. */
 .character-list {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -251,7 +253,13 @@ input:focus-visible {
 
 .char-card img {
   width: 96px;
+  max-width: 100%;
   height: auto;
+}
+
+.char-card {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .char-card[aria-pressed="true"] {
@@ -295,6 +303,84 @@ input:focus-visible {
 
 .badge-ragebait {
   background: var(--ragebait);
+}
+
+/* "Create your own" (always the last card of the main grid) and "Your characters" below it.
+   A custom card is a frame holding the select button (a .char-card without its own border) and
+   the Edit / Delete row: a button can't contain other buttons. */
+.create-card img {
+  opacity: 0.9;
+}
+
+.create-card[aria-disabled="true"] {
+  cursor: default;
+  box-shadow: none;
+}
+
+.create-card[aria-disabled="true"]:active {
+  transform: none;
+}
+
+.badge-free {
+  background: var(--primary);
+  color: var(--primary-text);
+}
+
+.custom-section {
+  margin-top: 24px;
+}
+
+.custom-section h3 {
+  font-size: 1.05rem;
+  margin: 0 0 12px;
+}
+
+.custom-item {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  min-width: 0;
+  transition: border-color 0.15s;
+}
+
+.custom-item.selected {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, var(--surface));
+}
+
+.custom-item .char-card {
+  flex: 1;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding-bottom: 6px;
+}
+
+/* The name is the user's own text: long words break instead of widening the card. */
+.custom-item .char-name {
+  overflow-wrap: anywhere;
+}
+
+.custom-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 8px 10px;
+}
+
+.custom-actions .btn {
+  flex: 1 1 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: var(--text);
+  font-size: 0.9rem;
 }
 
 /* ---------- setup: choices ---------- */
@@ -1429,6 +1515,451 @@ a {
   white-space: nowrap;
 }
 
+/* ---------- character editor (avatar.html) ---------- */
+
+.avatar-back {
+  margin: 0 0 4px;
+}
+
+.avatar-page h1 {
+  font-size: 1.6rem;
+}
+
+/* The preview stays at the top while the options scroll under it. Its height follows the screen,
+   so a short (or landscape) phone keeps most of its height for the options. */
+.avatar-preview {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 -16px 20px;
+  padding: 8px 16px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.avatar-preview-img {
+  flex: 0 0 auto;
+  width: clamp(72px, 32%, 150px);
+  height: auto;
+  max-height: 26vh;
+  max-height: 26svh;
+  aspect-ratio: 200 / 240;
+  object-fit: contain;
+}
+
+/* The buttons take the rest of the row; with large text a long word may break rather than push
+   the page wider than the screen. */
+.avatar-preview-actions {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.avatar-preview-actions .btn {
+  padding-left: 10px;
+  padding-right: 10px;
+  overflow-wrap: anywhere;
+}
+
+.editor-section {
+  border: none;
+  margin: 0 0 24px;
+  padding: 0;
+  min-width: 0;
+}
+
+.editor-section legend {
+  padding: 0;
+}
+
+.editor-section .small {
+  margin: 8px 0 0;
+}
+
+.editor-section legend h3 {
+  margin: 0 0 10px;
+  font-size: 1.05rem;
+  line-height: 1.2;
+}
+
+/* The editor's groups (Costumes, Base, Clothes, Accessories): a tap on the title opens or closes
+   one. The arrow turns when it's open. */
+.editor-group {
+  margin: 0 0 12px;
+  border-top: 1px solid var(--border);
+}
+
+.editor-group > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  padding: 8px 0;
+  cursor: pointer;
+  list-style: none;
+}
+
+.editor-group > summary::-webkit-details-marker {
+  display: none;
+}
+
+.editor-group > summary h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.editor-group > summary::after {
+  content: "";
+  flex: 0 0 auto;
+  width: 11px;
+  height: 11px;
+  margin: 0 6px 4px 0;
+  border-right: 2.5px solid var(--text);
+  border-bottom: 2.5px solid var(--text);
+  transform: rotate(45deg);
+  transition: transform 0.15s;
+}
+
+.editor-group[open] > summary::after {
+  margin-bottom: -4px;
+  transform: rotate(-135deg);
+}
+
+.editor-group > summary:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+.editor-group-body {
+  padding-top: 4px;
+}
+
+.editor-group-body > .small {
+  margin: 0 0 10px;
+}
+
+/* Costume presets: buttons with a picture and a name. The columns get wider with larger text, so
+   a name breaks between words, not inside one. */
+.preset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(max(76px, 4em), 1fr));
+  gap: 8px;
+  margin: 0 0 24px;
+}
+
+.preset {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 4px 4px 6px;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .preset:hover {
+    border-color: var(--primary);
+  }
+}
+
+.preset:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.preset-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
+/* A section of look options off screen isn't styled, laid out or painted at all (with every
+   group open the page has ~2,000 elements; Randomize would otherwise redo them all). Its height
+   until then comes from contain-intrinsic-size (avatar.js), then from its last real height. */
+.editor-section-box {
+  content-visibility: auto;
+}
+
+/* "No costume" on its own row, above the theme chips. */
+.preset-grid-none {
+  margin-bottom: 12px;
+}
+
+/* Costume themes: one radio group shown as chips. They wrap onto more lines when they don't fit
+   (never a sideways-scrolling row). */
+.theme-picker {
+  margin: 0 0 12px;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.theme-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.theme-chip {
+  position: relative;
+  min-width: 0;
+}
+
+.theme-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+}
+
+.theme-chip-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 6px 16px;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.theme-input:checked + .theme-chip-text {
+  color: var(--primary-text);
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.theme-input:focus-visible + .theme-chip-text {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* The theme of the costume being worn. */
+.theme-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+
+.theme-input:checked + .theme-chip-text .theme-dot {
+  background: var(--primary-text);
+}
+
+.text-input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+}
+
+.text-input[aria-invalid="true"] {
+  border-color: var(--error);
+}
+
+/* Radio-style grids: the real radio button is invisible (but focusable, so arrow keys and screen
+   readers work as usual) and its picture or text is drawn next to it. */
+.option-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(68px, 1fr));
+  gap: 8px;
+}
+
+.option-grid-swatch {
+  grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+}
+
+.option-grid-text {
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+}
+
+.option-grid-full {
+  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+}
+
+.option {
+  position: relative;
+  display: block;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.option-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+}
+
+.option-visual {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  height: 100%;
+  padding: 4px;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.option-input:checked + .option-visual {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, var(--surface));
+}
+
+/* A check mark in the corner of the picked option, so it isn't marked by colour alone. */
+.option-input:checked + .option-visual::after {
+  content: "";
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--primary) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5 10.5 L8.5 14 L15 6.5' fill='none' stroke='white' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 100% no-repeat;
+}
+
+.option-input:focus-visible + .option-visual {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* A thumbnail: inline SVG (avatar.js), with the proportions of its view (AVATAR_VIEWS). */
+/* "Funny" before the funny faces, across the whole grid. */
+.option-group-title {
+  grid-column: 1 / -1;
+  margin: 10px 0 0;
+  font-size: 1rem;
+}
+
+.option-img {
+  display: block;
+  width: 100%;
+  /* A redrawn thumbnail can't change anything else on the page, so the browser only lays out and
+     paints that box again (much quicker when Randomize redraws every thumbnail on screen). */
+  contain: layout paint style;
+}
+
+.option-img svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.option-img-head {
+  aspect-ratio: 184 / 204;
+}
+
+.option-img-full {
+  aspect-ratio: 200 / 240;
+}
+
+.option-swatch {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+.personality-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* The personality badges keep their group colour, picked or not (they'd get the plain option
+   background otherwise). The picked one gets a ring and the check mark. */
+.personality-option .option-visual {
+  padding: 8px 16px;
+  font-size: 0.95rem;
+  color: #fff;
+  border: 2px solid transparent;
+}
+
+.personality-option .option-visual.badge-relaxed,
+.personality-option .option-input:checked + .option-visual.badge-relaxed {
+  background: var(--relaxed);
+}
+
+.personality-option .option-visual.badge-firm,
+.personality-option .option-input:checked + .option-visual.badge-firm {
+  background: var(--firm);
+}
+
+.personality-option .option-visual.badge-strict,
+.personality-option .option-input:checked + .option-visual.badge-strict {
+  background: var(--strict);
+}
+
+.personality-option .option-visual.badge-ragebait,
+.personality-option .option-input:checked + .option-visual.badge-ragebait {
+  background: var(--ragebait);
+}
+
+.personality-option .option-input:checked + .option-visual {
+  border-color: var(--surface);
+  box-shadow: 0 0 0 3px var(--text);
+}
+
+.personality-option .option-input:checked + .option-visual::after {
+  background-color: var(--text);
+}
+
+.editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.editor-actions .btn {
+  flex: 1 1 140px;
+}
+
+#saveError {
+  margin: 0 0 12px;
+}
+
 /* ---------- small screens ---------- */
 
 @media (max-width: 380px) {
@@ -1483,9 +2014,311 @@ a {
   }
 }
 
+/* ---------- wide and landscape screens (index.html: setup and session) ---------- */
+
+/* The session screen's two wrappers (index.html). In portrait they make no box of their own, so
+   their children lay out (and the bottom bar sticks) exactly as if the wrappers weren't there. */
+.session-side,
+.session-main {
+  display: contents;
+}
+
+/* Two columns: laptops, desktops and landscape tablets (900px wide or more, landscape), and
+   landscape phones (any width, under 500px tall). A portrait tablet, even a large one, keeps the
+   single column. Only index.html (.app-timer); the other pages keep their 600px column.
+   See "Layout (screen sizes)" in the README. */
+@media (min-width: 900px) and (orientation: landscape), (orientation: landscape) and (max-height: 500px) {
+  .app-timer {
+    max-width: 1200px;
+  }
+
+  /* Setup: only step 1 (the character grid) uses the full width. Everything else keeps today's
+     600px column, centred, so lines of text don't get long. Same for the summary and the
+     "open in another tab" notice. */
+  #setupScreen > :not(#characterStep),
+  #summaryScreen,
+  #elsewhereScreen {
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* As many cards per row as fit (7 on a laptop, 5 on a landscape phone), each at least 150px
+     wide: about the width of a card on a 320px phone today. */
+  .character-list {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+
+  /* Session: the character on the left, the timer and buttons on the right, vertically centred.
+     position: relative: landscape phones place the category picker and the motivation card over
+     the character column (below). */
+  #sessionScreen {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 40px;
+    align-items: center;
+  }
+
+  /* The full height of the screen minus the page's top and bottom padding (24px + 40px), so the
+     page doesn't scroll. svh = the height while the browser's address bar is showing (vh is the
+     fallback for older browsers). */
+  .session-side {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 64px);
+    height: calc(100svh - 64px);
+    min-height: 280px;
+  }
+
+  /* The character gets whatever height is left under the info line and notes. */
+  .session-side .stage {
+    position: relative;
+    flex: 1 1 0;
+    min-height: 80px;
+  }
+
+  /* Fills the stage, scaled to fit inside it whatever the art's aspect ratio: never cropped or
+     stretched (object-fit: contain). Anchored at the bottom, where the animations pivot.
+     Absolute, so the image's own size never makes the stage taller. */
+  #sessionImg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: 50% 100%;
+  }
+
+  .session-main {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 520px;
+    justify-self: center;
+  }
+
+  .timer {
+    font-size: clamp(4rem, 6vw, 5.5rem);
+  }
+
+  /* Only as wide as its column now, not the whole screen. */
+  .session-bar {
+    margin: 24px 0 0;
+    padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+  }
+}
+
+/* Landscape phones: height is the tight dimension. Everything is tighter, so the timer, both rows
+   of distraction buttons and the bottom bar fit without scrolling in about 250px (a 740x360 phone
+   in Chrome with the address bar showing has about 265px). The category picker and the motivation
+   card take the distraction buttons' place instead of pushing anything down (see below). */
+@media (orientation: landscape) and (max-height: 500px) {
+  .app-timer {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  #sessionScreen {
+    grid-template-columns: 40% minmax(0, 1fr);
+    column-gap: 20px;
+  }
+
+  .session-side {
+    height: calc(100vh - 16px);
+    height: calc(100svh - 16px);
+    min-height: 0;
+  }
+
+  .session-info {
+    margin-bottom: 4px;
+  }
+
+  .screen-note {
+    margin: 0 0 4px;
+  }
+
+  .timer-block {
+    margin: 0 0 6px;
+  }
+
+  .timer {
+    font-size: 2.5rem;
+    line-height: 1.1;
+  }
+
+  .distraction h2 {
+    font-size: 1rem;
+    margin-bottom: 6px;
+  }
+
+  .distraction-buttons {
+    gap: 6px;
+  }
+
+  /* Advanced: four per row even in a narrow column (568x320), so the seven lengths stay on two rows. */
+  .distraction-buttons.advanced {
+    grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+  }
+
+  /* Still at least 44px tall. */
+  .btn.level {
+    padding-top: 9px;
+    padding-bottom: 9px;
+  }
+
+  /* The right column is a grid of three rows: the timer, the "block" (the distraction buttons with
+     their question) and the bar's buttons. The category picker and the motivation card are placed
+     exactly over the block, so they take the distraction buttons' place: the block keeps its
+     height and the timer and the bar never move. Everything fits the screen, so the bar doesn't
+     need to stick: it has no box of its own here (display: contents), and its picker, Motivate me
+     / Undo and End session become cells of this grid. */
+  .session-main {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "timer timer"
+      "block block"
+      "left right";
+    column-gap: 8px;
+  }
+
+  .timer-block {
+    grid-area: timer;
+  }
+
+  .distraction {
+    grid-area: block;
+  }
+
+  .session-bar {
+    display: contents;
+  }
+
+  .session-bar > .btn {
+    margin-top: 8px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  /* Motivate me and Undo share one cell: only one of them is ever shown. */
+  #motivateButton,
+  #undoButton {
+    grid-area: left;
+  }
+
+  #endButton {
+    grid-area: right;
+  }
+
+  /* Over the block, exactly its size (absolute, so they never make it taller). The picker wins
+     over the card: app.js closes the card when the picker opens, and a card opened while the
+     picker is showing waits under it. */
+  .category-picker,
+  .motivation-card {
+    grid-area: block;
+    position: absolute;
+    inset: 0;
+    margin: 0;
+  }
+
+  .motivation-card {
+    z-index: 1;
+  }
+
+  .category-picker {
+    z-index: 2;
+  }
+
+  /* The distraction buttons under them keep their space but can't be seen, tapped, focused or read
+     out; they're back as soon as the picker closes (a category, Skip or its auto-close) and the
+     card is closed with its ×. */
+  .session-main:has(> .motivation-card:not([hidden])) .distraction,
+  .session-main:has(.category-picker:not([hidden])) .distraction {
+    visibility: hidden;
+  }
+
+  /* The picker in the block's ~120px, laid out like the block it replaces: the question on top,
+     the six categories in two rows of three, and Skip on the right, as tall as both rows (still a
+     plain grey button). Its head and button row have no box of their own here. No card frame:
+     there's no room for one, and it stands where the distraction buttons were. */
+  .category-picker {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+    gap: 6px;
+    align-content: start;
+    padding: 0;
+    background: var(--bg);
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
+  }
+
+  .category-head,
+  .category-buttons {
+    display: contents;
+  }
+
+  /* Same size and spacing as the question it replaces ("Got distracted? How much?"). */
+  .category-prompt {
+    grid-column: 1 / -1;
+    font-size: 1rem;
+    line-height: 1.2;
+    text-align: center;
+  }
+
+  .category-picker .skip-btn {
+    grid-column: 4;
+    grid-row: 2 / span 2;
+    min-width: 60px;
+  }
+
+  /* A touch smaller, so "Thoughts" fits a third of the picker even on a 568x320 phone. */
+  .category-buttons .btn {
+    padding: 8px 2px;
+    font-size: 0.9375rem;
+  }
+
+  /* The card fills the block. If its message doesn't fit, app.js (fitMotivationCard) makes the
+     text a step smaller (fit-1, then fit-2); if even that doesn't fit, it scrolls inside the card.
+     It never grows the block, so it can't push the bar off the screen. */
+  .motivation-card {
+    padding: 8px 44px 8px 12px;
+    font-size: 0.9375rem;
+    overflow-y: auto;
+  }
+
+  .motivation-card.fit-1 {
+    font-size: 0.875rem;
+  }
+
+  .motivation-card.fit-2 {
+    font-size: 0.8125rem;
+  }
+
+  .motivation-card p {
+    margin-top: 2px;
+  }
+
+  /* index.html's dialogs (they follow its <main>; history.html's keep their look): less padding,
+     and anything taller than the screen scrolls inside the dialog. */
+  .app-timer ~ dialog {
+    padding: 16px;
+    max-height: calc(100vh - 16px);
+    max-height: calc(100svh - 16px);
+    overflow-y: auto;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .char-img,
   .stage {
     animation: none !important;
+  }
+
+  .editor-group > summary::after {
+    transition: none;
   }
 }

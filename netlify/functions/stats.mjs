@@ -1,5 +1,7 @@
 // GET /api/stats
-// Popularity of every character, plus which ones would be paid.
+// Popularity of every built-in character, plus which ones would be paid. Custom characters (all
+// counted under "custom") come separately in customPicks: they're always paid, so they're left out
+// of the ranking and of the character count.
 
 import { CHARACTERS } from "../lib/characters.mjs";
 import { picksStore, storeKind, utcDay } from "../lib/picks-store.mjs";
@@ -26,6 +28,8 @@ export default async (req, context) => {
       return { id: character.id, name: character.name, recentPicks, totalPicks };
     })
   );
+  const custom = rows.find((row) => CHARACTERS.find((c) => c.id === row.id).custom);
+  rows.splice(rows.indexOf(custom), 1);
   rows.sort(
     (a, b) =>
       b.recentPicks - a.recentPicks ||
@@ -43,6 +47,7 @@ export default async (req, context) => {
       store: storeKind(context),
       characters: rows,
       paidCharacterIds: rows.slice(0, paidCount).map((row) => row.id),
+      customPicks: { recentPicks: custom.recentPicks, totalPicks: custom.totalPicks },
     },
     // Let browsers/CDN reuse the answer for a minute instead of reading the store every time.
     { headers: { "cache-control": "public, max-age=60" } }

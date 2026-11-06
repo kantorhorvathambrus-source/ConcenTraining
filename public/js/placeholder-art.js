@@ -1,4 +1,5 @@
 // Draws simple SVG stand-in art for characters that don't have real artwork yet.
+// The eyes, brows, mouths and extras here are shared with custom characters (avatar-art.js).
 // Every character gets all 9 poses in its own personality (see personalityOf in
 // characters.js), so the app is fully usable before the real images are finished.
 
@@ -58,6 +59,10 @@ const ART_EXPRESSIONS = {
 // front (things worn around the neck), face, hair (beards too, so the eyes and mouth
 // are always drawn on top of them), face parts, glasses.
 // poses (optional) replaces some of the personality's poses for this one character.
+// head (optional) is drawn instead of the skin-coloured neck and face oval, for a character
+// whose head isn't a head (Your Phone: the face is on the screen). The face parts still go on top.
+// The strict "red" flush only colours the default face oval.
+// hands (optional) is the colour of the hands that extras draw (point, clap, ...); default: skin.
 const ART_LOOKS = {
   boss: {
     skin: "#f2c9a0",
@@ -143,6 +148,25 @@ const ART_LOOKS = {
             <rect x="128" y="168" width="10" height="16" rx="5" fill="#5a5a5a"/>`,
     hair: `<path d="M46 98 Q42 42 100 40 Q158 42 154 98 Q148 72 136 64 Q128 76 116 66 Q104 80 90 68 Q78 80 66 68 Q54 78 46 98Z" fill="#3a2618"/>`,
   },
+  "study-partner": {
+    skin: "#8d5a3b",
+    brow: "#1e1410",
+    // A high bun with a pencil pushed through it.
+    back: `<circle cx="100" cy="34" r="21" fill="#1e1410"/>
+           <path d="M84 30 Q100 22 116 32" fill="none" stroke="#3a2a22" stroke-width="2.5"/>
+           <g transform="rotate(-24 100 30)" stroke="#222" stroke-width="1.5">
+             <rect x="66" y="26" width="56" height="8" fill="#f4c430"/>
+             <rect x="60" y="26" width="8" height="8" rx="2" fill="#f28b9a"/>
+             <path d="M122 26 L133 30 L122 34Z" fill="#e8c9a0"/>
+             <path d="M130 28.9 L133 30 L130 31.1Z" fill="#222"/>
+           </g>`,
+    body: `<path d="M18 240 Q22 178 100 172 Q178 178 182 240Z" fill="#7fae8c"/>
+           <path d="M78 175 Q100 192 122 175" fill="none" stroke="#5f8d6c" stroke-width="7"/>
+           <path d="M84 181 L100 188 L92 202Z M116 181 L100 188 L108 202Z" fill="#fff" stroke="#d6d6d6" stroke-width="1.5"/>
+           <path d="M40 206 Q44 222 42 240 M160 206 Q156 222 158 240" fill="none" stroke="#6a9a77" stroke-width="3"/>`,
+    hair: `<path d="M46 100 Q42 44 100 42 Q158 44 154 100 Q152 74 138 64 Q112 54 88 62 Q64 64 54 76 Q48 86 46 100Z" fill="#1e1410"/>
+           <path d="M50 92 Q44 110 52 128 M150 92 Q156 110 148 128" fill="none" stroke="#1e1410" stroke-width="4" stroke-linecap="round"/>`,
+  },
   coach: {
     skin: "#d9a07a",
     brow: "#3b2a1e",
@@ -205,6 +229,43 @@ const ART_LOOKS = {
     hair: `<path d="M46 100 Q42 44 100 42 Q158 44 154 100 Q150 68 120 62 Q100 70 80 62 Q50 68 46 100Z" fill="#262626"/>
            <path d="M46 100 Q44 80 50 70 Q54 84 56 96Z" fill="#a0a0a0"/>
            <path d="M154 100 Q156 80 150 70 Q146 84 144 96Z" fill="#a0a0a0"/>`,
+  },
+  judge: {
+    skin: "#d8a37f",
+    brow: "#9a9a9a",
+    // Black robe with soft pleats.
+    body: `<path d="M18 240 Q22 178 100 172 Q178 178 182 240Z" fill="#151515"/>
+           <path d="M100 196 L100 240" stroke="#2c2c2c" stroke-width="3"/>
+           <path d="M44 198 Q50 220 48 240 M66 190 Q70 216 68 240 M156 198 Q150 220 152 240 M134 190 Q130 216 132 240" fill="none" stroke="#2c2c2c" stroke-width="2.5"/>`,
+    // Gavel in hand. Strict poses only point with the other hand, so it shows in every pose.
+    hand: `<g transform="rotate(-18 44 200)">
+             <rect x="40" y="150" width="8" height="64" rx="3" fill="#8a5a2b" stroke="#222" stroke-width="2"/>
+             <rect x="22" y="136" width="44" height="20" rx="6" fill="#a8703a" stroke="#222" stroke-width="2"/>
+             <path d="M30 136 L30 156 M58 136 L58 156" stroke="#6b4320" stroke-width="3"/>
+           </g>
+           <rect x="30" y="192" width="30" height="24" rx="10" fill="#d8a37f" stroke="#222" stroke-width="2"/>
+           <path d="M36 204 L54 204" fill="none" stroke="#222" stroke-width="2" stroke-linecap="round"/>`,
+    // Wide white collar with two bands.
+    front: `<path d="M64 166 Q100 186 136 166 L140 178 Q100 202 60 178Z" fill="#fff" stroke="#cfcfcf" stroke-width="1.5"/>
+            <path d="M92 186 L99 186 L99 214 L92 212Z M101 186 L108 186 L108 212 L101 214Z" fill="#fff" stroke="#cfcfcf" stroke-width="1.5"/>`,
+    hair: `<path d="M46 98 Q42 42 100 40 Q158 42 154 98 Q152 74 140 64 Q114 58 90 66 Q68 60 56 70 Q48 82 46 98Z" fill="#cdcdcd"/>
+           <path d="M88 44 Q86 56 90 66" fill="none" stroke="#a9a9a9" stroke-width="2.5" stroke-linecap="round"/>`,
+  },
+  sensei: {
+    skin: "#c68e64",
+    brow: "#1f1f1f",
+    // Plain dark gi, left lapel over right, black belt.
+    body: `<path d="M18 240 Q22 178 100 172 Q178 178 182 240Z" fill="#2c3550"/>
+           <path d="M84 176 L100 206 L116 176Z" fill="#c68e64"/>
+           <path d="M117 174 L99 210" stroke="#1d2436" stroke-width="10" stroke-linecap="round"/>
+           <path d="M83 174 L114 226" stroke="#1d2436" stroke-width="10" stroke-linecap="round"/>
+           <path d="M40 196 Q46 214 44 226 M160 196 Q154 214 156 226" fill="none" stroke="#3b4566" stroke-width="2.5"/>
+           <rect x="20" y="222" width="160" height="12" fill="#111"/>
+           <rect x="90" y="218" width="20" height="18" rx="4" fill="#111" stroke="#2c2c2c" stroke-width="1.5"/>
+           <path d="M94 234 L84 240 L92 240 L98 236Z M106 234 L116 240 L108 240 L102 236Z" fill="#111"/>`,
+    hair: `<path d="M48 94 Q46 46 100 44 Q154 46 152 94 Q148 68 100 62 Q52 68 48 94Z" fill="#1f1f1f"/>
+           <path d="M110 47 Q128 50 140 60 Q126 56 110 54Z" fill="#8c8c8c"/>
+           <path d="M90 148 Q100 168 110 148 Q100 155 90 148Z" fill="#2b2b2b"/>`,
   },
   "meditation-guide": {
     skin: "#e2b08a",
@@ -274,6 +335,27 @@ const ART_LOOKS = {
       level4: { eyes: "squeezed", brows: "raised", mouth: "laugh", extras: ["tears"] },
     },
   },
+  // The character is a smartphone: the face is on the screen, and its arms and hands are the colour
+  // of its case (a shade lighter, so they stand out against the case edge).
+  "your-phone": {
+    skin: "#cfe6ff",
+    brow: "#222",
+    hands: "#4a4f5a",
+    body: `<rect x="34" y="8" width="132" height="260" rx="28" fill="#2a2d34"/>
+           <rect x="166" y="64" width="4" height="30" rx="2" fill="#1c1e23"/>
+           <rect x="30" y="58" width="4" height="18" rx="2" fill="#1c1e23"/>
+           <rect x="30" y="82" width="4" height="18" rx="2" fill="#1c1e23"/>`,
+    head: `<rect x="44" y="20" width="112" height="240" rx="18" fill="#cfe6ff"/>
+           <path d="M44 38 Q44 20 62 20 L120 20 Q72 60 44 130Z" fill="#fff" fill-opacity="0.35"/>
+           <rect x="86" y="28" width="28" height="9" rx="4.5" fill="#2a2d34"/>`,
+    // A cracked corner and notification badges (plain dots: characters never show text).
+    hair: `<g fill="none" stroke-linecap="round" stroke-linejoin="round">
+             <path d="M44 44 L56 50 L52 58 L62 64 M56 50 L66 42 M52 58 L44 66" stroke="#7d93ab" stroke-width="3.5"/>
+             <path d="M44 44 L56 50 L52 58 L62 64 M56 50 L66 42 M52 58 L44 66" stroke="#fff" stroke-width="1.5"/>
+           </g>
+           <circle cx="160" cy="16" r="12" fill="#ff3b30" stroke="#fff" stroke-width="3"/>
+           <circle cx="136" cy="8" r="7" fill="#ff3b30" stroke="#fff" stroke-width="2.5"/>`,
+  },
 };
 
 // [outer end y, inner end y] of each eyebrow.
@@ -288,6 +370,9 @@ const BROW_SHAPES = {
 };
 
 const EYE_Y = 102;
+// The built-in face: eye centres (x), eye size, brow thickness and how far the brows sit above
+// their usual place. Custom characters' faces change these (FACES in avatar-parts.js).
+const FACE_GEO = { eyeL: 78, eyeR: 122, eyeScale: 1, browWidth: 5, browDy: 0, tearDy: 0 };
 const LINE = `fill="none" stroke="#222" stroke-linecap="round"`;
 
 function drawEye(cx, type) {
@@ -330,12 +415,16 @@ function drawEye(cx, type) {
   }
 }
 
-function drawBrows(type, color) {
+// geo (optional, custom characters only, see avatar-art.js): where the eyes are and how thick the
+// brows are. Without it the brows are exactly the built-in characters' ones.
+function drawBrows(type, color, geo = FACE_GEO) {
   const [left, right] = Array.isArray(type) ? type : [type, type];
   const [leftOuter, leftInner] = BROW_SHAPES[left] || BROW_SHAPES.flat;
   const [rightOuter, rightInner] = BROW_SHAPES[right] || BROW_SHAPES.flat;
-  const style = `fill="none" stroke="${color}" stroke-width="5" stroke-linecap="round"`;
-  return `<path d="M66 ${leftOuter} L90 ${leftInner}" ${style}/><path d="M110 ${rightInner} L134 ${rightOuter}" ${style}/>`;
+  const dy = geo.browDy;
+  const style = `fill="none" stroke="${color}" stroke-width="${geo.browWidth}" stroke-linecap="round"`;
+  return `<path d="M${geo.eyeL - 12} ${leftOuter + dy} L${geo.eyeL + 12} ${leftInner + dy}" ${style}/>` +
+    `<path d="M${geo.eyeR - 12} ${rightInner + dy} L${geo.eyeR + 12} ${rightOuter + dy}" ${style}/>`;
 }
 
 function drawMouth(type) {
@@ -381,13 +470,14 @@ function drop(x, y) {
   return `<path d="M${x} ${y} Q${x - 6} ${y + 11} ${x} ${y + 14} Q${x + 6} ${y + 11} ${x} ${y}Z" fill="#7ec8ff"/>`;
 }
 
-// skin is the character's skin colour, for the hands.
+// skin is the colour of the hands (the character's hands, or skin when it has none). geo (FACE_GEO
+// by default) moves the blush and the tears with the eyes of a custom character's face.
 const ART_EXTRAS = {
   sparkle: () => star(28, 56, 11) + star(172, 64, 9) + star(162, 28, 6),
-  blush: () => `<ellipse cx="66" cy="122" rx="10" ry="5" fill="#ff7aa2" fill-opacity="0.5"/>
-                <ellipse cx="134" cy="122" rx="10" ry="5" fill="#ff7aa2" fill-opacity="0.5"/>`,
+  blush: (skin, geo = FACE_GEO) => `<ellipse cx="${geo.eyeL - 12}" cy="122" rx="10" ry="5" fill="#ff7aa2" fill-opacity="0.5"/>
+                <ellipse cx="${geo.eyeR + 12}" cy="122" rx="10" ry="5" fill="#ff7aa2" fill-opacity="0.5"/>`,
   sweat: () => drop(160, 66),
-  tears: () => drop(72, 112) + drop(128, 112),
+  tears: (skin, geo = FACE_GEO) => drop(geo.eyeL - 6, 112 + geo.tearDy) + drop(geo.eyeR + 6, 112 + geo.tearDy),
   heart: () => `<path d="M164 66 C150 55 152 43 164 50 C176 43 178 55 164 66Z" fill="#ff4d6d"/>`,
   vein: () => `<g fill="none" stroke="#d62828" stroke-width="4" stroke-linecap="round">
                  <path d="M146 48 Q152 55 146 62"/><path d="M166 48 Q160 55 166 62"/>
@@ -438,7 +528,9 @@ const HAND_BUSY_EXTRAS = ["clap", "crossedArms"];
 const artCache = new Map();
 
 // Returns a data: URL for the given character and pose, drawn in the character's personality.
+// Custom characters are built from their look's layers instead (avatarArt in avatar-art.js).
 function placeholderArt(character, pose) {
+  if (character.custom) return avatarArt(character.look, personalityOf(character), pose);
   const key = `${character.id}/${pose}`;
   if (artCache.has(key)) return artCache.get(key);
 
@@ -455,17 +547,17 @@ function placeholderArt(character, pose) {
     ${look.back || ""}
     ${look.body}
     ${look.hand && !extras.some((name) => HAND_BUSY_EXTRAS.includes(name)) ? look.hand : ""}
-    <rect x="${100 - neckWidth / 2}" y="140" width="${neckWidth}" height="40" fill="${look.skin}"/>
+    ${look.head ? "" : `<rect x="${100 - neckWidth / 2}" y="140" width="${neckWidth}" height="40" fill="${look.skin}"/>`}
     ${look.front || ""}
-    <ellipse cx="100" cy="105" rx="54" ry="60" fill="${look.skin}"/>
-    ${extras.includes("red") ? `<ellipse cx="100" cy="105" rx="54" ry="60" fill="#ff2d2d" fill-opacity="0.3"/>` : ""}
+    ${look.head || `<ellipse cx="100" cy="105" rx="54" ry="60" fill="${look.skin}"/>`}
+    ${extras.includes("red") && !look.head ? `<ellipse cx="100" cy="105" rx="54" ry="60" fill="#ff2d2d" fill-opacity="0.3"/>` : ""}
     ${look.hair}
     ${drawBrows(face.brows, look.brow)}
     ${drawEye(78, leftEye)}
     ${drawEye(122, rightEye)}
     ${drawMouth(face.mouth)}
     ${look.glasses || ""}
-    ${extras.filter((name) => ART_EXTRAS[name]).map((name) => ART_EXTRAS[name](look.skin)).join("")}
+    ${extras.filter((name) => ART_EXTRAS[name]).map((name) => ART_EXTRAS[name](look.hands || look.skin)).join("")}
   </svg>`;
 
   const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
