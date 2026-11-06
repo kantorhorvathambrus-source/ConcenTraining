@@ -2014,6 +2014,304 @@ a {
   }
 }
 
+/* ---------- wide and landscape screens (index.html: setup and session) ---------- */
+
+/* The session screen's two wrappers (index.html). In portrait they make no box of their own, so
+   their children lay out (and the bottom bar sticks) exactly as if the wrappers weren't there. */
+.session-side,
+.session-main {
+  display: contents;
+}
+
+/* Two columns: laptops, desktops and landscape tablets (900px wide or more, landscape), and
+   landscape phones (any width, under 500px tall). A portrait tablet, even a large one, keeps the
+   single column. Only index.html (.app-timer); the other pages keep their 600px column.
+   See "Layout (screen sizes)" in the README. */
+@media (min-width: 900px) and (orientation: landscape), (orientation: landscape) and (max-height: 500px) {
+  .app-timer {
+    max-width: 1200px;
+  }
+
+  /* Setup: only step 1 (the character grid) uses the full width. Everything else keeps today's
+     600px column, centred, so lines of text don't get long. Same for the summary and the
+     "open in another tab" notice. */
+  #setupScreen > :not(#characterStep),
+  #summaryScreen,
+  #elsewhereScreen {
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* As many cards per row as fit (7 on a laptop, 5 on a landscape phone), each at least 150px
+     wide: about the width of a card on a 320px phone today. */
+  .character-list {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+
+  /* Session: the character on the left, the timer and buttons on the right, vertically centred.
+     position: relative: landscape phones place the category picker and the motivation card over
+     the character column (below). */
+  #sessionScreen {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 40px;
+    align-items: center;
+  }
+
+  /* The full height of the screen minus the page's top and bottom padding (24px + 40px), so the
+     page doesn't scroll. svh = the height while the browser's address bar is showing (vh is the
+     fallback for older browsers). */
+  .session-side {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 64px);
+    height: calc(100svh - 64px);
+    min-height: 280px;
+  }
+
+  /* The character gets whatever height is left under the info line and notes. */
+  .session-side .stage {
+    position: relative;
+    flex: 1 1 0;
+    min-height: 80px;
+  }
+
+  /* Fills the stage, scaled to fit inside it whatever the art's aspect ratio: never cropped or
+     stretched (object-fit: contain). Anchored at the bottom, where the animations pivot.
+     Absolute, so the image's own size never makes the stage taller. */
+  #sessionImg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: 50% 100%;
+  }
+
+  .session-main {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 520px;
+    justify-self: center;
+  }
+
+  .timer {
+    font-size: clamp(4rem, 6vw, 5.5rem);
+  }
+
+  /* Only as wide as its column now, not the whole screen. */
+  .session-bar {
+    margin: 24px 0 0;
+    padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+  }
+}
+
+/* Landscape phones: height is the tight dimension. Everything is tighter, so the timer, both rows
+   of distraction buttons and the bottom bar fit without scrolling in about 250px (a 740x360 phone
+   in Chrome with the address bar showing has about 265px). The category picker and the motivation
+   card take the distraction buttons' place instead of pushing anything down (see below). */
+@media (orientation: landscape) and (max-height: 500px) {
+  .app-timer {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  #sessionScreen {
+    grid-template-columns: 40% minmax(0, 1fr);
+    column-gap: 20px;
+  }
+
+  .session-side {
+    height: calc(100vh - 16px);
+    height: calc(100svh - 16px);
+    min-height: 0;
+  }
+
+  .session-info {
+    margin-bottom: 4px;
+  }
+
+  .screen-note {
+    margin: 0 0 4px;
+  }
+
+  .timer-block {
+    margin: 0 0 6px;
+  }
+
+  .timer {
+    font-size: 2.5rem;
+    line-height: 1.1;
+  }
+
+  .distraction h2 {
+    font-size: 1rem;
+    margin-bottom: 6px;
+  }
+
+  .distraction-buttons {
+    gap: 6px;
+  }
+
+  /* Advanced: four per row even in a narrow column (568x320), so the seven lengths stay on two rows. */
+  .distraction-buttons.advanced {
+    grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+  }
+
+  /* Still at least 44px tall. */
+  .btn.level {
+    padding-top: 9px;
+    padding-bottom: 9px;
+  }
+
+  /* The right column is a grid of three rows: the timer, the "block" (the distraction buttons with
+     their question) and the bar's buttons. The category picker and the motivation card are placed
+     exactly over the block, so they take the distraction buttons' place: the block keeps its
+     height and the timer and the bar never move. Everything fits the screen, so the bar doesn't
+     need to stick: it has no box of its own here (display: contents), and its picker, Motivate me
+     / Undo and End session become cells of this grid. */
+  .session-main {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "timer timer"
+      "block block"
+      "left right";
+    column-gap: 8px;
+  }
+
+  .timer-block {
+    grid-area: timer;
+  }
+
+  .distraction {
+    grid-area: block;
+  }
+
+  .session-bar {
+    display: contents;
+  }
+
+  .session-bar > .btn {
+    margin-top: 8px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  /* Motivate me and Undo share one cell: only one of them is ever shown. */
+  #motivateButton,
+  #undoButton {
+    grid-area: left;
+  }
+
+  #endButton {
+    grid-area: right;
+  }
+
+  /* Over the block, exactly its size (absolute, so they never make it taller). The picker wins
+     over the card: app.js closes the card when the picker opens, and a card opened while the
+     picker is showing waits under it. */
+  .category-picker,
+  .motivation-card {
+    grid-area: block;
+    position: absolute;
+    inset: 0;
+    margin: 0;
+  }
+
+  .motivation-card {
+    z-index: 1;
+  }
+
+  .category-picker {
+    z-index: 2;
+  }
+
+  /* The distraction buttons under them keep their space but can't be seen, tapped, focused or read
+     out; they're back as soon as the picker closes (a category, Skip or its auto-close) and the
+     card is closed with its ×. */
+  .session-main:has(> .motivation-card:not([hidden])) .distraction,
+  .session-main:has(.category-picker:not([hidden])) .distraction {
+    visibility: hidden;
+  }
+
+  /* The picker in the block's ~120px, laid out like the block it replaces: the question on top,
+     the six categories in two rows of three, and Skip on the right, as tall as both rows (still a
+     plain grey button). Its head and button row have no box of their own here. No card frame:
+     there's no room for one, and it stands where the distraction buttons were. */
+  .category-picker {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+    gap: 6px;
+    align-content: start;
+    padding: 0;
+    background: var(--bg);
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
+  }
+
+  .category-head,
+  .category-buttons {
+    display: contents;
+  }
+
+  /* Same size and spacing as the question it replaces ("Got distracted? How much?"). */
+  .category-prompt {
+    grid-column: 1 / -1;
+    font-size: 1rem;
+    line-height: 1.2;
+    text-align: center;
+  }
+
+  .category-picker .skip-btn {
+    grid-column: 4;
+    grid-row: 2 / span 2;
+    min-width: 60px;
+  }
+
+  /* A touch smaller, so "Thoughts" fits a third of the picker even on a 568x320 phone. */
+  .category-buttons .btn {
+    padding: 8px 2px;
+    font-size: 0.9375rem;
+  }
+
+  /* The card fills the block. If its message doesn't fit, app.js (fitMotivationCard) makes the
+     text a step smaller (fit-1, then fit-2); if even that doesn't fit, it scrolls inside the card.
+     It never grows the block, so it can't push the bar off the screen. */
+  .motivation-card {
+    padding: 8px 44px 8px 12px;
+    font-size: 0.9375rem;
+    overflow-y: auto;
+  }
+
+  .motivation-card.fit-1 {
+    font-size: 0.875rem;
+  }
+
+  .motivation-card.fit-2 {
+    font-size: 0.8125rem;
+  }
+
+  .motivation-card p {
+    margin-top: 2px;
+  }
+
+  /* index.html's dialogs (they follow its <main>; history.html's keep their look): less padding,
+     and anything taller than the screen scrolls inside the dialog. */
+  .app-timer ~ dialog {
+    padding: 16px;
+    max-height: calc(100vh - 16px);
+    max-height: calc(100svh - 16px);
+    overflow-y: auto;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .char-img,
   .stage {

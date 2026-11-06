@@ -1271,9 +1271,20 @@ function schedulePicker(distraction, button) {
 
 // Announced only when it appears, not when it was already open (after Keep going). Polite, like
 // the reaction's line, so it's read after that one, not over it. Focus stays where it is.
+// On landscape phones the picker takes the distraction buttons' place and wins over the motivation
+// card (they'd share that place): the card closes when the picker opens. If focus was on what the
+// picker now covers (the distraction button just pressed, or the card), it moves to Skip, the
+// picker's first control, so it isn't lost; closing the picker brings it back to that button.
 function showPicker(closeInMs) {
-  if ($("#categoryPicker").hidden) announce(PICKER_ANNOUNCEMENT);
-  $("#categoryPicker").hidden = false;
+  const box = $("#categoryPicker");
+  const card = $("#motivationCard");
+  const compact = box.hidden && isCompactLandscape();
+  const coveredFocus =
+    compact && ($(".distraction").contains(document.activeElement) || card.contains(document.activeElement));
+  if (compact) card.hidden = true;
+  if (box.hidden) announce(PICKER_ANNOUNCEMENT);
+  box.hidden = false;
+  if (coveredFocus) $("#skipCategoryButton").focus({ preventScroll: true });
   picker.closesAt = Date.now() + closeInMs;
   picker.hideTimer = setTimeout(() => closePicker(true), closeInMs);
 }
@@ -1309,6 +1320,8 @@ function pickCategory(id) {
 // Focus inside it (a category or Skip was tapped) goes back to the distraction button that was
 // tapped, or to the heading above the buttons if that one is disabled now (Advanced mode), so
 // it isn't lost. Before the restart question, so focus comes back there when that closes.
+// On landscape phones, if the motivation card is open (it waited under the picker), the buttons
+// stay covered by it, so focus goes to the card's × instead.
 function closePicker(thenAsk) {
   clearTimeout(picker.showTimer);
   clearTimeout(picker.hideTimer);
@@ -1318,7 +1331,12 @@ function closePicker(thenAsk) {
   if (announcer.text === PICKER_ANNOUNCEMENT) clearAnnouncement();
   if (hadFocus) {
     const button = picker.returnFocus;
-    const target = button && button.isConnected && !button.disabled ? button : $("#distractionPrompt");
+    const covered = isCompactLandscape() && !$("#motivationCard").hidden;
+    const target = covered
+      ? $("#motivationClose")
+      : button && button.isConnected && !button.disabled
+        ? button
+        : $("#distractionPrompt");
     target.focus({ preventScroll: true });
   }
   picker.distraction = null;
@@ -2047,9 +2065,45 @@ function onMotivateClick() {
 
 // On short screens the card opens under the sticky bottom bar, so scroll it up
 // just far enough to sit 12px above the bar (which is taller while the picker is open).
+// Not on landscape phones: there the card takes the distraction buttons' place, above the bar.
 function scrollMotivationIntoView() {
+  if (isCompactLandscape()) return;
   const overlap = $("#motivationCard").getBoundingClientRect().bottom - ($(".session-bar").getBoundingClientRect().top - 12);
   if (overlap > 0) window.scrollBy({ top: overlap, behavior: "smooth" });
+}
+
+// ---------- landscape phones ----------
+
+// The compact layout in style.css ("Layout (screen sizes)" in the README): the category picker
+// and the motivation card take the distraction buttons' place in the right column, so only one
+// of them can be seen at a time. The layout itself is CSS; these only cover what CSS can't:
+// which one wins (showPicker), where focus goes (closePicker) and the card's text size.
+const COMPACT_LANDSCAPE = matchMedia("(orientation: landscape) and (max-height: 500px)");
+
+function isCompactLandscape() {
+  return COMPACT_LANDSCAPE.matches;
+}
+
+// The card is exactly the size of the distraction buttons' block there. If its message doesn't
+// fit, the text gets a step smaller (fit-1, then fit-2 in style.css); if even that doesn't
+// fit, the card scrolls inside itself. Never the other way round: it can't push the bar down.
+const CARD_FIT_STEPS = ["fit-1", "fit-2"];
+
+function fitMotivationCard() {
+  const card = $("#motivationCard");
+  card.classList.remove(...CARD_FIT_STEPS);
+  if (card.hidden || !isCompactLandscape()) return;
+  for (const step of CARD_FIT_STEPS) {
+    if (card.scrollHeight <= card.clientHeight) return;
+    card.classList.remove(...CARD_FIT_STEPS);
+    card.classList.add(step);
+  }
+}
+
+// Again whenever the card's size changes: rotating the phone, or a new message (showMotivation).
+function initMotivationFit() {
+  if (typeof ResizeObserver === "function") new ResizeObserver(fitMotivationCard).observe($("#motivationCard"));
+  if (typeof COMPACT_LANDSCAPE.addEventListener === "function") COMPACT_LANDSCAPE.addEventListener("change", fitMotivationCard);
 }
 
 function showMotivation() {
@@ -2059,6 +2113,7 @@ function showMotivation() {
   $("#motivationBadge").dataset.type = message.type;
   $("#motivationText").textContent = message.text;
   $("#motivationCard").hidden = false;
+  fitMotivationCard();
 }
 
 // ---------- summary ----------
@@ -2167,6 +2222,7 @@ function init() {
   initLeaveReminder();
   cancelLeaveReminder(); // e.g. its tap reopened the app after the browser discarded the page
   buildCategoryButtons();
+  initMotivationFit();
   setupPicker = durationPicker($("#setupDuration"), prefs.minutes);
   // Capture phase, so the count goes up before the press moves focus (see pressCount).
   for (const type of ["pointerdown", "keydown"]) document.addEventListener(type, () => pressCount++, true);
