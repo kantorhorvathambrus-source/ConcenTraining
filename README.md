@@ -46,8 +46,9 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   first screen.
 - **Setup:** 1. pick a character, 2. a mode (Simple / Advanced), 3. a focus duration.
   The character decides the personality (see below). While custom characters are on
-  (`CUSTOM_CHARACTERS_ENABLED`, off for launch, but always on on Netlify's test sites), the last card of step 1 is **Create your own**,
-  and characters you made appear under the grid in **Your characters** (see
+  (`CUSTOM_CHARACTERS_ENABLED`, now on in production, and always on on Netlify's test sites), the
+  last card of step 1 is **Create your own**, and characters you made appear under the grid in
+  **Your characters** (see
   [Custom characters](#custom-characters)). Ragebait characters show a warning before
   they can be selected. Selecting a card only updates which card is pressed (`aria-pressed`), so
   keyboard and screen reader focus stays on it, also after the ragebait warning (**Bring it on** or
@@ -625,8 +626,12 @@ the user picks it when creating the character, and from then on it belongs to th
 ### The switch (`CUSTOM_CHARACTERS_ENABLED`)
 
 The whole feature is behind one switch, `CUSTOM_CHARACTERS_ENABLED` at the top of
-`public/js/custom-characters.js`. It is **`false` for launch**. Everything below describes the
-feature as it works while it's on.
+`public/js/custom-characters.js`. It is now **`true`**: custom characters are on in production.
+Everything below describes the feature as it works while it's on.
+
+**The plan:** this isn't final yet. The switch is meant to go back to `false` until the final
+character art is ready, and part 2 (exporting and importing the characters themselves, see
+**Export** below) is to be finished before custom characters are switched on for good.
 
 **Where it's on:** the switch decides on the production site (concentraining.netlify.app and any
 later custom domain), on the GitHub Pages backup, on `localhost` and under `netlify dev`. On
@@ -655,8 +660,8 @@ While they're off:
 - **A session that's already running** with a custom character (started while they were on)
   keeps running with that character after a reload.
 
-To switch the feature on, set it to `true`. Nothing else needs to change: no saved data, no
-backend, no service worker version (the file's name stays the same).
+To switch the feature off or on, set it to `false` or `true`. Nothing else needs to change: no
+saved data, no backend, no service worker version (the file's name stays the same).
 
 ### On the setup screen
 
@@ -933,9 +938,10 @@ sports face guard.
 - **Picks:** every custom character counts as `"custom"` in `POST /api/picks`; the user's own ids
   and names never leave the device. See [Popularity stats](#popularity-stats-backend).
 - **Export:** the history export includes these sessions (with `characterName`), but not yet the
-  characters themselves. That's part 2 of custom characters, which waits until the feature is
-  switched on. Each character's `look` is exported and imported as a whole and goes through
-  `cleanLook`, so look fields added later (and older files without them) work without extra code.
+  characters themselves. That's part 2 of custom characters, which is to be finished before the
+  feature is switched on for good. Each character's `look` is exported and imported as a whole
+  and goes through `cleanLook`, so look fields added later (and older files without them) work
+  without extra code.
 
 ### Paid characters (plan for December)
 
