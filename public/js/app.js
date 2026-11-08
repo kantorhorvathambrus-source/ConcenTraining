@@ -24,6 +24,8 @@ const ANNOUNCE_DELAY_MS = 100;
 const ANNOUNCE_CLEAR_MS = 5000;
 const PICKER_ANNOUNCEMENT = "What distracted you? Choose below, or skip.";
 const UNDO_ANNOUNCEMENT = "Distraction undone.";
+const PAUSED_ANNOUNCEMENT = "Paused";
+const RESUMED_ANNOUNCEMENT = "Resumed";
 // Page hidden (another app, another tab, locked screen) for at least this long during a session:
 // on return the app asks whether it was a distraction. Shorter absences are ignored.
 // AWAY_MIN_MS is in history-store.js, because imports check away distractions against it.
@@ -145,7 +147,9 @@ delete prefs.style; // saved before personalities came from the character; dropp
 // leftAt: set while the page is hidden, cleared on return (see "time away"). Saved, so a page the
 // browser discarded in the background still asks after the reload. Never goes into the history.
 // characterName: only for custom characters, so a renamed or deleted one keeps its name in old sessions.
-let session = null; // { characterId, characterName, style, mode, durationMs, startedAt, distractions: [], endedAt, restartPending, leftAt }
+// pausedAt: when the current break started (Stop → Take a break), null while running. pauses: the
+// breaks that are over, [{ at, ms }]. Sessions saved before breaks existed have neither: never paused.
+let session = null; // { characterId, characterName, style, mode, durationMs, startedAt, distractions: [], endedAt, restartPending, leftAt, pausedAt, pauses: [] }
 let tickTimer = 0;
 let nextGoodAt = 0;
 let saveErrorNoteTimer = 0;
@@ -418,12 +422,13 @@ const wakeLock = { sentinel: null, pending: false };
 
 function wakeLockWanted() {
   return Boolean(
-    prefs.keepScreenOn && session && !session.endedAt &&
+    prefs.keepScreenOn && session && !session.endedAt && !session.pausedAt &&
     !$("#sessionScreen").hidden && document.visibilityState === "visible",
   );
 }
 
-// Holds the lock while a session is on screen, releases it everywhere else. Called on every
+// Holds the lock while a session is on screen, releases it everywhere else and during a break
+// (a screen that turns off then changes nothing; Resume takes it back). Called on every
 // screen change, when the page becomes visible again (the browser drops the lock while it's
 // hidden) and on taps during a session (a reload may be refused until the first tap).
 // Unsupported or refused: the session carries on without it (and the note below shows).
@@ -462,11 +467,15 @@ async function updateWakeLock() {
 function updateScreenNote() {
   const note = $("#screenNote");
   const running = Boolean(session && !session.endedAt && !$("#sessionScreen").hidden);
+  // During a break it doesn't apply (the screen may turn off then): invisible, but it keeps its
+  // space, so the screen doesn't move when the break starts or ends. Resume brings it back as it was.
+  const paused = running && Boolean(session.pausedAt);
+  note.style.visibility = paused ? "hidden" : "";
   if (!running || !prefs.endSound) {
     note.hidden = true;
     return;
   }
-  if (wakeLock.pending || document.visibilityState !== "visible") return;
+  if (paused || wakeLock.pending || document.visibilityState !== "visible") return;
   note.hidden = Boolean(wakeLock.sentinel);
 }
 
@@ -1083,6 +1092,8 @@ function startSession(character, mode, minutes) {
     startedAt: Date.now(),
     distractions: [],
     endedAt: null,
+    pausedAt: null,
+    pauses: [],
   };
   save(SESSION_KEY, session);
   enterSession();
@@ -1120,6 +1131,7 @@ function enterSession() {
   motivation.phase = null;
   $("#motivationCard").hidden = true;
   nextGoodAt = Date.now() + GOOD_EVERY_MS;
+  updatePausedView(); // a session reloaded or taken over during a break comes back paused
 
   showScreen("sessionScreen");
   mountStage(character);
@@ -1135,12 +1147,20 @@ function enterSession() {
 function tick() {
   if (!session || session.endedAt) return;
   const now = Date.now();
-  const elapsed = Math.min(now - session.startedAt, session.durationMs);
+  const elapsed = activeElapsed(session, now);
   const remaining = session.durationMs - elapsed;
 
   const clock = formatClock(remaining);
   $("#timer").textContent = clock;
   $("#progressBar").style.width = `${(elapsed / session.durationMs) * 100}%`;
+
+  // During a break the clock stands still and only the break counter moves: no motivation phase,
+  // no "doing well" pose, and the session can't run out.
+  if (session.pausedAt) {
+    $("#breakClock").textContent = formatBreak(now - session.pausedAt);
+    document.title = `Paused · ${BASE_TITLE}`;
+    return;
+  }
   document.title = `${clock} · ${BASE_TITLE}`;
 
   updateMotivationPhase(elapsed);
@@ -1181,7 +1201,7 @@ function addDistraction(distraction, askRestart) {
 // no lengths, so nothing changes there.
 function updateLengthButtons() {
   if (!session || session.mode !== "advanced") return;
-  const elapsed = Math.min(Date.now() - session.startedAt, session.durationMs);
+  const elapsed = activeElapsed(session);
   const logged = session.distractions.reduce((sum, d) => sum + (d.ms || 0), 0);
   const free = elapsed - logged;
   $("#distractionButtons").querySelectorAll("button").forEach((button, i) => {
@@ -1192,7 +1212,7 @@ function updateLengthButtons() {
 
 // ---------- undo ----------
 
-// Undo sits in Motivate me's cell, so End session stays where it is the whole time. The seconds
+// Undo sits in Motivate me's cell, so Stop stays where it is the whole time. The seconds
 // left are shown on the button itself ("Undo · 4"), not as a bar, so they can't be mistaken
 // for a time limit on the category picker right above it.
 // Undo only applies to the latest distraction: a newer tap moves it there and restarts the window.
@@ -1223,7 +1243,7 @@ function closeUndo(thenAsk) {
   const button = $("#undoButton");
   const hadFocus = document.activeElement === button;
   button.hidden = true;
-  $("#motivateButton").hidden = false;
+  $("#motivateButton").hidden = Boolean(session && session.pausedAt); // Resume has the cell during a break
   if (hadFocus) $("#motivateButton").focus(); // keyboard focus stays in the same spot
   if (thenAsk) askPendingRestart();
 }
@@ -1289,7 +1309,7 @@ function showPicker(closeInMs) {
   picker.hideTimer = setTimeout(() => closePicker(true), closeInMs);
 }
 
-// While End session's question is open, the picker's timers are stopped: its safety close
+// While Stop's question is open, the picker's timers are stopped: its safety close
 // would ask a waiting continue/restart question, which must not open on top of that dialog.
 // The picker stays (behind the dialog, where it can't be tapped) and keeps its distraction,
 // so a waiting continue/restart question keeps waiting for it, as before.
@@ -1300,6 +1320,7 @@ function pausePicker() {
 
 // After Keep going: the picker is back as it was, with the time it had left. If its safety
 // close would have happened in the meantime, it closes now instead (category stays null).
+// (Take a break closes it as Skip instead: see takeBreak.)
 function resumePicker() {
   if (!picker.distraction || !session || session.endedAt) return;
   if ($("#categoryPicker").hidden) showPicker(PICKER_AUTO_CLOSE_MS); // End was tapped before it appeared
@@ -1344,10 +1365,13 @@ function closePicker(thenAsk) {
   if (thenAsk) askPendingRestart();
 }
 
-// Waits while the category picker is open (or about to open), the Undo window is open, or
-// the time away card is open or waiting: closing any of them calls this again.
+// Waits while the category picker is open (or about to open), the Undo window is open, the time
+// away card is open or waiting, or during a break: closing any of them (or Resume) calls this again.
 function askPendingRestart() {
-  if (session && session.restartPending && !picker.distraction && !undo.distraction && !away.ms) {
+  if (
+    session && session.restartPending && !session.pausedAt &&
+    !picker.distraction && !undo.distraction && !away.ms
+  ) {
     askContinueOrRestart();
   }
 }
@@ -1424,10 +1448,11 @@ async function askContinueOrRestart() {
   // session is saved as ending right now, so what's shown is what's saved. Only
   // offered when it could be saved at all (same 1-minute rule as finishing).
   const cutAt = Date.now();
-  const canSave = cutAt - session.startedAt >= HISTORY_MIN_MS;
+  const sessionTime = activeElapsed(session, cutAt); // without the breaks
+  const canSave = sessionTime >= HISTORY_MIN_MS;
   $("#restartSaveRow").hidden = !canSave;
   $("#restartSave").checked = true;
-  $("#restartSaveText").textContent = `Save the first ${formatDuration(cutAt - session.startedAt)} to history`;
+  $("#restartSaveText").textContent = `Save the first ${formatDuration(sessionTime)} to history`;
 
   const asked = session;
   const answer = await ask(dialog);
@@ -1454,27 +1479,124 @@ async function askContinueOrRestart() {
   }
 }
 
+// The bar's Stop button (labelled End session during a break). Running, its dialog asks "Stop for
+// now?" and offers Take a break above the divider; the save checkbox below it belongs to ending.
+// During a break pausing is no longer an option: the old "End this session now?" without that part.
 async function onEndClick() {
+  const paused = Boolean(session.pausedAt);
   // Tapped during the Undo window: the distraction stays logged and Undo is over for good (it
   // doesn't come back after Keep going). false: a waiting restart question doesn't open now.
   closeUndo(false);
   // The picker waits behind this dialog, and a waiting restart question waits until it's answered.
   pausePicker();
+  $("#endTitle").textContent = paused ? "End this session now?" : "Stop for now?";
+  $("#endBreak").hidden = paused;
   // "Save this session to your history": only offered when it could be saved at all
-  // (same 1-minute rule as saving). Ticked every time the dialog opens, never remembered.
-  const canSave = Date.now() - session.startedAt >= HISTORY_MIN_MS;
+  // (same 1-minute rule as saving, on session time without breaks). Ticked every time the dialog
+  // opens, never remembered.
+  const canSave = activeElapsed(session) >= HISTORY_MIN_MS;
   $("#endSaveRow").hidden = !canSave;
   $("#endSave").checked = true;
   const asked = session;
   const answer = await ask($("#endDialog"));
   if (session !== asked) return; // another tab took the session over meanwhile (loseControl)
   if (answer === "end" && session && !session.endedAt) {
-    finishSession(Date.now(), !canSave || $("#endSave").checked);
+    // During a break the session ends where the break started: the break isn't session time.
+    finishSession(session.pausedAt || Date.now(), !canSave || $("#endSave").checked);
+  } else if (answer === "break" && session && !session.endedAt && !session.pausedAt && Date.now() < effectiveEnd(session)) {
+    takeBreak();
   } else {
     resumePicker();
     askPendingAway();
     askPendingRestart();
   }
+}
+
+// ---------- break (Stop → Take a break) ----------
+
+// A break is a chosen pause, not a distraction: the clock stops, and the planned end moves later by
+// the length of every break. The break is never session time (pausedTotal in history-store.js).
+// Saved in ct_session_v1 (pausedAt, pauses), so a reload, reopen or another tab's Continue here
+// comes back paused, however long the break has been. While paused: the character stays in its
+// initial pose (blinks and breathing go on, no reactions), the distraction block is replaced by
+// the paused card, Resume takes Motivate me's cell, no leave reminder or time away card, and the
+// screen may turn off. A waiting continue/restart or time away question is asked after Resume.
+
+// The planned end, moved later by the breaks that are over. A running session's clock reaches 0 here.
+function effectiveEnd(s) {
+  return s.startedAt + s.durationMs + pausedTotal(s.pauses);
+}
+
+// Session time so far, without breaks. During a break it stands still at the moment it started.
+function activeElapsed(s, now = Date.now()) {
+  const until = s.pausedAt || now;
+  return Math.min(Math.max(0, until - s.startedAt - pausedTotal(s.pauses)), s.durationMs);
+}
+
+// The paused look (dimmed timer, grey progress bar, paused card, Resume, "End session"), or the
+// running one. Only ever shows or hides elements, so nothing on the screen moves.
+function updatePausedView() {
+  const paused = Boolean(session && session.pausedAt);
+  $("#sessionScreen").classList.toggle("paused", paused);
+  $("#pausedCard").hidden = !paused;
+  $("#resumeButton").hidden = !paused;
+  $("#motivateButton").hidden = paused || Boolean(undo.distraction);
+  $("#endButton").textContent = paused ? "End session" : "Stop";
+  if (paused) {
+    $("#motivationCard").hidden = true;
+    $("#categoryPicker").hidden = true;
+  }
+}
+
+// "Take a break" in Stop's dialog. The break starts now. A picker that was open closes as Skip
+// (its category stays null); the Undo window was already closed by Stop.
+function takeBreak() {
+  closePicker(false);
+  closeUndo(false);
+  session.pausedAt = Date.now();
+  if (!Array.isArray(session.pauses)) session.pauses = [];
+  save(SESSION_KEY, session);
+  cancelLeaveReminder();
+  stopReaction();
+  setPose("initial");
+  updatePausedView();
+  tick();
+  $("#resumeButton").focus({ preventScroll: true });
+  announce(PAUSED_ANNOUNCEMENT);
+  updateWakeLock(); // released: the screen may turn off now
+}
+
+// Resume: the break is saved, the clock runs again from where it stopped and the character shows
+// its refocus pose, as after a distraction. Then what waited for the break is asked.
+function resumeFromBreak() {
+  if (!session || session.endedAt || !session.pausedAt) return;
+  const now = Date.now();
+  const ms = now - session.pausedAt;
+  if (!Array.isArray(session.pauses)) session.pauses = [];
+  if (ms > 0) session.pauses.push({ at: session.pausedAt, ms });
+  session.pausedAt = null;
+  save(SESSION_KEY, session);
+  nextGoodAt = now + GOOD_EVERY_MS;
+  updatePausedView();
+  clearTimeout(stage.reactTimer);
+  stage.reacting = true; // the refocus pose counts as reacting: no blink over it
+  refocus();
+  tick();
+  // The prompt above the distraction buttons, where the session goes on.
+  $("#distractionPrompt").focus({ preventScroll: true });
+  announce(RESUMED_ANNOUNCEMENT);
+  updateWakeLock(); // this tap lets the browser keep the screen on again
+  askPendingAway();
+  askPendingRestart();
+}
+
+// The break counter: "2:14", "1:05:09" from an hour on, counting up with no limit.
+function formatBreak(ms) {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const ss = String(total % 60).padStart(2, "0");
+  return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${ss}` : `${m}:${ss}`;
 }
 
 // ---------- one tab at a time (Web Locks API) ----------
@@ -1572,8 +1694,10 @@ function resumeSavedSession() {
   const character = sessionCharacter(saved);
   session.style = personalityOf(character);
   if (character.custom && !character.ghost) session.characterName = character.name;
+  if (session.pausedAt) delete session.leftAt; // nothing is measured while paused
   save(SESSION_KEY, session);
-  if (Date.now() >= saved.startedAt + saved.durationMs) {
+  // A paused session never runs out: it always comes back paused, however long the break.
+  if (!saved.pausedAt && Date.now() >= effectiveEnd(saved)) {
     onTimerRanOut(false);
   } else {
     enterSession();
@@ -1704,10 +1828,11 @@ function onStorage(event) {
 // ---------- time away ----------
 
 // The page was hidden or shown again. The browser can't tell another app or tab from a locked
-// screen, so the card only says "away". Nothing is ever logged without a tap.
+// screen, so the card only says "away". Nothing is ever logged without a tap. During a break
+// leaving is fine: no leave time is saved and there's no reminder or card.
 function onVisibilityChange() {
   if (!document.hidden) cancelLeaveReminder(); // any way back, also after the session ended meanwhile
-  if (!session || session.endedAt) return;
+  if (!session || session.endedAt || session.pausedAt) return;
   if (document.hidden) noteLeave();
   else noteReturn();
 }
@@ -1742,9 +1867,10 @@ function noteReturn() {
   else askPendingAway();
 }
 
-// An open question (End session, continue/restart) comes first: closing it calls this again.
+// An open question (Stop, continue/restart) comes first: closing it calls this again. During a
+// break it waits for Resume.
 function askPendingAway() {
-  if (!away.ms || away.open || !session || session.endedAt) return;
+  if (!away.ms || away.open || !session || session.endedAt || session.pausedAt) return;
   if (document.querySelector("dialog[open]")) return;
   away.open = true;
   away.yes = false;
@@ -1882,12 +2008,12 @@ async function onLeaveReminderChange() {
 }
 
 // More than AWAY_ASK_AFTER_MS of the session must be left: a session ending sooner gets its chime
-// and summary instead. Only the tab running the session (see "one tab at a time").
+// and summary instead. Only the tab running the session (see "one tab at a time"), never during a break.
 function leaveReminderWanted() {
   return Boolean(
     prefs.leaveReminder && notificationsAllowed() && document.hidden && !leaveReminder.unloading &&
-    session && !session.endedAt && (!locks || control.hold) &&
-    session.startedAt + session.durationMs - Date.now() > AWAY_ASK_AFTER_MS,
+    session && !session.endedAt && !session.pausedAt && (!locks || control.hold) &&
+    effectiveEnd(session) - Date.now() > AWAY_ASK_AFTER_MS,
   );
 }
 
@@ -1959,7 +2085,9 @@ function finishSession(endedAt, keep = true) {
   stopStage();
   closePicker(false);
   closeUndo(false);
-  session.endedAt = Math.min(endedAt, session.startedAt + session.durationMs);
+  // Ended during a break: endedAt is when it started, and that open break isn't kept.
+  session.endedAt = Math.min(endedAt, effectiveEnd(session));
+  session.pausedAt = null;
   const saved = keep ? saveFinishedSession(session) : "";
   if (saved === "saved" || saved === "exists") requestPersistentStorage();
   remove(SESSION_KEY);
@@ -1983,7 +2111,7 @@ function finishSession(endedAt, keep = true) {
 // running: called by the running timer (not on start-up after a reload or reopen).
 // The chime only plays if the end is happening right now, not when someone comes back later.
 function onTimerRanOut(running) {
-  const endedAt = session.startedAt + session.durationMs;
+  const endedAt = effectiveEnd(session);
   const late = Date.now() - endedAt;
   if (late > REOPEN_ASK_AFTER_MS) {
     askSaveLateSession(endedAt);
@@ -2167,6 +2295,12 @@ function renderSummary(saveFailed) {
     textEl.textContent = `Your session ran ${formatDuration(elapsed)}${planned}, ${logged}`;
   }
 
+  // Breaks: one factual line, only when there were any (and not for a short session).
+  const pauses = cleanPauses(session.pauses);
+  const pausesEl = $("#summaryPauses");
+  pausesEl.hidden = short || pauses.length === 0;
+  pausesEl.textContent = pauses.length ? formatPauses(pauses, formatDuration) : "";
+
   // Top 3 picked categories. Hidden if none was picked this session, or if it was short.
   const top = countCategories(session.distractions).slice(0, 3);
   const categoriesEl = $("#summaryCategories");
@@ -2245,6 +2379,7 @@ function init() {
   $("#motivationClose").addEventListener("click", () => ($("#motivationCard").hidden = true));
   $("#endButton").addEventListener("click", onEndClick);
   $("#undoButton").addEventListener("click", onUndoClick);
+  $("#resumeButton").addEventListener("click", resumeFromBreak);
   $("#skipCategoryButton").addEventListener("click", () => closePicker(true));
   $("#newSessionButton").addEventListener("click", () => {
     session = null;

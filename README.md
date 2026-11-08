@@ -8,10 +8,11 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
 ## How it works
 
 - **How it works card:** at the top of the setup screen (above step 1) a short card explains the
-  app in 4 points: pick a character and a timer; when you notice your mind has wandered, tap how much
+  app in 5 points: pick a character and a timer; when you notice your mind has wandered, tap how much
   (Simple) or how long (Advanced), the character reacts with a pose, never with words, and noticing
-  and coming back is the skill being trained; leaving the app during a session brings a "were you
-  distracted?" question; the history is saved automatically on this device, and Export on the
+  and coming back is the skill being trained; to step away for a moment, tap **Stop**, then **Take a
+  break** (the timer waits, and the break doesn't count against your focus); leaving the app during a
+  session brings a "were you distracted?" question; the history is saved automatically on this device, and Export on the
   history page (linked) moves it to another phone. It's shown on the setup screen until **Got it** is tapped (saved as `howItWorksDismissed` in
   `ct_prefs_v1`), then never again by itself. Prefs saved before this existed don't have the key, so
   existing users also see it once. The **How it works** button in the header (next to "Your history
@@ -106,12 +107,14 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
     category or **Skip**, focus goes back to the distraction button you tapped (or to the "Got
     distracted?" heading if that button is disabled now, in Advanced mode), so it isn't lost.
   - **Undo:** "Distraction undone." is read out.
+  - **Break:** "Paused" is read out when a break starts and "Resumed" when it ends. Focus moves to
+    **Resume** after **Take a break**, and to the "Got distracted?" heading after **Resume**.
   - **Images:** the session and summary images have the same descriptions as their alt
     ("Grandma, calm and smiling."), following the pose, so you can check the character any time by
     moving to it. Blinks don't change the alt.
   - **Screens:** when a session starts (Start session, Start on the Quick start card, Start new session, Continue here, or a reload), focus
-    moves to the session info line ("Grandma · Relaxed · Simple · 25 min"); when it ends (End
-    session, timer ran out, Save in "Welcome back"), focus moves to the summary title. Whenever "This session is open in another tab." shows
+    moves to the session info line ("Grandma · Relaxed · Simple · 25 min"); when it ends (Stop →
+    End session, timer ran out, Save in "Welcome back"), focus moves to the summary title. Whenever "This session is open in another tab." shows
     (Start or Quick start while another tab runs the session, opening the app then, another tab's
     **Continue here**, or the setup screen switching by itself), focus moves to that heading
     (`showElsewhere()` in `public/js/app.js`), so it's read out once. Focus moves
@@ -137,7 +140,7 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   come up there in Advanced mode.
 - **Undo:** after any distraction button (both modes), **Motivate me** turns into **Undo** for 5 s
   (`UNDO_WINDOW_MS` in `public/js/app.js`): same place, same size, so nothing on the screen moves,
-  and **End session** stays next to it the whole time. The button counts down the seconds in its
+  and **Stop** stays next to it the whole time. The button counts down the seconds in its
   label ("Undo · 5" … "Undo · 1"), then Motivate me comes back. The countdown is on the button, not
   a bar, so it isn't mistaken for a time limit on the category picker right above it (the picker
   has none). Screen readers hear just "Undo" (the number is hidden from them). If Undo has keyboard
@@ -157,10 +160,11 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   (`PICKER_AUTO_CLOSE_MS`), also with `null`, so it doesn't stay up for the rest of the session
   (both constants are at the top of `public/js/app.js`). Tapping another distraction button replaces
   the picker (the earlier distraction keeps `null`); **Undo**, ending the session and the timer running
-  out close it. Tapping **End session** only pauses it (also during the 5 s Undo window, or before
+  out close it. Tapping **Stop** only holds it (also during the 5 s Undo window, or before
   the picker has appeared: then it appears after **Keep going**, with the full 60 s): it waits behind the question with its 60 s
   stopped, so its safety close can't open the continue/restart question on top of it. After **Keep
-  going** it's back with the time it had left, or closes then if its 60 s would have run out meanwhile. On small phones the open picker covers some of the distraction buttons (never the
+  going** it's back with the time it had left, or closes then if its 60 s would have run out meanwhile.
+  **Take a break** closes it as Skip (`category: null`). On small phones the open picker covers some of the distraction buttons (never the
   character or the timer); tap a category or Skip first, or scroll down, to log another one.
 - **"Totally gone" / "10+ min"** asks: continue this session, or start over with a new duration.
   The question comes in two steps of one dialog, so the duration chips can't be read as "how long
@@ -203,9 +207,17 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   session's own note ("This session won't be saved…", see
   [When the browser won't save](#when-the-browser-wont-save)) shows in that spot instead: only one
   line fits, and it covers the lost first part too.
-- **End session** asks "End this session now?". If the session has run at least 1 minute (measured
-  when the dialog opens), the dialog also has a checkbox: "Save this session to your history",
-  ticked every time the dialog opens (it isn't remembered). Unticked means "this session doesn't
+- **Stop** (the right button of the bottom bar, where End session used to be: same place, style and
+  size) asks "Stop for now?". Under the title is a full-width **Take a break** button with a muted,
+  centred line under it, "The timer waits for you.", then a thin divider. Below the divider, because
+  they belong to ending, not to the break: the save checkbox and **Keep going** / **End session**
+  (End session stays the primary button). One button covers both on purpose: anyone who wants to stop
+  finds the break, without a pause button tempting you on the timer screen all the time. Keyboard focus
+  lands on **Take a break** when the dialog opens. During a break the button reads **End session**
+  and opens the old "End this session now?" dialog, without Take a break, the note and the divider
+  (pausing is no longer an option then). If the session has run at least 1 minute (session time,
+  measured when the dialog opens; breaks don't count), the dialog also has a checkbox: "Save this
+  session to your history", ticked every time the dialog opens (it isn't remembered). Unticked means "this session doesn't
   count": **End session** ends it, saves nothing (and doesn't request persistent storage), and goes
   straight back to the setup screen with no summary, like **Discard** in the "Welcome back" dialog.
   The setup keeps the last character, mode and length. Under 1 minute there's no checkbox (nothing is
@@ -214,13 +226,47 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   Tapped during the 5 s Undo window, it closes Undo first: the distraction stays logged and Undo
   doesn't come back after **Keep going**. A waiting continue/restart question doesn't open on top of
   the dialog; after Keep going it opens once the category picker has closed, as usual.
+- **Take a break:** a chosen pause is not a distraction. The app trains noticing that you drifted
+  away and coming back; a break is a decision, so it's kept separate, never judged, and always shown
+  honestly in the summary and the history.
+  - The clock stops at the tap, so the planned end moves later by the length of every break. A
+    break is never session time: it doesn't count in the elapsed time, the focus %, the result, the
+    stats or the 1-minute rule.
+  - **Paused screen:** the timer digits are dimmed (40%, `--paused-opacity` in `style.css`) and the
+    progress bar turns grey (`--paused-progress`). The distraction block is replaced by a calm card:
+    **Paused** and, under it, "Break · 2:14", counting up from the start of the break (m:ss, h:mm:ss
+    from 1 hour, no upper limit). The card sits exactly over the block, which keeps its space, so
+    nothing on the screen moves (also on landscape phones and wide screens). The motivation card and
+    the category picker are hidden. **Resume** (primary) takes Motivate me's cell, like Undo, and the
+    right button reads **End session**. The tab title is "Paused · ConcenTraining". The change is
+    instant, with no animation.
+  - **Character:** its normal pose. Blinks and breathing go on, but no reactions, no "doing well"
+    pose and no taunts (ragebait included). **Resume** shows the refocus pose for 2.5 s, as after a
+    distraction; the next "doing well" pose comes 5 minutes after Resume.
+  - **Nothing is measured:** leaving the page during a break saves no leave time and brings no time
+    away card and no leave reminder (one that's showing is closed when the break starts). The screen
+    may turn off: the screen lock is released and the "Your screen may turn off" note turns invisible
+    (keeping its space); **Resume** takes the lock back.
+  - **What waits:** a category picker that was open when Stop was tapped closes as Skip on **Take a
+    break** (the Undo window is already over). A waiting continue/restart question or time away card
+    is asked after **Resume**, not during the break.
+  - **End session** during a break ends the session where the break started (`endedAt` is the start
+    of the break), and that last break isn't recorded: it came after the session.
+  - The break is saved with the running session (`pausedAt` and `pauses` in `ct_session_v1`), so a
+    reload, reopening the app or **Continue here** in another tab brings the session back paused,
+    with the counter running from the start of the break, however long it has been. There's no time
+    limit and no question: the paused screen already offers **Resume** and **End session**. The timer
+    never runs out during a break.
+  - **Summary and history:** a session with breaks shows one factual line: "Paused once · 2 min 14
+    sec" on the summary (its usual time format) and "Paused 3 times · 6 min" in the history list
+    (whole minutes, at least 1). Nothing is shown when there were no breaks. Same in both modes.
 - **Time away:** if the page is hidden during a running session (another app, another tab, or a
   locked screen; the browser can't tell these apart, so the wording stays neutral) and you come back
   after at least 15 s (`AWAY_MIN_MS` in `public/js/history-store.js`), a card at the bottom of the
   screen asks "You were away for 2 min 15 sec. Were you distracted?" (measured to the second). Under
   15 s nothing happens. Nothing is ever logged without a tap. With **Remind me if I leave the app**
   on, a system notification also comes as soon as you leave; it doesn't change anything here (see
-  [Leave reminder](#leave-reminder)).
+  [Leave reminder](#leave-reminder)). During a break nothing is measured (see **Take a break** above).
   - While the card is open, the character holds its `level1` pose (no blinking, no "doing well"
     pose) and shows no text.
   - **No, it was for the task** (or Esc) closes it and logs nothing.
@@ -250,7 +296,7 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   - The timer check comes first: if the session ran out while you were away, the end (summary, or the
     "Welcome back" question) happens as before and there's no card. If it runs out while the card is
     open, the card closes and nothing is logged.
-  - If End session's question or the continue/restart question was open when you left, it stays and
+  - If Stop's question or the continue/restart question was open when you left, it stays and
     comes first; the card follows after **Keep going** / **Continue** (and is dropped after **End
     session** or **Start new session**). An open category picker stays as it was (it still belongs to the
     earlier distraction). An open Undo window is closed on return (its 5 s are long over).
@@ -300,14 +346,16 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
 - **Summary screen:** the character's pose, the title and the message follow how the session went
   (see "Summary result" below). It also shows the session's top 3 picked categories, e.g.
   "Most common distractions: Screen (2), Thoughts (1)". Hidden if nothing was picked.
-  Times are shown with seconds when there are any ("24 min 30 sec out of 25 min").
+  Times are shown with seconds when there are any ("24 min 30 sec out of 25 min"). They're session
+  time: breaks aren't included. A session with breaks adds one line, "Paused once · 2 min 14 sec" or
+  "Paused 3 times · 6 min" (see **Take a break**).
   In Advanced mode, a session ended before the timer ran out also shows its planned length:
   "You focused for 28 min out of 30 min (60 min planned), with 2 distractions logged."
   Simple mode shows the character's sentence (see "Summary result" below) and, under it, a factual
   line: "Your session ran 24 min 30 sec (25 min planned), with 3 distractions logged." Simple mode has
   no distraction lengths, so this is the session's length (distractions included), never "focused"
   time; "(… planned)" follows the same rule as in Advanced mode. A session under 1 minute only shows
-  the title and the "not saved" note (no focus %, sentence, factual line or categories).
+  the title and the "not saved" note (no focus %, sentence, factual line, breaks or categories).
 - **Couldn't save:** if the browser refused to store a finished session (storage full or site data
   blocked; usually the setup and session screens already said so, see
   [When the browser won't save](#when-the-browser-wont-save)), the summary adds one red line under the details: "Couldn't save this session to your
@@ -404,7 +452,7 @@ are in `public/js/data/messages.js`.
 - **Keep the screen on:** while a session is on screen, the app asks the browser to keep the screen
   on (the Screen Wake Lock API), so the phone doesn't lock and pause the page. A locked phone pauses
   the page, so without this the chime would rarely play on a phone. The lock is released when the
-  session ends or is stopped, and on the setup and summary screens. The browser drops it whenever the
+  session ends, during a break (Resume takes it back), and on the setup and summary screens. The browser drops it whenever the
   page is hidden (another tab or app), so it's asked for again when the page is visible. After a reload
   the browser may refuse it until the first tap, so taps during a session ask again. Browsers without
   support (or a refused request, e.g. in battery saver mode) just carry on without it. Needs HTTPS,
@@ -417,7 +465,8 @@ are in `public/js/data/messages.js`.
   It disappears as soon as the lock is held (e.g. after the first tap following a reload). It's never
   shown with the sound off, or on the setup and summary screens. While a lock request is out, or the
   page is hidden, it stays as it is, so it doesn't blink on every tap or return (`updateScreenNote()`
-  in `public/js/app.js`).
+  in `public/js/app.js`). During a break it doesn't apply: it turns invisible but keeps its space, so
+  nothing moves when the break starts or ends.
 
 ### Leave reminder
 
@@ -1070,7 +1119,7 @@ never requests hundreds of files that don't exist.
 
 ## Session history (`history.html`)
 
-Every finished session (timer ran out or **End session** pressed) that ran at least 1 minute is saved
+Every finished session (timer ran out, or **Stop** → **End session**) that ran at least 1 minute is saved
 on the device, except one ended with "Save this session to your history" unticked, and one you chose to **Discard** after coming back long after it ended (see above). A session abandoned with **Start over** is saved too, unless its "Save the first …
 to history" checkbox was unticked (see above). The page shows:
 
@@ -1160,7 +1209,7 @@ page again after nothing happened draws nothing, and an Import only draws once (
 
 | Key | What's in it |
 |---|---|
-| `ct_session_v1` | The session that's running right now (removed when it ends). `characterName`: only with a custom character (its name when the session started). `restartPending: true` while the continue/restart question is unanswered; older saved sessions don't have it, which means `false`. `leftAt` (timestamp in ms): only while the page is hidden, for the time away card; missing means the page wasn't left. Never copied into the history |
+| `ct_session_v1` | The session that's running right now (removed when it ends). `characterName`: only with a custom character (its name when the session started). `restartPending: true` while the continue/restart question is unanswered; older saved sessions don't have it, which means `false`. `leftAt` (timestamp in ms): only while the page is hidden, for the time away card; missing means the page wasn't left. Never copied into the history. `pausedAt` (timestamp in ms, or `null`): when the current break started (see **Take a break**). `pauses` (`[{ at, ms }]`): the breaks that are over. Sessions saved before breaks existed have neither, which means never paused |
 | `ct_history_v1` | Finished sessions, newest first, max. 1000 |
 | `ct_custom_characters_v1` | Characters made in the editor: `{ v: 1, characters: [ { id, name, personality, createdAt, look: { gender, skin, hairColor, hairStyle, face, outfit, eyewear, earrings, necklace, facialHair, headwear, mask, earsHorns, costumeBeard, costumeOutfit, back, held, pet } } ] }`. The 8 costume fields are optional: characters saved before costumes don't have them, which means None. `id` is `custom-` plus 10 random letters/digits, never reused (a new id also avoids every id in the history). `personality` is the style its sessions run in. Reading never fails: a broken entry is skipped (not the whole list), an unknown look value gets the default. See [Custom characters](#custom-characters) |
 | `ct_prefs_v1` | Last chosen character, mode and duration, plus `endSound` and `keepScreenOn` (the two setup checkboxes, `true`/`false`). Prefs saved before these existed get `true` for both. `leaveReminder`: the **Remind me if I leave the app** checkbox (see [Leave reminder](#leave-reminder)); prefs saved before it existed get `false`. `homeScreenTipDismissed`: `true` once **Got it** was tapped on the iPhone Home Screen tip. `persistRequested`: `true` once persistent storage was asked for (or skipped in Firefox), see [iPhone storage and the Home Screen app](#iphone-storage-and-the-home-screen-app). Prefs saved before these two existed get `false` for both. `howItWorksDismissed`: `true` once **Got it** was tapped on the How it works card; prefs saved before it existed get `false`, so the card shows once. A `style` value saved by older versions is ignored and dropped. Saved field by field (see [Several tabs](#several-tabs-one-tab-at-a-time)) |
@@ -1172,7 +1221,9 @@ built-in characters and older entries don't have it), `style` (the character's p
 (`null` in Simple mode) and `distractions` (`[{ at, level, ms, category }]`). `category` is
 `"phone"` (shown as "Screen": the phone, other apps or tabs; also what the time away card sets), `"thoughts"`, `"noise"`,
 `"people"`, `"tired"`, `"other"` or `null` (nothing picked). A distraction logged from the time away
-card also has `source: "away"`; tapped ones have no `source` field.
+card also has `source: "away"`; tapped ones have no `source` field. `pauses` (`[{ at, ms }]`: when each
+break started and how long it lasted) is only there when the session had breaks; older entries never
+have it. `elapsedMs` is session time: `endedAt − startedAt` minus the breaks.
 Sessions saved before categories existed have no `category` field; everything that reads it treats
 that as `null`.
 Sessions saved before personalities came from the character keep the style that was chosen then
@@ -1286,7 +1337,7 @@ doesn't do this.
   {
     "app": "ConcenTraining",
     "type": "session-history",
-    "version": 6,
+    "version": 7,
     "exportedAt": "2026-10-28T09:00:00.000Z",
     "sessions": [ /* history entries, newest first */ ]
   }
@@ -1306,7 +1357,13 @@ doesn't do this.
   A session must have valid times, `endedBy`, character id, mode, style, focus % and distractions
   (unknown character ids are fine, so a newer export with new characters still imports), **and
   its numbers must agree with each other** the way the app saves them:
-  - at least 1 minute long (same rule as saving), and `elapsedMs` = `endedAt − startedAt`
+  - at least 1 minute long (same rule as saving), and `elapsedMs` = `endedAt − startedAt` minus the
+    breaks (version 7; before that there are no breaks)
+  - from version 7, `pauses` is missing or a list of breaks: each `at` a time and each `ms` a whole
+    number above 0 ("bad break"), each inside the session ("break outside the session"), in order and
+    not overlapping ("breaks overlap"), and no distraction may fall inside a break ("distraction
+    during a break": the buttons are hidden then). The breaks are taken into account before the times
+    are compared, so a session with breaks that ran to the timer is still `"timer"`
   - `plannedMs` is a whole number of minutes (at least 1), and `elapsedMs` isn't more than it
   - `endedBy` fits the times: `"timer"` ran the full planned time, `"manual"` and `"startOver"`
     less. The allowed values and their rules are in `ENDED_BY_RULES` in
@@ -1336,7 +1393,9 @@ doesn't do this.
   "unknown end reason". Version 5 allows `style: "firm"` (again for the same reason); in version
   1–4 files it's an "unknown style". Version 6 allows time away distractions (`source: "away"` and
   a measured length). Version 1–5 files import exactly as before: a `source` field in them is
-  dropped, and every Advanced distraction must still be 30 sec to 10 min.
+  dropped, and every Advanced distraction must still be 30 sec to 10 min. Version 7 adds the
+  session's breaks (`pauses`, see **Take a break**). Version 1–6 files import exactly as before: a
+  `pauses` field in them is dropped, and `elapsedMs` must be `endedAt − startedAt`.
 - If the session fields ever change again, raise `EXPORT_VERSION` in `public/js/history-store.js`,
   add the new number to `IMPORT_VERSIONS`, and teach the import how to read the older files.
 
@@ -1462,7 +1521,7 @@ A portrait tablet keeps the single column: it has plenty of height, and one colu
 
 **Session screen, two columns.** The character is on the left with the info line ("Grandma ·
 Relaxed · Simple · 25 min") and any notes above it. The timer, "Got distracted?" and its buttons,
-the motivation card and the Motivate me / End session bar are on the right, vertically centred. In
+the motivation card and the Motivate me / Stop bar are on the right, vertically centred. In
 `index.html` these two groups are wrapped in `.session-side` and `.session-main`; in portrait the
 wrappers are `display: contents` (they make no box), so the single column lays out exactly as
 without them. The character fills the left column's height (the screen height minus the page's
@@ -1480,8 +1539,9 @@ skips it on landscape phones).
 
 **Picker and motivation card on landscape phones.** There's no room for them under the buttons,
 so they take the place of the distraction buttons block, the question and its buttons, directly
-above Motivate me / End session. The left column (info line, notes, full-size character) is never
-covered or resized.
+above Motivate me / Stop. The left column (info line, notes, full-size character) is never
+covered or resized. During a break the paused card sits over the same block in the same way (in
+every layout), and **Resume** takes Motivate me's cell, so nothing moves.
 
 - **One place, one thing at a time.** While the picker or the card is shown, the distraction
   buttons are hidden: they can't be seen, tapped, focused or read out, but they keep their space.
@@ -1542,8 +1602,8 @@ and the timer keeps counting from the start time as always.
 | `public/js/avatar-art.js` | Draws a custom character from its layers (SVG, or listed PNGs with skin/hair tint) |
 | `public/js/custom-characters.js` | Saving and reading `ct_custom_characters_v1`, name rules, the 10 limit, `CUSTOM_PAID`, the feature switch `CUSTOM_CHARACTERS_ENABLED` (and `CUSTOM_CHARACTERS_ON`, which is also true on Netlify's test sites), stand-in for deleted characters (used by all three pages and `stats.html`) |
 | `public/js/avatar.js` | The editor on `avatar.html` |
-| `public/js/app.js` | Timer, reaction engine, distraction category picker, Undo, disabled Advanced lengths, time away card, leave reminder notification, motivation rotation, the picker and card in the distraction buttons' place on landscape phones, end chime, screen wake lock and the "screen may turn off" note, summary, How it works card, iPhone Home Screen tip, persistent storage request, one tab at a time (Web Locks) |
-| `public/js/history-store.js` | Saving/loading history, focus % and summary result (with their thresholds), distraction categories, export/import checks, iPhone/iPad and iPhone Safari checks, the "can this browser save?" test (`storageWorks`) (used by both pages) |
+| `public/js/app.js` | Timer, reaction engine, distraction category picker, Undo, Stop and breaks (Take a break / Resume), disabled Advanced lengths, time away card, leave reminder notification, motivation rotation, the picker and card in the distraction buttons' place on landscape phones, end chime, screen wake lock and the "screen may turn off" note, summary, How it works card, iPhone Home Screen tip, persistent storage request, one tab at a time (Web Locks) |
+| `public/js/history-store.js` | Saving/loading history, focus % and summary result (with their thresholds), break totals and the "Paused …" line, distraction categories, export/import checks, iPhone/iPad and iPhone Safari checks, the "can this browser save?" test (`storageWorks`) (used by both pages) |
 | `public/js/history.js` | Streaks, weekly time and focus charts, time of day, distraction categories, session list and backup buttons on `history.html` |
 | `netlify/functions/picks.mjs` | `POST /api/picks`: counts one session started with a character |
 | `netlify/functions/stats.mjs` | `GET /api/stats`: popularity + which characters are paid |
