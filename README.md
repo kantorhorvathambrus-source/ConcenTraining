@@ -233,10 +233,12 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
     break is never session time: it doesn't count in the elapsed time, the focus %, the result, the
     stats or the 1-minute rule.
   - **Paused screen:** the timer digits are dimmed (40%, `--paused-opacity` in `style.css`) and the
-    progress bar turns grey (`--paused-progress`). The distraction block is replaced by a calm card:
-    **Paused** and, under it, "Break · 2:14", counting up from the start of the break (m:ss, h:mm:ss
-    from 1 hour, no upper limit). The card sits exactly over the block, which keeps its space, so
-    nothing on the screen moves (also on landscape phones and wide screens). The motivation card and
+    progress bar fill turns a light neutral grey that reads as "stopped" (`--paused-progress`, with
+    its own value in dark mode: visible on the track, but quieter than the dimmed digits). The
+    distraction block is replaced by centred text, with no box around it: **Paused** and, under it,
+    "Break · 2:14", counting up from the start of the break (m:ss, h:mm:ss from 1 hour, no upper
+    limit). The prompt and buttons keep their space but are invisible, and the text sits in the
+    middle of that space, so nothing on the screen moves (also on landscape phones and wide screens). The motivation card and
     the category picker are hidden. **Resume** (primary) takes Motivate me's cell, like Undo, and the
     right button reads **End session**. The tab title is "Paused · ConcenTraining". The change is
     instant, with no animation.
@@ -1540,7 +1542,7 @@ skips it on landscape phones).
 **Picker and motivation card on landscape phones.** There's no room for them under the buttons,
 so they take the place of the distraction buttons block, the question and its buttons, directly
 above Motivate me / Stop. The left column (info line, notes, full-size character) is never
-covered or resized. During a break the paused card sits over the same block in the same way (in
+covered or resized. During a break the paused text sits over the same block in the same way (in
 every layout), and **Resume** takes Motivate me's cell, so nothing moves.
 
 - **One place, one thing at a time.** While the picker or the card is shown, the distraction

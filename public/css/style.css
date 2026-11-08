@@ -21,10 +21,11 @@
   --level-5: #c9302c;
   --radius: 16px;
   --shadow: 0 4px 18px rgba(40, 30, 20, 0.08);
-  /* During a break (Stop → Take a break): the timer digits fade, the progress bar goes neutral.
-     --muted is redefined for dark mode, so this follows it. */
+  /* During a break (Stop → Take a break): the timer digits fade, and the progress bar fill turns
+     a light neutral that reads as "stopped": still visible on the track (--surface-2), but quieter
+     than the dimmed timer digits. Redefined for dark mode below. */
   --paused-opacity: 0.4;
-  --paused-progress: var(--muted);
+  --paused-progress: #cdc5ba;
   color-scheme: light;
 }
 
@@ -41,6 +42,7 @@
     --error: #ff6b6b;
     --error-text: #17161b; /* white on the lighter red would be too faint */
     --shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+    --paused-progress: #4c4753;
     color-scheme: dark;
   }
 }
@@ -707,7 +709,8 @@ input:focus-visible {
   visibility: hidden;
 }
 
-/* Exactly over the distraction block, in every layout. */
+/* Exactly over the distraction block, in every layout: just the centred text, no box of its own
+   (the hidden prompt and buttons under it are already invisible). */
 .paused-card {
   position: absolute;
   inset: 0;
@@ -718,9 +721,8 @@ input:focus-visible {
   gap: 4px;
   padding: 8px 16px;
   text-align: center;
-  background: var(--surface);
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius);
+  background: transparent;
+  border: 0;
 }
 
 .paused-card p {
