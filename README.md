@@ -5,6 +5,9 @@ Plain HTML, CSS and vanilla JS: no build step, no framework. The website is the
 `public/` folder (open `public/index.html` in a browser to try it). The backend is two
 Netlify Functions that store counts in Netlify Blobs, used only for character popularity stats.
 
+**Live at https://concentraining.com** (the production site; the old Netlify address redirects
+there, see [Domain, redirect and security headers](#domain-redirect-and-security-headers)).
+
 ## How it works
 
 - **How it works card:** at the top of the setup screen (above step 1) a short card explains the
@@ -690,8 +693,7 @@ Everything below describes the feature as it works while it's on.
 character art is ready, and part 2 (exporting and importing the characters themselves, see
 **Export** below) is to be finished before custom characters are switched on for good.
 
-**Where it's on:** the switch decides on the production site (concentraining.netlify.app and any
-later custom domain), on the GitHub Pages backup, on `localhost` and under `netlify dev`. On
+**Where it's on:** the switch decides on the production site (https://concentraining.com), on the GitHub Pages backup, on `localhost` and under `netlify dev`. On
 Netlify's test sites custom characters are **always on**, whatever the switch says, so they can be
 tried on a phone: every Deploy Preview (the hostname starts with `deploy-preview-`, e.g.
 `deploy-preview-54--concentraining.netlify.app`) and the main branch deploy (it starts with
@@ -1436,7 +1438,14 @@ works online exactly as before.
 - **First online visit (install):** the service worker downloads every file needed to start a
   session (the `PRECACHE` list in `sw.js`: both pages, CSS, all JS, manifest, icons, favicon) into a
   cache named `concentraining-v<CACHE_VERSION>`. If any file fails, nothing is saved and it tries
-  again on a later visit. `stats.html` is left out: it needs `api/stats` anyway.
+  again on a later visit. `stats.html` (and `js/stats.js`) is left out: it needs `api/stats` anyway.
+  The install asks with `cache: "no-cache"`: each file is checked with the server, so it's always
+  the current version, but a file the page has just downloaded comes back as a tiny "not modified"
+  answer instead of being downloaded a second time (measured locally: about 510 KB, 11 files, less
+  on the first visit than with the earlier `cache: "reload"`).
+- **Later visits:** every file the page uses is asked for again (network first, see below), but the
+  browser only checks whether it changed: an unchanged file is a "not modified" answer of a few
+  hundred bytes with no body. A second visit to the setup screen is about 12 such checks.
 - **Network first:** every same-origin `GET` first tries the network. A good answer is used and its
   copy saved, so **online you always get the newest version**. A forgotten version bump can't
   leave anyone on an old app. The saved copy is used when the network fails (offline) or hasn't
@@ -1598,7 +1607,8 @@ and the timer keeps counting from the start time as always.
 | `public/history.html` | Your finished sessions, streaks, time per week and focus trends |
 | `public/avatar.html` | The character editor (see [Custom characters](#custom-characters)) |
 | `public/privacy.html` | Privacy page: what stays on the device, what is sent to the server, hosting, your rights (no scripts) |
-| `public/stats.html` | Popularity table (reads `/api/stats`) |
+| `public/stats.html` | Popularity table (not indexed by search engines) |
+| `public/js/stats.js` | Loads `/api/stats` and fills in the tables on `stats.html` (a file of its own because the CSP allows no inline scripts) |
 | `public/sw.js` | Service worker: offline start, network first with a 3-second fallback to the cache, precache list and cache version (see [Offline use](#offline-use)), and taps on the leave reminder notification |
 | `public/js/sw-register.js` | Registers `sw.js` from `index.html`, `history.html` and `avatar.html`; does nothing without service worker support |
 | `public/css/style.css` | Styling, light/dark mode, breathing and reaction animations, the wide and landscape layout (see [Layout](#layout-screen-sizes)) |
@@ -1621,7 +1631,7 @@ and the timer keeps counting from the start time as always.
 | `public/manifest.webmanifest` | Web app manifest: name, colors and icons for Add to Home Screen / Install |
 | `public/icons/` | Placeholder app icons: `icon.svg` and `icon-small.svg` (sources) and the PNGs rendered from them (Home Screen, Android, maskable) |
 | `public/favicon.ico` | Browser tab icon (placeholder) |
-| `netlify.toml` | Tells Netlify the site is in `public/`, and sends `sw.js` with `Cache-Control: no-cache` |
+| `netlify.toml` | Tells Netlify the site is in `public/`, the redirect from the old Netlify addresses to https://concentraining.com, the security headers and CSP, and `Cache-Control: no-cache` for `sw.js` (see [Domain, redirect and security headers](#domain-redirect-and-security-headers)) |
 | `.github/workflows/pages.yml` | Optional backup: publishes `public/` to the GitHub Pages test site on every push to `main` (see [GitHub Pages backup test site](#github-pages-backup-test-site-optional)) |
 | `package.json` | The one dependency the functions need (`@netlify/blobs`) |
 
@@ -1731,6 +1741,77 @@ created automatically by the first pick.
 `picks-live`. The test counts are shared by every preview and `main`, so they mix test runs; that's
 fine for checking that counting works.
 
+### Domain, redirect and security headers
+
+**The official address is https://concentraining.com** (Netlify DNS, the site's primary domain;
+`www.concentraining.com` redirects to it in Netlify's domain settings). Live and test counting
+doesn't depend on the address: it follows Netlify's deploy context, so the custom domain (the
+production deploy) counts into `picks-live`.
+
+**Redirect** (`[[redirects]]` in `netlify.toml`): `https://concentraining.netlify.app/*` and
+`https://live--concentraining.netlify.app/*` (the production branch's own address) send a permanent
+**301** redirect to the same path on https://concentraining.com. `force = true` makes it apply even
+where a file exists. A domain rule only matches that exact host, so these are **not** redirected:
+Deploy Previews (`deploy-preview-N--concentraining.netlify.app`), the main branch deploy
+(`main--concentraining.netlify.app`) and the GitHub Pages copy (which doesn't read `netlify.toml`).
+Custom characters aren't affected: `CUSTOM_CHARACTERS_ENABLED` is on for the new domain, and the
+test-site hostname check still matches the previews and `main--`.
+- Saved data belongs to an address: history, settings and custom characters saved on
+  `concentraining.netlify.app` stay there and don't move to `concentraining.com`. Since the
+  redirect, the old address can't be opened any more (that was decided: only test data was there).
+  A Home Screen app added from the old address opens the new site; add it again from the new one.
+
+**Canonical address and link previews.** `index.html`, `history.html` and `privacy.html` have
+`<link rel="canonical">` with their https://concentraining.com address (`index.html` →
+`https://concentraining.com/`), so search engines treat every copy (including GitHub Pages) as that
+one. `stats.html` and `avatar.html` have `noindex` instead (not pages for search results), and no
+canonical. The same three pages have Open Graph and Twitter card tags (`og:title`,
+`og:description` = the page's meta description, `og:url` = the canonical address, `og:image`,
+`twitter:card` = `summary`), which apps like Messenger use for the preview of a shared link.
+- **The preview image is the placeholder app icon** (`https://concentraining.com/icons/icon-512.png`,
+  512×512). Replace it (and its `og:image:width`, `og:image:height` and `og:image:alt`) on all three
+  pages once the real character art exists.
+- Messenger, Facebook and others keep a copy of a preview for a while. After changing the tags,
+  Facebook's Sharing Debugger (https://developers.facebook.com/tools/debug/) shows the new one and
+  can refresh it.
+
+**Security headers** (`[[headers]] for = "/*"` in `netlify.toml`, on every Netlify deploy, including
+Deploy Previews; GitHub Pages can't send headers):
+
+| Header | Value | What it does |
+|---|---|---|
+| `X-Content-Type-Options` | `nosniff` | Files are only used as the type the server says they are |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` | Links to other sites only tell them "concentraining.com", never the page's full address |
+| `X-Frame-Options` | `DENY` | No other site can show the app inside a frame (older browsers; newer ones use `frame-ancestors`) |
+| `Permissions-Policy` | camera, microphone, geolocation, payment, USB, serial, HID, MIDI, motion sensors, fullscreen, … `=()` | Browser features the app never uses are switched off. `screen-wake-lock=(self)` stays on (the screen stays on during a session). Notifications, sound and vibration aren't controlled by this header |
+| `Strict-Transport-Security` | `max-age=31536000` | Browsers use only https for this site for a year. No `preload` and no `includeSubDomains` |
+| `Content-Security-Policy` | see below | Which files the pages may load |
+
+**Content-Security-Policy (CSP)**, enforced:
+
+```
+default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:;
+connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self';
+form-action 'self'; frame-ancestors 'none'
+```
+
+- Everything comes from the site's own files (`'self'`): scripts, the stylesheet, `fetch` calls
+  (`api/picks`, `api/stats`, the avatar PNGs in `assets/avatar/`), the manifest and the service
+  worker. No other site is ever contacted.
+- **No inline scripts and no inline styles.** That's why `stats.html`'s script is in
+  `js/stats.js`. No page or generated SVG uses `style="…"` or `<style>`; the code only sets styles
+  through `element.style` (e.g. the progress bar width), which the CSP allows. So `style-src` needs
+  no `'unsafe-inline'`. **Keep it that way:** a new inline `<script>` or `style="…"` is blocked
+  (check the browser console for "Content Security Policy" errors).
+- `img-src` also allows `data:` and `blob:`: the character art is SVG drawn by code and shown as a
+  `data:` URL (custom characters' PNG layers are written into it as `data:` URLs too), and the
+  setup screen's checkmark in `style.css` is a `data:` image.
+- Not limited by the CSP: the end chime (Web Audio), the leave reminder notification, the export
+  download (a `blob:` link) and the import (the file is read in the page).
+- **Netlify's Deploy Preview toolbar is blocked** (it's a script from another site), so it doesn't
+  show on Deploy Previews and the console shows Netlify's own CSP error for it. That's expected; the
+  toolbar can also be switched off in the Netlify project's Deploy Preview settings.
+
 ### GitHub Pages backup test site (optional)
 
 The normal way to test is the Netlify Deploy Preview of each pull request (and the `main` branch
@@ -1756,5 +1837,7 @@ need it for everyday testing.
   so the app, history and offline start work the same as on Netlify.
 - **Separate saved data:** it's a different address from the Netlify sites, so its history,
   settings and offline cache are separate too.
+- **Canonical tags, no headers:** its pages point search engines to https://concentraining.com
+  (`<link rel="canonical">`), and the security headers and CSP from `netlify.toml` don't apply there.
 - **Doesn't affect Netlify:** the workflow only publishes to GitHub Pages and can be deleted any
   time without changing the Netlify sites.

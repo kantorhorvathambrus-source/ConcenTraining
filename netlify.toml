@@ -4,8 +4,53 @@
 [build]
   publish = "public"
 
+# ---------- one official address ----------
+# The production site's Netlify addresses send every visitor on to https://concentraining.com,
+# same path, with a permanent (301) redirect. force = true: even when a file exists at that path.
+# A domain rule only matches that exact host, so Deploy Previews (deploy-preview-N--...), the main
+# branch deploy (main--...) and the GitHub Pages copy are never redirected.
+# See "Domain, redirect and security headers" in the README.
+[[redirects]]
+  from = "https://concentraining.netlify.app/*"
+  to = "https://concentraining.com/:splat"
+  status = 301
+  force = true
+
+# The production branch's own address (the live branch deploy): the same site again.
+[[redirects]]
+  from = "https://live--concentraining.netlify.app/*"
+  to = "https://concentraining.com/:splat"
+  status = 301
+  force = true
+
+# ---------- headers ----------
+# Security headers for every file, on every Netlify deploy (production, Deploy Previews, main--).
+# GitHub Pages can't send headers, so they don't apply there.
+#   X-Content-Type-Options: files are only used as the type the server says they are.
+#   Referrer-Policy: other sites only learn "concentraining.com", never the page's full address.
+#   X-Frame-Options / frame-ancestors: no other site can show the app inside a frame.
+#   Permissions-Policy: browser features the app never uses are switched off. Kept on:
+#     screen-wake-lock (the screen stays on during a session). Notifications, sound and
+#     vibration aren't controlled by this header.
+#   Strict-Transport-Security: browsers only use https for this site for a year (no preload, no
+#     subdomains).
+#   Content-Security-Policy: scripts, styles, fetches, the manifest and the service worker only
+#     from the site's own files. img-src also allows data: and blob: images: the character art is
+#     SVG drawn by code and shown as data: URLs, and the CSS checkmark is a data: image. No inline
+#     scripts or style attributes are allowed. Netlify's Deploy Preview toolbar is blocked by it.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    X-Frame-Options = "DENY"
+    Permissions-Policy = "accelerometer=(), camera=(), display-capture=(), fullscreen=(), geolocation=(), gyroscope=(), hid=(), magnetometer=(), microphone=(), midi=(), payment=(), publickey-credentials-get=(), serial=(), usb=(), xr-spatial-tracking=(), browsing-topics=(), screen-wake-lock=(self)"
+    Strict-Transport-Security = "max-age=31536000"
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+
 # The service worker (public/sw.js) must never be kept in a cache: the browser checks it with the
 # server on every visit, so a new version of the app's offline support is picked up right away.
+# (The /* headers above apply to it too.)
 [[headers]]
   for = "/sw.js"
   [headers.values]
