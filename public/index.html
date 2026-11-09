@@ -295,11 +295,16 @@
     </form>
   </dialog>
 
-  <!-- Opened by Stop (onEndClick in app.js). Running: "Stop for now?" with Take a break above the
-       divider. During a break: "End this session now?" without that part. -->
+  <!-- Opened by Stop (onEndClick in app.js). Running: "Stop for now?" with the live "Timer still
+       running" line (ticked by tick(), the dialog's description, no live region) and Take a break
+       above the divider. During a break: "End this session now?" without those parts. -->
   <dialog id="endDialog" aria-labelledby="endTitle">
     <form method="dialog">
       <h2 id="endTitle">Stop for now?</h2>
+      <p id="endRunning" class="end-running">
+        <span class="end-running-dot" aria-hidden="true"></span>
+        <span>Timer still running · <strong id="endClock">00:00</strong></span>
+      </p>
       <div id="endBreak" class="end-break">
         <button value="break" class="btn wide">Take a break</button>
         <p class="end-break-note">The timer waits for you.</p>

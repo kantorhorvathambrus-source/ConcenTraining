@@ -1152,6 +1152,7 @@ function tick() {
 
   const clock = formatClock(remaining);
   $("#timer").textContent = clock;
+  $("#endClock").textContent = clock; // Stop's dialog covers #timer, so it shows the same clock
   $("#progressBar").style.width = `${(elapsed / session.durationMs) * 100}%`;
 
   // During a break the clock stands still and only the break counter moves: no motivation phase,
@@ -1491,6 +1492,17 @@ async function onEndClick() {
   pausePicker();
   $("#endTitle").textContent = paused ? "End this session now?" : "Stop for now?";
   $("#endBreak").hidden = paused;
+  // Running: "Timer still running · 16:41" under the title, ticked by tick(). It's the dialog's
+  // description, read once when it opens; no live region, so the ticking time isn't announced.
+  // The attribute goes during a break: screen readers read a description even when it's hidden.
+  const endDialog = $("#endDialog");
+  $("#endRunning").hidden = paused;
+  if (paused) {
+    endDialog.removeAttribute("aria-describedby");
+  } else {
+    $("#endClock").textContent = formatClock(session.durationMs - activeElapsed(session));
+    endDialog.setAttribute("aria-describedby", "endRunning");
+  }
   // "Save this session to your history": only offered when it could be saved at all
   // (same 1-minute rule as saving, on session time without breaks). Ticked every time the dialog
   // opens, never remembered.
@@ -1498,7 +1510,7 @@ async function onEndClick() {
   $("#endSaveRow").hidden = !canSave;
   $("#endSave").checked = true;
   const asked = session;
-  const answer = await ask($("#endDialog"));
+  const answer = await ask(endDialog);
   if (session !== asked) return; // another tab took the session over meanwhile (loseControl)
   if (answer === "end" && session && !session.endedAt) {
     // During a break the session ends where the break started: the break isn't session time.
