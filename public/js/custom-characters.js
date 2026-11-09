@@ -20,7 +20,7 @@ const CUSTOM_PICK_ID = "custom";
 // stats.html leaves out the custom line, and a saved choice of a custom character counts as no
 // choice (like a first visit). Saved characters are kept as they are, the history still shows
 // their sessions' names, and POST /api/picks still accepts "custom". true: everything works as
-// described in the README. This is what the production site (and any later custom domain) follows.
+// described in the README. This is what the production site (https://concentraining.com) follows.
 const CUSTOM_CHARACTERS_ENABLED = true;
 
 // Netlify's test sites always have custom characters on, whatever the switch says, so they can be
