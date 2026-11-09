@@ -461,6 +461,15 @@ function renderSessionList(history) {
       formatSessionLength(entry),
       plural(entry.distractions.length, "distraction"),
     ].join(" · ");
+    // Breaks (Stop → Take a break): one factual line, only when there were any. Whole minutes, at
+    // least 1, like the session length above it.
+    const pauses = cleanPauses(entry.pauses);
+    if (pauses.length) {
+      const line = document.createElement("div");
+      line.className = "muted small session-item-pauses";
+      line.textContent = formatPauses(pauses, (ms) => `${Math.max(1, Math.round(ms / 60000))} min`);
+      item.querySelector(".session-item-meta").after(line);
+    }
 
     const focus = item.querySelector(".session-item-focus");
     if (entry.focusPercent === null) {

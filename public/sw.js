@@ -67,15 +67,18 @@ const SCOPE_PATH = SCOPE_URL.pathname;
 
 // ---------- install / activate ----------
 
-// Downloads every PRECACHE file fresh (bypassing the browser's HTTP cache) and only saves them
-// once all have arrived. If any one fails, the install fails and the app works as without a
-// service worker (online only); the browser tries again on a later visit.
+// Gets every PRECACHE file as the server has it now and only saves them once all have arrived.
+// cache: "no-cache" checks each file with the server first: a file the page has just downloaded
+// comes back as a tiny "not modified" answer instead of a second full download, and a changed
+// one is downloaded fresh. (Before, "reload" downloaded all of them again on the first visit.)
+// If any one fails, the install fails and the app works as without a service worker (online
+// only); the browser tries again on a later visit.
 self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
       const responses = await Promise.all(
         PRECACHE.map(async (url) => {
-          const response = await fetch(new Request(url, { cache: "reload" }));
+          const response = await fetch(new Request(url, { cache: "no-cache" }));
           if (!response.ok) throw new Error(`Precache failed: ${url} (${response.status})`);
           return withoutRedirect(response);
         })

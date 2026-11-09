@@ -1,0 +1,64 @@
+{
+  "app": "ConcenTraining",
+  "type": "session-history",
+  "version": 7,
+  "exportedAt": "2026-11-08T09:00:00.000Z",
+  "sessions": [
+    {
+      "startedAt": 1789462800000,
+      "endedAt": 1789464570000,
+      "endedBy": "timer",
+      "characterId": "leader",
+      "style": "kind",
+      "mode": "advanced",
+      "plannedMs": 1500000,
+      "elapsedMs": 1500000,
+      "distractedMs": 60000,
+      "focusPercent": 96,
+      "distractions": [
+        {
+          "at": 1789463100000,
+          "level": 2,
+          "ms": 60000,
+          "category": "thoughts"
+        }
+      ],
+      "pauses": [
+        {
+          "at": 1789463400000,
+          "ms": 180000
+        },
+        {
+          "at": 1789464000000,
+          "ms": 90000
+        }
+      ]
+    },
+    {
+      "startedAt": 1789480800000,
+      "endedAt": 1789482000000,
+      "endedBy": "manual",
+      "characterId": "grandma",
+      "style": "kind",
+      "mode": "simple",
+      "plannedMs": 1500000,
+      "elapsedMs": 1080000,
+      "distractedMs": 0,
+      "focusPercent": null,
+      "distractions": [
+        {
+          "at": 1789480980000,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        }
+      ],
+      "pauses": [
+        {
+          "at": 1789481280000,
+          "ms": 120000
+        }
+      ]
+    }
+  ]
+}

@@ -5,6 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ConcenTraining</title>
   <meta name="description" content="A focus timer with characters that react when you get distracted.">
+  <!-- The official address of this page (also on the GitHub Pages copy), and its link preview
+       (Open Graph and Twitter card tags). See "Domain, redirect and security headers" in the README. -->
+  <link rel="canonical" href="https://concentraining.com/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="ConcenTraining">
+  <meta property="og:title" content="ConcenTraining">
+  <meta property="og:description" content="A focus timer with characters that react when you get distracted.">
+  <meta property="og:url" content="https://concentraining.com/">
+  <meta property="og:image" content="https://concentraining.com/icons/icon-512.png">
+  <meta property="og:image:width" content="512">
+  <meta property="og:image:height" content="512">
+  <meta property="og:image:alt" content="The ConcenTraining app icon">
+  <meta name="twitter:card" content="summary">
   <link rel="stylesheet" href="css/style.css">
   <!-- Home Screen / install support. Colors: --bg of the light and dark theme (css/style.css). -->
   <link rel="manifest" href="manifest.webmanifest">
@@ -58,6 +71,7 @@
         <ul>
           <li>Pick a character and a timer, then start focusing.</li>
           <li>When you notice your mind has wandered, tap how much (Simple) or how long (Advanced). Your character reacts with a pose, never with words. Noticing and coming back is the skill you're training.</li>
+          <li>Need to step away for a moment? Tap Stop, then Take a break. The timer waits for you, and the break doesn't count against your focus.</li>
           <li>If you leave the app during a session, it asks when you're back whether you were distracted.</li>
           <li>Your history is saved automatically on this device. To move it to another phone, use <a href="history.html#backup">Export on the history page →</a></li>
         </ul>
@@ -165,6 +179,12 @@
         <div class="distraction">
           <h2 id="distractionPrompt" tabindex="-1"></h2>
           <div id="distractionButtons" class="distraction-buttons"></div>
+          <!-- During a break (Stop → Take a break): placed over the prompt and buttons, which keep
+               their space, so nothing moves (updatePausedView in app.js). The counter counts up. -->
+          <div id="pausedCard" class="paused-card" hidden>
+            <p class="paused-title">Paused</p>
+            <p class="paused-break">Break · <span id="breakClock">0:00</span></p>
+          </div>
         </div>
 
         <div id="motivationCard" class="motivation-card" aria-live="polite" hidden>
@@ -190,12 +210,15 @@
           </div>
           <button id="motivateButton" type="button" class="btn primary">Motivate me</button>
           <!-- Takes Motivate me's place (same cell, same size) for UNDO_WINDOW_MS after each
-               distraction tap (app.js), so nothing on the screen moves and End session is always
+               distraction tap (app.js), so nothing on the screen moves and Stop is always
                there. The seconds left are hidden from screen readers: the button is just "Undo". -->
           <button id="undoButton" type="button" class="btn undo-btn" hidden>
             Undo<span class="undo-seconds" aria-hidden="true"> · <span id="undoSeconds">5</span></span>
           </button>
-          <button id="endButton" type="button" class="btn">End session</button>
+          <!-- Resume also takes Motivate me's cell, during a break. -->
+          <button id="resumeButton" type="button" class="btn primary" hidden>Resume</button>
+          <!-- "Stop" while running, "End session" during a break (updatePausedView in app.js). -->
+          <button id="endButton" type="button" class="btn">Stop</button>
         </div>
       </div>
     </section>
@@ -210,6 +233,8 @@
       <div class="summary-details">
         <p id="summaryMessage" class="summary-text" hidden></p>
         <p id="summaryText" class="summary-text"></p>
+        <!-- "Paused once · 2 min": only when the session had breaks (renderSummary in app.js). -->
+        <p id="summaryPauses" class="summary-text" hidden></p>
         <p id="summaryNote" class="summary-text" hidden></p>
         <!-- Shown when the browser refused to store the session (renderSummary in app.js). -->
         <p id="summarySaveError" class="summary-text error" role="status" hidden></p>
@@ -283,9 +308,20 @@
     </form>
   </dialog>
 
+  <!-- Opened by Stop (onEndClick in app.js). Running: "Stop for now?" with the live "Timer still
+       running" line (ticked by tick(), the dialog's description, no live region) and Take a break
+       above the divider. During a break: "End this session now?" without those parts. -->
   <dialog id="endDialog" aria-labelledby="endTitle">
     <form method="dialog">
-      <h2 id="endTitle">End this session now?</h2>
+      <h2 id="endTitle">Stop for now?</h2>
+      <p id="endRunning" class="end-running">
+        <span class="end-running-dot" aria-hidden="true"></span>
+        <span>Timer still running · <strong id="endClock">00:00</strong></span>
+      </p>
+      <div id="endBreak" class="end-break">
+        <button value="break" class="btn wide">Take a break</button>
+        <p class="end-break-note">The timer waits for you.</p>
+      </div>
       <!-- Only shown once the session could be saved (1 minute or more), ticked every time (onEndClick in app.js). -->
       <label id="endSaveRow" class="check-row" hidden>
         <input id="endSave" type="checkbox" checked>
