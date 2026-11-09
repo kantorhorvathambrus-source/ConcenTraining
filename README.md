@@ -1786,7 +1786,7 @@ Deploy Previews; GitHub Pages can't send headers):
 | `Referrer-Policy` | `strict-origin-when-cross-origin` | Links to other sites only tell them "concentraining.com", never the page's full address |
 | `X-Frame-Options` | `DENY` | No other site can show the app inside a frame (older browsers; newer ones use `frame-ancestors`) |
 | `Permissions-Policy` | camera, microphone, geolocation, payment, USB, serial, HID, MIDI, motion sensors, fullscreen, … `=()` | Browser features the app never uses are switched off. `screen-wake-lock=(self)` stays on (the screen stays on during a session). Notifications, sound and vibration aren't controlled by this header |
-| `Strict-Transport-Security` | `max-age=31536000` | Browsers use only https for this site for a year. No `preload` and no `includeSubDomains` |
+| `Strict-Transport-Security` | `max-age=31536000` | Browsers use only https for this site for a year. No `preload` and no `includeSubDomains`. On `*.netlify.app` addresses (Deploy Previews, `main--`) Netlify sends its own stricter value instead (`includeSubDomains; preload`, the whole netlify.app domain is https-only); that doesn't affect concentraining.com |
 | `Content-Security-Policy` | see below | Which files the pages may load |
 
 **Content-Security-Policy (CSP)**, enforced:
