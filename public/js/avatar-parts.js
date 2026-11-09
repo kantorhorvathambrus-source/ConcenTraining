@@ -345,21 +345,32 @@ function makeFace(id, label, [head, ears, nose, eyeSize, eyeSpacing, brows, mark
   return { id, label, head, ears, nose, eyeSize, eyeSpacing, brows, marks, ...features };
 }
 
+// "Face 3: soft oval, straight nose": worked out each time it's read (a getter), from the parts'
+// names in the current language (see "translations" at the end of this file).
 function faceLabel(n, [head, , nose, , , , marks, features = {}]) {
   const parts = [HEAD_SHAPES[head].label, NOSES[nose].label, ...marks.map((mark) => MARKS[mark].label)];
-  if (features.lashes) parts.push("lashes");
-  if (features.lip) parts.push("lip tint");
-  return `Face ${n}: ${[...new Set(parts)].join(", ")}`;
+  if (features.lashes) parts.push(t("avatar.feature.lashes"));
+  if (features.lip) parts.push(t("avatar.feature.lip"));
+  return t("avatar.faceLabel", { number: n, parts: [...new Set(parts)].join(t("common.listSeparator")) });
+}
+
+function faceWithLabel(face, label) {
+  Object.defineProperty(face, "label", { get: label, enumerable: true, configurable: true });
+  return face;
 }
 
 const FACES_BY_GENDER = {
-  female: FEMALE_FACES.map((f, i) => makeFace(`w-face-${String(i + 1).padStart(2, "0")}`, faceLabel(i + 1, f), f)),
-  male: MALE_FACES.map((f, i) => makeFace(`m-face-${String(i + 1).padStart(2, "0")}`, faceLabel(i + 1, f), f)),
+  female: FEMALE_FACES.map((f, i) => faceWithLabel(makeFace(`w-face-${String(i + 1).padStart(2, "0")}`, "", f), () => faceLabel(i + 1, f))),
+  male: MALE_FACES.map((f, i) => faceWithLabel(makeFace(`m-face-${String(i + 1).padStart(2, "0")}`, "", f), () => faceLabel(i + 1, f))),
 };
-const FUNNY = FUNNY_FACES.map(([name, ...f], i) => ({
-  ...makeFace(`fun-${String(i + 1).padStart(2, "0")}`, `Funny face ${i + 1}: ${name.toLowerCase()}`, f),
-  funny: true,
-}));
+// "Funny face 1: huge chin". The name's key: avatar.funny.<id>.
+const FUNNY = FUNNY_FACES.map(([name, ...f], i) => {
+  const id = `fun-${String(i + 1).padStart(2, "0")}`;
+  I18N.source(`avatar.funny.${id}`, name.toLowerCase());
+  return faceWithLabel({ ...makeFace(id, "", f), funny: true }, () =>
+    t("avatar.funnyFaceLabel", { number: i + 1, name: t(`avatar.funny.${id}`) })
+  );
+});
 
 // The face's geometry for the shared expression parts (see FACE_GEO in placeholder-art.js).
 function faceGeometry(face) {
@@ -1052,4 +1063,23 @@ function randomLook(gender) {
     necklace: necklace.id,
     facialHair,
   };
+}
+
+// ---------- translations ----------
+// The English labels above go to the translation system (localize in js/i18n.js): each becomes a
+// getter that gives the current language. Keys: avatar.headShape.<id>, avatar.nose.<id>,
+// avatar.mark.<id> (the parts of a face's name), and avatar.<field>.<option id> for every option
+// (the faces build their names from the parts, see faceLabel). avatar-costumes.js does the same
+// for the costume lists. Only ids are ever saved.
+for (const [table, prefix] of [[HEAD_SHAPES, "headShape"], [NOSES, "nose"], [MARKS, "mark"]]) {
+  for (const [id, part] of Object.entries(table)) I18N.localize(part, "label", `avatar.${prefix}.${id}`);
+}
+for (const [field, options] of Object.entries(SHARED_OPTIONS)) {
+  for (const option of options) I18N.localize(option, "label", `avatar.${field}.${option.id}`);
+}
+for (const fields of Object.values(GENDER_OPTIONS)) {
+  for (const [field, options] of Object.entries(fields)) {
+    if (field === "face") continue;
+    for (const option of options) I18N.localize(option, "label", `avatar.${field}.${option.id}`);
+  }
 }

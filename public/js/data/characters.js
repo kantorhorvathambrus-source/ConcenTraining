@@ -83,7 +83,7 @@ const POSE_DESCRIPTIONS = {
 // "Grandma, a little surprised, smiling." Just the name for a pose without a description.
 function describePose(character, pose) {
   const text = (POSE_DESCRIPTIONS[personalityOf(character)] || {})[pose];
-  return text ? `${character.name}, ${text}` : character.name;
+  return text ? t("character.poseAlt", { name: character.name, pose: text }) : character.name;
 }
 
 // What the user sees for a saved style: its group's label ("kind" -> "Relaxed"). Old history
@@ -248,3 +248,20 @@ const CHARACTERS = [
     artExt: "png",
   },
 ];
+
+// ---------- translations ----------
+// The English above is handed to the translation system (localize in js/i18n.js): each text field
+// becomes a getter that gives the current language. Keys: group.<id>.label / .warning,
+// pose.<personality>.<pose>, character.<id>.name / .tagline. The ids never change, so saved
+// sessions (which store ids only) show every name in the current language.
+for (const [id, group] of Object.entries(GROUPS)) {
+  I18N.localize(group, "label", `group.${id}.label`);
+  I18N.localize(group, "warning", `group.${id}.warning`);
+}
+for (const [personality, poses] of Object.entries(POSE_DESCRIPTIONS)) {
+  for (const pose of Object.keys(poses)) I18N.localize(poses, pose, `pose.${personality}.${pose}`);
+}
+for (const character of CHARACTERS) {
+  I18N.localize(character, "name", `character.${character.id}.name`);
+  I18N.localize(character, "tagline", `character.${character.id}.tagline`);
+}

@@ -47,16 +47,21 @@ const CUSTOM_PAID = false;
 // badge, the ragebait warning and personalityOf.
 const PERSONALITY_GROUPS = { kind: "relaxed", firm: "firm", strict: "strict", ragebait: "ragebait" };
 
+// The texts (custom.* in js/i18n/en.js), each read in the current language when it's used.
+// stats.html loads this file without the translation system (it stays English and uses none of
+// these): customText then gives the key instead of failing, so loading the file never breaks a page.
+const customText = (key, values) => (typeof t === "function" ? t(key, values) : key);
+
 const CUSTOM_TEXTS = {
-  createTitle: "Create your own",
-  createTagline: "Design your own character, with your own name.",
-  freeBadge: "Free during launch",
-  limit: `You can have up to ${CUSTOM_LIMIT} characters. Delete one to make a new one.`,
-  nameMissing: "Give your character a name.",
-  nameTooLong: `Names can be up to ${CUSTOM_NAME_MAX} characters.`,
-  nameTaken: "You already have a character with this name.",
-  saveFailed: "Couldn't save your character. Your browser isn't letting this site store data.",
-  deletedElsewhere: "This character was deleted in another tab, so it can't be saved.",
+  get createTitle() { return customText("custom.createTitle"); },
+  get createTagline() { return customText("custom.createTagline"); },
+  get freeBadge() { return customText("custom.freeBadge"); },
+  get limit() { return customText("custom.limit", { limit: CUSTOM_LIMIT }); },
+  get nameMissing() { return customText("custom.nameMissing"); },
+  get nameTooLong() { return customText("custom.nameTooLong", { max: CUSTOM_NAME_MAX }); },
+  get nameTaken() { return customText("custom.nameTaken"); },
+  get saveFailed() { return customText("custom.saveFailed"); },
+  get deletedElsewhere() { return customText("custom.deletedElsewhere"); },
 };
 
 function isCustomId(id) {
@@ -171,7 +176,7 @@ function ghostCharacter(id, name, style) {
   const personality = Object.hasOwn(PERSONALITY_GROUPS, style) ? style : "kind";
   return {
     id,
-    name: typeof name === "string" && name.trim() ? name.trim() : "Custom character",
+    name: typeof name === "string" && name.trim() ? name.trim() : customText("custom.ghostName"),
     personality,
     group: PERSONALITY_GROUPS[personality],
     createdAt: 0,

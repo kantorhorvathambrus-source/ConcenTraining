@@ -3,7 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Your Character · ConcenTraining</title>
+  <!-- Languages (see "Languages" in the README): the list of languages, the English texts, then the
+       system that picks the language and translates the page while it's built, so the English below
+       never shows in another language. Before <title>, so the title is translated too. -->
+  <script src="js/i18n/languages.js"></script>
+  <script src="js/i18n/en.js"></script>
+  <script src="js/i18n.js"></script>
+  <title data-i18n="avatar.pageTitle">Your Character · ConcenTraining</title>
   <meta name="description" content="Design your own ConcenTraining character.">
   <meta name="robots" content="noindex">
   <link rel="stylesheet" href="css/style.css">
@@ -20,8 +26,8 @@
   <!-- The character editor: avatar.html creates a character, avatar.html?id=custom-… edits one
        (avatar.js). Nothing is saved until Save; Cancel, Back or leaving the page discards it. -->
   <main class="app avatar-page">
-    <p class="avatar-back"><a href="./" id="backLink" class="back-link">← Back</a></p>
-    <h1 id="editorTitle">Create your character</h1>
+    <p class="avatar-back"><a href="./" id="backLink" class="back-link" data-i18n="avatar.back">← Back</a></p>
+    <h1 id="editorTitle" data-i18n="avatar.title">Create your character</h1>
 
     <!-- Shown while the browser doesn't let the site save anything (avatar.js). The editor still
          works; Save then says it couldn't save. Its text is set when it appears. -->
@@ -31,14 +37,14 @@
     <div class="avatar-preview">
       <img id="previewImg" class="avatar-preview-img" alt="">
       <div class="avatar-preview-actions">
-        <button id="previewButton" type="button" class="btn compact">Preview reactions</button>
-        <button id="randomizeButton" type="button" class="btn compact">Randomize</button>
+        <button id="previewButton" type="button" class="btn compact" data-i18n="avatar.preview">Preview reactions</button>
+        <button id="randomizeButton" type="button" class="btn compact" data-i18n="avatar.randomize">Randomize</button>
       </div>
     </div>
 
     <form id="editorForm" class="avatar-form" novalidate>
       <section class="editor-section">
-        <h2><label for="nameInput">Name</label></h2>
+        <h2><label for="nameInput" data-i18n="avatar.name">Name</label></h2>
         <input id="nameInput" class="text-input" type="text" autocomplete="off" spellcheck="false"
                aria-describedby="nameError">
         <p id="nameError" class="error" hidden></p>
@@ -46,14 +52,14 @@
 
       <!-- Create mode: pick it once. -->
       <fieldset id="personalityPicker" class="editor-section">
-        <legend><h2>Personality</h2></legend>
+        <legend><h2 data-i18n="avatar.personality">Personality</h2></legend>
         <div id="personalityOptions" class="personality-options"></div>
-        <p class="muted small">You can't change this later.</p>
+        <p class="muted small" data-i18n="avatar.personalityFixed">You can't change this later.</p>
       </fieldset>
 
       <!-- Edit mode: read-only. -->
       <section id="personalityFixed" class="editor-section" hidden>
-        <h2>Personality</h2>
+        <h2 data-i18n="avatar.personality">Personality</h2>
         <p><span id="personalityBadge" class="badge"></span></p>
       </section>
 
@@ -62,8 +68,8 @@
 
       <p id="saveError" class="error" role="alert" hidden></p>
       <div class="editor-actions">
-        <button type="submit" class="btn primary">Save</button>
-        <button id="cancelButton" type="button" class="btn">Cancel</button>
+        <button type="submit" class="btn primary" data-i18n="common.save">Save</button>
+        <button id="cancelButton" type="button" class="btn" data-i18n="common.cancel">Cancel</button>
       </div>
     </form>
   </main>

@@ -83,6 +83,10 @@ const DISTRACTION_CATEGORIES = [
   { id: "other", label: "Other" },
 ];
 
+// The labels go to the translation system (localize in js/i18n.js) under category.<id>: each one
+// gives the current language. Only the id is ever saved.
+for (const category of DISTRACTION_CATEGORIES) I18N.localize(category, "label", `category.${category.id}`);
+
 const isCategory = (value) => DISTRACTION_CATEGORIES.some((category) => category.id === value);
 
 // Distractions saved before categories existed have no category field: they get null.
@@ -123,8 +127,7 @@ function cleanPauses(pauses) {
 // "Paused once · 2 min" / "Paused 3 times · 6 min". formatLength formats the total: the summary
 // uses its own time format, the history list whole minutes.
 function formatPauses(pauses, formatLength) {
-  const times = pauses.length === 1 ? "once" : `${pauses.length} times`;
-  return `Paused ${times} · ${formatLength(pausedTotal(pauses))}`;
+  return t("pauses.line", { count: pauses.length, duration: formatLength(pausedTotal(pauses)) });
 }
 
 // Time and focus numbers for a finished session. focusPercent is null in Simple
@@ -291,8 +294,9 @@ function buildHistoryExport() {
 const isTime = (value) => Number.isFinite(value) && value >= 0;
 
 // Checks one session from an import file. Returns a clean copy (only the known
-// fields) or throws an Error whose message is a short reason, shown in the
-// import result (e.g. "shorter than 1 minute"). Besides each field on its own,
+// fields) or throws an Error whose message is the code of a short reason, shown in the
+// import result in the current language (import.reason.<code> in js/i18n/en.js, e.g.
+// "tooShort": "shorter than 1 minute"). Besides each field on its own,
 // it checks that the numbers agree with each other the way the app saves them,
 // so a hand-edited session can't contradict itself. Unknown character ids are
 // fine (a newer export can have new characters). Version 1 files have no
@@ -304,39 +308,39 @@ const isTime = (value) => Number.isFinite(value) && value >= 0;
 // Before version 7 there are no breaks: a pauses field is dropped, and elapsedMs must
 // be endedAt - startedAt, exactly as those versions did.
 function cleanImportedSession(raw, version) {
-  if (!raw || typeof raw !== "object") throw new Error("not a session");
+  if (!raw || typeof raw !== "object") throw new Error("notSession");
 
   const { startedAt, endedAt, endedBy, characterId, style, mode, plannedMs, elapsedMs, distractedMs, focusPercent } = raw;
-  if (!isTime(startedAt) || !isTime(endedAt) || endedAt < startedAt) throw new Error("bad start or end time");
+  if (!isTime(startedAt) || !isTime(endedAt) || endedAt < startedAt) throw new Error("badTimes");
   if (!Object.hasOwn(ENDED_BY_RULES, endedBy) || (endedBy === "startOver" && version < 4)) {
-    throw new Error("unknown end reason");
+    throw new Error("unknownEndReason");
   }
-  if (typeof characterId !== "string" || !/^[a-z0-9-]{1,64}$/.test(characterId)) throw new Error("bad character id");
+  if (typeof characterId !== "string" || !/^[a-z0-9-]{1,64}$/.test(characterId)) throw new Error("badCharacter");
   const styles = ["kind", "strict"];
   if (version >= 3) styles.push("ragebait");
   if (version >= 5) styles.push("firm");
-  if (!styles.includes(style)) throw new Error("unknown style");
-  if (mode !== "simple" && mode !== "advanced") throw new Error("unknown mode");
+  if (!styles.includes(style)) throw new Error("unknownStyle");
+  if (mode !== "simple" && mode !== "advanced") throw new Error("unknownMode");
   if (!isTime(plannedMs) || !isTime(elapsedMs) || !isTime(distractedMs) || distractedMs > elapsedMs) {
-    throw new Error("bad duration fields");
+    throw new Error("badDurations");
   }
-  if (mode === "simple" && focusPercent !== null) throw new Error("focus % in Simple mode");
+  if (mode === "simple" && focusPercent !== null) throw new Error("focusInSimple");
   if (mode === "advanced" && !(Number.isInteger(focusPercent) && focusPercent >= 0 && focusPercent <= 100)) {
-    throw new Error("bad focus %");
+    throw new Error("badFocus");
   }
-  if (!Array.isArray(raw.distractions)) throw new Error("no distraction list");
+  if (!Array.isArray(raw.distractions)) throw new Error("noDistractions");
 
   // Breaks (version 7): each inside the session, in order and not overlapping. They're attached
   // before the numbers are checked below, so session time is measured without them, exactly as
   // the app saves it (a session with breaks that ran to the timer is still "timer").
   let pauses = [];
   if (version >= 7 && Object.hasOwn(raw, "pauses")) {
-    if (!Array.isArray(raw.pauses)) throw new Error("bad break list");
+    if (!Array.isArray(raw.pauses)) throw new Error("badBreakList");
     let previousEnd = startedAt;
     pauses = raw.pauses.map((p) => {
-      if (!p || !isTime(p.at) || !Number.isInteger(p.ms) || p.ms <= 0) throw new Error("bad break");
-      if (p.at < startedAt || p.at + p.ms > endedAt) throw new Error("break outside the session");
-      if (p.at < previousEnd) throw new Error("breaks overlap");
+      if (!p || !isTime(p.at) || !Number.isInteger(p.ms) || p.ms <= 0) throw new Error("badBreak");
+      if (p.at < startedAt || p.at + p.ms > endedAt) throw new Error("breakOutside");
+      if (p.at < previousEnd) throw new Error("breaksOverlap");
       previousEnd = p.at + p.ms;
       return { at: p.at, ms: p.ms };
     });
@@ -344,13 +348,13 @@ function cleanImportedSession(raw, version) {
 
   const distractions = raw.distractions.map((d) => {
     if (!d || !isTime(d.at) || !Number.isInteger(d.level) || d.level < 1 || d.level > 5 || !isTime(d.ms)) {
-      throw new Error("bad distraction");
+      throw new Error("badDistraction");
     }
     if (version >= 2 && d.category !== null && !isCategory(d.category)) {
-      throw new Error("unknown distraction category");
+      throw new Error("unknownCategory");
     }
     if (version >= 6 && Object.hasOwn(d, "source") && d.source !== "away") {
-      throw new Error("unknown distraction source");
+      throw new Error("unknownSource");
     }
     const clean = { at: d.at, level: d.level, ms: d.ms, category: version >= 2 ? d.category : null };
     if (version >= 6 && d.source === "away") clean.source = "away";
@@ -359,34 +363,34 @@ function cleanImportedSession(raw, version) {
 
   // Do the numbers agree? The app's own calculation is the reference.
   const expected = sessionFocus({ startedAt, endedAt, mode, distractions, pauses });
-  if (elapsedMs !== expected.elapsedMs) throw new Error("elapsed time doesn't match start and end");
-  if (elapsedMs < HISTORY_MIN_MS) throw new Error("shorter than 1 minute");
-  if (plannedMs < MIN_PLANNED_MS || plannedMs % MIN_PLANNED_MS !== 0) throw new Error("bad planned length");
-  if (elapsedMs > plannedMs) throw new Error("longer than planned");
+  if (elapsedMs !== expected.elapsedMs) throw new Error("elapsedMismatch");
+  if (elapsedMs < HISTORY_MIN_MS) throw new Error("tooShort");
+  if (plannedMs < MIN_PLANNED_MS || plannedMs % MIN_PLANNED_MS !== 0) throw new Error("badPlanned");
+  if (elapsedMs > plannedMs) throw new Error("longerThanPlanned");
   const endedByRule = ENDED_BY_RULES[endedBy];
-  if (endedByRule && !endedByRule(elapsedMs, plannedMs)) throw new Error("end reason doesn't match the times");
+  if (endedByRule && !endedByRule(elapsedMs, plannedMs)) throw new Error("endReasonMismatch");
   for (const d of distractions) {
-    if (d.at < startedAt || d.at > endedAt + IMPORT_LATE_DISTRACTION_MS) throw new Error("distraction outside the session");
+    if (d.at < startedAt || d.at > endedAt + IMPORT_LATE_DISTRACTION_MS) throw new Error("distractionOutside");
     // The distraction buttons are hidden during a break, and leaving the page then logs nothing.
-    if (pauses.some((p) => d.at > p.at && d.at < p.at + p.ms)) throw new Error("distraction during a break");
-    if (mode === "simple" && d.ms !== 0) throw new Error("Simple distraction with a length");
+    if (pauses.some((p) => d.at > p.at && d.at < p.at + p.ms)) throw new Error("distractionInBreak");
+    if (mode === "simple" && d.ms !== 0) throw new Error("simpleWithLength");
     // Away: measured in whole seconds, at least AWAY_MIN_MS, never longer than the session.
     // Its at (the moment the page was left) is inside the session like any other.
     if (mode === "advanced" && d.source === "away") {
       if (d.ms % 1000 !== 0 || d.ms < AWAY_MIN_MS || d.ms > elapsedMs) {
-        throw new Error("away distraction length out of range");
+        throw new Error("awayLength");
       }
-      if (d.level !== awayLevel(d.ms)) throw new Error("away distraction level doesn't match its length");
+      if (d.level !== awayLevel(d.ms)) throw new Error("awayLevel");
     } else if (mode === "advanced" && (d.ms < IMPORT_MIN_DISTRACTION_MS || d.ms > IMPORT_MAX_DISTRACTION_MS)) {
-      throw new Error("Advanced distraction length out of range");
+      throw new Error("advancedLength");
     }
   }
-  if (distractedMs !== expected.distractedMs) throw new Error("distraction total doesn't add up");
+  if (distractedMs !== expected.distractedMs) throw new Error("totalMismatch");
   // Before 19 Oct 2026 the app rounded a tiny distraction (under 0.5% of the
   // session) up to 100%, so that old value is accepted too.
   const oldRoundedTo100 = Math.round(((elapsedMs - distractedMs) / elapsedMs) * 100) === 100;
   if (mode === "advanced" && focusPercent !== expected.focusPercent && !(focusPercent === 100 && oldRoundedTo100)) {
-    throw new Error("focus % doesn't match distraction time");
+    throw new Error("focusMismatch");
   }
 
   return {
@@ -396,25 +400,21 @@ function cleanImportedSession(raw, version) {
 }
 
 // Reads the text of an import file. Returns { sessions, invalidReasons }: the
-// cleaned sessions, and one short reason per session that was skipped because
-// it's invalid. A problem with the file itself throws an Error whose message
-// can be shown to the user as-is.
+// cleaned sessions, and one reason code per session that was skipped because
+// it's invalid. A problem with the file itself throws an Error whose message is a code:
+// import.file.<code> in js/i18n/en.js.
 function parseHistoryExport(text) {
   let data;
   try {
     data = JSON.parse(text);
   } catch {
-    throw new Error("This file isn't a ConcenTraining export: it isn't valid JSON.");
+    throw new Error("notJson");
   }
   if (!data || data.app !== EXPORT_APP || data.type !== EXPORT_TYPE || !Array.isArray(data.sessions)) {
-    throw new Error("This file isn't a ConcenTraining history export.");
+    throw new Error("notExport");
   }
   if (!IMPORT_VERSIONS.includes(data.version)) {
-    throw new Error(
-      typeof data.version === "number" && data.version > EXPORT_VERSION
-        ? "This export was made by a newer version of ConcenTraining. Reload the page and try again."
-        : "This export has an unknown version number."
-    );
+    throw new Error(typeof data.version === "number" && data.version > EXPORT_VERSION ? "newerVersion" : "unknownVersion");
   }
   // A broken session is skipped; the rest of the file still imports.
   const sessions = [];

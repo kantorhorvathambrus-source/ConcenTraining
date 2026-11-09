@@ -2329,3 +2329,16 @@ function wornPreset(look) {
     return COSTUME_FIELDS.every((field) => worn[field] === look[field]);
   }) || null;
 }
+
+// ---------- translations ----------
+// The English labels above go to the translation system (localize in js/i18n.js): each becomes a
+// getter that gives the current language. Keys: avatar.<field>.<item id> for the items offered,
+// avatar.theme.<id>, avatar.preset.<id> and avatar.presetDescription.<id>. Only ids are ever saved.
+for (const field of COSTUME_FIELDS) {
+  for (const item of COSTUME_OPTIONS[field]) I18N.localize(item, "label", `avatar.${field}.${item.id}`);
+}
+for (const theme of COSTUME_THEMES) I18N.localize(theme, "label", `avatar.theme.${theme.id}`);
+for (const preset of [NO_COSTUME_PRESET, ...COSTUME_PRESETS]) {
+  I18N.localize(preset, "label", `avatar.preset.${preset.id}`);
+  I18N.localize(preset, "description", `avatar.presetDescription.${preset.id}`);
+}

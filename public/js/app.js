@@ -22,10 +22,7 @@ const UNDO_WINDOW_MS = 5000; // after a distraction tap, Undo takes Motivate me'
 // region is emptied, and emptied again this long after that.
 const ANNOUNCE_DELAY_MS = 100;
 const ANNOUNCE_CLEAR_MS = 5000;
-const PICKER_ANNOUNCEMENT = "What distracted you? Choose below, or skip.";
-const UNDO_ANNOUNCEMENT = "Distraction undone.";
-const PAUSED_ANNOUNCEMENT = "Paused";
-const RESUMED_ANNOUNCEMENT = "Resumed";
+// Their texts: announce.* in js/i18n/en.js.
 // Page hidden (another app, another tab, locked screen) for at least this long during a session:
 // on return the app asks whether it was a distraction. Shorter absences are ignored.
 // AWAY_MIN_MS is in history-store.js, because imports check away distractions against it.
@@ -61,25 +58,27 @@ const SUMMARY_POSES = {
 };
 
 // Simple mode: severity only, no time. Level = which reaction pose to show (1-5).
+// key: the button's text (js/i18n/en.js: A flicker, Drifted, Lost track, Far away, Totally gone).
 const SIMPLE_OPTIONS = [
-  { label: "A flicker", level: 1 },
-  { label: "Drifted", level: 2 },
-  { label: "Lost track", level: 3 },
-  { label: "Far away", level: 4 },
-  { label: "Totally gone", level: 5, askRestart: true },
+  { key: "distraction.simple.1", level: 1 },
+  { key: "distraction.simple.2", level: 2 },
+  { key: "distraction.simple.3", level: 3 },
+  { key: "distraction.simple.4", level: 4 },
+  { key: "distraction.simple.5", level: 5, askRestart: true },
 ];
 
 // Advanced mode: distraction length. "10+ min" counts as 10 minutes in the focus %.
 // A length longer than the free time so far is disabled (see updateLengthButtons),
 // except "30 sec" (alwaysEnabled), so the row isn't all grey at the start.
+// key: the button's text (30 sec, 1 min, 2 min, 3 min, 5 min, 10 min, 10+ min).
 const ADVANCED_OPTIONS = [
-  { label: "30 sec", ms: 30 * 1000, level: 1, alwaysEnabled: true },
-  { label: "1 min", ms: 1 * MIN, level: 2 },
-  { label: "2 min", ms: 2 * MIN, level: 3 },
-  { label: "3 min", ms: 3 * MIN, level: 3 },
-  { label: "5 min", ms: 5 * MIN, level: 4 },
-  { label: "10 min", ms: 10 * MIN, level: 4 },
-  { label: "10+ min", ms: 10 * MIN, level: 5, askRestart: true },
+  { key: "distraction.advanced.1", ms: 30 * 1000, level: 1, alwaysEnabled: true },
+  { key: "distraction.advanced.2", ms: 1 * MIN, level: 2 },
+  { key: "distraction.advanced.3", ms: 2 * MIN, level: 3 },
+  { key: "distraction.advanced.4", ms: 3 * MIN, level: 3 },
+  { key: "distraction.advanced.5", ms: 5 * MIN, level: 4 },
+  { key: "distraction.advanced.6", ms: 10 * MIN, level: 4 },
+  { key: "distraction.advanced.7", ms: 10 * MIN, level: 5, askRestart: true },
 ];
 
 const $ = (selector) => document.querySelector(selector);
@@ -129,6 +128,8 @@ function countCharacterPick(character) {
 // ---------- state ----------
 
 // endSound / keepScreenOn / leaveReminder: the setup checkboxes (leaveReminder: see "leave reminder").
+// language: only set when a language was picked in the language sheet (js/i18n.js saves it; until
+// then the app follows the browser's language). This file never writes it: savePrefs keeps it.
 // homeScreenTipDismissed: "Got it" was tapped on the iPhone Home Screen tip.
 // persistRequested: persistent storage was asked for (or skipped, in Firefox).
 // howItWorksDismissed: "Got it" was tapped on the How it works card.
@@ -479,8 +480,8 @@ function updateScreenNote() {
   note.hidden = Boolean(wakeLock.sentinel);
 }
 
-// Red note on the new session's screen: SESSION_STORAGE_NOTE when the session starts while the
-// browser doesn't let the site save anything (startSession), or RESTART_SAVE_ERROR when Start new
+// Red note on the new session's screen: storage.sessionNote when the session starts while the
+// browser doesn't let the site save anything (startSession), or session.saveFirstPartFailed when Start new
 // session couldn't save the abandoned part. After SAVE_ERROR_NOTE_MS it turns invisible but keeps
 // its space, so nothing on the screen moves while a distraction button may be tapped. The next
 // session (enterSession) removes it completely.
@@ -568,11 +569,11 @@ function clampMinutes(value) {
 // The limits are checked on what was typed, before rounding: 0.5 says "Min.", 240.4 says "Max.".
 function minutesNote(value) {
   const n = Number(value);
-  if (String(value).trim() === "" || !Number.isFinite(n)) return `Set to ${DEFAULT_MINUTES} min.`;
-  if (n > MAX_MINUTES) return `Max. ${MAX_MINUTES} min.`;
-  if (n < MIN_MINUTES) return `Min. ${MIN_MINUTES} min.`;
+  if (String(value).trim() === "" || !Number.isFinite(n)) return t("duration.setTo", { minutes: DEFAULT_MINUTES });
+  if (n > MAX_MINUTES) return t("duration.max", { minutes: MAX_MINUTES });
+  if (n < MIN_MINUTES) return t("duration.min", { minutes: MIN_MINUTES });
   const rounded = Math.round(n);
-  if (rounded !== n) return `Rounded to ${rounded} min.`;
+  if (rounded !== n) return t("duration.rounded", { minutes: rounded });
   return "";
 }
 
@@ -585,16 +586,32 @@ let pressCount = 0;
 // starts, so the message can be seen, and the next tap starts with the corrected value. It blocks
 // only once per correction, so a click without a press (TalkBack, Voice Access, Switch Access)
 // can't get stuck. value() returns the minutes without blocking. clearNote() hides the line.
+// relabel() puts its texts in the current language, keeping the typed value (language switch).
 function durationPicker(container, initialMinutes) {
   container.innerHTML = "";
 
   const chips = document.createElement("div");
   chips.className = "chips";
 
+  // "Custom: [25] min": the words around the field are their own text nodes, so they can be
+  // translated without touching the field.
   const custom = document.createElement("label");
   custom.className = "custom-minutes";
-  custom.innerHTML = `Custom: <input type="number" min="${MIN_MINUTES}" max="${MAX_MINUTES}" inputmode="numeric"> min`;
-  const input = custom.querySelector("input");
+  const before = document.createTextNode("");
+  const after = document.createTextNode("");
+  const input = document.createElement("input");
+  input.type = "number";
+  input.min = MIN_MINUTES;
+  input.max = MAX_MINUTES;
+  input.inputMode = "numeric";
+  custom.append(before, input, after);
+  const relabel = () => {
+    before.textContent = `${t("duration.customBefore")} `;
+    after.textContent = ` ${t("duration.customAfter")}`;
+    chips.querySelectorAll("button").forEach((chip) => {
+      chip.textContent = t("duration.chip", { minutes: chip.dataset.minutes });
+    });
+  };
 
   // Always in the page (a status line must exist before its text changes to be read out),
   // empty and without height until the field is corrected.
@@ -630,7 +647,6 @@ function durationPicker(container, initialMinutes) {
     chip.type = "button";
     chip.className = "chip";
     chip.dataset.minutes = minutes;
-    chip.textContent = `${minutes} min`;
     chip.addEventListener("click", () => {
       input.value = minutes;
       sync();
@@ -639,6 +655,7 @@ function durationPicker(container, initialMinutes) {
     chips.append(chip);
   }
 
+  relabel();
   input.value = initialMinutes;
   // While typing the line only goes away (once the value is valid), it never appears.
   input.addEventListener("input", () => {
@@ -664,6 +681,7 @@ function durationPicker(container, initialMinutes) {
     },
     value: () => clampMinutes(input.value),
     clearNote,
+    relabel,
   };
 }
 
@@ -686,7 +704,7 @@ function updateSetupStorageNote(ok) {
   if (note.hidden === ok) return;
   const anchor = $("#characterStep");
   const before = anchor.getBoundingClientRect().top;
-  note.textContent = ok ? "" : SETUP_STORAGE_NOTE;
+  note.textContent = ok ? "" : t("storage.setupNote");
   note.hidden = ok;
   if ($("#setupScreen").hidden || window.scrollY === 0) return;
   const moved = anchor.getBoundingClientRect().top - before;
@@ -695,7 +713,7 @@ function updateSetupStorageNote(ok) {
 
 // ---------- setup screen ----------
 
-let setupPicker = { read: () => prefs.minutes, value: () => prefs.minutes, clearNote() {} };
+let setupPicker = { read: () => prefs.minutes, value: () => prefs.minutes, clearNote() {}, relabel() {} };
 
 // Saves only the given fields on top of what's saved now, so a field another tab changed since
 // this page loaded isn't undone. This page's copy fills in fields that were never saved, so the
@@ -766,9 +784,10 @@ function updateQuickStart() {
     setPoseImage($("#quickStartImg"), character, "initial");
     quickStart.artKey = artKey;
   }
-  // No-break spaces (\u00a0): a narrow screen wraps after a "·", never before it or inside "25 min".
-  $("#quickStartLine").textContent =
-    `${character.name}\u00a0· ${capitalize(prefs.mode)}\u00a0· ${setupPicker.value()}\u00a0min`;
+  // No-break spaces in the text: a narrow screen wraps after a "·", never before it or inside "25 min".
+  $("#quickStartLine").textContent = t("quickStart.line", {
+    name: character.name, mode: modeName(prefs.mode), minutes: setupPicker.value(),
+  });
 }
 
 // A restore from the browser's back/forward cache (e.g. Back from history.html after deleting
@@ -902,15 +921,15 @@ function renderCustomList() {
     const edit = document.createElement("a");
     edit.className = "btn compact";
     edit.href = `avatar.html?id=${encodeURIComponent(character.id)}`;
-    edit.textContent = "Edit";
+    edit.textContent = t("common.edit");
     edit.dataset.role = "edit";
-    edit.setAttribute("aria-label", `Edit ${character.name}`);
+    edit.setAttribute("aria-label", t("character.editLabel", { name: character.name }));
     const remove = document.createElement("button");
     remove.type = "button";
     remove.className = "btn compact";
-    remove.textContent = "Delete";
+    remove.textContent = t("common.delete");
     remove.dataset.role = "delete";
-    remove.setAttribute("aria-label", `Delete ${character.name}`);
+    remove.setAttribute("aria-label", t("character.deleteLabel", { name: character.name }));
     remove.addEventListener("click", () => confirmDeleteCustom(character));
     actions.append(edit, remove);
 
@@ -938,7 +957,7 @@ function focusAfterRemoval(removedId, before) {
 // The saved list is read again right here, so a character saved or edited in another tab meanwhile
 // is kept. If it was the chosen character, nothing is chosen any more (like a first visit).
 async function confirmDeleteCustom(character) {
-  $("#deleteCharacterTitle").textContent = `Delete ${character.name}?`;
+  $("#deleteCharacterTitle").textContent = t("character.deleteTitle", { name: character.name });
   if ((await ask($("#deleteCharacterDialog"))) !== "delete") return;
   const before = loadCustomCharacters();
   const kept = before.filter((c) => c.id !== character.id);
@@ -990,7 +1009,7 @@ function updateCharacterCards() {
 
 async function onCharacterTap(character) {
   if (character.group === "ragebait" && prefs.characterId !== character.id) {
-    $("#ragebaitText").textContent = `${character.name}: ${GROUPS.ragebait.warning}`;
+    $("#ragebaitText").textContent = t("character.ragebaitText", { name: character.name, warning: GROUPS.ragebait.warning });
     if ((await ask($("#ragebaitDialog"))) !== "ok") return;
   }
 
@@ -1047,7 +1066,7 @@ async function onStartClick(fromQuickStart) {
     const error = $("#characterError");
     error.hidden = false;
     error.textContent = "";
-    error.textContent = "Pick a character first."; // re-set so screen readers announce it again on every tap
+    error.textContent = t("setup.pickFirst"); // re-set so screen readers announce it again on every tap
     scrollToStep($("#characterStep"));
     return;
   }
@@ -1098,7 +1117,7 @@ function startSession(character, mode, minutes) {
   save(SESSION_KEY, session);
   enterSession();
   const ok = checkStorage();
-  if (!ok) showSaveErrorNote(SESSION_STORAGE_NOTE);
+  if (!ok) showSaveErrorNote(t("storage.sessionNote"));
   return ok;
 }
 
@@ -1106,10 +1125,11 @@ function enterSession() {
   const character = sessionCharacter(session);
   const options = session.mode === "advanced" ? ADVANCED_OPTIONS : SIMPLE_OPTIONS;
 
-  $("#sessionInfo").textContent =
-    `${character.name} · ${styleLabel(session.style)} · ${capitalize(session.mode)} · ${Math.round(session.durationMs / MIN)} min`;
-  $("#distractionPrompt").textContent =
-    session.mode === "advanced" ? "Got distracted? For how long?" : "Got distracted? How much?";
+  $("#sessionInfo").textContent = t("session.info", {
+    name: character.name, style: styleLabel(session.style), mode: modeName(session.mode),
+    minutes: Math.round(session.durationMs / MIN),
+  });
+  $("#distractionPrompt").textContent = t(session.mode === "advanced" ? "session.promptAdvanced" : "session.promptSimple");
 
   const buttons = $("#distractionButtons");
   buttons.innerHTML = "";
@@ -1119,7 +1139,7 @@ function enterSession() {
     const button = document.createElement("button");
     button.type = "button";
     button.className = `btn level level-${option.level}`;
-    button.textContent = option.label;
+    button.textContent = t(option.key);
     button.addEventListener("click", () => logDistraction(option, button));
     buttons.append(button);
   }
@@ -1159,7 +1179,7 @@ function tick() {
   // no "doing well" pose, and the session can't run out.
   if (session.pausedAt) {
     $("#breakClock").textContent = formatBreak(now - session.pausedAt);
-    document.title = `Paused · ${BASE_TITLE}`;
+    document.title = t("session.pausedTitle");
     return;
   }
   document.title = `${clock} · ${BASE_TITLE}`;
@@ -1262,7 +1282,7 @@ function onUndoClick() {
   stopReaction();
   setPose("initial");
   closePicker(false);
-  announce(UNDO_ANNOUNCEMENT); // replaces the reaction's line if it hasn't been read yet
+  announce(t("announce.undo")); // replaces the reaction's line if it hasn't been read yet
   updateLengthButtons();
   // An earlier "10+ min" / "Totally gone" that wasn't undone still asks, now.
   closeUndo(true);
@@ -1272,6 +1292,7 @@ function onUndoClick() {
 
 function buildCategoryButtons() {
   const buttons = $("#categoryButtons");
+  buttons.innerHTML = ""; // built again after a language switch
   for (const category of DISTRACTION_CATEGORIES) {
     const button = document.createElement("button");
     button.type = "button";
@@ -1303,7 +1324,7 @@ function showPicker(closeInMs) {
   const coveredFocus =
     compact && ($(".distraction").contains(document.activeElement) || card.contains(document.activeElement));
   if (compact) card.hidden = true;
-  if (box.hidden) announce(PICKER_ANNOUNCEMENT);
+  if (box.hidden) announce(t("announce.picker"));
   box.hidden = false;
   if (coveredFocus) $("#skipCategoryButton").focus({ preventScroll: true });
   picker.closesAt = Date.now() + closeInMs;
@@ -1350,7 +1371,7 @@ function closePicker(thenAsk) {
   const box = $("#categoryPicker");
   const hadFocus = box.contains(document.activeElement);
   box.hidden = true;
-  if (announcer.text === PICKER_ANNOUNCEMENT) clearAnnouncement();
+  if (announcer.text === t("announce.picker")) clearAnnouncement();
   if (hadFocus) {
     const button = picker.returnFocus;
     const covered = isCompactLandscape() && !$("#motivationCard").hidden;
@@ -1379,16 +1400,11 @@ function askPendingRestart() {
 
 let restartPicker = null; // built again every time the dialog opens
 
-// Step 1 of the continue/restart dialog. Simple mode has no times, so it doesn't say "long break".
+// Step 1 of the continue/restart dialog (its texts' keys). Simple mode has no times, so it doesn't
+// say "long break".
 const RESTART_TEXTS = {
-  simple: {
-    title: "That was a big distraction",
-    text: "Keep going with this session, or start fresh? After a big distraction, starting over is often easier.",
-  },
-  advanced: {
-    title: "That was a long break",
-    text: "Keep going with this session, or start fresh? After a long break, starting over is often easier.",
-  },
+  simple: { title: "restart.simpleTitle", text: "restart.simpleText" },
+  advanced: { title: "restart.advancedTitle", text: "restart.advancedText" },
 };
 
 // Step 1 asks only "continue or start over"; step 2 (after Start over) asks for the new length,
@@ -1440,8 +1456,8 @@ async function askContinueOrRestart() {
 
   // Every opening starts at step 1 with fresh chips, even after a reload or a takeover.
   const texts = RESTART_TEXTS[session.mode] || RESTART_TEXTS.simple;
-  $("#restartTitle").textContent = texts.title;
-  $("#restartText").textContent = texts.text;
+  $("#restartTitle").textContent = t(texts.title);
+  $("#restartText").textContent = t(texts.text);
   showRestartStep(1);
   restartPicker = durationPicker($("#restartDuration"), Math.round(session.durationMs / MIN));
 
@@ -1453,7 +1469,7 @@ async function askContinueOrRestart() {
   const canSave = sessionTime >= HISTORY_MIN_MS;
   $("#restartSaveRow").hidden = !canSave;
   $("#restartSave").checked = true;
-  $("#restartSaveText").textContent = `Save the first ${formatDuration(sessionTime)} to history`;
+  $("#restartSaveText").textContent = t("restart.save", { duration: formatDuration(sessionTime) });
 
   const asked = session;
   const answer = await ask(dialog);
@@ -1474,7 +1490,7 @@ async function askContinueOrRestart() {
     const canSaveNow = startSession(character, mode, restartPicker.value());
     // Only one line fits: if nothing can be saved at all, the new session's note (already shown by
     // startSession) also covers the lost first part.
-    if (saved === "failed" && canSaveNow) showSaveErrorNote(RESTART_SAVE_ERROR);
+    if (saved === "failed" && canSaveNow) showSaveErrorNote(t("session.saveFirstPartFailed"));
   } else {
     askPendingAway();
   }
@@ -1490,7 +1506,7 @@ async function onEndClick() {
   closeUndo(false);
   // The picker waits behind this dialog, and a waiting restart question waits until it's answered.
   pausePicker();
-  $("#endTitle").textContent = paused ? "End this session now?" : "Stop for now?";
+  $("#endTitle").textContent = t(paused ? "end.titlePaused" : "end.titleRunning");
   $("#endBreak").hidden = paused;
   // Running: "Timer still running · 16:41" under the title, ticked by tick(). It's the dialog's
   // description, read once when it opens; no live region, so the ticking time isn't announced.
@@ -1553,7 +1569,7 @@ function updatePausedView() {
   $("#pausedCard").hidden = !paused;
   $("#resumeButton").hidden = !paused;
   $("#motivateButton").hidden = paused || Boolean(undo.distraction);
-  $("#endButton").textContent = paused ? "End session" : "Stop";
+  $("#endButton").textContent = t(paused ? "session.endSession" : "session.stop");
   if (paused) {
     $("#motivationCard").hidden = true;
     $("#categoryPicker").hidden = true;
@@ -1574,7 +1590,7 @@ function takeBreak() {
   updatePausedView();
   tick();
   $("#resumeButton").focus({ preventScroll: true });
-  announce(PAUSED_ANNOUNCEMENT);
+  announce(t("announce.paused"));
   updateWakeLock(); // released: the screen may turn off now
 }
 
@@ -1596,7 +1612,7 @@ function resumeFromBreak() {
   tick();
   // The prompt above the distraction buttons, where the session goes on.
   $("#distractionPrompt").focus({ preventScroll: true });
-  announce(RESUMED_ANNOUNCEMENT);
+  announce(t("announce.resumed"));
   updateWakeLock(); // this tap lets the browser keep the screen on again
   askPendingAway();
   askPendingRestart();
@@ -1895,7 +1911,7 @@ function askPendingAway() {
 }
 
 function showAwayQuestion() {
-  $("#awayTitle").textContent = `You were away for ${formatDuration(away.ms)}.`;
+  $("#awayTitle").textContent = t("away.title", { duration: formatDuration(away.ms) });
 }
 
 // Every way the card closes ends up here: "Yes", "No", Esc, the session ending.
@@ -1933,8 +1949,6 @@ function logAwayDistraction(from, ms) {
 // registration fetched beforehand, because iOS freezes a Home Screen app very soon after it's left.
 // No push, no backend.
 const LEAVE_REMINDER_TAG = "ct-leave-reminder"; // a new notification with this tag replaces the old one
-const LEAVE_REMINDER_HINT =
-  "Notifications are blocked for this site. You can allow them in your browser's site settings.";
 // The one switch for iPhones and iPads. Untested on a real device: false turns it off there again.
 const LEAVE_REMINDER_ON_IOS = true;
 // registration: the service worker registration, kept ready for the synchronous call (see above).
@@ -2015,7 +2029,7 @@ async function onLeaveReminderChange() {
   savePrefs({ leaveReminder: allowed });
   if (permission === "denied") {
     hint.hidden = false;
-    hint.textContent = LEAVE_REMINDER_HINT; // set after showing it, so screen readers announce it
+    hint.textContent = t("setup.leaveReminderBlocked"); // set after showing it, so screen readers announce it
   }
 }
 
@@ -2034,14 +2048,16 @@ function leaveReminderWanted() {
 // renotify: a notification that replaces one with the same tag (e.g. an older reminder still in the
 // notification shade) is silent without it. Browsers that don't support it (Safari, Firefox) skip
 // it; it only throws with an empty tag, and the tag here is never empty.
+// Its text is in this page's language (t): the service worker only handles the tap, so it never
+// needs to know the language (it can't read the saved prefs anyway).
 function showLeaveReminder() {
   if (!leaveReminderWanted()) return;
   const registration = leaveReminder.registration;
   if (!registration || !registration.active) return; // no service worker yet: no reminder
   let shown;
   try {
-    shown = registration.showNotification("Your session is still running", {
-      body: "Is this part of what you're focusing on? Tap to go back.",
+    shown = registration.showNotification(t("notification.title"), {
+      body: t("notification.body"),
       icon: "icons/icon-192.png",
       tag: LEAVE_REMINDER_TAG,
       renotify: true,
@@ -2148,9 +2164,10 @@ async function askSaveLateSession(endedAt) {
   showScreen("setupScreen");
 
   const character = sessionCharacter(session);
-  $("#lateText").textContent =
-    `Your ${Math.round(session.durationMs / MIN)} min ${capitalize(session.mode)} session with ` +
-    `${character.name} ended ${formatTimeAgo(Date.now() - endedAt)}.`;
+  $("#lateText").textContent = t("late.text", {
+    minutes: Math.round(session.durationMs / MIN), mode: modeName(session.mode), name: character.name,
+    ago: formatTimeAgo(Date.now() - endedAt),
+  });
 
   // Discard deletes the session, so only a tap on a button answers (Esc asks again).
   // Another tab taking the session over closes the dialog: then this one stops asking.
@@ -2249,7 +2266,7 @@ function initMotivationFit() {
 function showMotivation() {
   const message = MOTIVATION[motivation.phase][motivation.index];
   motivation.shown = true;
-  $("#motivationBadge").textContent = message.type === "fact" ? "Brain fact" : "Boost";
+  $("#motivationBadge").textContent = t(message.type === "fact" ? "motivation.fact" : "motivation.boost");
   $("#motivationBadge").dataset.type = message.type;
   $("#motivationText").textContent = message.text;
   $("#motivationCard").hidden = false;
@@ -2271,32 +2288,33 @@ function renderSummary(saveFailed) {
   img.alt = describePose(character, pose);
   setPoseImage(img, character, pose);
 
-  $("#summaryTitle").textContent = SUMMARY_TITLES[result];
+  $("#summaryTitle").textContent = t(`summary.title.${result}`);
   const percentEl = $("#summaryPercent");
   const messageEl = $("#summaryMessage");
   const textEl = $("#summaryText");
   const noteEl = $("#summaryNote");
-  noteEl.textContent = SUMMARY_SHORT_NOTE;
+  noteEl.textContent = t("summary.shortNote");
   noteEl.hidden = !short;
   // Reset every time, so the next summary never shows an old error. The text is only set when it's
   // shown, so a screen reader reads it once.
   const saveErrorEl = $("#summarySaveError");
-  saveErrorEl.textContent = saveFailed ? SUMMARY_SAVE_ERROR : "";
+  saveErrorEl.textContent = saveFailed ? t("summary.saveError") : "";
   saveErrorEl.hidden = !saveFailed;
 
   const { elapsedMs: elapsed, distractedMs: distracted, focusPercent: percent } = sessionFocus(session);
   const count = session.distractions.length;
-  const logged = `with ${count} distraction${count === 1 ? "" : "s"} logged.`;
+  const logged = t("summary.logged", { count });
   // Ended before the timer ran out: also say how long it was meant to be.
-  const planned = elapsed < session.durationMs ? ` (${formatDuration(session.durationMs)} planned)` : "";
+  const planned = elapsed < session.durationMs ? t("summary.planned", { duration: formatDuration(session.durationMs) }) : "";
   textEl.hidden = short; // means nothing after a few seconds
 
   if (session.mode === "advanced") {
     messageEl.hidden = true;
-    percentEl.textContent = `${percent}% focused`;
+    percentEl.textContent = t("summary.percent", { percent });
     percentEl.hidden = short;
-    textEl.textContent =
-      `You focused for ${formatDuration(elapsed - distracted)} out of ${formatDuration(elapsed)}${planned}, ${logged}`;
+    textEl.textContent = t("summary.advancedLine", {
+      focused: formatDuration(elapsed - distracted), elapsed: formatDuration(elapsed), planned, logged,
+    });
   } else {
     // Simple mode has no lengths, so the elapsed time includes the distractions:
     // it's the session's length, not focused time. The character's sentence comes first.
@@ -2304,7 +2322,7 @@ function renderSummary(saveFailed) {
     const messages = SIMPLE_SUMMARY_MESSAGES[result];
     messageEl.hidden = !messages; // a short session only shows the note
     if (messages) messageEl.textContent = messages[Math.floor(Math.random() * messages.length)];
-    textEl.textContent = `Your session ran ${formatDuration(elapsed)}${planned}, ${logged}`;
+    textEl.textContent = t("summary.simpleLine", { elapsed: formatDuration(elapsed), planned, logged });
   }
 
   // Breaks: one factual line, only when there were any (and not for a short session).
@@ -2317,15 +2335,17 @@ function renderSummary(saveFailed) {
   const top = countCategories(session.distractions).slice(0, 3);
   const categoriesEl = $("#summaryCategories");
   categoriesEl.hidden = short || top.length === 0;
-  categoriesEl.textContent =
-    `Most common distraction${top.length === 1 ? "" : "s"}: ` +
-    top.map((category) => `${category.label} (${category.count})`).join(", ");
+  categoriesEl.textContent = t("summary.categories", {
+    count: top.length,
+    list: top.map((category) => t("summary.categoryCount", { label: category.label, count: category.count })).join(t("common.listSeparator")),
+  });
 }
 
 // ---------- formatting ----------
 
-function capitalize(text) {
-  return text.charAt(0).toUpperCase() + text.slice(1);
+// "simple" / "advanced" as shown: "Simple" / "Advanced" in English.
+function modeName(mode) {
+  return t(`mode.${mode}`);
 }
 
 function formatClock(ms) {
@@ -2343,18 +2363,41 @@ function formatDuration(ms) {
   const total = Math.round(ms / 1000);
   const minutes = Math.floor(total / 60);
   const seconds = total % 60;
-  if (minutes === 0) return `${seconds} sec`;
-  return seconds ? `${minutes} min ${seconds} sec` : `${minutes} min`;
+  if (minutes === 0) return t("time.sec", { seconds });
+  return seconds ? t("time.minSec", { minutes, seconds }) : t("time.min", { minutes });
 }
 
-// "45 min ago", "3 hours ago", "2 days ago"
+// "45 min ago", "3 hours ago", "2 days ago" (English) / "45 perce", "3 órája" (Hungarian): Intl's
+// relative time in the language's relativeTimeStyle (js/i18n/languages.js).
 function formatTimeAgo(ms) {
   const minutes = Math.floor(ms / MIN);
-  if (minutes < 60) return `${minutes} min ago`;
+  if (minutes < 60) return I18N.formatAgo(minutes, "minute");
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
-  const days = Math.floor(hours / 24);
-  return `${days} day${days === 1 ? "" : "s"} ago`;
+  if (hours < 24) return I18N.formatAgo(hours, "hour");
+  return I18N.formatAgo(Math.floor(hours / 24), "day");
+}
+
+// ---------- language switch ----------
+
+// A row tapped in the language sheet (js/language-picker.js) while the setup screen shows (the only
+// screen with the language button). js/i18n.js has already put the page's own text (data-i18n) in
+// the new language; this builds the parts made here again, in place, keeping every choice and the
+// typed minutes. Everything else (session, summary, dialogs) is built in the current language
+// whenever it's next shown. A session that's running in this tab can't be on screen now; one in
+// another tab keeps its language until that tab is loaded again.
+function onLanguageChange() {
+  renderCharacterList();
+  buildCategoryButtons();
+  setupPicker.relabel();
+  setupPicker.clearNote(); // a correction message in the old language: it comes back on the next Start
+  updateQuickStart();
+  // Notes that are showing get their text again (they're only set when they appear).
+  const storageNote = $("#setupStorageNote");
+  if (!storageNote.hidden) storageNote.textContent = t("storage.setupNote");
+  const characterError = $("#characterError");
+  if (!characterError.hidden) characterError.textContent = t("setup.pickFirst");
+  const hint = $("#leaveReminderHint");
+  if (!hint.hidden) hint.textContent = t("setup.leaveReminderBlocked");
 }
 
 // ---------- start-up ----------
@@ -2420,6 +2463,8 @@ function init() {
   window.addEventListener("storage", onCustomStorage);
   window.addEventListener("pageshow", onPageShow);
   window.addEventListener("pagehide", () => (leaveReminder.unloading = true)); // see "leave reminder"
+  document.addEventListener("ct:languagechange", onLanguageChange);
+  initLanguagePicker();
 
   checkStorage();
   // Real images for custom characters' layers (AVATAR_PNG_FILES), once they're loaded.
