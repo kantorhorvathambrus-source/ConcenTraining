@@ -1021,6 +1021,33 @@ dialog p {
   gap: 10px;
 }
 
+/* Stop's dialog while running: "Timer still running · 16:41" under the title, because the dialog
+   covers the timer. Static dot, no animation; the time doesn't wobble as it ticks. */
+.end-running {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+
+dialog .end-running {
+  margin: -6px 0 14px;
+}
+
+.end-running-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+
+.end-running strong {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
 /* Stop's dialog: Take a break and its note, then a divider. The save checkbox is below it, because
    it belongs to ending, not to the break. Hidden during a break (onEndClick in app.js). */
 .end-break {

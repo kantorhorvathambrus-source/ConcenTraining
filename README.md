@@ -208,7 +208,13 @@ Netlify Functions that store counts in Netlify Blobs, used only for character po
   [When the browser won't save](#when-the-browser-wont-save)) shows in that spot instead: only one
   line fits, and it covers the lost first part too.
 - **Stop** (the right button of the bottom bar, where End session used to be: same place, style and
-  size) asks "Stop for now?". Under the title is a full-width **Take a break** button with a muted,
+  size) asks "Stop for now?". Because the dialog covers the timer, a line right under the title shows
+  that the clock keeps running: a small static orange dot (`--primary`), muted "Timer still running · "
+  and the remaining time in bold ("Timer still running · 16:41"), the same value and format as the
+  timer, updated every second with the same tick (tabular numbers, so it doesn't wobble). Screen
+  readers read it once as the dialog's description when it opens; it isn't a live region, so the
+  ticking time isn't announced. It's not shown during a break. Under it is a full-width
+  **Take a break** button with a muted,
   centred line under it, "The timer waits for you.", then a thin divider. Below the divider, because
   they belong to ending, not to the break: the save checkbox and **Keep going** / **End session**
   (End session stays the primary button). One button covers both on purpose: anyone who wants to stop
