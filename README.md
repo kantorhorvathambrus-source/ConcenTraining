@@ -1763,8 +1763,10 @@ test-site hostname check still matches the previews and `main--`.
 
 **Canonical address and link previews.** `index.html`, `history.html` and `privacy.html` have
 `<link rel="canonical">` with their https://concentraining.com address (`index.html` →
-`https://concentraining.com/`), so search engines treat every copy (including GitHub Pages) as that
-one. `stats.html` and `avatar.html` have `noindex` instead (not pages for search results), and no
+`https://concentraining.com/`, `history.html` → `https://concentraining.com/history`,
+`privacy.html` → `https://concentraining.com/privacy`: Netlify serves a page without `.html` and,
+with Pretty URLs on, redirects the `.html` address there, so the canonical address is never a
+redirect), so search engines treat every copy (including GitHub Pages) as that one. `stats.html` and `avatar.html` have `noindex` instead (not pages for search results), and no
 canonical. The same three pages have Open Graph and Twitter card tags (`og:title`,
 `og:description` = the page's meta description, `og:url` = the canonical address, `og:image`,
 `twitter:card` = `summary`), which apps like Messenger use for the preview of a shared link.
