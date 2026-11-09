@@ -21,6 +21,11 @@
   --level-5: #c9302c;
   --radius: 16px;
   --shadow: 0 4px 18px rgba(40, 30, 20, 0.08);
+  /* During a break (Stop → Take a break): the timer digits fade, and the progress bar fill turns
+     a light neutral that reads as "stopped": still visible on the track (--surface-2), but quieter
+     than the dimmed timer digits. Redefined for dark mode below. */
+  --paused-opacity: 0.4;
+  --paused-progress: #cdc5ba;
   color-scheme: light;
 }
 
@@ -37,6 +42,7 @@
     --error: #ff6b6b;
     --error-text: #17161b; /* white on the lighter red would be too faint */
     --shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+    --paused-progress: #4c4753;
     color-scheme: dark;
   }
 }
@@ -678,8 +684,59 @@ input:focus-visible {
   transition: width 0.5s linear;
 }
 
+.distraction {
+  position: relative; /* the paused card is placed over it */
+}
+
 .distraction h2 {
   text-align: center;
+}
+
+/* ---------- break (paused) ---------- */
+
+/* Instant, no animation: only the opacity and colour change. */
+.paused .timer {
+  opacity: var(--paused-opacity);
+}
+
+.paused .progress-bar {
+  background: var(--paused-progress);
+}
+
+/* The prompt and the distraction buttons keep their space under the paused card, so nothing on
+   the screen moves, but they can't be seen, tapped, focused or read out. */
+.paused .distraction > :not(.paused-card) {
+  visibility: hidden;
+}
+
+/* Exactly over the distraction block, in every layout: just the centred text, no box of its own
+   (the hidden prompt and buttons under it are already invisible). */
+.paused-card {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 16px;
+  text-align: center;
+  background: transparent;
+  border: 0;
+}
+
+.paused-card p {
+  margin: 0;
+}
+
+.paused-title {
+  font-weight: 700;
+  font-size: 1.15rem;
+}
+
+.paused-break {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums; /* the counter doesn't wobble as it counts */
 }
 
 .distraction-buttons {
@@ -962,6 +1019,21 @@ dialog p {
   justify-content: flex-end;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+/* Stop's dialog: Take a break and its note, then a divider. The save checkbox is below it, because
+   it belongs to ending, not to the break. Hidden during a break (onEndClick in app.js). */
+.end-break {
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+dialog .end-break-note {
+  margin: 8px 0 0;
+  color: var(--muted);
+  text-align: center;
+  font-size: 0.9375rem;
 }
 
 /* Full-width buttons on top of each other, the primary one first (the continue/restart dialog). */
@@ -2202,9 +2274,10 @@ a {
     padding-bottom: 10px;
   }
 
-  /* Motivate me and Undo share one cell: only one of them is ever shown. */
+  /* Motivate me, Undo and Resume share one cell: only one of them is ever shown. */
   #motivateButton,
-  #undoButton {
+  #undoButton,
+  #resumeButton {
     grid-area: left;
   }
 

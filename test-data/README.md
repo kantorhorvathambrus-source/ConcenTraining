@@ -44,6 +44,9 @@ Each holds one session that breaks one rule.
 | `bad-16-away-level-mismatch.json` | Version 6, a 2 min 15 sec time away distraction at level 5 (should be 3) | Nothing was imported. Skipped 1 invalid session (away distraction level doesn't match its length). |
 | `bad-17-unknown-source.json` | Version 6, a distraction with `source: "timer"` | Nothing was imported. Skipped 1 invalid session (unknown distraction source). |
 | `bad-18-away-in-v5.json` | A 20-sec time away distraction in a version 5 file: before version 6 every Advanced distraction must be 30 sec to 10 min, as always | Nothing was imported. Skipped 1 invalid session (Advanced distraction length out of range). |
+| `bad-19-break-outside.json` | Version 7, a break that starts 2 min before the session | Nothing was imported. Skipped 1 invalid session (break outside the session). |
+| `bad-20-breaks-overlap.json` | Version 7, a second break that starts while the first is still running | Nothing was imported. Skipped 1 invalid session (breaks overlap). |
+| `bad-21-distraction-during-break.json` | Version 7, a distraction logged in the middle of a break | Nothing was imported. Skipped 1 invalid session (distraction during a break). |
 
 ## Good files: everything imports
 
@@ -55,6 +58,7 @@ Each holds one session that breaks one rule.
 | `good-v4-start-over.json` | Version 4, two sessions saved with **Start over** (`endedBy: "startOver"`): Advanced 12 of 25 min at 8% (with a 10+ min distraction), Simple 8 of 25 min. Both show "restarted" in the list | Imported 2 sessions. |
 | `good-v5-firm.json` | Version 5, two Professor sessions with the firm style: Advanced 25 of 25 min at 94%, Simple 20 of 30 min. Both show "… · Firm" in the list | Imported 2 sessions. |
 | `good-v6-away.json` | Version 6, time away distractions (`source: "away"`, category Screen): Advanced 25 of 25 min at 87% with a 2 min 15 sec one and a tapped 1 min; Simple 20 of 25 min with one at level 4; Advanced **Start over** after 15 min at 54% with an 11 min 30 sec one (level 5, longer than any button) | Imported 3 sessions. |
+| `good-v7-pauses.json` | Version 7, sessions with breaks (`pauses`): Advanced 25 of 25 min at 96% with breaks of 3 min and 1 min 30 sec, which **ran to the timer** (`endedBy: "timer"`, shown as "25 min"), and a Simple session ended after 18 of 25 min with one 2 min break. Their rows say "Paused 2 times · 5 min" and "Paused once · 2 min" | Imported 2 sessions. |
 | `good-edge-cases.json` | 100% with one 30-sec distraction in 2 hours (how the app rounded before 19 Oct 2026), and a distraction tapped 0.4 sec after the timer ran out | Imported 2 sessions. |
 
 ## Mixed

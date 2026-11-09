@@ -24,11 +24,12 @@ const SIMPLE_POINTS_PER_MS = 25 * 60 * 1000; // shorter sessions count as 25 min
 // Version 2 added a category to each distraction. Version 3 allows the style
 // "ragebait". Version 4 allows endedBy "startOver". Version 5 allows the style
 // "firm". Version 6 allows distractions logged from the time away card
-// (source: "away", with a measured length). Version 1-5 files still import.
+// (source: "away", with a measured length). Version 7 adds the session's breaks
+// (pauses: [{ at, ms }], see "breaks" below). Version 1-6 files still import.
 const EXPORT_APP = "ConcenTraining";
 const EXPORT_TYPE = "session-history";
-const EXPORT_VERSION = 6;
-const IMPORT_VERSIONS = [1, 2, 3, 4, 5, 6];
+const EXPORT_VERSION = 7;
+const IMPORT_VERSIONS = [1, 2, 3, 4, 5, 6, 7];
 const IMPORT_MAX_BYTES = 5 * 1024 * 1024;
 
 // How a session can end, and what that says about its times (see saveFinishedSession):
@@ -104,11 +105,34 @@ function countCategories(distractions) {
     .sort((a, b) => b.count - a.count);
 }
 
+// ---------- breaks (Stop → Take a break in app.js) ----------
+
+// A break is a chosen pause, not a distraction: the session clock stops, and the break never counts
+// as session time (elapsed time, focus %, result, stats). Each one is saved as { at, ms }: when it
+// started and how long it lasted. A session without breaks has no pauses field (or an empty one),
+// so sessions saved before breaks existed count as never paused.
+function pausedTotal(pauses) {
+  return Array.isArray(pauses) ? pauses.reduce((sum, p) => sum + p.ms, 0) : 0;
+}
+
+// Only the known fields, and no zero-length breaks (Take a break and Resume in the same millisecond).
+function cleanPauses(pauses) {
+  return Array.isArray(pauses) ? pauses.filter((p) => p && p.ms > 0).map((p) => ({ at: p.at, ms: p.ms })) : [];
+}
+
+// "Paused once · 2 min" / "Paused 3 times · 6 min". formatLength formats the total: the summary
+// uses its own time format, the history list whole minutes.
+function formatPauses(pauses, formatLength) {
+  const times = pauses.length === 1 ? "once" : `${pauses.length} times`;
+  return `Paused ${times} · ${formatLength(pausedTotal(pauses))}`;
+}
+
 // Time and focus numbers for a finished session. focusPercent is null in Simple
 // mode, because its buttons say how much you were distracted, not for how long.
 // It's only 100 with no distraction time at all: 99.6% shows as 99, not 100.
+// elapsedMs is session time: from start to end, without the breaks.
 function sessionFocus(session) {
-  const elapsedMs = Math.max(0, session.endedAt - session.startedAt);
+  const elapsedMs = Math.max(0, session.endedAt - session.startedAt - pausedTotal(session.pauses));
   const loggedMs = session.distractions.reduce((sum, d) => sum + (d.ms || 0), 0);
   const distractedMs = Math.min(elapsedMs, loggedMs);
   let focusPercent = null;
@@ -180,7 +204,8 @@ function writeHistory(history) {
 }
 
 // Adds a finished session to the front of the history (newest first).
-// endedBy is worked out from the times ("timer" or "manual") unless it's given.
+// endedBy is worked out from the times ("timer" or "manual") unless it's given: "timer" when the
+// session time (without breaks) reached the planned length.
 // Returns "saved", "exists" (already in the saved history: same start time, nothing is written),
 // "short" (under HISTORY_MIN_MS: not saved on purpose) or "failed" (the browser refused to store it).
 function saveFinishedSession(session, endedBy) {
@@ -190,10 +215,11 @@ function saveFinishedSession(session, endedBy) {
   const history = loadHistory();
   if (history.some((entry) => entry.startedAt === session.startedAt)) return "exists";
 
+  const pauses = cleanPauses(session.pauses);
   history.unshift({
     startedAt: session.startedAt,
     endedAt: session.endedAt,
-    endedBy: endedBy || (session.endedAt >= session.startedAt + session.durationMs ? "timer" : "manual"),
+    endedBy: endedBy || (elapsedMs >= session.durationMs ? "timer" : "manual"),
     characterId: session.characterId,
     // Custom characters only: the name when the session ran, so a renamed or deleted character's
     // sessions still show a name. Built-in characters and older entries don't have it.
@@ -206,6 +232,8 @@ function saveFinishedSession(session, endedBy) {
     focusPercent,
     // A session resumed after a reload can still hold distractions from before categories existed.
     distractions: session.distractions.map(withCategory),
+    // Only when the session had breaks.
+    ...(pauses.length && { pauses }),
   });
   history.length = Math.min(history.length, HISTORY_LIMIT);
   // If it fails the app keeps working, the session just isn't remembered (and the user is told).
@@ -273,6 +301,8 @@ const isTime = (value) => Number.isFinite(value) && value >= 0;
 // version 5. Before version 4 the only end reasons were "timer" and "manual".
 // Before version 6 there are no away distractions: a source field is dropped and
 // every Advanced distraction needs a button length, exactly as those versions did.
+// Before version 7 there are no breaks: a pauses field is dropped, and elapsedMs must
+// be endedAt - startedAt, exactly as those versions did.
 function cleanImportedSession(raw, version) {
   if (!raw || typeof raw !== "object") throw new Error("not a session");
 
@@ -296,6 +326,22 @@ function cleanImportedSession(raw, version) {
   }
   if (!Array.isArray(raw.distractions)) throw new Error("no distraction list");
 
+  // Breaks (version 7): each inside the session, in order and not overlapping. They're attached
+  // before the numbers are checked below, so session time is measured without them, exactly as
+  // the app saves it (a session with breaks that ran to the timer is still "timer").
+  let pauses = [];
+  if (version >= 7 && Object.hasOwn(raw, "pauses")) {
+    if (!Array.isArray(raw.pauses)) throw new Error("bad break list");
+    let previousEnd = startedAt;
+    pauses = raw.pauses.map((p) => {
+      if (!p || !isTime(p.at) || !Number.isInteger(p.ms) || p.ms <= 0) throw new Error("bad break");
+      if (p.at < startedAt || p.at + p.ms > endedAt) throw new Error("break outside the session");
+      if (p.at < previousEnd) throw new Error("breaks overlap");
+      previousEnd = p.at + p.ms;
+      return { at: p.at, ms: p.ms };
+    });
+  }
+
   const distractions = raw.distractions.map((d) => {
     if (!d || !isTime(d.at) || !Number.isInteger(d.level) || d.level < 1 || d.level > 5 || !isTime(d.ms)) {
       throw new Error("bad distraction");
@@ -312,7 +358,7 @@ function cleanImportedSession(raw, version) {
   });
 
   // Do the numbers agree? The app's own calculation is the reference.
-  const expected = sessionFocus({ startedAt, endedAt, mode, distractions });
+  const expected = sessionFocus({ startedAt, endedAt, mode, distractions, pauses });
   if (elapsedMs !== expected.elapsedMs) throw new Error("elapsed time doesn't match start and end");
   if (elapsedMs < HISTORY_MIN_MS) throw new Error("shorter than 1 minute");
   if (plannedMs < MIN_PLANNED_MS || plannedMs % MIN_PLANNED_MS !== 0) throw new Error("bad planned length");
@@ -321,6 +367,8 @@ function cleanImportedSession(raw, version) {
   if (endedByRule && !endedByRule(elapsedMs, plannedMs)) throw new Error("end reason doesn't match the times");
   for (const d of distractions) {
     if (d.at < startedAt || d.at > endedAt + IMPORT_LATE_DISTRACTION_MS) throw new Error("distraction outside the session");
+    // The distraction buttons are hidden during a break, and leaving the page then logs nothing.
+    if (pauses.some((p) => d.at > p.at && d.at < p.at + p.ms)) throw new Error("distraction during a break");
     if (mode === "simple" && d.ms !== 0) throw new Error("Simple distraction with a length");
     // Away: measured in whole seconds, at least AWAY_MIN_MS, never longer than the session.
     // Its at (the moment the page was left) is inside the session like any other.
@@ -341,7 +389,10 @@ function cleanImportedSession(raw, version) {
     throw new Error("focus % doesn't match distraction time");
   }
 
-  return { startedAt, endedAt, endedBy, characterId, style, mode, plannedMs, elapsedMs, distractedMs, focusPercent, distractions };
+  return {
+    startedAt, endedAt, endedBy, characterId, style, mode, plannedMs, elapsedMs, distractedMs, focusPercent, distractions,
+    ...(pauses.length && { pauses }),
+  };
 }
 
 // Reads the text of an import file. Returns { sessions, invalidReasons }: the
