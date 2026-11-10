@@ -235,7 +235,7 @@ I18N_TEXTS.en = {
   "history.title": "Your history",
   "history.subtitle": "Finished sessions saved on this device.",
   "history.storageBefore":
-    "Your history is stored only in this browser. Clearing site data, using private mode or switching devices starts it over. Use",
+    "Your history is stored only in this browser. Clearing site data or using private mode deletes it, and it doesn't show up on other devices. Use",
   // Names the Export button. Other languages keep it exactly as their history.export (checked).
   "history.storageExport": "Export",
   "history.storageAfter": "below before you switch phones or clear your browser data.",
@@ -276,7 +276,7 @@ I18N_TEXTS.en = {
   "history.best.morning": "You focus best in the morning ({percent}% on average).",
   "history.best.afternoon": "You focus best in the afternoon ({percent}% on average).",
   "history.best.evening": "You focus best in the evening ({percent}% on average).",
-  "history.best.night": "You focus best in the night ({percent}% on average).",
+  "history.best.night": "You focus best at night ({percent}% on average).",
   "history.bestNotEnough": "Not enough data yet. A time of day counts once it has {count} Advanced-mode sessions.",
   "history.dayPartNeeds": "{sessions} · needs {count} to count",
 

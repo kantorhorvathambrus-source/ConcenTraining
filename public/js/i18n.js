@@ -90,7 +90,8 @@ const I18N = (() => {
 
   // The text for key in the current language, English if it has none, the key itself if neither has
   // it (and the dev check lists it). values fill {placeholders}; a text with plural forms
-  // ({ one, other, ... }) picks its form by values.count with Intl.PluralRules.
+  // ({ one, other, ... }) picks its form by values.count with Intl.PluralRules. An optional "zero"
+  // form wins for a count of 0: Brazilian Portuguese wants "0 dias", but Intl puts 0 in "one".
   function t(key, values) {
     let code = current();
     let text = lookup(code, key);
@@ -101,7 +102,7 @@ const I18N = (() => {
     if (text === undefined) return key;
     if (typeof text === "object") {
       const count = values && Number(values.count);
-      text = text[pluralCategory(code, count)] ?? text.other;
+      text = (count === 0 && Object.hasOwn(text, "zero") ? text.zero : text[pluralCategory(code, count)]) ?? text.other;
     }
     return fill(text, values);
   }
