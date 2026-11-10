@@ -628,7 +628,7 @@ I18N_TEXTS.pl = {
   "summary.simple.early.1": "Koniec przed czasem. W porządku, jeśli to, co było do zrobienia, jest zrobione.",
   "summary.simple.early.2": "Sesja skończyła się przed minutnikiem. Jeśli robota jest zrobiona, to się liczy.",
   "summary.simple.early.3": "Szybszy finisz. Następnym razem wybierz długość dopasowaną do zadania.",
-  "summary.simple.early.4": "Krócej, niż w planie. Liczy się to, co udało się zrobić.",
+  "summary.simple.early.4": "Krócej niż w planie. Liczy się to, co udało się zrobić.",
 
   // ---------- distraction categories (js/history-store.js) ----------
   // Short chip labels, all nouns ("Zmęczenie", never an adjective).
