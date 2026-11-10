@@ -58,7 +58,7 @@ const SUMMARY_POSES = {
 };
 
 // Simple mode: severity only, no time. Level = which reaction pose to show (1-5).
-// key: the button's text (js/i18n/en.js: A flicker, Drifted, Lost track, Far away, Totally gone).
+// key: the button's text (js/i18n/en.js: Barely, A little, Quite a bit, A lot, Completely).
 const SIMPLE_OPTIONS = [
   { key: "distraction.simple.1", level: 1 },
   { key: "distraction.simple.2", level: 2 },
@@ -143,7 +143,7 @@ const prefs = Object.assign(
 );
 delete prefs.style; // saved before personalities came from the character; dropped on the next save
 // style: the character's personality when the session ran ("kind", "firm", "strict" or "ragebait")
-// restartPending: "Totally gone" / "10+ min" was tapped and the continue/restart question
+// restartPending: "Completely" / "10+ min" was tapped and the continue/restart question
 // hasn't been answered yet. Saved, so a reload still asks it.
 // leftAt: set while the page is hidden, cleared on return (see "time away"). Saved, so a page the
 // browser discarded in the background still asks after the reload. Never goes into the history.
@@ -1284,7 +1284,7 @@ function onUndoClick() {
   closePicker(false);
   announce(t("announce.undo")); // replaces the reaction's line if it hasn't been read yet
   updateLengthButtons();
-  // An earlier "10+ min" / "Totally gone" that wasn't undone still asks, now.
+  // An earlier "10+ min" / "Completely" that wasn't undone still asks, now.
   closeUndo(true);
 }
 

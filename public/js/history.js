@@ -145,13 +145,15 @@ function counted(key, count) {
 }
 
 // Every date and time comes from Intl in the current language (I18N.formatDate), never put
-// together by hand in English order. English: "20 Oct", "Mon 20 Oct", "14:05".
+// together by hand in English order. English: "20 Oct", "Mon 20 Oct", "14:05"; Hungarian:
+// "okt. 20.", "okt. 20., hétfő", "14:05".
 function formatShortDate(date) {
   return I18N.formatDate(date, { day: "numeric", month: "short" });
 }
 
+// The weekday's length is the language's (weekday in js/i18n/languages.js): "Mon" / "hétfő".
 function formatDay(time) {
-  return I18N.formatDate(new Date(time), { weekday: "short", day: "numeric", month: "short" });
+  return I18N.formatDate(new Date(time), { weekday: I18N.language().weekday || "short", day: "numeric", month: "short" });
 }
 
 function formatClockTime(time) {

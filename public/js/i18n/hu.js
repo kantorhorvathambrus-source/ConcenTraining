@@ -53,13 +53,13 @@ I18N_TEXTS.hu = {
   "how.item2":
     "Amikor észreveszed, hogy elkalandoztál, koppints rá, mennyire (Egyszerű) vagy mennyi ideig (Részletes). A karaktered egy pózzal reagál, sosem szavakkal. Észrevenni és visszatérni: ez az a képesség, amit edzel.",
   "how.item3":
-    "Szükséged van egy kis szünetre? Koppints a Leállítás, majd a Szünet gombra. Az időzítő megvár, és a szünet nem számít bele a fókuszodba.",
+    "Szükséged van egy kis szünetre? Koppints a Stop, majd a Szünet gombra. Az időzítő megvár, és a szünet nem számít bele a fókuszodba.",
   "how.item4": "Ha fókuszálás közben kilépsz az alkalmazásból, visszatéréskor megkérdezi, hogy elkalandoztál-e.",
   "how.item5": "Az előzményeid automatikusan mentődnek ezen az eszközön. Ha át szeretnéd vinni őket egy másik telefonra, használd ezt:",
   "how.item5Link": "Exportálás az előzmények oldalon →",
 
   "tip.title": "Óvd meg az előzményeidet iPhone-on",
-  "tip.text": "A Safari törölheti az előzményeidet és a sorozatodat, ha 7 napig nem nyitod meg a ConcenTrainingot. A Főképernyőre tett alkalmazások megtartják.",
+  "tip.text": "Ha 7 napig nem nyitod meg a ConcenTrainingot, a Safari törölheti az előzményeidet és a sorozatodat. A Főképernyőre tett appnál ez nem történik meg.",
   "tip.howLabel": "Hogyan:",
   "tip.how": "koppints a Megosztás gombra (vagy ••• → Megosztás), majd válaszd a Főképernyőhöz adás lehetőséget.",
   "tip.importantLabel": "Fontos:",
@@ -129,16 +129,16 @@ I18N_TEXTS.hu = {
   "session.motivate": "Motiválj",
   "session.undo": "Visszavonás",
   "session.resume": "Folytatás",
-  "session.stop": "Leállítás",
+  "session.stop": "Stop",
   "session.endSession": "Befejezés",
   "session.pausedTitle": "Szünet · ConcenTraining",
   "session.saveFirstPartFailed": "Az első részt nem sikerült menteni az előzményeidbe: a böngésződ nem engedte.",
 
-  "distraction.simple.1": "Egy pillanat",
-  "distraction.simple.2": "Elkalandoztam",
-  "distraction.simple.3": "Elvesztettem a fonalat",
-  "distraction.simple.4": "Messze jártam",
-  "distraction.simple.5": "Teljesen elszálltam",
+  "distraction.simple.1": "Alig",
+  "distraction.simple.2": "Kicsit",
+  "distraction.simple.3": "Eléggé",
+  "distraction.simple.4": "Nagyon",
+  "distraction.simple.5": "Teljesen",
   "distraction.advanced.1": "30 mp",
   "distraction.advanced.2": "1 perc",
   "distraction.advanced.3": "2 perc",
@@ -219,7 +219,7 @@ I18N_TEXTS.hu = {
   "history.title": "Előzmények",
   "history.subtitle": "Az ezen az eszközön mentett, befejezett munkamenetek.",
   "history.storageBefore":
-    "Az előzményeid csak ebben a böngészőben vannak tárolva. A webhelyadatok törlése, a privát mód vagy az eszközváltás elölről kezdi őket. Mielőtt telefont cserélsz vagy törlöd a böngészőadataidat, használd lent az",
+    "Az előzményeid csak ebben a böngészőben vannak. Ha törlöd a webhelyadatokat, vagy privát módban használod az appot, elvesznek, másik eszközön pedig nem látszanak. Telefoncsere vagy adattörlés előtt használd lent az",
   "history.storageExport": "Exportálás",
   "history.storageAfter": "gombot.",
   "history.iosNote":
@@ -260,7 +260,7 @@ I18N_TEXTS.hu = {
   "history.best.evening": "Este fókuszálsz a legjobban (átlagosan {percent}%).",
   "history.best.night": "Éjszaka fókuszálsz a legjobban (átlagosan {percent}%).",
   "history.bestNotEnough": "Még nincs elég adat. Egy napszak akkor számít, ha már {count} Részletes módú munkamenet van benne.",
-  "history.dayPartNeeds": "{sessions} · {count} kell, hogy számítson",
+  "history.dayPartNeeds": "{sessions} · legalább {count} kell",
 
   "history.distractTitle": "Mi tereli el a figyelmed?",
   "history.categoriesNone": "Még nincs rögzített elkalandozás.",
@@ -287,8 +287,8 @@ I18N_TEXTS.hu = {
   "history.backupTitle": "Biztonsági mentés",
   "history.backupText":
     "A munkameneteid automatikusan mentődnek ezen az eszközön. Exportálj egy másolatot, ha telefont cserélsz vagy törlöd a böngészőadataidat. Az exportálás az összes munkamenetedet egy .json fájlba menti. Az importálás hozzáadja egy ilyen fájl munkameneteit; a már meglévőket kihagyja. Csak a legújabb 1000 munkamenet marad meg: ha összesen több lesz 1000-nél, a legrégebbiek törlődnek.",
-  "history.export": "Előzmények exportálása",
-  "history.import": "Előzmények importálása",
+  "history.export": "Exportálás",
+  "history.import": "Importálás",
   "history.backToTimer": "← Vissza az időzítőhöz",
 
   // ---------- export / import ----------
@@ -402,11 +402,11 @@ I18N_TEXTS.hu = {
 
   // ---------- groups, poses and characters (js/data/characters.js) ----------
   "group.relaxed.label": "Laza",
-  "group.firm.label": "Határozott, de igazságos",
+  "group.firm.label": "Határozott",
   "group.strict.label": "Szigorú",
-  "group.ragebait.label": "Provokátor",
+  "group.ragebait.label": "Ragebait",
   "group.ragebait.warning":
-    "Ez egy provokátor karakter. A reakciói szándékosan harsányak és túlzók. Az egész csak poén, sosem akar megbántani. Így is őt választod?",
+    "Ez egy ragebait karakter: szándékosan próbál felhúzni. A reakciói harsányak és túlzók, de az egész csak poén, sosem akar megbántani. Így is őt választod?",
 
   // Image descriptions for screen readers ("Nagyi, nyugodt és mosolyog."), never the character speaking.
   "pose.kind.initial": "nyugodt és mosolyog.",
@@ -563,10 +563,10 @@ I18N_TEXTS.hu = {
 
   // ---------- distraction categories (js/history-store.js) ----------
   "category.phone": "Képernyő",
-  "category.thoughts": "Gondolatok",
+  "category.thoughts": "Gondolat",
   "category.noise": "Zaj",
   "category.people": "Emberek",
-  "category.tired": "Fáradtság",
+  "category.tired": "Fáradt",
   "category.other": "Egyéb",
 
   // ---------- character editor options (js/avatar-parts.js, js/avatar-costumes.js) ----------

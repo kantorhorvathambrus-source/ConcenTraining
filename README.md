@@ -133,8 +133,10 @@ there, see [Domain, redirect and security headers](#domain-redirect-and-security
     without a second scroll and without a focus outline, so a screen reader carries on reading there.
   - **Dialogs:** every dialog is labelled by its title (and described by its question), so a screen
     reader reads it when focus moves into it, e.g. "You were away for 2 min 10 sec. Were you distracted?"
-- **Simple mode:** 5 severity buttons (A flicker, Drifted, Lost track, Far away, Totally gone), not
-  time-based. They always sit in two full rows: three in the first, two wider ones in the second.
+- **Simple mode:** 5 severity buttons (Barely, A little, Quite a bit, A lot, Completely), not
+  time-based. They answer the prompt "Got distracted? How much?", so they're plain words that
+  clearly increase (Hungarian: Alig, Kicsit, Eléggé, Nagyon, Teljesen). Only the level (1–5) is
+  saved, never the label, so renaming them changed no saved data. They always sit in two full rows: three in the first, two wider ones in the second.
 - **Advanced mode:** 7 duration buttons (30 sec … 10+ min). Ends with the % of the session spent focusing.
   "10+ min" counts as 10 minutes in that %. A length that can't have happened yet is disabled (greyed
   out but readable): one longer than the free time, which is the time so far minus the distraction time
@@ -172,7 +174,7 @@ there, see [Domain, redirect and security headers](#domain-redirect-and-security
   going** it's back with the time it had left, or closes then if its 60 s would have run out meanwhile.
   **Take a break** closes it as Skip (`category: null`). On small phones the open picker covers some of the distraction buttons (never the
   character or the timer); tap a category or Skip first, or scroll down, to log another one.
-- **"Totally gone" / "10+ min"** asks: continue this session, or start over with a new duration.
+- **"Completely" / "10+ min"** asks: continue this session, or start over with a new duration.
   The question comes in two steps of one dialog, so the duration chips can't be read as "how long
   was the distraction?" (the app never asks that):
   - **Step 1** asks only continue or start over. Simple mode (which has no times): "That was a big
@@ -193,7 +195,7 @@ there, see [Domain, redirect and security headers](#domain-redirect-and-security
   The category picker, the Undo window and the time away card come first: the dialog opens once the
   picker has closed (category picked, Skip, or the 60 s safety close), the 5 s Undo window is over and
   the time away card (see below) has been answered, so they never show at the same time. Undoing the tap means no question
-  (an earlier "10+ min" / "Totally gone" that wasn't undone still asks, right after the Undo). The
+  (an earlier "10+ min" / "Completely" that wasn't undone still asks, right after the Undo). The
   question is saved with the running session (`restartPending`) as soon as the button is tapped, so if
   the page is reloaded before it's answered, it's asked right after the reload.
   If the session has run at least 1 minute, step 2 also has a checkbox above **Start new session**:
@@ -338,11 +340,11 @@ there, see [Domain, redirect and security headers](#domain-redirect-and-security
 
 | Button (Simple) | Button (Advanced) | Pose |
 |---|---|---|
-| A flicker | 30 sec | level1 |
-| Drifted | 1 min | level2 |
-| Lost track | 2 min, 3 min | level3 |
-| Far away | 5 min, 10 min | level4 |
-| Totally gone | 10+ min | level5 |
+| Barely | 30 sec | level1 |
+| A little | 1 min | level2 |
+| Quite a bit | 2 min, 3 min | level3 |
+| A lot | 5 min, 10 min | level4 |
+| Completely | 10+ min | level5 |
 
 - **Motivation button:** always visible. Messages rotate in phases (see `js/data/messages.js`).
   The messages are research-based: every "Brain fact" has a `// source:` comment in
@@ -391,12 +393,12 @@ Every finished session gets a result. The thresholds are constants at the top of
   (`SUMMARY_OKAY_FOCUS`), **rough** below that. The focus % is only 100% when no distraction time was
   logged at all (99.6% shows as 99%).
 - **Simple mode** has no focus % (it's saved as `null`), so it uses distraction points: each logged
-  distraction scores its level (A flicker = 1, Drifted = 2, Lost track = 3, Far away = 4,
-  Totally gone = 5). The points are counted per 25 minutes of session time; sessions shorter than
+  distraction scores its level (Barely = 1, A little = 2, Quite a bit = 3, A lot = 4,
+  Completely = 5). The points are counted per 25 minutes of session time; sessions shorter than
   25 minutes count as 25 minutes. **great** up to 2 points per 25 min (`SIMPLE_GREAT_POINTS`),
-  **rough** from 8 (`SIMPLE_ROUGH_POINTS`), **okay** in between. Example: two "Far away" in a 25-minute
+  **rough** from 8 (`SIMPLE_ROUGH_POINTS`), **okay** in between. Example: two "A lot" in a 25-minute
   session = 8 points = rough. Short sessions are judged like a 25-minute one on purpose, so they
-  aren't harsher: one "Lost track" in a 5-minute session = 3 points = okay (one "Drifted" = great).
+  aren't harsher: one "Quite a bit" in a 5-minute session = 3 points = okay (one "A little" = great).
 - **early:** the session ran less than half of its planned time (`EARLY_END_RATIO` = 0.5), whatever
   the focus % or distraction points. Ending early isn't judged as good or bad: the title is
   "Ended early", the pose is neutral, and Simple mode shows a short neutral message. Advanced mode
@@ -616,11 +618,11 @@ personality, in one place (`GROUPS` and `personalityOf()`). A new character only
 | Group | Personality | How it reacts |
 |---|---|---|
 | `relaxed` (Grandma, Leader, Santa, Study Buddy, Study Partner, Coach, Meditation Guide), label "Relaxed" | `kind` | Happy you're back, cheers you on. Hops. |
-| `firm` (Professor, Librarian, Surgeon), label "Firm but fair" | `firm` | Patient, but expects your best. Never shouts or gets angry: disappointment instead. One slow, calm lean (never shakes); a small nod when you do well. |
+| `firm` (Professor, Librarian, Surgeon), label "Firm" | `firm` | Patient, but expects your best. Never shouts or gets angry: disappointment instead. One slow, calm lean (never shakes); a small nod when you do well. |
 | `strict` (Boss, Soldier, Headmistress, Grandmaster, Judge, Sensei) | `strict` | Stern when you drift off, angrier each level. Shakes. |
 | `ragebait` (Bodybuilder, Influencer, Your Phone) | `ragebait` | Annoying on purpose: mocking, more insulting each level. Cheeky head tilt. |
 
-The app always shows the group's label ("Relaxed", "Firm but fair", "Strict", "Ragebait"): on the
+The app always shows the group's label ("Relaxed", "Firm", "Strict", "Ragebait"): on the
 character cards, in the session info line and in the history list. The personality (`kind`, `firm`, ...)
 is only what's saved. The history list finds the label from the saved `style` (`styleLabel()` in
 `characters.js`), so an old entry shows the personality it actually ran with (a strict Grandma: "Strict").
@@ -770,7 +772,7 @@ saved data, no backend, no service worker version (the file's name stays the sam
   unique among your own characters ignoring case. A name like a built-in character's is fine.
   Errors: "Give your character a name." / "Names can be up to 20 characters." / "You already have
   a character with this name." Checked on **Save**, then live while typing.
-- **Personality:** Relaxed, Firm but fair, Strict or Ragebait (the built-in groups and their
+- **Personality:** Relaxed, Firm, Strict or Ragebait (the built-in groups and their
   expressions), Relaxed at the start, with "You can't change this later." When editing it's shown
   as a read-only badge.
 - **Gender** (Female / Male): the two genders are fully separate. Each has its own faces,
@@ -1547,7 +1549,9 @@ English, with `<html lang="en">`.
 - **Plurals:** a text with plural forms is an object with one entry per `Intl.PluralRules` category
   of the language (`{ one, other }` in English and Hungarian; Polish will need `few` and `many`).
 - **Dates and times:** always `Intl.DateTimeFormat` in the language's `intlLocale`, never put
-  together by hand: English (`en-GB`) "Mon 20 Oct · 14:05", Hungarian "okt. 20., H · 14:05".
+  together by hand: English (`en-GB`) "Mon 20 Oct · 14:05", Hungarian "okt. 20., hétfő · 14:05". How long the weekday is comes from the language's `weekday`
+  field in `languages.js` (`short` for English, `long` for Hungarian, whose short form is a single
+  letter).
 - **"Ended 3 hours ago":** `Intl.RelativeTimeFormat` in the language's `relativeTimeStyle`. English
   mixes styles to keep its wording ("45 min ago", "1 hour ago", "3 hours ago", "2 days ago"),
   Hungarian is `narrow` ("45 perce", "3 órája").
@@ -1566,7 +1570,7 @@ informal "you", the same across the whole app:
 | Language | "You" | Notes |
 |---|---|---|
 | English | you | The source. |
-| Hungarian | te (tegeződés) | Names, modes and durations in a text never get a case ending ("Törlöd: {name}?"), because custom names can be anything. "Munkamenet" (session) only where nothing more natural fits: buttons and headings use verbs or no noun ("Kezdés", "Még egy kör"). Terms: elkalandozás (distraction), fókusz, sorozat (streak), szünet (break), Egyszerű / Részletes (Simple / Advanced), Laza / Határozott, de igazságos / Szigorú / Provokátor (groups), Tudtad? / Lendület (Brain fact / Boost). |
+| Hungarian | te (tegeződés) | Names, modes and durations in a text never get a case ending ("Törlöd: {name}?"), because custom names can be anything. "Munkamenet" (session) only where nothing more natural fits: buttons and headings use verbs or no noun ("Kezdés", "Még egy kör"). Terms: elkalandozás (distraction), fókusz, sorozat (streak), szünet (break), Egyszerű / Részletes (Simple / Advanced), Alig / Kicsit / Eléggé / Nagyon / Teljesen (the Simple levels), Laza / Határozott / Szigorú / Ragebait (groups), Tudtad? / Lendület (Brain fact / Boost). The Stop button keeps its English name, "Stop". The storage note on the history page names the Export button exactly as the button says it ("Exportálás"; the checks compare them). |
 | German (part 2) | du | |
 | Spanish (part 2) | tú | |
 | French (part 2) | tu | |
@@ -1574,6 +1578,10 @@ informal "you", the same across the whole app:
 | Brazilian Portuguese (part 2) | você | |
 | Polish (part 2) | ty | |
 | Indonesian (part 2) | kamu | |
+
+**"Ragebait"** is a loanword in many languages. Each language decides whether to keep it (when the
+word is used locally, as in Hungarian, where the warning dialog explains it: "szándékosan próbál
+felhúzni") or to use a native word. The check for leftover English allows it.
 
 ### Adding a language
 

@@ -12,6 +12,8 @@
 //                 listed after every reviewed language
 //   file          the texts, relative to the page
 //   intlLocale    the locale every Intl format uses (dates, times, plurals)
+//   weekday       how a date in the history names its day: Intl's "short" ("Mon 20 Oct") or "long"
+//                 ("okt. 20., hétfő": Hungarian's short form is a single letter)
 //   relativeTimeStyle  Intl.RelativeTimeFormat's style for "ended 3 hours ago": one style, or one per
 //                 unit (minute, hour, day). English mixes them to keep its wording: "45 min ago",
 //                 "3 hours ago", "2 days ago".
@@ -24,11 +26,11 @@
 const LANGUAGES = [
   {
     code: "en", nativeName: "English", englishName: "English", nativeSpeakers: null, beta: false,
-    file: "js/i18n/en.js", intlLocale: "en-GB", relativeTimeStyle: { minute: "short", hour: "long", day: "long" },
+    file: "js/i18n/en.js", intlLocale: "en-GB", weekday: "short", relativeTimeStyle: { minute: "short", hour: "long", day: "long" },
   },
   {
     code: "hu", nativeName: "Magyar", englishName: "Hungarian", nativeSpeakers: 13, beta: false,
-    file: "js/i18n/hu.js", intlLocale: "hu-HU", relativeTimeStyle: "narrow",
+    file: "js/i18n/hu.js", intlLocale: "hu-HU", weekday: "long", relativeTimeStyle: "narrow",
   },
 ];
 

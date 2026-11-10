@@ -145,12 +145,13 @@ I18N_TEXTS.en = {
   "session.pausedTitle": "Paused · ConcenTraining",
   "session.saveFirstPartFailed": "Couldn't save the first part to your history: your browser didn't allow it.",
 
-  // Simple mode's 5 buttons (by level) and Advanced mode's 7 lengths (in order).
-  "distraction.simple.1": "A flicker",
-  "distraction.simple.2": "Drifted",
-  "distraction.simple.3": "Lost track",
-  "distraction.simple.4": "Far away",
-  "distraction.simple.5": "Totally gone",
+  // Simple mode's 5 buttons (by level): they answer "How much?", so they're plain and clearly
+  // increase. Advanced mode's 7 lengths (in order).
+  "distraction.simple.1": "Barely",
+  "distraction.simple.2": "A little",
+  "distraction.simple.3": "Quite a bit",
+  "distraction.simple.4": "A lot",
+  "distraction.simple.5": "Completely",
   "distraction.advanced.1": "30 sec",
   "distraction.advanced.2": "1 min",
   "distraction.advanced.3": "2 min",
@@ -235,6 +236,7 @@ I18N_TEXTS.en = {
   "history.subtitle": "Finished sessions saved on this device.",
   "history.storageBefore":
     "Your history is stored only in this browser. Clearing site data, using private mode or switching devices starts it over. Use",
+  // Names the Export button. Other languages keep it exactly as their history.export (checked).
   "history.storageExport": "Export",
   "history.storageAfter": "below before you switch phones or clear your browser data.",
   "history.iosNote":

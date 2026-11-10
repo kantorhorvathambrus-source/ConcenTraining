@@ -14,7 +14,7 @@ const POSES = ["initial", "level1", "level2", "level3", "level4", "level5", "goo
 //   ragebait = annoying on purpose: mocking reactions, grudging when you do well
 const GROUPS = {
   relaxed: { label: "Relaxed", personality: "kind" },
-  firm: { label: "Firm but fair", personality: "firm" },
+  firm: { label: "Firm", personality: "firm" },
   strict: { label: "Strict", personality: "strict" },
   ragebait: {
     label: "Ragebait",

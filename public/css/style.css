@@ -755,7 +755,7 @@ input:focus-visible {
 }
 
 /* Simple: always two full rows, 3 + 2. On a 6-column grid the first three buttons span 2 columns,
-   the last two span 3. Less side padding, so "Lost track" stays on one line on 320px phones. If a
+   the last two span 3. Less side padding, so a label like "Quite a bit" stays on one line on 320px phones. If a
    label still wraps (a large phone font), every row grows to the same height. */
 .distraction-buttons.simple {
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -844,16 +844,19 @@ input:focus-visible {
   background: var(--surface-2);
 }
 
+/* minmax(0, 1fr): three equal columns whatever the labels. Plain 1fr lets a column grow to its
+   longest word, which pushed the last column past the card at 320px in Hungarian. */
 .category-buttons {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
-/* Big enough to tap comfortably on a phone. */
+/* Big enough to tap comfortably on a phone. Little side padding: at 320px a column is about 80px,
+   and a longer label ("Thoughts", "Képernyő") still has to fit on its line. */
 .category-buttons .btn {
   min-height: 44px;
-  padding: 8px;
+  padding: 8px 4px;
 }
 
 .category-buttons .btn:hover {
@@ -2081,9 +2084,10 @@ a {
     gap: 6px;
   }
 
+  /* No side padding: four chips share about 240px, and "90 perc" needs nearly all of its quarter. */
   dialog .chip {
     font-size: 0.9375rem;
-    padding: 6px 2px;
+    padding: 6px 0;
   }
 
   #restartDialog h2 {
