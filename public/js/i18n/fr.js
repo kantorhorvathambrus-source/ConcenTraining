@@ -52,7 +52,7 @@ I18N_TEXTS.fr = {
   "quickStart.label": "Démarrage rapide",
   "quickStart.change": "Modifier ↓",
   "quickStart.changeLabel": "Modifier les réglages",
-  "quickStart.start": "Commencer",
+  "quickStart.start": "Lancer",
   "quickStart.line": "{name}\u00a0· {mode}\u00a0· {minutes}\u00a0min",
 
   "how.title": "Comment ça marche",
