@@ -1244,7 +1244,8 @@ that as `null`.
 Sessions saved before personalities came from the character keep the style that was chosen then
 (for example a strict Grandma). A session that was still running when this changed continues, and
 is saved, with the character's own personality.
-History lives only in this browser: clearing site data or switching devices starts it over.
+History lives only in this browser: clearing site data or using private mode deletes it, and it
+doesn't show up on other devices.
 The history page says so, too (its storage note at the top: "Use Export below before you switch
 phones or clear your browser data.").
 
@@ -1432,7 +1433,9 @@ the session or summary screens, or in dialogs. "← Back to the timer" at the to
 
 ## Languages
 
-The app runs in **English** and **Hungarian** (magyar), without a build step. English is the source
+The app runs in **English**, **Hungarian** (magyar) and, in beta, **Spanish** (español), **Brazilian
+Portuguese** (português), **Indonesian** (Bahasa Indonesia), **French** (français), **German**
+(Deutsch), **Italian** (italiano) and **Polish** (polski), without a build step. English is the source
 of every text and the fallback for any text another language doesn't have. `privacy.html` (legal
 text), `stats.html` (internal), the link preview tags (`og:*`, `meta description`) and
 `manifest.webmanifest` stay English: crawlers and the browser read those without running the app's
@@ -1445,6 +1448,7 @@ scripts.
 | `public/js/i18n/languages.js` | The list of languages without their texts (`LANGUAGES`: code, native name, English name, native speakers, beta flag, file, Intl locale, relative-time style) and the sheet's order rule (`sortLanguages`). The speaker numbers' sources are in a comment there. |
 | `public/js/i18n/en.js` | The English UI texts (setup, session, dialogs, summary, history, import messages, editor), keyed `area.name`. |
 | `public/js/i18n/hu.js` | Every key in Hungarian: the UI texts and the data files' texts (below). |
+| `public/js/i18n/es.js`, `pt-BR.js`, `id.js`, `fr.js`, `de.js`, `it.js`, `pl.js` | Every key in Spanish, Brazilian Portuguese, Indonesian, French, German, Italian and Polish (beta: not yet reviewed by a native speaker). |
 | `public/js/i18n.js` | The system: picks the language, `t(key, values)`, plurals, dates and relative times via Intl, translating the page while it's built, switching (`setLanguage`), the dev check. |
 | `public/js/language-picker.js` | The language button and its bottom sheet (setup screen and history page). |
 
@@ -1517,7 +1521,7 @@ and the **export file is exactly the same in every language**. Import problems a
   (hu)" (always English, so reports can be filtered). No animation, like the app's other dialogs.
 - **Order, worked out from the data** (`sortLanguages`): English first; then the reviewed languages,
   most native speakers first; then the beta ones, most native speakers first; equal numbers by
-  English name A–Z. So removing a language's `beta` flag moves it up by itself. With all planned
+  English name A–Z. So removing a language's `beta` flag moves it up by itself. With today's
   languages: English, Magyar, then (beta) Español, Português (Brasil), Bahasa Indonesia, Français,
   Deutsch, Italiano, Polski. Only languages that exist in `LANGUAGES` are listed.
 - **Switching** happens at once, in place: the page's own text, the character cards, Quick start, the
@@ -1547,14 +1551,22 @@ English, with `<html lang="en">`.
 ### Formats
 
 - **Plurals:** a text with plural forms is an object with one entry per `Intl.PluralRules` category
-  of the language (`{ one, other }` in English and Hungarian; Polish will need `few` and `many`).
+  of the language: `{ one, other }` in English, Hungarian and German; `{ one, many, other }` in
+  Spanish, French, Italian and Brazilian Portuguese ("many" is for very large round numbers and has
+  the same text as "other"); `{ one, few, many, other }` in Polish; only `{ other }` in Indonesian.
 - **Dates and times:** always `Intl.DateTimeFormat` in the language's `intlLocale`, never put
   together by hand: English (`en-GB`) "Mon 20 Oct · 14:05", Hungarian "okt. 20., hétfő · 14:05". How long the weekday is comes from the language's `weekday`
-  field in `languages.js` (`short` for English, `long` for Hungarian, whose short form is a single
-  letter).
+  field in `languages.js` (`short` for English and the beta languages, e.g. "mar, 20 oct",
+  "Di., 20. Okt.", "Sel, 20 Okt"; `long` for Hungarian, whose short form is a single letter). Spanish
+  uses plain `es` (not tied to Spain, 24-hour clock; `es-419` would give "02:05 p.m.").
 - **"Ended 3 hours ago":** `Intl.RelativeTimeFormat` in the language's `relativeTimeStyle`. English
   mixes styles to keep its wording ("45 min ago", "1 hour ago", "3 hours ago", "2 days ago"),
-  Hungarian is `narrow` ("45 perce", "3 órája").
+  Hungarian is `narrow` ("45 perce", "3 órája"). Each beta language's choice is commented in
+  `languages.js`, picked from the real Intl output: `long` for Brazilian Portuguese and German
+  (their short forms end in a full stop: "há 45 min.", "vor 45 Min.") and Indonesian ("45 mnt lalu"
+  is cryptic); short minutes with long hours and days for Spanish, French, Italian and Polish
+  ("hace 45 min", "il y a 3 heures"; French `narrow` would give "-45 min", Italian short days
+  "2 gg fa", Polish narrow "3 g. temu").
 - **Durations** ("24 min 30 sec" / "24 perc 30 mp") and percentages are templates in the language
   files (`time.*`, `history.percent`).
 - **The leave reminder** is shown by the page (`app.js`), with the page's texts: always in the
@@ -1571,17 +1583,44 @@ informal "you", the same across the whole app:
 |---|---|---|
 | English | you | The source. |
 | Hungarian | te (tegeződés) | Names, modes and durations in a text never get a case ending ("Törlöd: {name}?"), because custom names can be anything. "Munkamenet" (session) only where nothing more natural fits: buttons and headings use verbs or no noun ("Kezdés", "Még egy kör"). Terms: elkalandozás (distraction), fókusz, sorozat (streak), szünet (break), Egyszerű / Részletes (Simple / Advanced), Alig / Kicsit / Eléggé / Nagyon / Teljesen (the Simple levels), Laza / Határozott / Szigorú / Ragebait (groups), Tudtad? / Lendület (Brain fact / Boost). The Stop button keeps its English name, "Stop". The storage note on the history page names the Export button exactly as the button says it ("Exportálás"; the checks compare them). |
-| German (part 2) | du | |
-| Spanish (part 2) | tú | |
-| French (part 2) | tu | |
-| Italian (part 2) | tu | |
-| Brazilian Portuguese (part 2) | você | |
-| Polish (part 2) | ty | |
-| Indonesian (part 2) | kamu | |
+| Spanish | tú (never vosotros; ustedes if a plural is ever needed) | Neutral international Spanish for Latin America and Spain ("teléfono", "temporizador", no regional slang). Gender-neutral: no adjective or participle about the user (listo, cansado, bienvenido); verbs and nouns instead ("¡Hola de nuevo!"). Terms: sesión, distracción ("¿Te distrajiste? ¿Cuánto?"), concentración, racha, descanso, Parar, Simple / Detallado, Apenas / Un poco / Bastante / Mucho / Por completo, Amable / Firme / Inflexible / Ragebait (invariable, so they fit any character), ¿Lo sabías? / Impulso. |
+| Brazilian Portuguese | você | Brazilian vocabulary and spelling (tela, celular, modo anônimo). Gender-neutral: no pronto, cansado, bem-vindo, obrigado about the user ("Que bom te ver de novo!"). Terms: sessão, distração ("Se distraiu? Quanto?"), foco, sequência, pausa, Parar, Simples / Detalhado, Quase nada / Um pouco / Mais ou menos / Muito / Totalmente, Gentil / Firme / Inflexível / Ragebait, Você sabia? / Impulso, "timer" (the Brazilian word). |
+| Indonesian | kamu | No grammatical gender; no gendered address (Mas/Mbak, Kak). Terms: sesi, distraksi ("Terdistraksi? Seberapa banyak?"), fokus, hari beruntun (streak), istirahat, Berhenti, Sederhana / Rinci, Hampir tidak / Sedikit / Lumayan / Banyak / Sepenuhnya, Santai / Tegas / Ketat / Ragebait, Tahukah kamu? / Penyemangat; "timer", "browser" and "HP" are the everyday words. |
+| French | tu | French typography: a narrow no-break space (`\u202f`) before ? ! : ; and % and inside « ». Gender-neutral: past tenses about the user use avoir ("tu as décroché"), never être + participle; no prêt, distrait, fatigué about the user ("Fin anticipée", "Bon retour !"). Terms: séance, distraction ("Tu as décroché ? À quel point ?"), concentration, série, pause, Stop, Simple / Détaillé, À peine / Un peu / Assez / Beaucoup / Complètement, Calme / Ferme / Sévère / Ragebait (invariable), Le savais-tu ? / Coup de pouce, minuteur. |
+| German | du (lowercase) | Gender-neutral: no person nouns for the user (Nutzer, Anfänger, Profi); participles don't inflect ("Abgelenkt?", "du bist zurückgekommen"). Soft hyphens (`\u00ad`) in long compounds ("Weihnachts\u00admann"). Terms: Runde (session: "Letzte 10 Runden"), Ablenkung ("Abgelenkt? Wie sehr?"), Fokus, Serie, Pause, Stopp, Einfach / Detailliert, Kaum / Etwas / Ziemlich / Stark / Völlig, Locker / Konsequent / Streng / Ragebait, Wusstest du? / Ansporn, Figur (character), Timer. |
+| Italian | tu | Gender-neutral: past tenses about the user use avere ("Hai perso il filo?"), never essere + participle ("ti sei distratto"); no pronto, stanco, bentornato about the user ("Rieccoti!"). Terms: sessione, distrazione, concentrazione, serie, pausa, Stop, Semplice / Dettagliata (agrees with "modalità"), Pochissimo / Un po' / Abbastanza / Molto / Del tutto, Gentile / Esigente / Inflessibile / Ragebait (invariable), Lo sapevi? / Carica, timer. |
+| Polish | ty | Gender-neutral: never the 2nd-person past tense (-łeś/-łaś) or adjectives about the user; present tense, imperatives, impersonal forms and nouns instead ("Coś cię rozproszyło?", "Nie było cię przez 5 min."). Names are never declined ("Usunąć: {name}?"). Plurals have one / few / many / other. Terms: sesja, rozproszenie, skupienie, seria, przerwa, Stop, Prosty / Szczegółowy, Ledwo / Trochę / Sporo / Bardzo / Całkowicie, Łagodnie / Stanowczo / Surowo / Ragebait (adverbs, so they don't agree with a gender), Ciekawostka / Zachęta, minutnik. |
+
+**The user's gender is unknown**, so no language uses a gendered form for the user: no slash forms
+("listo/a"), no "(a)", no gender stars. Pose descriptions are written as verbs or invariable words,
+because any character (also a custom one of either gender) uses them, and the "Tired" distraction
+category is a noun everywhere (Cansancio, Cansaço, Lelah, Fatigue, Müdigkeit, Stanchezza, Zmęczenie).
+The checks search each language for its typical gendered forms.
 
 **"Ragebait"** is a loanword in many languages. Each language decides whether to keep it (when the
 word is used locally, as in Hungarian, where the warning dialog explains it: "szándékosan próbál
-felhúzni") or to use a native word. The check for leftover English allows it.
+felhúzni") or to use a native word. Every language so far keeps it: it's in everyday use on social
+media in all of them. Each ragebait warning explains it in one sentence (es "intenta sacarte de
+quicio a propósito", de "Sie will dich absichtlich auf die Palme bringen", …). The check for leftover
+English allows it.
+
+**Character names and their grammatical gender.** Most languages need a gender for role names
+(Profesor / Profesora, Chirurg / Chirurgin). Each character keeps the gender its **current
+placeholder art** shows (`placeholder-art.js`); this follows the placeholders and will be revisited
+when the real artwork is made.
+
+| Gender | Characters | From the art |
+|---|---|---|
+| Female | Grandma, Study Partner, Meditation Guide, Librarian, Headmistress | name; high bun; long braid; long hair; bun and name |
+| Male | Santa, Professor, Sensei, Boss, Influencer | beard; beard; goatee; tie; "his phone" in the art code |
+| Male (short hair only, no other cue) | Leader, Study Buddy, Grandmaster, Bodybuilder, Judge | short hair |
+| Ambiguous (cap, mask or helmet hides the hair) | Coach, Surgeon, Soldier | a gender-neutral word where the language has a natural one, otherwise a provisional form (below); their taglines are gender-neutral |
+
+Ambiguous characters per language: Coach = Coach (es, pt-BR, fr, de, it), Pelatih (id), Trener
+(pl, provisional). Soldier = Soldado (es, pt-BR), Militaire (fr), Militare (it), Tentara (id), Soldat
+(de, provisional), Żołnierz (pl, provisional). Surgeon = Dokter Bedah (id); provisional masculine
+forms elsewhere (Cirujano, Cirurgião, Chirurgien, Chirurg, Chirurgo, Chirurg). Your Phone is an
+object. Custom characters' names are never translated.
 
 ### Adding a language
 
@@ -1793,7 +1832,7 @@ and the timer keeps counting from the start time as always.
 | `public/js/data/characters.js` | Character list, groups and the personality each group gives (`personalityOf`), art paths, pose descriptions for screen readers (`POSE_DESCRIPTIONS`) |
 | `public/js/data/messages.js` | Motivation messages (each with a fixed `id`) and Simple-mode summary messages per result, in English; their translations are in the language files (also loaded by `history.html`) |
 | `public/js/i18n/languages.js` | The languages (code, names, speakers, beta flag, file, Intl settings) and the sheet's order rule (see [Languages](#languages)) |
-| `public/js/i18n/en.js`, `public/js/i18n/hu.js` | The texts: English (the UI texts; the data files keep their own English) and Hungarian (everything) |
+| `public/js/i18n/en.js`, `public/js/i18n/hu.js`, `es.js`, `pt-BR.js`, `id.js`, `fr.js`, `de.js`, `it.js`, `pl.js` | The texts: English (the UI texts; the data files keep their own English) and every other language (everything) |
 | `public/js/i18n.js` | Translation system: language detection, `t()`, plurals, Intl dates, translating the page while it loads, switching |
 | `public/js/language-picker.js` | The language button and bottom sheet on the setup screen and the history page |
 | `public/js/placeholder-art.js` | Built-in placeholder drawings (kind, firm, strict and ragebait faces, plus each character's look) for characters without real art; its eyes, brows, mouths and extras are shared with custom characters |
