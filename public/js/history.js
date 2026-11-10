@@ -25,12 +25,13 @@ let canSave = true;
 let drawnFrom = null;
 let renderPending = false;
 
-// Sessions are grouped by the hour they started.
+// Sessions are grouped by the hour they started. id: the texts (dayPart.<id>, history.best.<id>).
+// hours: shown as it is (numbers only, the same in every language).
 const DAY_PARTS = [
-  { label: "Morning", hours: "5:00–12:00", matches: (h) => h >= 5 && h < 12 },
-  { label: "Afternoon", hours: "12:00–17:00", matches: (h) => h >= 12 && h < 17 },
-  { label: "Evening", hours: "17:00–22:00", matches: (h) => h >= 17 && h < 22 },
-  { label: "Night", hours: "22:00–5:00", matches: (h) => h >= 22 || h < 5 },
+  { id: "morning", hours: "5:00–12:00", matches: (h) => h >= 5 && h < 12 },
+  { id: "afternoon", hours: "12:00–17:00", matches: (h) => h >= 12 && h < 17 },
+  { id: "evening", hours: "17:00–22:00", matches: (h) => h >= 17 && h < 22 },
+  { id: "night", hours: "22:00–5:00", matches: (h) => h >= 22 || h < 5 },
 ];
 
 // ---------- dates ----------
@@ -137,42 +138,54 @@ function calcDayParts(history) {
 
 // ---------- formatting ----------
 
-function plural(count, word) {
-  return `${count} ${word}${count === 1 ? "" : "s"}`;
+// "3 days", "1 session", "12 distractions": key is history.days, history.sessions or
+// history.distractions (plural forms in the language files).
+function counted(key, count) {
+  return t(key, { count });
 }
 
+// Every date and time comes from Intl in the current language (I18N.formatDate), never put
+// together by hand in English order. English: "20 Oct", "Mon 20 Oct", "14:05"; Hungarian:
+// "okt. 20.", "okt. 20., hétfő", "14:05".
 function formatShortDate(date) {
-  return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  return I18N.formatDate(date, { day: "numeric", month: "short" });
 }
 
+// The weekday's length is the language's (weekday in js/i18n/languages.js): "Mon" / "hétfő".
+function formatDay(time) {
+  return I18N.formatDate(new Date(time), { weekday: I18N.language().weekday || "short", day: "numeric", month: "short" });
+}
+
+function formatClockTime(time) {
+  return I18N.formatDate(new Date(time), { hour: "2-digit", minute: "2-digit" });
+}
+
+// "Mon 20 Oct · 14:05": the two Intl parts on one line (time.dateAndClock).
 function formatSessionDate(time) {
-  const date = new Date(time);
-  const day = date.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
-  const clock = date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-  return `${day} · ${clock}`;
+  return t("time.dateAndClock", { date: formatDay(time), time: formatClockTime(time) });
 }
 
 // Rounded to whole minutes: "45 min", "1 h", "2 h 15 min".
 function formatTotalTime(ms) {
   const total = Math.round(ms / 60000);
-  const h = Math.floor(total / 60);
-  const m = total % 60;
-  if (h === 0) return `${m} min`;
-  return m ? `${h} h ${m} min` : `${h} h`;
+  const hours = Math.floor(total / 60);
+  const minutes = total % 60;
+  if (hours === 0) return t("time.min", { minutes });
+  return minutes ? t("time.hMin", { hours, minutes }) : t("time.h", { hours });
 }
 
 function formatSessionLength(entry) {
   const planned = Math.round(entry.plannedMs / 60000);
-  if (entry.endedBy === "timer") return `${planned} min`;
+  if (entry.endedBy === "timer") return t("history.lengthFull", { planned });
   const actual = Math.max(1, Math.round(entry.elapsedMs / 60000));
-  return `${actual} of ${planned} min`;
+  return t("history.lengthPart", { actual, planned });
 }
 
 // One line about a session, for the delete dialog: "Grandma · Advanced · Mon 20 Oct · 14:05 · 25 min".
 function formatSessionSummary(entry) {
   return [
     characterName(entry),
-    capitalize(entry.mode),
+    modeName(entry.mode),
     formatSessionDate(entry.startedAt),
     formatSessionLength(entry),
   ].join(" · ");
@@ -186,11 +199,17 @@ function characterName(entry) {
   return typeof entry.characterName === "string" && entry.characterName ? entry.characterName : entry.characterId;
 }
 
-function capitalize(text) {
-  return text.charAt(0).toUpperCase() + text.slice(1);
+// "simple" / "advanced" as shown: "Simple" / "Advanced" in English.
+function modeName(mode) {
+  return t(`mode.${mode}`);
 }
 
 // ---------- charts ----------
+
+// The charts are SVG text: every text that goes into it is escaped (translations could hold & or <).
+function escapeHtml(text) {
+  return String(text).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
 
 // Line chart of weekly focus %. Weeks without data leave a gap in the line.
 // Colors come from CSS classes, so the chart follows light/dark mode.
@@ -207,14 +226,14 @@ function trendChartSvg(weeks) {
   let grid = "";
   for (const percent of [0, 25, 50, 75, 100]) {
     grid += `<line class="chart-grid" x1="${left}" x2="${width - right}" y1="${y(percent)}" y2="${y(percent)}"/>`;
-    grid += `<text class="chart-label" x="${left - 6}" y="${y(percent) + 4}" text-anchor="end">${percent}%</text>`;
+    grid += `<text class="chart-label" x="${left - 6}" y="${y(percent) + 4}" text-anchor="end">${escapeHtml(t("history.percent", { percent }))}</text>`;
   }
 
   // Label every third week, ending with the current week.
   let labels = "";
   weeks.forEach((week, i) => {
     if ((weeks.length - 1 - i) % 3 === 0) {
-      labels += `<text class="chart-label" x="${x(i)}" y="${height - 8}" text-anchor="middle">${formatShortDate(week.start)}</text>`;
+      labels += `<text class="chart-label" x="${x(i)}" y="${height - 8}" text-anchor="middle">${escapeHtml(formatShortDate(week.start))}</text>`;
     }
   });
 
@@ -230,10 +249,10 @@ function trendChartSvg(weeks) {
     penDown = true;
     points +=
       `<circle class="chart-point" cx="${x(i)}" cy="${y(week.percent)}" r="4.5">` +
-      `<title>Week of ${formatShortDate(week.start)}: ${week.percent}% (${plural(week.count, "session")})</title></circle>`;
+      `<title>${escapeHtml(t("history.focusPointTitle", { date: formatShortDate(week.start), percent: week.percent, sessions: counted("history.sessions", week.count) }))}</title></circle>`;
   });
 
-  return `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Weekly focus percentage for the last ${weeks.length} weeks">
+  return `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(t("history.focusChartLabel", { count: weeks.length }))}">
     ${grid}${labels}
     <path class="chart-line" d="${path.trim()}"/>
     ${points}
@@ -245,12 +264,13 @@ function trendChartSvg(weeks) {
 function timeScale(maxMs) {
   const maxMinutes = maxMs / 60000;
   const [unit, unitMinutes, steps] =
-    maxMinutes < 120 ? ["min", 1, [5, 10, 15, 30]] : ["h", 60, [1, 2, 5, 10, 20, 50, 100]];
+    maxMinutes < 120 ? ["minutes", 1, [5, 10, 15, 30]] : ["hours", 60, [1, 2, 5, 10, 20, 50, 100]];
   const max = maxMinutes / unitMinutes;
   const step = steps.find((s) => Math.ceil(max / s) <= 4) || steps[steps.length - 1];
   const stepCount = Math.max(2, Math.ceil(max / step));
   const ticks = [];
-  for (let i = 0; i <= stepCount; i++) ticks.push({ ms: i * step * unitMinutes * 60000, label: `${i * step} ${unit}` });
+  const tickLabel = (value) => (unit === "minutes" ? t("time.min", { minutes: value }) : t("time.h", { hours: value }));
+  for (let i = 0; i <= stepCount; i++) ticks.push({ ms: i * step * unitMinutes * 60000, label: tickLabel(i * step) });
   return { topMs: stepCount * step * unitMinutes * 60000, ticks };
 }
 
@@ -272,14 +292,14 @@ function timeChartSvg(weeks) {
   let grid = "";
   for (const tick of ticks) {
     grid += `<line class="chart-grid" x1="${left}" x2="${width - right}" y1="${y(tick.ms)}" y2="${y(tick.ms)}"/>`;
-    grid += `<text class="chart-label" x="${left - 6}" y="${y(tick.ms) + 4}" text-anchor="end">${tick.label}</text>`;
+    grid += `<text class="chart-label" x="${left - 6}" y="${y(tick.ms) + 4}" text-anchor="end">${escapeHtml(tick.label)}</text>`;
   }
 
   // Label every third week, ending with the current week.
   let labels = "";
   weeks.forEach((week, i) => {
     if ((weeks.length - 1 - i) % 3 === 0) {
-      labels += `<text class="chart-label" x="${center(i)}" y="${height - 8}" text-anchor="middle">${formatShortDate(week.start)}</text>`;
+      labels += `<text class="chart-label" x="${center(i)}" y="${height - 8}" text-anchor="middle">${escapeHtml(formatShortDate(week.start))}</text>`;
     }
   });
 
@@ -297,10 +317,10 @@ function timeChartSvg(weeks) {
     const current = i === weeks.length - 1 ? " current" : "";
     bars +=
       `<path class="chart-bar${current}" d="${d}">` +
-      `<title>Week of ${formatShortDate(week.start)}: ${formatTotalTime(week.ms)} (${plural(week.count, "session")})</title></path>`;
+      `<title>${escapeHtml(t("history.timeBarTitle", { date: formatShortDate(week.start), time: formatTotalTime(week.ms), sessions: counted("history.sessions", week.count) }))}</title></path>`;
   });
 
-  return `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Time spent in sessions per week for the last ${weeks.length} weeks">
+  return `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(t("history.timeChartLabel", { count: weeks.length }))}">
     ${grid}${labels}
     ${bars}
   </svg>`;
@@ -310,8 +330,8 @@ function timeChartSvg(weeks) {
 
 function renderStreaks(history, now) {
   const { current, longest } = calcStreaks(history, now);
-  document.getElementById("currentStreak").textContent = plural(current, "day");
-  document.getElementById("longestStreak").textContent = plural(longest, "day");
+  document.getElementById("currentStreak").textContent = counted("history.days", current);
+  document.getElementById("longestStreak").textContent = counted("history.days", longest);
 }
 
 function renderWeeklyTime(history, now) {
@@ -321,7 +341,7 @@ function renderWeeklyTime(history, now) {
 
   if (weeks.every((week) => week.count === 0)) {
     chart.innerHTML = "";
-    note.textContent = "No sessions in the last 12 weeks.";
+    note.textContent = t("history.timeNone");
     return;
   }
 
@@ -329,8 +349,8 @@ function renderWeeklyTime(history, now) {
   const thisWeek = weeks[weeks.length - 1];
   note.textContent =
     thisWeek.count === 0
-      ? "No sessions this week yet."
-      : `This week: ${formatTotalTime(thisWeek.ms)} across ${plural(thisWeek.count, "session")}.`;
+      ? t("history.timeNoneThisWeek")
+      : t("history.timeThisWeek", { time: formatTotalTime(thisWeek.ms), sessions: counted("history.sessions", thisWeek.count) });
 }
 
 function renderTrend(history, now) {
@@ -340,7 +360,7 @@ function renderTrend(history, now) {
 
   if (weeks.every((week) => week.percent === null)) {
     chart.innerHTML = "";
-    note.textContent = "No Advanced-mode sessions in the last 12 weeks. Use Advanced mode to see your focus trend.";
+    note.textContent = t("history.focusNone");
     return;
   }
 
@@ -348,8 +368,8 @@ function renderTrend(history, now) {
   const thisWeek = weeks[weeks.length - 1];
   note.textContent =
     thisWeek.percent === null
-      ? "No Advanced-mode sessions this week yet."
-      : `This week: ${thisWeek.percent}% focused across ${plural(thisWeek.count, "session")}.`;
+      ? t("history.focusNoneThisWeek")
+      : t("history.focusThisWeek", { percent: thisWeek.percent, sessions: counted("history.sessions", thisWeek.count) });
 }
 
 function renderDayParts(history) {
@@ -359,8 +379,8 @@ function renderDayParts(history) {
   const best = eligible.sort((a, b) => b.percent - a.percent || b.count - a.count)[0] || null;
 
   document.getElementById("bestTime").textContent = best
-    ? `You focus best in the ${best.label.toLowerCase()} (${best.percent}% on average).`
-    : `Not enough data yet. A time of day counts once it has ${MIN_SESSIONS_FOR_BEST_TIME} Advanced-mode sessions.`;
+    ? t(`history.best.${best.id}`, { percent: best.percent })
+    : t("history.bestNotEnough", { count: MIN_SESSIONS_FOR_BEST_TIME });
 
   const list = document.getElementById("dayParts");
   list.innerHTML = "";
@@ -374,14 +394,14 @@ function renderDayParts(history) {
       </div>
       <div class="day-part-track"><div class="day-part-fill"></div></div>
       <span class="muted small day-part-count"></span>`;
-    item.querySelector("strong").textContent = part.label;
+    item.querySelector("strong").textContent = t(`dayPart.${part.id}`);
     item.querySelector(".day-part-head .muted").textContent = part.hours;
-    item.querySelector(".day-part-value").textContent = part.percent === null ? "—" : `${part.percent}%`;
+    item.querySelector(".day-part-value").textContent = part.percent === null ? "—" : t("history.percent", { percent: part.percent });
     item.querySelector(".day-part-fill").style.width = `${part.percent || 0}%`;
     item.querySelector(".day-part-count").textContent =
       part.count >= MIN_SESSIONS_FOR_BEST_TIME
-        ? plural(part.count, "session")
-        : `${plural(part.count, "session")} · needs ${MIN_SESSIONS_FOR_BEST_TIME} to count`;
+        ? counted("history.sessions", part.count)
+        : t("history.dayPartNeeds", { sessions: counted("history.sessions", part.count), count: MIN_SESSIONS_FOR_BEST_TIME });
     list.append(item);
   }
 }
@@ -397,13 +417,13 @@ function renderCategories(history) {
 
   const note = document.getElementById("categoryNote");
   if (distractions.length === 0) {
-    note.textContent = "No distractions logged yet.";
+    note.textContent = t("history.categoriesNone");
   } else if (picked === 0) {
-    note.textContent = "No categories yet. After logging a distraction, tap what caused it.";
+    note.textContent = t("history.categoriesNotPicked");
   } else {
     note.textContent =
-      `Based on ${plural(picked, "distraction")} with a category.` +
-      (notPicked > 0 ? ` ${notPicked} had none.` : "");
+      t("history.categoriesBasedOn", { count: picked }) +
+      (notPicked > 0 ? t("history.categoriesNoneHad", { count: notPicked }) : "");
   }
 
   const list = document.getElementById("categoryList");
@@ -419,7 +439,7 @@ function renderCategories(history) {
       </div>
       <div class="day-part-track"><div class="day-part-fill"></div></div>`;
     item.querySelector("strong").textContent = category.label;
-    item.querySelector(".day-part-value").textContent = `${category.count} · ${percent}%`;
+    item.querySelector(".day-part-value").textContent = t("history.categoryValue", { count: category.count, percent });
     item.querySelector(".day-part-fill").style.width = `${percent}%`;
     list.append(item);
   });
@@ -427,14 +447,14 @@ function renderCategories(history) {
 
 function renderSessionList(history) {
   const recent = history.slice(0, LIST_SIZE);
-  //   (no-break space): next to the Edit button at 320px the title wraps before "sessions (of 40)",
-  // not inside the brackets.
+  // No-break spaces in history.listLast: next to the Edit button at 320px the title wraps before
+  // "sessions (of 40)", not inside the brackets.
   document.getElementById("listTitle").textContent =
     history.length > LIST_SIZE
-      ? `Last ${LIST_SIZE} sessions (of ${history.length})`
-      : plural(history.length, "session");
+      ? t("history.listLast", { size: LIST_SIZE, total: history.length })
+      : counted("history.sessions", history.length);
 
-  document.getElementById("editButton").textContent = editing ? "Done" : "Edit";
+  document.getElementById("editButton").textContent = t(editing ? "common.done" : "common.edit");
   const list = document.getElementById("sessionList");
   list.classList.toggle("editing", editing);
   list.innerHTML = "";
@@ -448,18 +468,18 @@ function renderSessionList(history) {
       </div>
       <div class="session-item-focus"></div>`;
     item.querySelector("strong").textContent = characterName(entry);
-    item.querySelector(".session-item-mode").textContent = `${capitalize(entry.mode)} · ${styleLabel(entry.style)}`;
+    item.querySelector(".session-item-mode").textContent = `${modeName(entry.mode)} · ${styleLabel(entry.style)}`;
     if (entry.endedBy === "startOver") {
       const tag = document.createElement("span");
       tag.className = "session-tag";
-      tag.textContent = "restarted";
-      tag.title = "Saved when you chose Start over";
+      tag.textContent = t("history.restartedTag");
+      tag.title = t("history.restartedTitle");
       item.querySelector(".session-item-mode").after(" ", tag);
     }
     item.querySelector(".session-item-meta").textContent = [
       formatSessionDate(entry.startedAt),
       formatSessionLength(entry),
-      plural(entry.distractions.length, "distraction"),
+      counted("history.distractions", entry.distractions.length),
     ].join(" · ");
     // Breaks (Stop → Take a break): one factual line, only when there were any. Whole minutes, at
     // least 1, like the session length above it.
@@ -467,16 +487,16 @@ function renderSessionList(history) {
     if (pauses.length) {
       const line = document.createElement("div");
       line.className = "muted small session-item-pauses";
-      line.textContent = formatPauses(pauses, (ms) => `${Math.max(1, Math.round(ms / 60000))} min`);
+      line.textContent = formatPauses(pauses, (ms) => t("time.min", { minutes: Math.max(1, Math.round(ms / 60000)) }));
       item.querySelector(".session-item-meta").after(line);
     }
 
     const focus = item.querySelector(".session-item-focus");
     if (entry.focusPercent === null) {
       focus.textContent = "—";
-      focus.title = "Simple mode doesn't measure focus %";
+      focus.title = t("history.noFocusTitle");
     } else {
-      focus.textContent = `${entry.focusPercent}%`;
+      focus.textContent = t("history.percent", { percent: entry.focusPercent });
     }
 
     // On its own line under the row's text, so the text keeps its full width.
@@ -484,10 +504,10 @@ function renderSessionList(history) {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "btn compact session-delete";
-      button.textContent = "Delete";
+      button.textContent = t("common.delete");
       button.setAttribute(
         "aria-label",
-        `Delete session: ${characterName(entry)}, ${formatSessionDate(entry.startedAt).replace(" · ", ", ")}`
+        t("history.deleteLabel", { name: characterName(entry), date: formatDay(entry.startedAt), time: formatClockTime(entry.startedAt) })
       );
       button.dataset.startedAt = entry.startedAt;
       button.dataset.summary = formatSessionSummary(entry);
@@ -528,7 +548,7 @@ function render() {
 function renderStorageNote() {
   const note = document.getElementById("historyStorageNote");
   if (note.hidden === canSave) return;
-  note.textContent = canSave ? "" : HISTORY_STORAGE_NOTE;
+  note.textContent = canSave ? "" : t("storage.historyNote");
   note.hidden = canSave;
 }
 
@@ -653,7 +673,7 @@ async function confirmDelete(button) {
   // "missing" (already deleted in another tab) needs no message of its own: it's gone either way.
   if (answer !== "delete" || deleteFromHistory(startedAt) === "failed") {
     if (answer === "delete") {
-      showDeleteStatus("Couldn't delete the session: your browser didn't allow the change.", true);
+      showDeleteStatus(t("history.deleteFailed"), true);
     }
     const changed = renderPending && historySource() !== drawnFrom;
     renderPending = false;
@@ -664,7 +684,7 @@ async function confirmDelete(button) {
 
   const position = deleteButtons().indexOf(button);
   render();
-  showDeleteStatus("Session deleted.", false);
+  showDeleteStatus(t("history.deleted"), false);
   // Focus stays at the same place in the list: the row that moved up into it, or the row above
   // if it was the last one. With no sessions left, the empty state replaces the list (render
   // turns edit mode off then, and leaves the hidden list as it was).
@@ -691,12 +711,12 @@ function exportHistory() {
   link.click();
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-  showBackupStatus(`Exported ${plural(data.sessions.length, "session")}.`, false);
+  showBackupStatus(t("import.exported", { count: data.sessions.length }), false);
 }
 
 async function importHistory(file) {
   if (file.size > IMPORT_MAX_BYTES) {
-    showBackupStatus("This file is too big to be a ConcenTraining export.", true);
+    showBackupStatus(t("import.tooBig"), true);
     return;
   }
 
@@ -704,51 +724,49 @@ async function importHistory(file) {
   try {
     ({ sessions, invalidReasons } = parseHistoryExport(await file.text()));
   } catch (error) {
-    showBackupStatus(error.message, true);
+    // A problem with the file (a code from parseHistoryExport), or the browser couldn't read it.
+    const key = `import.file.${error.message}`;
+    showBackupStatus(I18N.has(key) ? t(key) : error.message, true);
     return;
   }
 
   const { added, skipped, droppedImported, removedExisting, saved } = mergeIntoHistory(sessions);
   if (!saved) {
-    showBackupStatus("Couldn't save the imported sessions: this browser's storage is full or blocked.", true);
+    showBackupStatus(t("import.saveFailed"), true);
     return;
   }
 
+  // The added parts start with their own space (in the language files).
   let message;
   if (added > 0) {
-    message = `Imported ${plural(added, "session")}.`;
-    if (skipped > 0) {
-      message += ` Skipped ${skipped} ${skipped === 1 ? "duplicate or session" : "duplicates or sessions"} you already had.`;
-    }
-    if (droppedImported > 0) {
-      message += ` ${plural(droppedImported, "older session")} from the file didn't fit (max. ${HISTORY_LIMIT}).`;
-    }
+    message = t("import.imported", { count: added });
+    if (skipped > 0) message += t("import.skipped", { count: skipped });
+    if (droppedImported > 0) message += t("import.didNotFit", { count: droppedImported, max: HISTORY_LIMIT });
   } else if (droppedImported > 0) {
-    message = `Nothing was imported: all new sessions in this file are older than the ${HISTORY_LIMIT} sessions kept.`;
+    message = t("import.allTooOld", { max: HISTORY_LIMIT });
   } else if (sessions.length === 0 && invalidReasons.length > 0) {
-    message = "Nothing was imported.";
+    message = t("import.nothing");
   } else {
-    const valid = invalidReasons.length > 0 ? "valid " : "";
-    message = `Nothing new to import: you already have every ${valid}session in this file (${sessions.length}).`;
+    message = t(invalidReasons.length > 0 ? "import.nothingNewValid" : "import.nothingNew", { count: sessions.length });
   }
-  if (invalidReasons.length > 0) message += ` ${invalidSummary(invalidReasons)}`;
-  if (removedExisting > 0) {
-    message +=
-      removedExisting === 1
-        ? ` Your oldest session was removed to stay under ${HISTORY_LIMIT}.`
-        : ` Your ${removedExisting} oldest sessions were removed to stay under ${HISTORY_LIMIT}.`;
-  }
+  if (invalidReasons.length > 0) message += invalidSummary(invalidReasons);
+  if (removedExisting > 0) message += t("import.removed", { count: removedExisting, max: HISTORY_LIMIT });
   showBackupStatus(message, added === 0 && invalidReasons.length > 0);
   render();
 }
 
-// One line about the sessions skipped as invalid, e.g. "Skipped 3 invalid
+// One line about the sessions skipped as invalid, e.g. " Skipped 3 invalid
 // sessions (2 shorter than 1 minute, 1 bad focus %)." With one reason, no counts.
+// reasons: codes from cleanImportedSession (import.reason.<code>).
 function invalidSummary(reasons) {
+  const reasonText = (code) => t(`import.reason.${code}`);
   const counts = new Map();
   for (const reason of reasons) counts.set(reason, (counts.get(reason) || 0) + 1);
-  const why = counts.size === 1 ? reasons[0] : [...counts].map(([reason, count]) => `${count} ${reason}`).join(", ");
-  return `Skipped ${plural(reasons.length, "invalid session")} (${why}).`;
+  const why =
+    counts.size === 1
+      ? reasonText(reasons[0])
+      : [...counts].map(([reason, count]) => t("import.reasonCount", { count, reason: reasonText(reason) })).join(t("common.listSeparator"));
+  return t("import.invalid", { count: reasons.length, why });
 }
 
 // Shown again: site data may have been allowed or blocked meanwhile, and the history may have changed.
@@ -757,7 +775,17 @@ function recheckAndRefresh() {
   refreshInBackground();
 }
 
+// A row tapped in the language sheet (js/language-picker.js). js/i18n.js has already put the page's
+// own text in the new language; everything drawn here is drawn again. Edit mode stays. The
+// "Session deleted." and backup lines keep the language they were written in until the next
+// message: they report something that already happened.
+function onLanguageChange() {
+  render();
+}
+
 function init() {
+  document.addEventListener("ct:languagechange", onLanguageChange);
+  initLanguagePicker();
   // The 7-day rule only applies in Safari on iPhone/iPad (see iosSafariNotInstalled in history-store.js).
   document.getElementById("iosStorageNote").hidden = !iosSafariNotInstalled();
   const fileInput = document.getElementById("importFile");

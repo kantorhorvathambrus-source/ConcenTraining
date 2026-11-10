@@ -1,4 +1,6 @@
 // Motivation messages. Each phase has 12 messages that rotate in order;
+// id: the message's translation key (motivation.<id>), given once and never reused or renumbered,
+// so moving a message doesn't mix up its translations. A new message gets the next free number.
 // the starting message is picked at random when the phase begins.
 //   type "fact"  = a finding from research, kept hedged, no made-up numbers.
 //                  Every fact has a "// source:" comment; the full references are listed below.
@@ -46,126 +48,102 @@
 
 const MOTIVATION = {
   general: [
-    { type: "boost", text: "Before you start: what's the one thing you want done when the timer ends? Name it in a few words." },
-    { type: "boost", text: "A slow start is normal. Give it a few minutes before you judge how this session is going." },
-    { type: "boost", text: "Put your phone where you'd have to get up to reach it. That one extra step is often enough to stop the reflex." },
+    { id: "general-1", type: "boost", text: "Before you start: what's the one thing you want done when the timer ends? Name it in a few words." },
+    { id: "general-2", type: "boost", text: "A slow start is normal. Give it a few minutes before you judge how this session is going." },
+    { id: "general-3", type: "boost", text: "Put your phone where you'd have to get up to reach it. That one extra step is often enough to stop the reflex." },
     // source: Ward et al. 2017; Böttger, Poschik & Zierer 2023
-    { type: "fact", text: "Some studies found that just having your phone in sight can make thinking a little harder. Not all of them did. Another room is the safe bet." },
-    { type: "boost", text: "Make the first step tiny: open the file, write one line, read one paragraph. Starting is the hard part, not the step." },
+    { id: "general-4", type: "fact", text: "Some studies found that just having your phone in sight can make thinking a little harder. Not all of them did. Another room is the safe bet." },
+    { id: "general-5", type: "boost", text: "Make the first step tiny: open the file, write one line, read one paragraph. Starting is the hard part, not the step." },
     // source: Leroy 2009
-    { type: "fact", text: "When you switch tasks, part of your attention stays on the last one for a while. Researchers call it attention residue." },
-    { type: "boost", text: "Decide now what you'll do when an urge comes: \"When I want to check my phone, I'll take one breath and keep going.\"" },
+    { id: "general-6", type: "fact", text: "When you switch tasks, part of your attention stays on the last one for a while. Researchers call it attention residue." },
+    { id: "general-7", type: "boost", text: "Decide now what you'll do when an urge comes: \"When I want to check my phone, I'll take one breath and keep going.\"" },
     // source: Gollwitzer & Sheeran 2006
-    { type: "fact", text: "If-then plans (\"When X happens, I'll do Y\") make people clearly more likely to follow through on what they set out to do." },
-    { type: "boost", text: "Something unfinished on your mind? Decide when you'll deal with it, for example \"after this session\". Then it can wait." },
+    { id: "general-8", type: "fact", text: "If-then plans (\"When X happens, I'll do Y\") make people clearly more likely to follow through on what they set out to do." },
+    { id: "general-9", type: "boost", text: "Something unfinished on your mind? Decide when you'll deal with it, for example \"after this session\". Then it can wait." },
     // source: Masicampo & Baumeister 2011
-    { type: "fact", text: "Making a specific plan for an unfinished task can stop it from popping into your head while you work on something else." },
+    { id: "general-10", type: "fact", text: "Making a specific plan for an unfinished task can stop it from popping into your head while you work on something else." },
     // source: Killingsworth & Gilbert 2010
-    { type: "fact", text: "People's minds wander from what they're doing close to half the time. Drifting is normal. Noticing and coming back is the skill you're training." },
-    { type: "boost", text: "First stop: minute 10. That's the only one that matters right now." },
+    { id: "general-11", type: "fact", text: "People's minds wander from what they're doing close to half the time. Drifting is normal. Noticing and coming back is the skill you're training." },
+    { id: "general-12", type: "boost", text: "First stop: minute 10. That's the only one that matters right now." },
   ],
   hardest: [
-    { type: "boost", text: "If this part feels slow and sticky, that's common. It isn't a sign that you should stop." },
-    { type: "boost", text: "An urge to check something? Notice it and name it: \"that's an urge\". Urges tend to rise and fade when you don't act on them." },
+    { id: "hardest-1", type: "boost", text: "If this part feels slow and sticky, that's common. It isn't a sign that you should stop." },
+    { id: "hardest-2", type: "boost", text: "An urge to check something? Notice it and name it: \"that's an urge\". Urges tend to rise and fade when you don't act on them." },
     // source: Mrazek et al. 2013
-    { type: "fact", text: "In one study, two weeks of mindfulness training reduced mind wandering and improved test scores. Noticing and coming back is a core part of it." },
-    { type: "boost", text: "You noticed you drifted. That's the rep. Come back to the exact line you were on, not the top of the page." },
+    { id: "hardest-3", type: "fact", text: "In one study, two weeks of mindfulness training reduced mind wandering and improved test scores. Noticing and coming back is a core part of it." },
+    { id: "hardest-4", type: "boost", text: "You noticed you drifted. That's the rep. Come back to the exact line you were on, not the top of the page." },
     // source: Bjork 1994
-    { type: "fact", text: "Learning that feels hard, like recalling instead of rereading, often sticks better than learning that feels easy. Effort here can be a good sign." },
-    { type: "boost", text: "Stuck? Say to yourself in one sentence exactly what you don't get. Often the next step shows up while you say it." },
-    { type: "boost", text: "Bored isn't the same as done. Keep the task, change the angle: start from a different part of it." },
-    { type: "boost", text: "Breathe in, then take a second short breath in, then breathe out slowly and fully. Twice. Then the next line." },
+    { id: "hardest-5", type: "fact", text: "Learning that feels hard, like recalling instead of rereading, often sticks better than learning that feels easy. Effort here can be a good sign." },
+    { id: "hardest-6", type: "boost", text: "Stuck? Say to yourself in one sentence exactly what you don't get. Often the next step shows up while you say it." },
+    { id: "hardest-7", type: "boost", text: "Bored isn't the same as done. Keep the task, change the angle: start from a different part of it." },
+    { id: "hardest-8", type: "boost", text: "Breathe in, then take a second short breath in, then breathe out slowly and fully. Twice. Then the next line." },
     // source: Balban et al. 2023
-    { type: "fact", text: "In a month-long study, five minutes a day of breathing with long exhales improved mood more than the same time spent on mindfulness meditation." },
+    { id: "hardest-9", type: "fact", text: "In a month-long study, five minutes a day of breathing with long exhales improved mood more than the same time spent on mindfulness meditation." },
     // source: Kross et al. 2014
-    { type: "fact", text: "In experiments, people who talked to themselves as \"you\" or by their own name, instead of \"I\", stayed calmer and did better under stress." },
-    { type: "boost", text: "Shrink the goal for the next five minutes: one problem, one paragraph, one email. Then decide again." },
-    { type: "boost", text: "You're past minute 10. The rest of this session doesn't have to feel good to be worth it." },
+    { id: "hardest-10", type: "fact", text: "In experiments, people who talked to themselves as \"you\" or by their own name, instead of \"I\", stayed calmer and did better under stress." },
+    { id: "hardest-11", type: "boost", text: "Shrink the goal for the next five minutes: one problem, one paragraph, one email. Then decide again." },
+    { id: "hardest-12", type: "boost", text: "You're past minute 10. The rest of this session doesn't have to feel good to be worth it." },
   ],
   middle: [
-    { type: "boost", text: "You're in the long middle stretch. A steady pace works better here than a fast one." },
+    { id: "middle-1", type: "boost", text: "You're in the long middle stretch. A steady pace works better here than a fast one." },
     // source: Stothart, Mitchum & Yehnert 2015
-    { type: "fact", text: "A notification you don't even check can still pull your attention away for a moment. Silent mode is doing real work for you." },
-    { type: "boost", text: "Quick check: without looking, try to recall the last part. What you can't recall is what to look at again." },
+    { id: "middle-2", type: "fact", text: "A notification you don't even check can still pull your attention away for a moment. Silent mode is doing real work for you." },
+    { id: "middle-3", type: "boost", text: "Quick check: without looking, try to recall the last part. What you can't recall is what to look at again." },
     // source: Roediger & Karpicke 2006
-    { type: "fact", text: "Testing yourself beats rereading. Pulling an answer out of your memory makes it stick better than seeing it again." },
-    { type: "boost", text: "Stuck on one thing for a while? Mark it, skip it and come back at the end. One problem doesn't get the whole session." },
+    { id: "middle-4", type: "fact", text: "Testing yourself beats rereading. Pulling an answer out of your memory makes it stick better than seeing it again." },
+    { id: "middle-5", type: "boost", text: "Stuck on one thing for a while? Mark it, skip it and come back at the end. One problem doesn't get the whole session." },
     // source: Amabile & Kramer 2011
-    { type: "fact", text: "In a diary study, people's best workdays had one thing in common most often: progress on something that mattered to them, even a small step." },
-    { type: "boost", text: "Finish one small piece now. Look at the clock after that, not before." },
-    { type: "boost", text: "Sip of water, sit up, shoulders down. Then straight back in." },
+    { id: "middle-6", type: "fact", text: "In a diary study, people's best workdays had one thing in common most often: progress on something that mattered to them, even a small step." },
+    { id: "middle-7", type: "boost", text: "Finish one small piece now. Look at the clock after that, not before." },
+    { id: "middle-8", type: "boost", text: "Sip of water, sit up, shoulders down. Then straight back in." },
     // source: Dunlosky et al. 2013
-    { type: "fact", text: "Asking yourself \"why is this true?\" and linking it to what you already know helps new material stick." },
-    { type: "boost", text: "Notice where you are right now: which line, which step. If you drift later, you'll know exactly where to come back to." },
+    { id: "middle-9", type: "fact", text: "Asking yourself \"why is this true?\" and linking it to what you already know helps new material stick." },
+    { id: "middle-10", type: "boost", text: "Notice where you are right now: which line, which step. If you drift later, you'll know exactly where to come back to." },
     // source: Harkin et al. 2016
-    { type: "fact", text: "Keeping track of your progress makes reaching a goal more likely, especially when you write it down." },
-    { type: "boost", text: "This is the kind of part that's easiest to put off. You're doing it anyway." },
+    { id: "middle-11", type: "fact", text: "Keeping track of your progress makes reaching a goal more likely, especially when you write it down." },
+    { id: "middle-12", type: "boost", text: "This is the kind of part that's easiest to put off. You're doing it anyway." },
   ],
   final: [
-    { type: "boost", text: "Final stretch. Pick one thing you can fully finish before the timer ends, and finish it." },
+    { id: "final-1", type: "boost", text: "Final stretch. Pick one thing you can fully finish before the timer ends, and finish it." },
     // source: Kivetz, Urminsky & Zheng 2006
-    { type: "fact", text: "People tend to speed up as a goal gets close. You can use that pull right now." },
+    { id: "final-2", type: "fact", text: "People tend to speed up as a goal gets close. You can use that pull right now." },
     // source: Kahneman et al. 1993
-    { type: "fact", text: "We tend to remember an experience by its most intense moment and by how it ended. Good last minutes shape how this session feels later." },
-    { type: "boost", text: "Leave a note for next time: where you stopped and what the very next step is. Getting started again will take seconds." },
-    { type: "boost", text: "Stop at a point where you know what comes next. That makes the next session much easier to start." },
-    { type: "boost", text: "Your phone can wait a few more minutes. Let the timer finish first." },
+    { id: "final-3", type: "fact", text: "We tend to remember an experience by its most intense moment and by how it ended. Good last minutes shape how this session feels later." },
+    { id: "final-4", type: "boost", text: "Leave a note for next time: where you stopped and what the very next step is. Getting started again will take seconds." },
+    { id: "final-5", type: "boost", text: "Stop at a point where you know what comes next. That makes the next session much easier to start." },
+    { id: "final-6", type: "boost", text: "Your phone can wait a few more minutes. Let the timer finish first." },
     // source: Dewar et al. 2012
-    { type: "fact", text: "Resting quietly for a few minutes after learning, with no new input, helped people remember more a week later." },
-    { type: "boost", text: "Plan your break now: a walk, a snack, a stretch. Something away from a screen." },
-    { type: "boost", text: "Before the timer ends, name three things you did in this session. Recalling them helps them stay." },
-    { type: "boost", text: "Think back to where you were when you started. What you got done since then is real progress." },
+    { id: "final-7", type: "fact", text: "Resting quietly for a few minutes after learning, with no new input, helped people remember more a week later." },
+    { id: "final-8", type: "boost", text: "Plan your break now: a walk, a snack, a stretch. Something away from a screen." },
+    { id: "final-9", type: "boost", text: "Before the timer ends, name three things you did in this session. Recalling them helps them stay." },
+    { id: "final-10", type: "boost", text: "Think back to where you were when you started. What you got done since then is real progress." },
     // source: Masicampo & Baumeister 2011
-    { type: "boost", text: "Something still unfinished? Decide what the next step is and when you'll do it. Then you can let it go for today." },
-    { type: "boost", text: "Last few minutes. Finish the piece in front of you and end on something done." },
+    { id: "final-11", type: "boost", text: "Something still unfinished? Decide what the next step is and when you'll do it. Then you can let it go for today." },
+    { id: "final-12", type: "boost", text: "Last few minutes. Finish the piece in front of you and end on something done." },
   ],
   short: [
-    { type: "boost", text: "Short session, so no long warm-up needed. Pick the one thing you'll get done and start." },
+    { id: "short-1", type: "boost", text: "Short session, so no long warm-up needed. Pick the one thing you'll get done and start." },
     // source: Leroy 2009
-    { type: "fact", text: "When you switch tasks, part of your attention stays on the last one for a while. In a short session, every switch costs a big slice." },
-    { type: "boost", text: "Phone out of reach and on silent. The session is short, so it can wait." },
+    { id: "short-2", type: "fact", text: "When you switch tasks, part of your attention stays on the last one for a while. In a short session, every switch costs a big slice." },
+    { id: "short-3", type: "boost", text: "Phone out of reach and on silent. The session is short, so it can wait." },
     // source: Killingsworth & Gilbert 2010
-    { type: "fact", text: "People's minds wander close to half the time. Drifting is normal. Coming back quickly is the skill you're training." },
-    { type: "boost", text: "Make the task tiny: one page, one problem, one paragraph. Then the next one." },
-    { type: "boost", text: "An urge to check something? Name it (\"that's an urge\") and let it pass. Then back to the exact line you were on." },
+    { id: "short-4", type: "fact", text: "People's minds wander close to half the time. Drifting is normal. Coming back quickly is the skill you're training." },
+    { id: "short-5", type: "boost", text: "Make the task tiny: one page, one problem, one paragraph. Then the next one." },
+    { id: "short-6", type: "boost", text: "An urge to check something? Name it (\"that's an urge\") and let it pass. Then back to the exact line you were on." },
     // source: Masicampo & Baumeister 2011
-    { type: "boost", text: "A thought keeps coming back? Tell yourself when you'll deal with it, for example \"after this session\", and carry on." },
-    { type: "boost", text: "No need to feel ready first. Start messy. You can fix a bad first draft, but not a blank page." },
+    { id: "short-7", type: "boost", text: "A thought keeps coming back? Tell yourself when you'll deal with it, for example \"after this session\", and carry on." },
+    { id: "short-8", type: "boost", text: "No need to feel ready first. Start messy. You can fix a bad first draft, but not a blank page." },
     // source: Roediger & Karpicke 2006
-    { type: "fact", text: "Testing yourself beats rereading. Cover your notes for a moment and try to recall the main point." },
+    { id: "short-9", type: "fact", text: "Testing yourself beats rereading. Cover your notes for a moment and try to recall the main point." },
     // source: Stothart, Mitchum & Yehnert 2015
-    { type: "fact", text: "A notification you don't check can still pull your attention away. Silent mode helps more than it seems." },
-    { type: "boost", text: "Stuck? Say to yourself in one sentence exactly what you don't get. Often the next step shows up while you say it." },
-    { type: "boost", text: "Short sessions add up. A few focused minutes today do more than a perfect plan for tomorrow." },
+    { id: "short-10", type: "fact", text: "A notification you don't check can still pull your attention away. Silent mode helps more than it seems." },
+    { id: "short-11", type: "boost", text: "Stuck? Say to yourself in one sentence exactly what you don't get. Often the next step shows up while you say it." },
+    { id: "short-12", type: "boost", text: "Short sessions add up. A few focused minutes today do more than a perfect plan for tomorrow." },
   ],
 };
 
-// Summary screen title for each session result (see sessionResult in history-store.js).
-const SUMMARY_TITLES = {
-  great: "Great session!",
-  okay: "Good effort!",
-  rough: "Tough session",
-  early: "Ended early",
-  short: "That was quick",
-};
-
-// Shown under the title for sessions under 1 minute, in both modes.
-const SUMMARY_SHORT_NOTE = "Sessions shorter than 1 minute aren't saved to your history.";
-
-// Shown when the browser refused to store a finished session (storage full or site data blocked):
-// on the summary, and on the new session's screen after Start new session.
-const SUMMARY_SAVE_ERROR =
-  "Couldn't save this session to your history: your browser didn't allow it. Full storage or blocked site data can cause this.";
-const RESTART_SAVE_ERROR = "Couldn't save the first part to your history: your browser didn't allow it.";
-
-// Shown while the browser doesn't let the site save anything (site data blocked or storage full,
-// see storageWorks in history-store.js): on the setup screen, on a new session's screen, and on
-// the history page instead of its empty state.
-const SETUP_STORAGE_NOTE =
-  "Your browser isn't letting this site save data, so sessions won't go into your history and your settings won't be remembered. You can allow it in your browser's site settings.";
-const SESSION_STORAGE_NOTE = "This session won't be saved: your browser isn't letting this site save data.";
-const HISTORY_STORAGE_NOTE =
-  "Your browser isn't letting this site save data, so no sessions can be stored here. You can allow it in your browser's site settings.";
+// The summary titles, the "not saved" notes and the storage notes are UI texts: they're in
+// js/i18n/en.js (summary.*, storage.*, session.saveFirstPartFailed).
 
 // End-of-session messages for Simple mode (it has no stats), one is picked at random.
 const SIMPLE_SUMMARY_MESSAGES = {
@@ -195,3 +173,14 @@ const SIMPLE_SUMMARY_MESSAGES = {
     "Shorter than planned. What matters is what you got done.",
   ],
 };
+
+// ---------- translations ----------
+// The English above goes to the translation system (localize in js/i18n.js); each text becomes a
+// getter that gives the current language. Keys: motivation.<id>, and summary.simple.<result>.<n>
+// for the Simple summary sentences (n from 1, in the order above; one is picked at random).
+for (const messages of Object.values(MOTIVATION)) {
+  for (const message of messages) I18N.localize(message, "text", `motivation.${message.id}`);
+}
+for (const [result, messages] of Object.entries(SIMPLE_SUMMARY_MESSAGES)) {
+  messages.forEach((message, i) => I18N.localize(messages, String(i), `summary.simple.${result}.${i + 1}`));
+}

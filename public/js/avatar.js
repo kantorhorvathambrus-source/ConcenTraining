@@ -6,41 +6,41 @@
 
 const $ = (selector) => document.querySelector(selector);
 
-// The look sections. view: how the thumbnails are drawn (avatar-art.js AVATAR_VIEWS); swatch: a
+// The look sections (their titles: avatar.section.<field> in js/i18n/en.js). view: how the thumbnails are drawn (avatar-art.js AVATAR_VIEWS); swatch: a
 // colour instead of a drawing; text: plain text buttons. perGender: the chosen gender's own list
 // (built again when the gender changes); the others are shared by both genders, like every costume
 // list (avatar-costumes.js). A section with no options for a gender (facial hair for women) isn't
 // shown.
 const SECTIONS = {
-  gender: { field: "gender", title: "Gender", kind: "text" },
-  skin: { field: "skin", title: "Skin tone", kind: "swatch" },
-  hairColor: { field: "hairColor", title: "Hair colour", kind: "swatch" },
-  face: { field: "face", title: "Face", view: "head", perGender: true },
-  hairStyle: { field: "hairStyle", title: "Hairstyle", view: "head", perGender: true },
-  outfit: { field: "outfit", title: "Outfit", view: "full", perGender: true },
-  costumeOutfit: { field: "costumeOutfit", title: "Costume outfit", view: "full" },
-  back: { field: "back", title: "Back", view: "full" },
-  headwear: { field: "headwear", title: "Headwear", view: "head" },
-  mask: { field: "mask", title: "Masks and face", view: "head" },
-  earsHorns: { field: "earsHorns", title: "Ears and horns", view: "head" },
-  eyewear: { field: "eyewear", title: "Eyewear", view: "head", perGender: true },
-  earrings: { field: "earrings", title: "Earrings", view: "head", perGender: true },
-  necklace: { field: "necklace", title: "Necklace", view: "full", perGender: true },
-  costumeBeard: { field: "costumeBeard", title: "Costume beard", view: "head" },
-  facialHair: { field: "facialHair", title: "Facial hair", view: "head", perGender: true },
-  held: { field: "held", title: "Held item", view: "full" },
-  pet: { field: "pet", title: "Shoulder pet", view: "full" },
+  gender: { field: "gender", kind: "text" },
+  skin: { field: "skin", kind: "swatch" },
+  hairColor: { field: "hairColor", kind: "swatch" },
+  face: { field: "face", view: "head", perGender: true },
+  hairStyle: { field: "hairStyle", view: "head", perGender: true },
+  outfit: { field: "outfit", view: "full", perGender: true },
+  costumeOutfit: { field: "costumeOutfit", view: "full" },
+  back: { field: "back", view: "full" },
+  headwear: { field: "headwear", view: "head" },
+  mask: { field: "mask", view: "head" },
+  earsHorns: { field: "earsHorns", view: "head" },
+  eyewear: { field: "eyewear", view: "head", perGender: true },
+  earrings: { field: "earrings", view: "head", perGender: true },
+  necklace: { field: "necklace", view: "full", perGender: true },
+  costumeBeard: { field: "costumeBeard", view: "head" },
+  facialHair: { field: "facialHair", view: "head", perGender: true },
+  held: { field: "held", view: "full" },
+  pet: { field: "pet", view: "full" },
 };
 
-// The editor's collapsible groups (<details>), in order. All four are open at the start; tapping a
+// The editor's collapsible groups (<details>), in order (titles: avatar.group.<id>). All four are open at the start; tapping a
 // group's title closes it. A group's sections are only built the first time it's open, and only
 // thumbnails on or near the screen are drawn (a closed group's thumbnails are never on screen).
 const EDITOR_GROUPS = [
-  { id: "base", title: "Base", open: true, sections: ["gender", "skin", "hairColor", "face", "hairStyle"] },
-  { id: "costumes", title: "Costumes", open: true, presets: true, sections: [] },
-  { id: "clothes", title: "Clothes", open: true, sections: ["outfit", "costumeOutfit", "back"] },
+  { id: "base", open: true, sections: ["gender", "skin", "hairColor", "face", "hairStyle"] },
+  { id: "costumes", open: true, presets: true, sections: [] },
+  { id: "clothes", open: true, sections: ["outfit", "costumeOutfit", "back"] },
   {
-    id: "accessories", title: "Accessories", open: true,
+    id: "accessories", open: true,
     sections: ["headwear", "mask", "earsHorns", "eyewear", "earrings", "necklace", "costumeBeard", "facialHair", "held", "pet"],
   },
 ];
@@ -93,7 +93,7 @@ const editor = {
 // ---------- drawing ----------
 
 function previewCharacter() {
-  const name = $("#nameInput").value.trim() || "Your character";
+  const name = $("#nameInput").value.trim() || t("avatar.defaultName");
   return { name, group: PERSONALITY_GROUPS[editor.personality] };
 }
 
@@ -306,8 +306,8 @@ function optionVisual(section, option, label) {
 // The heading before a group of options inside a section (the same radio group): "Funny" before
 // the funny faces, "Fantasy" before the fantasy skin colours.
 function optionGroupTitle(option) {
-  if (option.funny) return "Funny";
-  if (option.fantasy) return "Fantasy";
+  if (option.funny) return t("avatar.optionGroup.funny");
+  if (option.fantasy) return t("avatar.optionGroup.fantasy");
   return "";
 }
 
@@ -325,7 +325,7 @@ function buildSection(section) {
   fieldset.className = "editor-section";
   const legend = document.createElement("legend");
   const heading = document.createElement("h3");
-  heading.textContent = section.title;
+  heading.textContent = t(`avatar.section.${section.field}`);
   legend.append(heading);
   const grid = document.createElement("div");
   grid.className = `option-grid option-grid-${section.kind || section.view}`;
@@ -375,7 +375,12 @@ function presetButton(preset) {
   button.append(box, label);
   // Read out as "Put on the costume: Pirate" ("No costume" as it is).
   if (preset !== NO_COSTUME_PRESET) {
-    button.setAttribute("aria-label", `Put on the costume: ${preset.label}${preset.description ? `, ${preset.description}` : ""}`);
+    button.setAttribute(
+      "aria-label",
+      preset.description
+        ? t("avatar.putOnDescribed", { name: preset.label, description: preset.description })
+        : t("avatar.putOn", { name: preset.label })
+    );
   }
   button.addEventListener("click", () => onPreset(preset));
   addThumb(box, { field: "preset", preset, view: "full" });
@@ -391,7 +396,7 @@ function buildPresets(container) {
   editor.themes.clear();
   const intro = document.createElement("p");
   intro.className = "muted small";
-  intro.textContent = "Tap a costume to put it on. You can still change every part.";
+  intro.textContent = t("avatar.costumeIntro");
   const none = document.createElement("div");
   none.className = "preset-grid preset-grid-none";
   none.append(presetButton(NO_COSTUME_PRESET));
@@ -400,7 +405,7 @@ function buildPresets(container) {
   picker.className = "theme-picker";
   const legend = document.createElement("legend");
   legend.className = "visually-hidden";
-  legend.textContent = "Costume theme";
+  legend.textContent = t("avatar.costumeTheme");
   const chips = document.createElement("div");
   chips.className = "theme-chips";
   picker.append(legend, chips);
@@ -439,7 +444,7 @@ function updateThemeDots() {
   for (const [id, { dot, input, label }] of editor.themes) {
     const on = Boolean(worn && worn.theme === id);
     dot.hidden = !on;
-    input.setAttribute("aria-label", on ? `${label}, current costume` : label);
+    input.setAttribute("aria-label", on ? t("avatar.currentCostume", { theme: label }) : label);
   }
 }
 
@@ -467,7 +472,7 @@ function buildLookSections() {
     details.open = Boolean(group.open);
     const summary = document.createElement("summary");
     const heading = document.createElement("h2");
-    heading.textContent = group.title;
+    heading.textContent = t(`avatar.group.${group.id}`);
     summary.append(heading);
     group.body = document.createElement("div");
     group.body.className = "editor-group-body";
@@ -674,8 +679,11 @@ function init() {
     editor.editing = character;
     editor.look = { ...character.look };
     editor.personality = character.personality;
-    $("#editorTitle").textContent = "Edit your character";
-    document.title = "Edit Your Character · ConcenTraining";
+    // Their data-i18n goes, so the page's own translation pass keeps these.
+    $("#editorTitle").removeAttribute("data-i18n");
+    $("#editorTitle").textContent = t("avatar.titleEdit");
+    document.querySelector("title").removeAttribute("data-i18n");
+    document.title = t("avatar.pageTitleEdit");
     $("#nameInput").value = character.name;
     $("#personalityPicker").hidden = true;
     $("#personalityFixed").hidden = false;
@@ -687,7 +695,7 @@ function init() {
   }
 
   if (!storageWorks()) {
-    $("#storageNote").textContent = SETUP_STORAGE_NOTE;
+    $("#storageNote").textContent = t("storage.setupNote");
     $("#storageNote").hidden = false;
   }
 

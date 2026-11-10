@@ -755,7 +755,7 @@ input:focus-visible {
 }
 
 /* Simple: always two full rows, 3 + 2. On a 6-column grid the first three buttons span 2 columns,
-   the last two span 3. Less side padding, so "Lost track" stays on one line on 320px phones. If a
+   the last two span 3. Less side padding, so a label like "Quite a bit" stays on one line on 320px phones. If a
    label still wraps (a large phone font), every row grows to the same height. */
 .distraction-buttons.simple {
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -844,16 +844,19 @@ input:focus-visible {
   background: var(--surface-2);
 }
 
+/* minmax(0, 1fr): three equal columns whatever the labels. Plain 1fr lets a column grow to its
+   longest word, which pushed the last column past the card at 320px in Hungarian. */
 .category-buttons {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
-/* Big enough to tap comfortably on a phone. */
+/* Big enough to tap comfortably on a phone. Little side padding: at 320px a column is about 80px,
+   and a longer label ("Thoughts", "Képernyő") still has to fit on its line. */
 .category-buttons .btn {
   min-height: 44px;
-  padding: 8px;
+  padding: 8px 4px;
 }
 
 .category-buttons .btn:hover {
@@ -1397,6 +1400,11 @@ a {
 
 .list-head h2 {
   margin: 0;
+}
+
+/* Edit / Done keeps its own width ("Szerkesztés" is long): the title next to it wraps instead. */
+.list-head .btn {
+  flex: none;
 }
 
 .delete-summary {
@@ -2076,9 +2084,10 @@ a {
     gap: 6px;
   }
 
+  /* No side padding: four chips share about 240px, and "90 perc" needs nearly all of its quarter. */
   dialog .chip {
     font-size: 0.9375rem;
-    padding: 6px 2px;
+    padding: 6px 0;
   }
 
   #restartDialog h2 {
@@ -2421,4 +2430,177 @@ a {
   .editor-group > summary::after {
     transition: none;
   }
+}
+
+/* ---------- language button and sheet (js/language-picker.js) ---------- */
+
+/* The button: top right of the setup screen's and the history page's header. Where it would come
+   near the centred title (every phone), it sits on its own row above the title, right-aligned, so
+   the title stays centred and never overlaps it. 520px: the widest title (ConcenTraining) plus the
+   button on both sides, checked in every language. See "Languages" in the README. */
+.app-header {
+  position: relative;
+}
+
+.header-lang {
+  display: flex;
+  justify-content: flex-end;
+  margin: -8px 0 8px;
+}
+
+@media (min-width: 520px) {
+  .header-lang {
+    position: absolute;
+    top: -6px;
+    right: 0;
+    margin: 0;
+  }
+}
+
+/* Secondary style: surface, the 1.5px border token, fully rounded, at least 44px tall. */
+.lang-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 12px 0 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+.lang-pill:hover {
+  border-color: var(--muted);
+}
+
+.lang-pill svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: none;
+}
+
+.lang-pill-globe {
+  width: 18px;
+  height: 18px;
+  stroke-width: 1.6;
+}
+
+.lang-pill-chevron {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
+  color: var(--muted);
+}
+
+/* The sheet: a <dialog> at the bottom of the screen, as wide as the other dialogs on wide screens.
+   No animation, like the app's other dialogs. */
+dialog.language-sheet,
+.app-timer ~ dialog.language-sheet {
+  width: min(440px, 100vw);
+  max-width: 100vw;
+  margin: auto auto 0;
+  padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+  border-radius: var(--radius) var(--radius) 0 0;
+  max-height: calc(100vh - 24px);
+  max-height: calc(100svh - 24px);
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.sheet-grab {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  margin: 0 auto 12px;
+}
+
+.language-sheet h2 {
+  margin: 0 0 8px;
+  padding: 0 20px;
+}
+
+.language-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.language-list li + li {
+  border-top: 1px solid var(--border);
+}
+
+.language-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 8px 20px;
+  border: none;
+  background: none;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.language-row:focus-visible {
+  outline-offset: -3px;
+}
+
+.language-row[aria-current="true"] {
+  background: color-mix(in srgb, var(--primary) 8%, var(--surface));
+}
+
+.language-names {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.language-native {
+  font-weight: 700;
+}
+
+.language-english {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.language-beta {
+  flex: none;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.language-check {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.language-sheet .language-report {
+  margin: 4px 0 0;
+  text-align: center;
 }

@@ -3,7 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Your History · ConcenTraining</title>
+  <!-- Languages (see "Languages" in the README): the list of languages, the English texts, then the
+       system that picks the language and translates the page while it's built, so the English below
+       never shows in another language. Before <title>, so the title is translated too. -->
+  <script src="js/i18n/languages.js"></script>
+  <script src="js/i18n/en.js"></script>
+  <script src="js/i18n.js"></script>
+  <title data-i18n="history.pageTitle">Your History · ConcenTraining</title>
   <meta name="description" content="Your finished focus sessions, streaks, time per week and focus trends.">
   <!-- The official address of this page (also on the GitHub Pages copy), and its link preview
        (Open Graph and Twitter card tags). See "Domain, redirect and security headers" in the README. -->
@@ -31,18 +37,30 @@
 <body>
   <main class="app">
     <header class="app-header">
-      <h1>Your history</h1>
-      <p class="muted">Finished sessions saved on this device.</p>
+      <!-- The language button (js/language-picker.js): top right, or on its own row above the
+           title on narrow screens. Its code and label are in the current language (data-i18n). -->
+      <div class="header-lang">
+        <button id="languageButton" type="button" class="lang-pill" aria-haspopup="dialog"
+                aria-label="Language: English" data-i18n-attr="aria-label:language.buttonLabel">
+          <svg class="lang-pill-globe" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <circle cx="12" cy="12" r="9"/>
+            <path d="M3 12h18M12 3c2.4 2.6 3.6 5.6 3.6 9s-1.2 6.4-3.6 9c-2.4-2.6-3.6-5.6-3.6-9s1.2-6.4 3.6-9z"/>
+          </svg>
+          <span class="lang-pill-code" data-i18n="language.code">EN</span>
+          <svg class="lang-pill-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M7 10l5 5 5-5"/>
+          </svg>
+        </button>
+      </div>
+      <h1 data-i18n="history.title">Your history</h1>
+      <p class="muted" data-i18n="history.subtitle">Finished sessions saved on this device.</p>
     </header>
 
     <p class="storage-note">
-      Your history is stored only in this browser. Clearing site data, using private mode or
-      switching devices starts it over. Use <strong>Export</strong> below before you switch phones
-      or clear your browser data.
-      <span id="iosStorageNote" hidden>
-        On iPhone and iPad, Safari may also erase it if you don't visit for 7 days. Adding ConcenTraining
-        to your Home Screen (tap Share, or ••• → Share, then Add to Home Screen) keeps it.
-      </span>
+      <span data-i18n="history.storageBefore">Your history is stored only in this browser. Clearing site data, using private mode or switching devices starts it over. Use</span>
+      <strong data-i18n="history.storageExport">Export</strong>
+      <span data-i18n="history.storageAfter">below before you switch phones or clear your browser data.</span>
+      <span id="iosStorageNote" hidden data-i18n="history.iosNote">On iPhone and iPad, Safari may also erase it if you don't visit for 7 days. Adding ConcenTraining to your Home Screen (tap Share, or ••• → Share, then Add to Home Screen) keeps it.</span>
     </p>
 
     <!-- Shown instead of the empty state (and above the sessions, if any can still be read) while
@@ -53,47 +71,47 @@
 
     <!-- tabindex="-1": gets the focus after the last session is deleted (history.js). -->
     <p id="historyEmpty" class="empty-state" tabindex="-1" hidden>
-      No finished sessions yet. Every session that runs at least 1 minute shows up here once it ends.
-      <a href="./">Start one →</a>
+      <span data-i18n="history.empty">No finished sessions yet. Every session that runs at least 1 minute shows up here once it ends.</span>
+      <a href="./" data-i18n="history.startOne">Start one →</a>
     </p>
 
     <div id="historyContent" hidden>
       <section class="history-section">
         <div class="stat-cards">
           <div class="stat-card">
-            <span class="stat-label">Current streak</span>
+            <span class="stat-label" data-i18n="history.currentStreak">Current streak</span>
             <span id="currentStreak" class="stat-value"></span>
           </div>
           <div class="stat-card">
-            <span class="stat-label">Longest streak</span>
+            <span class="stat-label" data-i18n="history.longestStreak">Longest streak</span>
             <span id="longestStreak" class="stat-value"></span>
           </div>
         </div>
-        <p class="muted small">A streak counts days with at least one finished session.</p>
+        <p class="muted small" data-i18n="history.streakNote">A streak counts days with at least one finished session.</p>
       </section>
 
       <section class="history-section">
-        <h2>Time per week</h2>
-        <p class="muted small">All sessions over the last 12 weeks, Simple and Advanced.</p>
+        <h2 data-i18n="history.timeTitle">Time per week</h2>
+        <p class="muted small" data-i18n="history.timeNote">All sessions over the last 12 weeks, Simple and Advanced.</p>
         <div id="timeChart" class="chart"></div>
         <p id="timeNote" class="muted"></p>
       </section>
 
       <section class="history-section">
-        <h2>Weekly focus</h2>
-        <p class="muted small">Advanced-mode sessions over the last 12 weeks. Longer sessions count more.</p>
+        <h2 data-i18n="history.focusTitle">Weekly focus</h2>
+        <p class="muted small" data-i18n="history.focusNote">Advanced-mode sessions over the last 12 weeks. Longer sessions count more.</p>
         <div id="trendChart" class="chart"></div>
         <p id="trendNote" class="muted"></p>
       </section>
 
       <section class="history-section">
-        <h2>Best time of day</h2>
+        <h2 data-i18n="history.bestTimeTitle">Best time of day</h2>
         <p id="bestTime"></p>
         <ul id="dayParts" class="day-parts"></ul>
       </section>
 
       <section class="history-section">
-        <h2>What distracts you</h2>
+        <h2 data-i18n="history.distractTitle">What distracts you</h2>
         <p id="categoryNote" class="muted small"></p>
         <ul id="categoryList" class="day-parts"></ul>
       </section>
@@ -101,7 +119,7 @@
       <section class="history-section">
         <div class="list-head">
           <h2 id="listTitle">Last 30 sessions</h2>
-          <button id="editButton" type="button" class="btn compact">Edit</button>
+          <button id="editButton" type="button" class="btn compact" data-i18n="common.edit">Edit</button>
         </div>
         <ol id="sessionList" class="session-list"></ol>
       </section>
@@ -112,36 +130,31 @@
     <p id="deleteStatus" class="delete-status" role="status"></p>
 
     <section id="backup" class="history-section">
-      <h2>Backup</h2>
-      <p class="muted small">
-        Your sessions are saved automatically on this device. Export a copy if you switch phones or
-        clear your browser data. Export saves all your sessions as a .json file. Import adds the
-        sessions from such a file; sessions you already have are skipped. Only the newest 1000
-        sessions are kept: if the total goes over 1000, the oldest sessions are removed.
-      </p>
+      <h2 data-i18n="history.backupTitle">Backup</h2>
+      <p class="muted small" data-i18n="history.backupText">Your sessions are saved automatically on this device. Export a copy if you switch phones or clear your browser data. Export saves all your sessions as a .json file. Import adds the sessions from such a file; sessions you already have are skipped. Only the newest 1000 sessions are kept: if the total goes over 1000, the oldest sessions are removed.</p>
       <div class="backup-actions">
-        <button id="exportButton" type="button" class="btn">Export history</button>
-        <button id="importButton" type="button" class="btn">Import history</button>
+        <button id="exportButton" type="button" class="btn" data-i18n="history.export">Export history</button>
+        <button id="importButton" type="button" class="btn" data-i18n="history.import">Import history</button>
         <input id="importFile" type="file" accept=".json,application/json" hidden>
       </div>
       <p id="backupStatus" class="backup-status" role="status" hidden></p>
     </section>
 
-    <p><a href="./" class="back-link">← Back to the timer</a></p>
+    <p><a href="./" class="back-link" data-i18n="history.backToTimer">← Back to the timer</a></p>
 
-    <p class="page-footer"><a href="privacy.html" class="footer-link">Privacy</a></p>
+    <p class="page-footer"><a href="privacy.html" class="footer-link" data-i18n="common.privacy">Privacy</a></p>
   </main>
 
   <!-- Opened by a session's Delete button in edit mode. Cancel comes first, so it has the focus
        when the dialog opens. Esc and Back close it like Cancel. -->
   <dialog id="deleteDialog" aria-labelledby="deleteTitle" aria-describedby="deleteSummary deleteText">
     <form method="dialog">
-      <h2 id="deleteTitle">Delete this session?</h2>
+      <h2 id="deleteTitle" data-i18n="history.deleteTitle">Delete this session?</h2>
       <p id="deleteSummary" class="delete-summary"></p>
-      <p id="deleteText">It will be removed from your history and from every number on this page.</p>
+      <p id="deleteText" data-i18n="history.deleteText">It will be removed from your history and from every number on this page.</p>
       <div class="dialog-actions">
-        <button value="cancel" class="btn">Cancel</button>
-        <button value="delete" class="btn danger">Delete</button>
+        <button value="cancel" class="btn" data-i18n="common.cancel">Cancel</button>
+        <button value="delete" class="btn danger" data-i18n="common.delete">Delete</button>
       </div>
     </form>
   </dialog>
@@ -152,6 +165,7 @@
   <script src="js/avatar-costumes.js"></script>
   <script src="js/custom-characters.js"></script>
   <script src="js/history-store.js"></script>
+  <script src="js/language-picker.js"></script>
   <script src="js/history.js"></script>
   <script src="js/sw-register.js"></script>
 </body>
