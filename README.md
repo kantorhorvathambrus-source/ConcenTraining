@@ -1554,6 +1554,12 @@ English, with `<html lang="en">`.
   of the language: `{ one, other }` in English, Hungarian and German; `{ one, many, other }` in
   Spanish, French, Italian and Brazilian Portuguese ("many" is for very large round numbers and has
   the same text as "other"); `{ one, few, many, other }` in Polish; only `{ other }` in Indonesian.
+  A text may also have an optional **`zero`** form: for a count of 0, `t()` uses it if it's there,
+  otherwise the `Intl.PluralRules` category as usual. Only Brazilian Portuguese uses it:
+  `Intl.PluralRules("pt-BR")` puts 0 in "one" ("0 dia"), but Brazilians say "0 dias". Its zero forms
+  are on every plural text that can show 0: `summary.logged`, `history.days` (streaks),
+  `history.sessions` and `history.distractions`. The other plural texts are only shown for a count
+  of 1 or more.
 - **Dates and times:** always `Intl.DateTimeFormat` in the language's `intlLocale`, never put
   together by hand: English (`en-GB`) "Mon 20 Oct · 14:05", Hungarian "okt. 20., hétfő · 14:05". How long the weekday is comes from the language's `weekday`
   field in `languages.js` (`short` for English and the beta languages, e.g. "mar, 20 oct",
@@ -1614,13 +1620,43 @@ when the real artwork is made.
 | Female | Grandma, Study Partner, Meditation Guide, Librarian, Headmistress | name; high bun; long braid; long hair; bun and name |
 | Male | Santa, Professor, Sensei, Boss, Influencer | beard; beard; goatee; tie; "his phone" in the art code |
 | Male (short hair only, no other cue) | Leader, Study Buddy, Grandmaster, Bodybuilder, Judge | short hair |
-| Ambiguous (cap, mask or helmet hides the hair) | Coach, Surgeon, Soldier | a gender-neutral word where the language has a natural one, otherwise a provisional form (below); their taglines are gender-neutral |
+| Ambiguous (cap, mask or helmet hides the hair) | Coach, Surgeon, Soldier | a gender-neutral word where the language has a natural one, otherwise the masculine form (below); their taglines are gender-neutral |
 
-Ambiguous characters per language: Coach = Coach (es, pt-BR, fr, de, it), Pelatih (id), Trener
-(pl, provisional). Soldier = Soldado (es, pt-BR), Militaire (fr), Militare (it), Tentara (id), Soldat
-(de, provisional), Żołnierz (pl, provisional). Surgeon = Dokter Bedah (id); provisional masculine
-forms elsewhere (Cirujano, Cirurgião, Chirurgien, Chirurg, Chirurgo, Chirurg). Your Phone is an
-object. Custom characters' names are never translated.
+Ambiguous characters per language: Coach = Coach (es, pt-BR, fr, de, it), Pelatih (id), Trener (pl).
+Soldier = Soldado (es, pt-BR), Militaire (fr), Militare (it), Tentara (id), Soldat (de), Żołnierz (pl).
+Surgeon = Dokter Bedah (id); the masculine form elsewhere (Cirujano, Cirurgião, Chirurgien, Chirurg,
+Chirurgo, Chirurg). Where a language has no neutral word, the masculine form was chosen to follow the
+placeholders, like the short-haired characters above; all of this is revisited with the real artwork.
+Your Phone is an object. Custom characters' names are never translated.
+
+### For the native-speaker review
+
+Choices the independent reviews flagged and kept on purpose. A native speaker checks these before a
+language loses its `beta` flag:
+
+- **All gendered languages:** the masculine names of Surgeon (es, pt-BR, fr, de, it, pl), Soldier (de,
+  pl) and Coach (pl), and the male short-haired characters (see the table above).
+- **Spanish:** "Gamer" for the gamer costume (an invariable anglicism; "Videojugador" would be
+  masculine). "Atardecer" for evening (17–22 h; Spanish has no exact one-word "evening"). "Gafas"
+  (Spain) and "Aretes" (Latin America), both widely understood.
+- **Brazilian Portuguese:** "Noite" (17–22 h) and "Madrugada" (22–5 h; strictly it starts at midnight,
+  but the hours are shown next to the label).
+- **Indonesian:** the Advanced restart dialog says "a long distraction" ("distraksi yang lama") rather
+  than "a long break", so it isn't confused with the break feature ("Istirahat"). "Siang" for 12–17 h
+  and "Malam" for 17–22 h. Duration chips use "mnt" / "dtk" for space; sentences say "menit".
+- **French:** "Binôme" (Study Partner) is a masculine noun for a female character; her tagline doesn't
+  agree with any gender. Pose descriptions are noun phrases ("un sourire encourageant"), because
+  "Mamie, sourit." isn't correct French.
+- **German:** costume presets that are masculine person nouns (Arzt, Koch, Feuerwehrmann, Superheld,
+  Detektiv, Pestarzt, Zirkusdirektor, Außerirdischer, Verrückter Wissenschaftler, Einbrecher) and can
+  be worn by a female custom character. The approved summary sentence "geht's" has a straight
+  apostrophe while the rest uses ’. "Masken und Schminke" as the heading of a section that also has a
+  monocle and noses.
+- **Italian:** "Settimana dal giorno {date}" in the chart labels ("Settimana del {date}" would need
+  "dell'8" / "dell'11"). Long single words carry soft hyphens for 320px phones ("Pochis-simo",
+  "Abba-stanza").
+- **Polish:** the badge "Za darmo na start" ("free to start with") is a little looser than "Free during
+  launch".
 
 ### Adding a language
 

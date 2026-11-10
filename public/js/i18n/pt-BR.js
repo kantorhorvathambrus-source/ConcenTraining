@@ -209,6 +209,7 @@ I18N_TEXTS["pt-BR"] = {
     "Não foi possível salvar esta sessão no seu histórico: seu navegador não permitiu. Isso pode acontecer quando o armazenamento está cheio ou os dados do site estão bloqueados.",
   "summary.percent": "{percent}% de foco",
   "summary.logged": {
+    zero: "com {count} distrações registradas.",
     one: "com {count} distração registrada.",
     many: "com {count} distrações registradas.",
     other: "com {count} distrações registradas.",
@@ -242,9 +243,11 @@ I18N_TEXTS["pt-BR"] = {
   "history.currentStreak": "Sequência atual",
   "history.longestStreak": "Maior sequência",
   "history.streakNote": "A sequência conta os dias com pelo menos uma sessão concluída.",
-  "history.days": { one: "{count} dia", many: "{count} dias", other: "{count} dias" },
-  "history.sessions": { one: "{count} sessão", many: "{count} sessões", other: "{count} sessões" },
-  "history.distractions": { one: "{count} distração", many: "{count} distrações", other: "{count} distrações" },
+  // zero: Intl.PluralRules puts 0 in "one" ("0 dia"); Brazilians say "0 dias". Every plural text that
+  // can show 0 has a zero form (summary.logged and these three); js/i18n.js picks it for a count of 0.
+  "history.days": { zero: "{count} dias", one: "{count} dia", many: "{count} dias", other: "{count} dias" },
+  "history.sessions": { zero: "{count} sessões", one: "{count} sessão", many: "{count} sessões", other: "{count} sessões" },
+  "history.distractions": { zero: "{count} distrações", one: "{count} distração", many: "{count} distrações", other: "{count} distrações" },
 
   "history.timeTitle": "Tempo por semana",
   "history.timeNote": "Todas as sessões das últimas 12 semanas, Simples e Detalhado.",
