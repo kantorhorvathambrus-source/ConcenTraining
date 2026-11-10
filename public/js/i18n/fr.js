@@ -209,7 +209,7 @@ I18N_TEXTS.fr = {
   "summary.shortNote": "Les séances de moins d'une minute ne sont pas enregistrées dans ton historique.",
   "summary.saveError":
     "Impossible d'enregistrer cette séance dans ton historique\u202f: ton navigateur ne l'a pas permis. Cela peut venir d'un stockage plein ou de données de site bloquées.",
-  "summary.percent": "{percent}\u202f% de concentration",
+  "summary.percent": "{percent}\u202f% de concen\u00adtration",
   // French "one" also covers 0 ("0 distraction notée"); "many" (1 000 000) is the same as "other".
   "summary.logged": {
     one: "avec {count} distraction notée.",

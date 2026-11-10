@@ -636,7 +636,7 @@ I18N_TEXTS.pl = {
   "category.thoughts": "Myśli",
   "category.noise": "Hałas",
   "category.people": "Ludzie",
-  "category.tired": "Zmęczenie",
+  "category.tired": "Zmę\u00adczenie",
   "category.other": "Inne",
 
   // ---------- character editor options (js/avatar-parts.js, js/avatar-costumes.js) ----------

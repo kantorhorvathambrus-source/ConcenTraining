@@ -208,7 +208,7 @@ I18N_TEXTS.es = {
   "summary.shortNote": "Las sesiones de menos de 1 minuto no se guardan en tu historial.",
   "summary.saveError":
     "No se pudo guardar esta sesión en tu historial: tu navegador no lo permitió. Puede pasar si el almacenamiento está lleno o los datos del sitio están bloqueados.",
-  "summary.percent": "{percent}% de concentración",
+  "summary.percent": "{percent}% de concen\u00adtración",
   // "many" is only used for large round numbers (1 000 000), so it is the same as "other".
   "summary.logged": {
     one: "con {count} distracción registrada.",
@@ -600,10 +600,10 @@ I18N_TEXTS.es = {
   // ---------- distraction categories (js/history-store.js) ----------
   // Short chip labels, all nouns ("Cansancio", never the adjective "cansado").
   "category.phone": "Pantalla",
-  "category.thoughts": "Pensamientos",
+  "category.thoughts": "Pensa\u00admientos",
   "category.noise": "Ruido",
   "category.people": "Gente",
-  "category.tired": "Cansancio",
+  "category.tired": "Can\u00adsancio",
   "category.other": "Otro",
 
   // ---------- character editor options (js/avatar-parts.js, js/avatar-costumes.js) ----------

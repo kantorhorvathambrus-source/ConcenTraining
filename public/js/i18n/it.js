@@ -131,9 +131,9 @@ I18N_TEXTS.it = {
   "session.pausedTitle": "In pausa · ConcenTraining",
   "session.saveFirstPartFailed": "Impossibile salvare la prima parte nella cronologia: il browser non l'ha permesso.",
 
-  "distraction.simple.1": "Pochissimo",
+  "distraction.simple.1": "Pochis\u00adsimo",
   "distraction.simple.2": "Un po'",
-  "distraction.simple.3": "Abbastanza",
+  "distraction.simple.3": "Abba\u00adstanza",
   "distraction.simple.4": "Molto",
   "distraction.simple.5": "Del tutto",
   "distraction.advanced.1": "30 sec",
@@ -198,7 +198,7 @@ I18N_TEXTS.it = {
   "summary.title.short": "Sessione lampo",
   "summary.shortNote": "Le sessioni più brevi di 1 minuto non vengono salvate nella cronologia.",
   "summary.saveError": "Impossibile salvare questa sessione nella cronologia: il browser non l'ha permesso. Può succedere se lo spazio di archiviazione è pieno o se i dati del sito sono bloccati.",
-  "summary.percent": "{percent}% di concentrazione",
+  "summary.percent": "{percent}% di concen\u00adtrazione",
   "summary.logged": { one: "con {count} distrazione registrata.", many: "con {count} distrazioni registrate.", other: "con {count} distrazioni registrate." },
   "summary.planned": " (durata prevista: {duration})",
   "summary.advancedLine": "Hai mantenuto la concentrazione per {focused} su {elapsed}{planned}, {logged}",
@@ -543,7 +543,7 @@ I18N_TEXTS.it = {
   "category.thoughts": "Pensieri",
   "category.noise": "Rumore",
   "category.people": "Persone",
-  "category.tired": "Stanchezza",
+  "category.tired": "Stan\u00adchezza",
   "category.other": "Altro",
 
   // ---------- character editor options (js/avatar-parts.js, js/avatar-costumes.js) ----------

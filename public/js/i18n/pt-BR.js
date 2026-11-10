@@ -582,7 +582,7 @@ I18N_TEXTS["pt-BR"] = {
 
   // ---------- distraction categories (js/history-store.js) ----------
   "category.phone": "Tela",
-  "category.thoughts": "Pensamentos",
+  "category.thoughts": "Pensa\u00admentos",
   "category.noise": "Barulho",
   "category.people": "Pessoas",
   "category.tired": "Cansaço",
