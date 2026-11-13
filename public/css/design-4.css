@@ -1,0 +1,732 @@
+/* Design lab, direction 4: Training Ground (temporary, never merged into main).
+   A training plan: chalk white or black, heavy rules, square corners, one volt accent that is
+   only ever a fill behind black text, condensed capitals like a scoreboard.
+   Fonts: Barlow Condensed 700 (headings, buttons, timer) and Barlow 400/600 (text), both SIL
+   Open Font License.
+   Loaded after style.css by js/design-lab.js with ?design=4 on test addresses only.
+   Colours are only written in the token blocks below; every rule under them uses the tokens. */
+
+@font-face {
+  font-family: "Barlow Condensed";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../fonts/barlow-condensed/barlow-condensed-latin-ext-700-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Barlow Condensed";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../fonts/barlow-condensed/barlow-condensed-latin-700-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+
+@font-face {
+  font-family: "Barlow";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/barlow/barlow-latin-ext-400-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Barlow";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/barlow/barlow-latin-400-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+
+@font-face {
+  font-family: "Barlow";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../fonts/barlow/barlow-latin-ext-600-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Barlow";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../fonts/barlow/barlow-latin-600-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+
+:root {
+  /* ----- colour: light ----- */
+  --bg: #f2f2ef;
+  --surface: #ffffff;
+  --surface-2: #e4e4df;
+  --text: #0e0e0e;
+  --muted: #53534d;
+  --border: #0e0e0e;
+  --primary: #c6f432;
+  --primary-hover: #b4e01f;
+  --primary-text: #0e0e0e;
+  --primary-border: #0e0e0e;
+  --link: #0e0e0e;
+  --fact: #1f5bd0;
+  --focus: #1f5bd0;
+  --relaxed: #1f7a4a;
+  --firm: #6a3fb5;
+  --strict: #1f5bd0;
+  --ragebait: #c92a2a;
+  --badge-text: #ffffff;
+  --error: #b91c1c;
+  --error-text: #ffffff;
+  --danger-border: #0e0e0e;
+  --level-1: #e8c51a;
+  --level-2: #f0a01e;
+  --level-3: #f07a1e;
+  --level-4: #e4501e;
+  --level-5: #c92a2a;
+  --btn-bg: #ffffff;
+  --btn-bg-hover: #e4e4df;
+  --btn-border: #0e0e0e;
+  --btn-border-hover: #0e0e0e;
+  --undo-border: #0e0e0e;
+  --chip-on-bg: #c6f432;
+  --chip-on-border: #0e0e0e;
+  --chip-on-text: #0e0e0e;
+  --input-bg: #ffffff;
+  --input-border: #0e0e0e;
+  --card-border: #0e0e0e;
+  --selected-ring: #0e0e0e;
+  --selected-bg: #f3fbd2;
+  --selected-shadow: inset 0 6px 0 #c6f432;
+  --tip-bg: #ffffff;
+  --track: #0e0e0e;
+  --progress: #c6f432;
+  --paused-progress: #7c7c75;
+  --paused-opacity: 0.5;
+  --grid: #c9c9c3;
+  --swatch-border: #0e0e0e;
+  --overlay: rgba(14, 14, 14, 0.6);
+  --overlay-soft: rgba(14, 14, 14, 0.35);
+  --shadow: none;
+  --shadow-btn: none;
+  --shadow-chip: none;
+  --shadow-dialog: 0 0 0 2px #0e0e0e, 0 18px 40px rgba(14, 14, 14, 0.3);
+  --stage-bg: none;
+  --char-contour: drop-shadow(0 0 1px rgba(14, 14, 14, 0.6)) drop-shadow(0 0 1px rgba(14, 14, 14, 0.4)) drop-shadow(0 4px 0 rgba(14, 14, 14, 0.14));
+  --check-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5 10.5 L8.5 14 L15 6.5' fill='none' stroke='%23ffffff' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --check-inverse-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5 10.5 L8.5 14 L15 6.5' fill='none' stroke='%23ffffff' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  color-scheme: light;
+
+  /* ----- shape ----- */
+  --radius: 4px;
+  --radius-btn: 4px;
+  --radius-chip: 4px;
+  --radius-input: 4px;
+  --radius-small: 4px;
+  --radius-badge: 2px;
+  --radius-bar: 0;
+  --bw-control: 2px;
+  --bw-card: 2px;
+  --press: scale(0.97);
+
+  /* ----- type ----- */
+  --font-body: "Barlow", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Barlow Condensed", "Barlow", system-ui, sans-serif;
+  --font-btn: "Barlow Condensed", "Barlow", system-ui, sans-serif;
+  --font-num: "Barlow Condensed", "Barlow", system-ui, sans-serif;
+  --fw-display: 700;
+  --fw-btn: 700;
+  --fw-num: 700;
+  --tracking-display: 0.02em;
+  --tracking-btn: 0.04em;
+  --transform-display: uppercase;
+  --transform-btn: uppercase;
+
+  /* Spacing (4/8px steps), type sizes and motion: the same scale in every direction. */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.875rem;
+  --fs-md: 1rem;
+  --fs-lg: 1.125rem;
+  --fs-xl: 1.375rem;
+  --fs-2xl: 1.875rem;
+  --fs-3xl: 2.5rem;
+  --dur: 180ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d0d0d;
+    --surface: #171717;
+    --surface-2: #262626;
+    --text: #f5f5f0;
+    --muted: #a8a8a0;
+    --border: #74746d;
+    --primary-border: #c6f432;
+    --link: #c6f432;
+    --fact: #9dbcff;
+    --focus: #ffffff;
+    --error: #ff8a80;
+    --error-text: #2a0b08;
+    --danger-border: #ff8a80;
+    --btn-bg: #171717;
+    --btn-bg-hover: #262626;
+    --btn-border: #74746d;
+    --btn-border-hover: #a8a8a0;
+    --undo-border: #c6f432;
+    --chip-on-border: #c6f432;
+    --input-bg: #171717;
+    --input-border: #74746d;
+    --card-border: #74746d;
+    --selected-ring: #c6f432;
+    --selected-bg: #222a0c;
+    --tip-bg: #171717;
+    --track: #333330;
+    --paused-progress: #74746d;
+    --grid: #3a3a37;
+    --swatch-border: #74746d;
+    --overlay: rgba(0, 0, 0, 0.72);
+    --overlay-soft: rgba(0, 0, 0, 0.5);
+    --shadow-dialog: 0 0 0 2px #74746d, 0 18px 40px rgba(0, 0, 0, 0.6);
+    --stage-bg: radial-gradient(ellipse 46% 50% at 50% 56%, #3a3a37 0%, rgba(58, 58, 55, 0) 100%);
+    --char-contour: drop-shadow(0 0 1px rgba(245, 245, 240, 0.85)) drop-shadow(0 0 1px rgba(245, 245, 240, 0.55)) drop-shadow(0 4px 0 rgba(0, 0, 0, 0.5));
+    --check-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5 10.5 L8.5 14 L15 6.5' fill='none' stroke='%230e0e0e' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    --check-inverse-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5 10.5 L8.5 14 L15 6.5' fill='none' stroke='%230d0d0d' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    color-scheme: dark;
+  }
+}
+
+/* =====================================================================================
+   Components (the same in every direction's file): they read only the tokens above.
+   Only looks change here: colours, type, radius, borders, shadows. Sizes that style.css
+   adjusts for small and landscape screens (paddings, font sizes of the session screen)
+   are left alone, so every layout of the app stays as it is.
+   ===================================================================================== */
+
+/* ---------- type ---------- */
+
+body {
+  font-family: var(--font-body);
+}
+
+h1,
+h2,
+h3,
+.paused-title {
+  font-family: var(--font-display);
+  font-weight: var(--fw-display);
+  letter-spacing: var(--tracking-display);
+  text-transform: var(--transform-display);
+}
+
+.char-name,
+.quick-start-line,
+.language-native {
+  font-family: var(--font-display);
+  font-weight: var(--fw-display);
+}
+
+.timer,
+.summary-percent,
+.stat-value,
+.session-item-focus {
+  font-family: var(--font-num);
+  font-weight: var(--fw-num);
+  font-variant-numeric: tabular-nums;
+}
+
+.end-running strong,
+.paused-break,
+.day-part-value,
+.undo-seconds {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- links and accents used as text or marks ---------- */
+
+a,
+.text-btn {
+  color: var(--link);
+}
+
+.summary-percent,
+.motivation-badge {
+  color: var(--link);
+}
+
+.motivation-badge[data-type="fact"] {
+  color: var(--fact);
+}
+
+.language-check {
+  stroke: var(--link);
+}
+
+.end-running-dot,
+.theme-dot {
+  background: var(--link);
+}
+
+.theme-input:checked + .theme-chip-text .theme-dot {
+  background: var(--chip-on-text);
+}
+
+/* ---------- focus: one visible ring everywhere ---------- */
+
+button:focus-visible,
+input:focus-visible,
+a:focus-visible,
+.preset:focus-visible,
+.editor-group > summary:focus-visible,
+.theme-input:focus-visible + .theme-chip-text,
+.option-input:focus-visible + .option-visual {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.language-row:focus-visible {
+  outline-offset: -3px;
+}
+
+/* ---------- buttons ---------- */
+
+.btn {
+  border: var(--bw-control) solid var(--btn-border);
+  border-radius: var(--radius-btn);
+  background: var(--btn-bg);
+  box-shadow: var(--shadow-btn);
+  font-family: var(--font-btn);
+  font-weight: var(--fw-btn);
+  letter-spacing: var(--tracking-btn);
+  text-transform: var(--transform-btn);
+  transition: transform var(--dur) var(--ease), opacity var(--dur) var(--ease);
+}
+
+.btn:hover {
+  border-color: var(--btn-border-hover);
+}
+
+.btn:active {
+  transform: var(--press);
+}
+
+.btn.primary,
+.btn.primary:hover {
+  border-color: var(--primary-border);
+  color: var(--primary-text);
+  box-shadow: var(--shadow-btn);
+}
+
+.btn.primary {
+  background: var(--primary);
+}
+
+.btn.primary:hover {
+  background: var(--primary-hover);
+}
+
+.btn.danger,
+.btn.danger:hover {
+  background: var(--error);
+  border-color: var(--danger-border);
+  color: var(--error-text);
+}
+
+.undo-btn,
+.undo-btn:hover {
+  border-color: var(--undo-border);
+}
+
+.session-delete:hover {
+  border-color: var(--error);
+}
+
+.skip-btn,
+.category-buttons .btn {
+  border-radius: var(--radius-btn);
+}
+
+.btn.level:hover,
+.category-buttons .btn:hover,
+.skip-btn:hover {
+  background: var(--btn-bg-hover);
+}
+
+/* The distraction buttons: the hooks for each direction's ramp (see "ramp" below). --lv-c is the
+   level's colour, --lv-n grows with the level, so the ramp is never told by colour alone. */
+.btn.level-1 { --lv-c: var(--level-1); --lv-n: 2; }
+.btn.level-2 { --lv-c: var(--level-2); --lv-n: 3; }
+.btn.level-3 { --lv-c: var(--level-3); --lv-n: 4; }
+.btn.level-4 { --lv-c: var(--level-4); --lv-n: 6; }
+.btn.level-5 { --lv-c: var(--level-5); --lv-n: 8; }
+
+/* ---------- chips, the language button ---------- */
+
+.chip,
+.theme-chip-text,
+.lang-pill {
+  border: var(--bw-control) solid var(--btn-border);
+  border-radius: var(--radius-chip);
+  background: var(--btn-bg);
+  box-shadow: var(--shadow-chip);
+  font-family: var(--font-btn);
+  font-weight: var(--fw-btn);
+  transition: transform var(--dur) var(--ease), opacity var(--dur) var(--ease);
+}
+
+.lang-pill:hover {
+  border-color: var(--btn-border-hover);
+}
+
+.chip:active,
+.lang-pill:active,
+.choice:active,
+.preset:active {
+  transform: var(--press);
+}
+
+.chip[aria-pressed="true"],
+.theme-input:checked + .theme-chip-text {
+  background: var(--chip-on-bg);
+  border-color: var(--chip-on-border);
+  color: var(--chip-on-text);
+}
+
+.language-beta {
+  border-color: var(--btn-border);
+}
+
+/* ---------- fields ---------- */
+
+.custom-minutes input,
+.text-input {
+  border: var(--bw-control) solid var(--input-border);
+  border-radius: var(--radius-input);
+  background: var(--input-bg);
+}
+
+.text-input[aria-invalid="true"] {
+  border-color: var(--error);
+}
+
+/* ---------- cards and panels ---------- */
+
+.char-card,
+.custom-item,
+.choice,
+.tip-card,
+.quick-start,
+.motivation-card,
+.stat-card,
+.chart,
+.session-list,
+.day-part,
+.category-picker {
+  border-width: var(--bw-card);
+  border-color: var(--card-border);
+}
+
+/* The editor's option tiles keep their border width: their grid is measured to the pixel. */
+.preset,
+.option-visual {
+  border-color: var(--card-border);
+}
+
+/* The sound setting: the whole 44px row is the tap target, not only the line of text. */
+.setting-row .check-row {
+  align-self: stretch;
+  align-items: center;
+}
+
+.choice,
+.chart,
+.session-list,
+.day-part,
+.empty-state,
+.stats-table {
+  box-shadow: var(--shadow);
+}
+
+.day-part,
+.category-picker,
+.preset,
+.option-visual,
+.storage-note,
+.backup-status,
+.delete-status:not(:empty) {
+  border-radius: var(--radius-small);
+}
+
+.char-card,
+.choice,
+.preset {
+  transition: transform var(--dur) var(--ease), opacity var(--dur) var(--ease);
+}
+
+.char-card,
+.choice {
+  position: relative;
+}
+
+.custom-item .char-card {
+  border-color: transparent;
+}
+
+.avatar-preview {
+  border-bottom-color: var(--border);
+}
+
+/* Picked: a ring, a tint and a check mark in the corner, so it isn't marked by colour alone. */
+.char-card[aria-pressed="true"],
+.custom-item.selected,
+.choice[aria-pressed="true"] {
+  border-color: var(--selected-ring);
+  background: var(--selected-bg);
+  box-shadow: var(--selected-shadow);
+}
+
+.custom-item .char-card[aria-pressed="true"] {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.char-card[aria-pressed="true"]::after,
+.choice[aria-pressed="true"]::after {
+  content: "";
+  position: absolute;
+  top: var(--sp-2);
+  right: var(--sp-2);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--selected-ring) var(--check-img) center / 100% no-repeat;
+}
+
+.option-input:checked + .option-visual {
+  border-color: var(--selected-ring);
+  box-shadow: 0 0 0 2px var(--selected-ring);
+  background: var(--selected-bg);
+}
+
+.option-input:checked + .option-visual::after {
+  background-color: var(--selected-ring);
+  background-image: var(--check-img);
+}
+
+.personality-option .option-visual {
+  color: var(--badge-text);
+}
+
+.personality-option .option-input:checked + .option-visual {
+  border-color: var(--surface);
+  box-shadow: 0 0 0 3px var(--text);
+}
+
+.personality-option .option-input:checked + .option-visual::after {
+  background-color: var(--text);
+  background-image: var(--check-inverse-img);
+}
+
+.option-swatch {
+  border-color: var(--swatch-border);
+}
+
+.language-row[aria-current="true"] {
+  background: var(--selected-bg);
+}
+
+.day-part.best {
+  border-color: var(--selected-ring);
+}
+
+@media (hover: hover) {
+  .preset:hover {
+    border-color: var(--selected-ring);
+  }
+}
+
+/* ---------- badges ---------- */
+
+.badge {
+  color: var(--badge-text);
+  border-radius: var(--radius-badge);
+}
+
+.tip-card {
+  background: var(--tip-bg);
+}
+
+.badge-free {
+  background: var(--primary);
+  color: var(--primary-text);
+}
+
+/* ---------- timer, progress, charts ---------- */
+
+.progress,
+.day-part-track {
+  background: var(--track);
+}
+
+.progress,
+.progress-bar,
+.day-part-track,
+.day-part-fill {
+  border-radius: var(--radius-bar);
+}
+
+.progress-bar {
+  background: var(--progress);
+}
+
+.paused .progress-bar {
+  background: var(--paused-progress);
+}
+
+.day-part.best .day-part-fill {
+  background: var(--progress);
+}
+
+.chart-line,
+.chart-point {
+  stroke: var(--link);
+}
+
+.chart-bar {
+  fill: var(--link);
+}
+
+.chart-grid {
+  stroke: var(--grid);
+}
+
+/* A wider label ("100 %" in German) may reach into the card's padding instead of being cut. */
+.chart svg {
+  overflow: visible;
+}
+
+/* ---------- dialogs ---------- */
+
+dialog {
+  box-shadow: var(--shadow-dialog);
+}
+
+dialog::backdrop {
+  background: var(--overlay);
+}
+
+.away-dialog::backdrop {
+  background: var(--overlay-soft);
+}
+
+/* ---------- the character on its stage ---------- */
+
+/* A calm, pattern-free light behind the character, and a contour that follows the artwork's own
+   (transparent) outline, so light and dark art both stand out from the page. */
+.stage {
+  background: var(--stage-bg);
+}
+
+.char-img {
+  filter: var(--char-contour);
+}
+
+/* ---------- landscape phones: the category picker stands where the buttons were, without a
+   card frame (as in style.css) ---------- */
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .category-picker {
+    border-radius: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn,
+  .chip,
+  .lang-pill,
+  .char-card,
+  .choice,
+  .preset {
+    transition: none;
+  }
+}
+
+/* =====================================================================================
+   Training Ground only
+   ===================================================================================== */
+
+h1 {
+  font-size: var(--fs-3xl);
+  line-height: 1;
+}
+
+.step h2,
+.history-section h2,
+.tip-card h2 {
+  font-size: var(--fs-xl);
+}
+
+/* Names stay as written (no capitals): they can be the user's own. */
+.char-name,
+.quick-start-line,
+.language-native {
+  font-size: var(--fs-lg);
+  letter-spacing: var(--tracking-display);
+}
+
+.chip {
+  font-size: var(--fs-lg);
+  letter-spacing: var(--tracking-btn);
+}
+
+.badge,
+.motivation-badge,
+.stat-label,
+.quick-start-label {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* Links are black on chalk: the underline (and weight) marks them, not a colour. */
+a,
+.text-btn {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+a.btn {
+  text-decoration: none;
+}
+
+.progress {
+  box-shadow: 0 0 0 2px var(--track);
+}
+
+/* Ramp: a bar on top of each button that grows from Barely to Completely, like a load gauge. */
+.btn.level {
+  border-width: var(--bw-control);
+  border-color: var(--btn-border);
+  box-shadow: inset 0 calc(var(--lv-n) * 1px) 0 var(--lv-c);
+}
+
+.btn.level:disabled {
+  border-color: var(--muted);
+  box-shadow: none;
+}
+
+/* Picked cards: the volt bar across the top, a black frame and the check mark. */
+.char-card[aria-pressed="true"]::after,
+.choice[aria-pressed="true"]::after {
+  top: var(--sp-3);
+}

@@ -1,0 +1,657 @@
+/* Design lab, direction 1: Quiet Paper (temporary, never merged into main).
+   A clean notebook page: warm paper, one ink-blue accent, hairlines, no shadows, system fonts.
+   Loaded after style.css by js/design-lab.js with ?design=1 on test addresses only.
+   Colours are only written in the token blocks below; every rule under them uses the tokens. */
+
+:root {
+  /* ----- colour: light ----- */
+  --bg: #faf8f4;
+  --surface: #ffffff;
+  --surface-2: #f0ede6;
+  --text: #1c1c1a;
+  --muted: #5e5c57;
+  --border: #dad6cc;
+  --primary: #1f3a5f;
+  --primary-hover: #172c49;
+  --primary-text: #ffffff;
+  --primary-border: #1f3a5f;
+  --link: #1f3a5f;
+  --fact: #2d5bbf;
+  --focus: #1f3a5f;
+  --relaxed: #2a7a4f;
+  --firm: #6b46b0;
+  --strict: #2d5bbf;
+  --ragebait: #c0352b;
+  --badge-text: #ffffff;
+  --error: #b3261e;
+  --error-text: #ffffff;
+  --danger-border: #b3261e;
+  --level-1: #e3b341;
+  --level-2: #e39a3b;
+  --level-3: #dd7a35;
+  --level-4: #d2552f;
+  --level-5: #b8322c;
+  --btn-bg: #ffffff;
+  --btn-bg-hover: #f0ede6;
+  --btn-border: #8c887e;
+  --btn-border-hover: #5e5c57;
+  --undo-border: #1f3a5f;
+  --chip-on-bg: #1f3a5f;
+  --chip-on-border: #1f3a5f;
+  --chip-on-text: #ffffff;
+  --input-bg: #ffffff;
+  --input-border: #8c887e;
+  --card-border: #dad6cc;
+  --selected-ring: #1f3a5f;
+  --selected-bg: #eef2f8;
+  --selected-shadow: 0 0 0 1px #1f3a5f;
+  --tip-bg: #ffffff;
+  --track: #e6e2d9;
+  --progress: #1f3a5f;
+  --paused-progress: #a9a59b;
+  --paused-opacity: 0.5;
+  --grid: #dad6cc;
+  --swatch-border: rgba(28, 28, 26, 0.3);
+  --overlay: rgba(28, 28, 26, 0.45);
+  --overlay-soft: rgba(28, 28, 26, 0.25);
+  --shadow: none;
+  --shadow-btn: none;
+  --shadow-chip: none;
+  --shadow-dialog: 0 0 0 1px #dad6cc, 0 16px 40px rgba(28, 28, 26, 0.16);
+  --session-bar-line: 0 -1px 0 #dad6cc;
+  --stage-bg: none;
+  --char-contour: drop-shadow(0 0 1px rgba(28, 28, 26, 0.6)) drop-shadow(0 0 1px rgba(28, 28, 26, 0.4)) drop-shadow(0 6px 8px rgba(28, 28, 26, 0.12));
+  --check-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5 10.5 L8.5 14 L15 6.5' fill='none' stroke='%23ffffff' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --check-inverse-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5 10.5 L8.5 14 L15 6.5' fill='none' stroke='%23ffffff' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  color-scheme: light;
+
+  /* ----- shape ----- */
+  --radius: 8px;
+  --radius-btn: 8px;
+  --radius-chip: 8px;
+  --radius-input: 8px;
+  --radius-small: 8px;
+  --radius-badge: 4px;
+  --radius-bar: 2px;
+  --bw-control: 1px;
+  --bw-card: 1px;
+  --press: scale(0.97);
+
+  /* ----- type ----- */
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-btn: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-num: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --fw-display: 600;
+  --fw-btn: 500;
+  --fw-num: 300;
+  --tracking-display: -0.01em;
+  --tracking-btn: 0;
+  --transform-display: none;
+  --transform-btn: none;
+
+  /* Spacing (4/8px steps), type sizes and motion: the same scale in every direction. */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.875rem;
+  --fs-md: 1rem;
+  --fs-lg: 1.125rem;
+  --fs-xl: 1.375rem;
+  --fs-2xl: 1.875rem;
+  --fs-3xl: 2.5rem;
+  --dur: 180ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141514;
+    --surface: #1c1e1d;
+    --surface-2: #272a28;
+    --text: #ecebe6;
+    --muted: #a6a49c;
+    --border: #363935;
+    --primary: #a9c3e8;
+    --primary-hover: #c0d4f0;
+    --primary-text: #0f1a2b;
+    --primary-border: #a9c3e8;
+    --link: #a9c3e8;
+    --fact: #9db8f2;
+    --focus: #a9c3e8;
+    --error: #ff8a80;
+    --error-text: #2a0b08;
+    --danger-border: #ff8a80;
+    --btn-bg: #1c1e1d;
+    --btn-bg-hover: #272a28;
+    --btn-border: #747870;
+    --btn-border-hover: #a6a49c;
+    --undo-border: #a9c3e8;
+    --chip-on-bg: #a9c3e8;
+    --chip-on-border: #a9c3e8;
+    --chip-on-text: #0f1a2b;
+    --input-bg: #1c1e1d;
+    --input-border: #747870;
+    --card-border: #363935;
+    --selected-ring: #a9c3e8;
+    --selected-bg: #222a36;
+    --selected-shadow: 0 0 0 1px #a9c3e8;
+    --tip-bg: #1c1e1d;
+    --track: #2e312e;
+    --progress: #a9c3e8;
+    --paused-progress: #5a5e58;
+    --grid: #363935;
+    --swatch-border: rgba(236, 235, 230, 0.35);
+    --overlay: rgba(0, 0, 0, 0.6);
+    --overlay-soft: rgba(0, 0, 0, 0.4);
+    --shadow-dialog: 0 0 0 1px #363935, 0 16px 40px rgba(0, 0, 0, 0.5);
+    --session-bar-line: 0 -1px 0 #363935;
+    --char-contour: drop-shadow(0 0 1px rgba(236, 235, 230, 0.85)) drop-shadow(0 0 1px rgba(236, 235, 230, 0.55)) drop-shadow(0 6px 8px rgba(0, 0, 0, 0.35));
+    --check-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5 10.5 L8.5 14 L15 6.5' fill='none' stroke='%230f1a2b' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    --check-inverse-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5 10.5 L8.5 14 L15 6.5' fill='none' stroke='%23141514' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    --stage-bg: radial-gradient(ellipse 46% 50% at 50% 56%, #3c403d 0%, rgba(60, 64, 61, 0) 100%);
+    color-scheme: dark;
+  }
+}
+
+/* =====================================================================================
+   Components (the same in every direction's file): they read only the tokens above.
+   Only looks change here: colours, type, radius, borders, shadows. Sizes that style.css
+   adjusts for small and landscape screens (paddings, font sizes of the session screen)
+   are left alone, so every layout of the app stays as it is.
+   ===================================================================================== */
+
+/* ---------- type ---------- */
+
+body {
+  font-family: var(--font-body);
+}
+
+h1,
+h2,
+h3,
+.paused-title {
+  font-family: var(--font-display);
+  font-weight: var(--fw-display);
+  letter-spacing: var(--tracking-display);
+  text-transform: var(--transform-display);
+}
+
+.char-name,
+.quick-start-line,
+.language-native {
+  font-family: var(--font-display);
+  font-weight: var(--fw-display);
+}
+
+.timer,
+.summary-percent,
+.stat-value,
+.session-item-focus {
+  font-family: var(--font-num);
+  font-weight: var(--fw-num);
+  font-variant-numeric: tabular-nums;
+}
+
+.end-running strong,
+.paused-break,
+.day-part-value,
+.undo-seconds {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- links and accents used as text or marks ---------- */
+
+a,
+.text-btn {
+  color: var(--link);
+}
+
+.summary-percent,
+.motivation-badge {
+  color: var(--link);
+}
+
+.motivation-badge[data-type="fact"] {
+  color: var(--fact);
+}
+
+.language-check {
+  stroke: var(--link);
+}
+
+.end-running-dot,
+.theme-dot {
+  background: var(--link);
+}
+
+.theme-input:checked + .theme-chip-text .theme-dot {
+  background: var(--chip-on-text);
+}
+
+/* ---------- focus: one visible ring everywhere ---------- */
+
+button:focus-visible,
+input:focus-visible,
+a:focus-visible,
+.preset:focus-visible,
+.editor-group > summary:focus-visible,
+.theme-input:focus-visible + .theme-chip-text,
+.option-input:focus-visible + .option-visual {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.language-row:focus-visible {
+  outline-offset: -3px;
+}
+
+/* ---------- buttons ---------- */
+
+.btn {
+  border: var(--bw-control) solid var(--btn-border);
+  border-radius: var(--radius-btn);
+  background: var(--btn-bg);
+  box-shadow: var(--shadow-btn);
+  font-family: var(--font-btn);
+  font-weight: var(--fw-btn);
+  letter-spacing: var(--tracking-btn);
+  text-transform: var(--transform-btn);
+  transition: transform var(--dur) var(--ease), opacity var(--dur) var(--ease);
+}
+
+.btn:hover {
+  border-color: var(--btn-border-hover);
+}
+
+.btn:active {
+  transform: var(--press);
+}
+
+.btn.primary,
+.btn.primary:hover {
+  border-color: var(--primary-border);
+  color: var(--primary-text);
+  box-shadow: var(--shadow-btn);
+}
+
+.btn.primary {
+  background: var(--primary);
+}
+
+.btn.primary:hover {
+  background: var(--primary-hover);
+}
+
+.btn.danger,
+.btn.danger:hover {
+  background: var(--error);
+  border-color: var(--danger-border);
+  color: var(--error-text);
+}
+
+.undo-btn,
+.undo-btn:hover {
+  border-color: var(--undo-border);
+}
+
+.session-delete:hover {
+  border-color: var(--error);
+}
+
+.skip-btn,
+.category-buttons .btn {
+  border-radius: var(--radius-btn);
+}
+
+.btn.level:hover,
+.category-buttons .btn:hover,
+.skip-btn:hover {
+  background: var(--btn-bg-hover);
+}
+
+/* The distraction buttons: the hooks for each direction's ramp (see "ramp" below). --lv-c is the
+   level's colour, --lv-n grows with the level, so the ramp is never told by colour alone. */
+.btn.level-1 { --lv-c: var(--level-1); --lv-n: 2; }
+.btn.level-2 { --lv-c: var(--level-2); --lv-n: 3; }
+.btn.level-3 { --lv-c: var(--level-3); --lv-n: 4; }
+.btn.level-4 { --lv-c: var(--level-4); --lv-n: 6; }
+.btn.level-5 { --lv-c: var(--level-5); --lv-n: 8; }
+
+/* ---------- chips, the language button ---------- */
+
+.chip,
+.theme-chip-text,
+.lang-pill {
+  border: var(--bw-control) solid var(--btn-border);
+  border-radius: var(--radius-chip);
+  background: var(--btn-bg);
+  box-shadow: var(--shadow-chip);
+  font-family: var(--font-btn);
+  font-weight: var(--fw-btn);
+  transition: transform var(--dur) var(--ease), opacity var(--dur) var(--ease);
+}
+
+.lang-pill:hover {
+  border-color: var(--btn-border-hover);
+}
+
+.chip:active,
+.lang-pill:active,
+.choice:active,
+.preset:active {
+  transform: var(--press);
+}
+
+.chip[aria-pressed="true"],
+.theme-input:checked + .theme-chip-text {
+  background: var(--chip-on-bg);
+  border-color: var(--chip-on-border);
+  color: var(--chip-on-text);
+}
+
+.language-beta {
+  border-color: var(--btn-border);
+}
+
+/* ---------- fields ---------- */
+
+.custom-minutes input,
+.text-input {
+  border: var(--bw-control) solid var(--input-border);
+  border-radius: var(--radius-input);
+  background: var(--input-bg);
+}
+
+.text-input[aria-invalid="true"] {
+  border-color: var(--error);
+}
+
+/* ---------- cards and panels ---------- */
+
+.char-card,
+.custom-item,
+.choice,
+.tip-card,
+.quick-start,
+.motivation-card,
+.stat-card,
+.chart,
+.session-list,
+.day-part,
+.category-picker {
+  border-width: var(--bw-card);
+  border-color: var(--card-border);
+}
+
+/* The editor's option tiles keep their border width: their grid is measured to the pixel. */
+.preset,
+.option-visual {
+  border-color: var(--card-border);
+}
+
+/* The sound setting: the whole 44px row is the tap target, not only the line of text. */
+.setting-row .check-row {
+  align-self: stretch;
+  align-items: center;
+}
+
+.choice,
+.chart,
+.session-list,
+.day-part,
+.empty-state,
+.stats-table {
+  box-shadow: var(--shadow);
+}
+
+.day-part,
+.category-picker,
+.preset,
+.option-visual,
+.storage-note,
+.backup-status,
+.delete-status:not(:empty) {
+  border-radius: var(--radius-small);
+}
+
+.char-card,
+.choice,
+.preset {
+  transition: transform var(--dur) var(--ease), opacity var(--dur) var(--ease);
+}
+
+.char-card,
+.choice {
+  position: relative;
+}
+
+.custom-item .char-card {
+  border-color: transparent;
+}
+
+.avatar-preview {
+  border-bottom-color: var(--border);
+}
+
+/* Picked: a ring, a tint and a check mark in the corner, so it isn't marked by colour alone. */
+.char-card[aria-pressed="true"],
+.custom-item.selected,
+.choice[aria-pressed="true"] {
+  border-color: var(--selected-ring);
+  background: var(--selected-bg);
+  box-shadow: var(--selected-shadow);
+}
+
+.custom-item .char-card[aria-pressed="true"] {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.char-card[aria-pressed="true"]::after,
+.choice[aria-pressed="true"]::after {
+  content: "";
+  position: absolute;
+  top: var(--sp-2);
+  right: var(--sp-2);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--selected-ring) var(--check-img) center / 100% no-repeat;
+}
+
+.option-input:checked + .option-visual {
+  border-color: var(--selected-ring);
+  box-shadow: 0 0 0 2px var(--selected-ring);
+  background: var(--selected-bg);
+}
+
+.option-input:checked + .option-visual::after {
+  background-color: var(--selected-ring);
+  background-image: var(--check-img);
+}
+
+.personality-option .option-visual {
+  color: var(--badge-text);
+}
+
+.personality-option .option-input:checked + .option-visual {
+  border-color: var(--surface);
+  box-shadow: 0 0 0 3px var(--text);
+}
+
+.personality-option .option-input:checked + .option-visual::after {
+  background-color: var(--text);
+  background-image: var(--check-inverse-img);
+}
+
+.option-swatch {
+  border-color: var(--swatch-border);
+}
+
+.language-row[aria-current="true"] {
+  background: var(--selected-bg);
+}
+
+.day-part.best {
+  border-color: var(--selected-ring);
+}
+
+@media (hover: hover) {
+  .preset:hover {
+    border-color: var(--selected-ring);
+  }
+}
+
+/* ---------- badges ---------- */
+
+.badge {
+  color: var(--badge-text);
+  border-radius: var(--radius-badge);
+}
+
+.tip-card {
+  background: var(--tip-bg);
+}
+
+.badge-free {
+  background: var(--primary);
+  color: var(--primary-text);
+}
+
+/* ---------- timer, progress, charts ---------- */
+
+.progress,
+.day-part-track {
+  background: var(--track);
+}
+
+.progress,
+.progress-bar,
+.day-part-track,
+.day-part-fill {
+  border-radius: var(--radius-bar);
+}
+
+.progress-bar {
+  background: var(--progress);
+}
+
+.paused .progress-bar {
+  background: var(--paused-progress);
+}
+
+.day-part.best .day-part-fill {
+  background: var(--progress);
+}
+
+.chart-line,
+.chart-point {
+  stroke: var(--link);
+}
+
+.chart-bar {
+  fill: var(--link);
+}
+
+.chart-grid {
+  stroke: var(--grid);
+}
+
+/* A wider label ("100 %" in German) may reach into the card's padding instead of being cut. */
+.chart svg {
+  overflow: visible;
+}
+
+/* ---------- dialogs ---------- */
+
+dialog {
+  box-shadow: var(--shadow-dialog);
+}
+
+dialog::backdrop {
+  background: var(--overlay);
+}
+
+.away-dialog::backdrop {
+  background: var(--overlay-soft);
+}
+
+/* ---------- the character on its stage ---------- */
+
+/* A calm, pattern-free light behind the character, and a contour that follows the artwork's own
+   (transparent) outline, so light and dark art both stand out from the page. */
+.stage {
+  background: var(--stage-bg);
+}
+
+.char-img {
+  filter: var(--char-contour);
+}
+
+/* ---------- landscape phones: the category picker stands where the buttons were, without a
+   card frame (as in style.css) ---------- */
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .category-picker {
+    border-radius: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn,
+  .chip,
+  .lang-pill,
+  .char-card,
+  .choice,
+  .preset {
+    transition: none;
+  }
+}
+
+/* =====================================================================================
+   Quiet Paper only
+   ===================================================================================== */
+
+/* Small labels above each block instead of loud headings. */
+.step h2,
+.history-section h2 {
+  font-size: var(--fs-md);
+}
+
+.btn.primary {
+  font-weight: 600;
+}
+
+/* A hairline above the bottom bar instead of a border, so the bar keeps its height. */
+.session-bar {
+  box-shadow: var(--session-bar-line);
+}
+
+.tip-card,
+.quick-start,
+.motivation-card {
+  box-shadow: none;
+}
+
+/* Ramp: the same hairline button, with a line under it that grows from Barely to Completely. */
+.btn.level {
+  border-width: var(--bw-control);
+  border-color: var(--btn-border);
+  box-shadow: inset 0 calc(var(--lv-n) * -1px) 0 var(--lv-c);
+}
+
+.btn.level:disabled {
+  box-shadow: none;
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .session-bar {
+    box-shadow: none;
+  }
+}
