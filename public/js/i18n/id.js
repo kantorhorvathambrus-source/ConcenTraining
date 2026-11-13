@@ -40,6 +40,7 @@ I18N_TEXTS.id = {
   "language.buttonLabel": "Bahasa: Indonesia",
   "language.title": "Bahasa",
   "language.report": "Laporkan masalah terjemahan",
+  "darkMode.label": "Mode gelap",
 
   // ---------- setup screen ----------
   "setup.tagline": "Pilih teman, pasang timer, lalu mulai fokus.",

@@ -44,6 +44,7 @@ I18N_TEXTS.fr = {
   "language.buttonLabel": "Langue\u202f: français",
   "language.title": "Langue",
   "language.report": "Signaler une erreur de traduction",
+  "darkMode.label": "Mode sombre",
 
   // ---------- setup screen ----------
   "setup.tagline": "Choisis qui t'accompagne, règle le minuteur et concentre-toi.",

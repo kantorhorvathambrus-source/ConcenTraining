@@ -15,7 +15,7 @@
 
 // Bump CACHE_VERSION whenever PRECACHE changes (a startup file added, removed or renamed).
 // On activate every older "concentraining-" cache is deleted.
-const CACHE_VERSION = 7;
+const CACHE_VERSION = 8;
 const CACHE_PREFIX = "concentraining-";
 const CACHE_NAME = `${CACHE_PREFIX}v${CACHE_VERSION}`;
 
@@ -24,12 +24,20 @@ const CACHE_NAME = `${CACHE_PREFIX}v${CACHE_VERSION}`;
 // English: each app update starts a new cache, so a language that was only saved while it was used
 // would be gone right after an update and the app would open in English offline. A new language
 // file goes in this list (and CACHE_VERSION goes up). See "Languages" in the README.
+// The fonts are all here too, both the Latin and the Latin Extended file of each family: a page
+// only downloads the extended one when its language needs it (Hungarian, Polish), so without this
+// those languages would fall back to a system font offline. See "Design system" in the README.
 // stats.html stays online-only (it needs api/stats anyway). index.html is saved as the scope (cacheKey).
 const PRECACHE = [
   "index.html",
   "history.html",
   "avatar.html",
   "css/style.css",
+  "fonts/figtree/figtree-latin-wght-normal.woff2",
+  "fonts/figtree/figtree-latin-ext-wght-normal.woff2",
+  "fonts/fraunces/fraunces-latin-600-normal.woff2",
+  "fonts/fraunces/fraunces-latin-ext-600-normal.woff2",
+  "js/theme.js",
   "js/i18n/languages.js",
   "js/i18n/en.js",
   "js/i18n/hu.js",

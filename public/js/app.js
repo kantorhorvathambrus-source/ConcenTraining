@@ -130,6 +130,8 @@ function countCharacterPick(character) {
 // endSound / keepScreenOn / leaveReminder: the setup checkboxes (leaveReminder: see "leave reminder").
 // language: only set when a language was picked in the language sheet (js/i18n.js saves it; until
 // then the app follows the browser's language). This file never writes it: savePrefs keeps it.
+// theme: "light" or "dark", only set once the light/dark switch was tapped (js/theme.js saves it;
+// until then the app follows the phone's setting). This file never writes it either: savePrefs keeps it.
 // homeScreenTipDismissed: "Got it" was tapped on the iPhone Home Screen tip.
 // persistRequested: persistent storage was asked for (or skipped, in Firefox).
 // howItWorksDismissed: "Got it" was tapped on the How it works card.

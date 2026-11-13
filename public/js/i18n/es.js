@@ -43,6 +43,7 @@ I18N_TEXTS.es = {
   "language.buttonLabel": "Idioma: español",
   "language.title": "Idioma",
   "language.report": "Avisar de un error de traducción",
+  "darkMode.label": "Modo oscuro",
 
   // ---------- setup screen ----------
   "setup.tagline": "Elige quién te acompaña, pon el temporizador y concéntrate.",
