@@ -9,7 +9,7 @@ so each one has a short recipe to confirm it before it is fixed.
   `i18n.js`, the `notificationclick` part of `public/sw.js`, and the load/save part of
   `public/js/custom-characters.js`.
 - Line numbers are from that commit and will drift: the function name is the reliable pointer.
-- Status: **in progress**. Areas done so far: A, B. Sections 1, 3, 4 and 5 are filled in last.
+- Status: **in progress**. Areas done so far: A, B, C, E. Sections 1, 3, 4 and 5 are filled in last.
 
 Words used below:
 
@@ -235,7 +235,196 @@ or cosmetic. Size: S = under ~30 changed lines, M = one function group, L = seve
 - **How to confirm:** desktop, two windows side by side on the app. Start a session in window 1,
   watch window 2 show the notice, close window 1: window 2 keeps (or re-shows) the notice.
 
-_Areas C, E, D and F follow._
+### Area C: storage and data integrity
+
+#### C7: When the save at the end of a session fails, the session is gone
+
+- **Severity:** medium (rare, but the whole session is lost). **Area:** C. **Size:** M.
+- **What the user sees:** the summary shows "Couldn't save" and that is all. There is no "try
+  again" and no way to keep the session; leaving the summary drops it for good.
+- **Where:** `app.js` `finishSession()`: `remove(SESSION_KEY)` runs whatever
+  `saveFinishedSession()` returned; the same in `askContinueOrRestart()` for the "first part"
+  saved by Start over.
+- **Root cause:** the running session's own copy (`ct_session_v1`) is deleted even when the
+  history write failed (storage full, or site data blocked during the session). During a session,
+  failed saves of `ct_session_v1` are silent as well (`save()` swallows the error), so the user
+  only finds out at the end.
+- **Proposed fix:** on `"failed"`, keep the finished session instead of deleting it: (1) a "Try
+  again" button on the summary that calls `saveFinishedSession` again (the user may have freed
+  space or allowed site data meanwhile); (2) a "Download this session" button that writes a normal
+  export file with this one session, so it can be imported later; (3) keep the finished session
+  in storage as "finished, not saved yet" and retry at the next start-up, removing it only after
+  `"saved"` or `"exists"`. Part (3) must not be overwritten by the next Start.
+- **Alternatives:** only (1) and (2): no new stored state, smallest change. Recommended for
+  launch; (3) can follow in December.
+- **Risk of the fix:** (3) adds a stored state that every reader of `ct_session_v1`
+  (`savedRunningSession`, `onStorage`, `canShowElsewhere`) must understand; a new storage key for
+  it would need a privacy page check. New UI text in nine languages.
+- **How to confirm:** start a 1-minute session; before it ends, fill the storage from the
+  console (`localStorage.setItem("x", "a".repeat(5_000_000))`, repeat with smaller sizes until it
+  throws). Let the session end: "Couldn't save". Check that `ct_session_v1` is gone and
+  `ct_history_v1` does not have the session.
+
+#### C8: The oldest sessions are deleted without a word once there are more than 1000
+
+- **Severity:** medium (permanent loss, but only for long-time users; see C14 for the import
+  case, which can happen on day one). **Area:** C. **Size:** S now, L in December.
+- **What the user sees:** nothing. From session 1001 on, each new session removes the oldest one;
+  the longest streak and every all-time number shrink quietly.
+- **Where:** `history-store.js` `saveFinishedSession()`: `history.length = Math.min(history.length,
+  HISTORY_LIMIT)`; `HISTORY_LIMIT = 1000`.
+- **Root cause:** a fixed cap to keep `localStorage` (a small browser store, about 5 MB per
+  site) from filling up, applied silently. It also cuts by position in the list, which assumes
+  the list is sorted newest first (see C18).
+- **Proposed fix (before launch, S):** raise the cap (5000 sessions is about 1.5 MB with
+  typical sessions; four sessions a day for more than three years) and sort by `startedAt` before
+  cutting. **December (L):** with accounts, move the history out of `localStorage` or stop
+  cutting, because two devices that each cut different sessions would keep sending them back to
+  each other.
+- **Alternatives:** keep 1000 and warn at 900 with a link to Export.
+- **Risk of the fix:** a larger history makes every save rewrite more text (still a few
+  milliseconds) and gets closer to the 5 MB limit for users with very many distractions per
+  session; C15's limit per session keeps that in check.
+- **How to confirm:** read `saveFinishedSession()`. Or in the console, fill `ct_history_v1` with
+  1000 valid copies of one session with different `startedAt`, finish a real session, and check
+  that the length is still 1000 and the oldest one is gone.
+
+#### C9: Saved data that cannot be read is treated as "empty" and then overwritten
+
+- **Severity:** medium (very unlikely today, total loss if it happens; more likely once sync
+  writes this data too). **Area:** C. **Size:** M.
+- **What the user sees:** the History page shows "No finished sessions yet" (with Export
+  disabled), and the next finished session replaces everything that was there.
+- **Where:** `history-store.js` `loadHistory()` (returns `[]` for broken JSON or a non-list) →
+  `saveFinishedSession()`, `mergeIntoHistory()`, `deleteFromHistory()` write that back;
+  `custom-characters.js` `loadCustomCharacters()` → `saveCustomCharacters()`.
+- **Root cause:** "could not read" and "nothing saved yet" give the same result, and the next
+  write replaces the original text. For custom characters there is a second path: a stored
+  character that fails `cleanCustomCharacter()` (for example a personality that a later version
+  no longer knows) is left out of the list, and the next save of any character writes the list
+  without it.
+- **Proposed fix:** tell the three cases apart: nothing saved (`null`), reading refused (storage
+  blocked: never write), and saved text that does not parse or has the wrong shape. In the third
+  case, before anything is written over it, copy the raw text to a rescue key (one copy, for
+  example `ct_history_v1_unreadable`), and show a line on the History page with a "Download the
+  unreadable data" button. For custom characters, keep entries that fail the check in the saved
+  list untouched (write them back as they were) instead of dropping them.
+- **Risk of the fix:** a new key holds the same kind of data on the device (check the privacy
+  page wording); the rescue copy doubles the space for a broken history, so keep only one.
+- **How to confirm:** console: `localStorage.setItem("ct_history_v1", "{oops")`, reload History:
+  empty state. Finish a 1-minute session: `ct_history_v1` now holds only that session.
+
+#### C10: One malformed session in the saved history breaks the History page, the export and the end of every session
+
+- **Severity:** low (needs damaged data; nothing in the app writes such an entry today).
+  **Area:** C. **Size:** S to M (fix together with C9).
+- **What the user sees:** the History page stops drawing part-way; Export does nothing; a
+  finishing session freezes on the session screen with the timer stopped, and does so again after
+  every reload.
+- **Where:** `history.js` `render()` and the functions it calls (`entry.distractions.length`,
+  `flatMap`); `history-store.js` `buildHistoryExport()` (`entry.distractions.map`) and
+  `saveFinishedSession()` (`entry.startedAt` on every entry); `app.js` `finishSession()` (an
+  exception there skips `remove(SESSION_KEY)` and `showScreen`).
+- **Root cause:** entries read from storage are never checked for shape, and none of these paths
+  catches an error for a single entry.
+- **Proposed fix:** one small "is this a usable session" check in `history-store.js` (an object
+  with finite `startedAt`, `endedAt`, `elapsedMs`, a `distractions` list, ...). Readers skip
+  entries that fail it; writers keep them in the saved list untouched (never drop them); the
+  export includes them as they are or reports how many it left out. `finishSession()` should show
+  the summary with the "Couldn't save" line if saving throws.
+- **Risk of the fix:** readers and writers must use the same list positions; keep the "writers
+  read the saved history again" pattern.
+- **How to confirm:** console: put `null` as the first item of the `ct_history_v1` list, reload
+  History (the page stays half-drawn, the console shows a TypeError), then finish a 1-minute
+  session on the app page.
+
+#### C11: The saved running session is restored without checking it
+
+- **Severity:** low. **Area:** C. **Size:** S.
+- **What the user sees:** with a damaged `ct_session_v1`, the app page stays blank on every load
+  until the site's data is cleared (which also deletes the history).
+- **Where:** `app.js` `savedRunningSession()` (checks only `endedAt` and the character),
+  `resumeSavedSession()`, `init()`.
+- **Root cause:** a missing `distractions` list or a non-number `startedAt` / `durationMs` throws
+  inside `init()` before any screen is shown. A second, quieter case: a running session whose
+  built-in character id no longer exists is ignored for ever and silently replaced by the next
+  Start, so a built-in character must never be removed or renamed while sessions can be running.
+- **Proposed fix:** check the shape in `savedRunningSession()` (numbers are finite numbers,
+  `distractions` and `pauses` are lists, `mode` is known); a session that fails is moved aside (or
+  removed) and the setup screen shows. Wrap the resume in `init()` so that any error still ends
+  on the setup screen.
+- **How to confirm:** console: `localStorage.setItem("ct_session_v1",
+  '{"characterId":"<a real id>","startedAt":1}')`, reload: blank page, TypeError in the console.
+
+#### C12: Saved preferences are used without checking their types
+
+- **Severity:** low. **Area:** C. **Size:** S.
+- **What the user sees:** nothing normally. With a damaged `ct_prefs_v1` (for example
+  `"mode":"x"`), sessions are saved with that mode; the History page shows a raw text key for it
+  and a later import of the backup rejects those sessions ("unknown mode").
+- **Where:** `app.js`, the `prefs` object (`Object.assign(defaults, load(PREFS_KEY, {}))`).
+- **Proposed fix:** after loading, put each field back to its default when it has the wrong type
+  or an unknown value (`mode`, `minutes` through `clampMinutes`, the true/false settings). Keep
+  unknown fields (`theme`, `language` belong to other files) untouched.
+- **How to confirm:** console: set `ct_prefs_v1` to `{"mode":"x","minutes":"abc"}`, reload, look
+  at the setup screen and start a session.
+
+### Area E: which day a session counts on
+
+#### C13 (known bug F11): The streak counts a session on the day it ended; everything else uses the day it started
+
+- **Severity:** high (visible, wrong-looking numbers on the main statistics page).
+  **Area:** E. **Size:** S for the minimum fix, M for the full fix.
+- **What the user sees:** a session from 23:50 to 00:15 is listed under Monday and adds its time
+  to Monday's week, but the streak counts it for Tuesday (and Monday gets nothing from it). On a
+  Sunday night the "time per week" chart and the streak even disagree about the week. A session
+  paused overnight and ended the next morning counts for the next day in the streak. After
+  travelling to another timezone, or changing the phone's timezone, old sessions can move to a
+  different day and the streak can change after the fact.
+- **Where:** `history.js`: `calcStreaks()` uses `startOfDay(entry.endedAt)`; `calcWeeklyTime()`,
+  `calcWeeklyTrend()`, `calcDayParts()` and the session list (`formatSessionDate(entry.startedAt)`)
+  use `entry.startedAt`.
+- **Root cause:** two different fields decide the day, and in every place the day is worked out
+  again each time the page is drawn, in whatever timezone the device has at that moment. Daylight
+  saving changes are handled correctly (`addDays` works on calendar days); only a change of
+  timezone moves old sessions.
+- **The ONE rule (proposed):** *a session counts on the local calendar day on which it
+  **started**, by the clock of the device at that moment, and that day never changes afterwards.*
+  - Start, not end: the start is the session's identity, it is the date shown in the list, four
+    of the five places already use it, and breaks can move the end by hours or days but never the
+    start.
+  - Over midnight: the whole session (all its time, its streak day, its "best time of day" slot)
+    belongs to the start day.
+  - After a timezone change: old sessions stay on the day they had. "Today" is the device's
+    current local date.
+- **Proposed fix:**
+  - **Minimum (S, no new data):** one helper in `history-store.js`, for example
+    `sessionDay(entry)`, used by every calculation in `history.js`, based on `startedAt`. This
+    ends the disagreement; sessions can still move when the timezone changes.
+  - **Full (M):** when a session starts, also store the device's offset from UTC (world time) in
+    minutes, for example `utcOffsetMin` (`-new Date(startedAt).getTimezoneOffset()`), in
+    `ct_session_v1` and in the history entry. The helper works out the day, the week and the hour
+    from `startedAt + offset`; sessions without the field (everything saved before the fix) fall
+    back to the device's current timezone, as today. The date and time shown in the list should
+    come from the same helper, so a session never shows a time that belongs to another day than
+    the one it counts on. The export format gets the optional field (a whole number from -720 to
+    840) in a new version 8; version 1 to 7 files import as before.
+- **Alternatives:** count on the end day everywhere (rejected: breaks move the end); split a
+  session's time at midnight between two days (rejected: complex, and a session is one line in
+  the list).
+- **Risk of the fix:** an existing streak can change by one day for users with sessions over
+  midnight (acceptable before launch). The full fix stores one new value on the device, so
+  `privacy.html` and its "Last updated" date must be updated in the same PR (CLAUDE.md rule), and
+  `EXPORT_VERSION` handling must follow the comments at the top of `history-store.js`. Do not
+  rewrite old entries.
+- **How to confirm:** console on the History page: add two sessions to `ct_history_v1`, one from
+  yesterday 23:50 to today 00:15 (local time) and nothing else today or yesterday. The list shows
+  yesterday's date; the current streak is 1 because of **today** (delete the idea of "today":
+  change the session to the day before yesterday 23:50 → yesterday 00:15 and the streak is still
+  alive, although the list shows a session two days ago). For the timezone part: note the streak,
+  change the device timezone by 12 hours, reload.
+
+_Areas D and F follow._
 
 ---
 
