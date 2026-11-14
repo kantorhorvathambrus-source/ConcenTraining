@@ -9,7 +9,7 @@ so each one has a short recipe to confirm it before it is fixed.
   `i18n.js`, the `notificationclick` part of `public/sw.js`, and the load/save part of
   `public/js/custom-characters.js`.
 - Line numbers are from that commit and will drift: the function name is the reliable pointer.
-- Status: **in progress**. Areas done so far: A, B, C, E. Sections 1, 3, 4 and 5 are filled in last.
+- Status: **complete** (areas A, B, C, E, D and F).
 
 Words used below:
 
@@ -24,7 +24,27 @@ Words used below:
 
 ## 1. Top 5 in plain English
 
-_Filled in at the end of the audit._
+No critical finding: nothing in normal use loses a whole history. The five that matter most:
+
+1. **The streak and the weekly chart disagree about the day (F11, finding C13).** The streak
+   counts a session on the day it ended, everything else on the day it started, and old sessions
+   can move to another day when the phone changes timezone. Proposed rule: a session counts on
+   the day it started, by the phone's clock at that moment, for ever.
+2. **Old sessions can be deleted without asking (C14, C8).** The history keeps only 1000
+   sessions. An import can push out existing sessions and only says so afterwards; in normal use
+   the oldest session disappears silently from session 1001 on.
+3. **A session that ends while you are away is saved as perfect (C1).** Leave after one minute,
+   come back after the end: the app saves the full time with 100% focus and never asks about the
+   time away, although it knows when you left.
+4. **The backup file is not a full backup (C16, C17).** Custom characters are not in it, their
+   names on old sessions are lost at import, and a few unusual sessions the app saved itself are
+   refused by its own import.
+5. **The reminder notification opens the wrong tab (F8, finding C5).** The background script
+   picks "any open app tab"; nothing tells it which tab runs the session. The fix is small: the
+   tab puts its own id into the notification.
+
+Close behind: when the save at the end of a session fails, the session cannot be rescued (C7),
+and tapping Start can quietly continue an older unfinished session instead of the chosen one (C2).
 
 ---
 
@@ -417,25 +437,337 @@ or cosmetic. Size: S = under ~30 changed lines, M = one function group, L = seve
   `privacy.html` and its "Last updated" date must be updated in the same PR (CLAUDE.md rule), and
   `EXPORT_VERSION` handling must follow the comments at the top of `history-store.js`. Do not
   rewrite old entries.
-- **How to confirm:** console on the History page: add two sessions to `ct_history_v1`, one from
-  yesterday 23:50 to today 00:15 (local time) and nothing else today or yesterday. The list shows
-  yesterday's date; the current streak is 1 because of **today** (delete the idea of "today":
-  change the session to the day before yesterday 23:50 → yesterday 00:15 and the streak is still
-  alive, although the list shows a session two days ago). For the timezone part: note the streak,
-  change the device timezone by 12 hours, reload.
+- **How to confirm:** console on the History page: replace `ct_history_v1` with one valid
+  session that started the day before yesterday at 23:50 and ended yesterday at 00:15 (local
+  time), and reload. The list shows the day before yesterday, but the current streak says 1 day,
+  because the streak counts the session for yesterday. By the proposed rule it is 0. For the
+  timezone part: note the streak and the list, change the device's timezone by 12 hours, reload.
 
-_Areas D and F follow._
+### Area D: history export / import (F10)
+
+How it works today: Export writes every saved session as it is, labelled version 7. Import only
+**merges**: a session whose start time is already in the history is skipped, everything else is
+added, and each session is checked strictly (each field, and that the numbers agree with each
+other). A broken session is skipped with a reason; the rest still imports. There is no "replace"
+mode, and that is good: keep merge only.
+
+#### C14: Import can delete existing sessions, and only says so afterwards
+
+- **Severity:** high (existing data is removed for good, with no question and no undo).
+  **Area:** D. **Size:** M.
+- **What the user sees:** with 990 sessions saved, importing a file with 20 newer sessions
+  removes the 10 oldest existing ones. The result line mentions it ("removed N older sessions")
+  after it has happened. In general: after an import only the 1000 sessions with the newest start
+  times are kept, whoever they belonged to.
+- **Where:** `history-store.js` `mergeIntoHistory()` (sorts, cuts at `HISTORY_LIMIT` and writes
+  in one step); `history.js` `importHistory()` (shows `import.removed` after the write).
+- **Root cause:** the limit of C8 applied to the merged list, with no step between "work out the
+  result" and "write it".
+- **Proposed fix:** split the merge in two: first work out the result without writing
+  (`added`, `skipped`, `droppedImported`, `removedExisting`); if `removedExisting > 0`, ask first
+  ("This import would remove your N oldest sessions. Export your history first?" Cancel / Import
+  anyway); only then write. Never let imported sessions push out existing ones silently. With the
+  higher limit of C8 this dialog becomes rare.
+- **Alternatives:** when the merged list is too long, drop imported sessions first and never
+  existing ones (no dialog needed, but a restore into a full history then silently imports less;
+  the result line already has a text for that, `import.didNotFit`).
+- **Risk of the fix:** the history may change in another tab between the two steps, so the
+  second step must read the saved history again and redo the merge (as `deleteFromHistory` does).
+  New dialog text in nine languages.
+- **How to confirm:** console: fill `ct_history_v1` with 995 valid sessions; import a file with
+  10 valid sessions that started later. The status line reports removed sessions; the 5 oldest
+  are gone.
+- **Note:** one more import case was reported to the owner outside this file (the repository is
+  public). The fixes of C14 and C15 together close it.
+
+#### C15: Import has no sanity limits on dates, lengths and counts
+
+- **Severity:** medium. **Area:** D. **Size:** M.
+- **What the user sees:** a hand-edited or damaged file can add sessions dated years in the
+  future or in 1970, sessions planned for weeks, times with fractions of a millisecond, or one
+  session with tens of thousands of distractions. Such sessions distort the charts and streaks
+  or use up the storage so that later sessions cannot be saved.
+- **Where:** `history-store.js` `cleanImportedSession()`: `isTime()` accepts any finite number
+  from 0 up; `plannedMs` has no upper limit; the number of distractions and breaks is not
+  limited; only the file size is (`IMPORT_MAX_BYTES`, 5 MB, checked in `history.js`
+  `importHistory()` before the file is read).
+- **Proposed fix (limits):**
+  1. Every time (`startedAt`, `endedAt`, each distraction's `at`, each break's `at`) is a whole
+     number (`Number.isSafeInteger`).
+  2. `startedAt` is not before a date safely earlier than the app's first release (for example
+     1 January 2024) and `endedAt` is not later than the moment of the import plus one day (the
+     day allows for a device clock that is a little off).
+  3. `plannedMs` is at most 240 minutes (`MAX_MINUTES` lives in `app.js`; the limit needs to be
+     in `history-store.js`, which both pages load).
+  4. Distractions per session: at most **max(100, 5 for every second of session time)**. Why
+     this number: taps are limited to one per 400 ms (`TAP_GUARD_MS`), which is 2.5 per second;
+     the owner logged 117 in one minute by tapping (about 2 per second). 5 per second is twice
+     what tapping can produce: 300 for a one-minute session, so real data always passes. Any
+     limit below 2.5 per second would reject real sessions.
+  5. Breaks per session: at most 1000.
+  Reuse the existing reason codes where they fit (`badTimes`, `badPlanned`, `badDistraction`), so
+  only one new text is needed ("too many distractions") in nine languages.
+- **The same limit inside the app:** a held-down Enter key on a distraction button repeats the
+  click many times per second and is not stopped by the tap guard (keyboard clicks are let
+  through on purpose). Ignore clicks that come from key auto-repeat on the distraction buttons,
+  so the app itself can never save a session that its own import would reject for limit 4.
+- **Alternatives:** no limit on counts and rely on the 5 MB file limit alone (then one imported
+  session can still be several megabytes).
+- **Risk of the fix:** a limit that is too tight rejects real sessions for good at restore time;
+  each limit above is far outside what the app can produce. Limit 2 uses the importing device's
+  clock: if that clock is wrong by more than a day, fresh sessions would be rejected, so the
+  reason text should say "date in the future".
+- **How to confirm:** export a history, pick a session without distractions or breaks, move its
+  `startedAt` and `endedAt` to the year 2099 (same difference between them), delete that session
+  from the History page and import the file: it is accepted.
+
+#### C16: The app can save sessions that its own import rejects, so a restore silently loses them
+
+- **Severity:** medium. **Area:** D. **Size:** M.
+- **What the user sees:** after Export on one device and Import on another (or after clearing
+  the site's data), the result says "Skipped N invalid sessions", for sessions the app saved
+  itself. They exist only in the file, and nothing can bring them back short of editing it by
+  hand.
+- **Where:** `history-store.js` `cleanImportedSession()` against what `saveFinishedSession()`
+  writes; `buildHistoryExport()`.
+- **Root cause:** the import checks are stricter than the saving code. Sessions from normal use
+  pass every check (I walked through each one: end reasons, breaks, time away, Start over, the
+  late "Welcome back" save). Known ways to fail: a device clock change during the session (C3:
+  `distractionOutside`, `breakOutside`), a damaged preference (C12: `unknownMode`), and sessions
+  saved by older versions of the app if a rule changed since (the special case for the focus
+  rounding of 19 October 2026 shows this has happened once). Export does not test its own output.
+- **Proposed fix:** two parts.
+  1. Export tests itself: run every exported session through `cleanImportedSession()`; sessions
+     that fail are still written to the file, and the status line says how many would not import
+     and why, so the user (and the owner, during testing) finds out at export time, not at
+     restore time.
+  2. Import repairs what can be worked out again instead of rejecting it: `elapsedMs`,
+     `distractedMs` and `focusPercent` are derived from the times and the distractions, so
+     recompute them (`sessionFocus()`) and accept the session; keep rejecting only what cannot be
+     true (end before start, unknown mode, a break outside the session, ...).
+- **Alternatives:** part 1 only (no change to what import accepts).
+- **Risk of the fix:** part 2 changes the meaning of "a hand-edited session can't contradict
+  itself" to "it is corrected"; `endedBy` must still agree with the recomputed times.
+- **How to confirm:** produce a session with a clock change (C3 recipe, with one distraction
+  logged before setting the clock back and End tapped after), export, clear the history, import:
+  "Skipped 1 invalid session".
+
+#### C17: The backup is not a full backup: custom characters and their names are lost
+
+- **Severity:** medium. **Area:** D. **Size:** S for the name, M for the characters.
+- **What is lost today (brief):**
+  - The custom characters themselves (`ct_custom_characters_v1`: name, look, personality) are not
+    in the export file. After a restore on a new device they do not exist.
+  - Every session stores the custom character's name (`characterName`) so old sessions keep a
+    name, and Export writes it to the file, but Import throws it away:
+    `cleanImportedSession()` returns only the fields it knows, and `characterName` is not among
+    them. After a restore, those sessions show the internal id (`custom-ab12...`) instead of the
+    name (`characterName()` in `history.js` falls back to the id), with the default look.
+  - The preferences (`ct_prefs_v1`: chosen character, mode, minutes, sound, theme, language,
+    dismissed tips) are not in the file either; that is a smaller loss.
+- **Proposed fix:**
+  - **Now (S):** Import keeps `characterName` when the `characterId` is a custom id
+    (`isCustomId`) and the name is a non-empty text within the name length limit; an invalid name
+    is dropped, the session still imports. The field is already in exported files, so files from
+    every version can carry it. It is shown with `textContent` everywhere today; keep it that way.
+  - **Later (M):** add the custom characters to the export file (a new version with a
+    `characters` list checked by `cleanCustomCharacter()`), and merge on import by id: a
+    character that already exists is kept, a name clash gets a number added rather than being
+    dropped, and the limit of 10 needs a rule.
+- **Risk of the fix:** the name is user-written text from a file: length-check it and never put
+  it into HTML.
+- **How to confirm:** make a custom character, finish a 1-minute session with it, export, clear
+  the site's data, import: the session is listed as `custom-...`.
+
+### Area F: other things found on the way
+
+#### C18: The history is assumed to be sorted, but saving does not sort it
+
+- **Severity:** low. **Area:** F. **Size:** S.
+- **Where:** `history-store.js` `saveFinishedSession()` puts the new session first
+  (`unshift`) and cuts the end of the list; `history.js` `renderSessionList()` shows the first 30.
+- **Root cause / effect:** after a clock change backwards, or a "Welcome back" save of an old
+  session, the list is no longer in start-time order until the next import sorts it; the "last
+  30" list and the cut at the limit then pick the wrong sessions.
+- **Proposed fix:** sort by `startedAt`, newest first, before cutting and writing.
+- **How to confirm:** read the two functions.
+
+#### C19: The History page does not notice midnight while it stays open
+
+- **Severity:** low. **Area:** F. **Size:** S.
+- **Where:** `history.js` `historySource()` includes today's date, but it is only compared when
+  the page is shown again or the history changes (`refreshInBackground`).
+- **Effect:** a page left open and visible over midnight keeps yesterday's "current streak" and
+  "this week" until something else triggers a redraw.
+- **Proposed fix:** a timer that redraws once just after the next local midnight (set again after
+  each redraw).
+
+### Notes for December: what makes syncing two devices hard today
+
+Not bugs today; things in the data model to settle before accounts and sync.
+
+1. **A session's identity is its start time** (`startedAt`, in milliseconds). There is no id and
+   no device id. "Same start time" means "same session" in `saveFinishedSession`,
+   `mergeIntoHistory` and `deleteFromHistory`. Give each session a random id; keep `startedAt`
+   as the fallback for old data.
+2. **A delete leaves no trace.** A session deleted on one device would come back from the other
+   at the next sync (today: from an older backup file). Sync needs a small "deleted" marker per
+   session id.
+3. **No version or "last changed" stamp** on an entry or on the stored history. Saved sessions
+   never change after saving, which makes sync simple (the union of both sides, minus deletes);
+   keep it that way.
+4. **The 1000-session cut** (C8) is applied per device, so two devices would cut different
+   sessions and keep sending them back to each other. Remove the cut or move the history to a
+   bigger store (IndexedDB, the browser's built-in database).
+5. **The day a session counts on** depends on the timezone of the device that shows it (C13).
+   Two devices in different timezones would show different streaks; the stored UTC offset of the
+   full fix solves it.
+6. **Derived numbers are stored and must match** (`elapsedMs`, `distractedMs`, `focusPercent`).
+   Any change of a formula makes old data "contradict itself" (C16). For sync, treat the times
+   and distractions as the truth and work the rest out.
+7. **Custom characters:** ids are random per device (no clash), but names must be unique and
+   `loadCustomCharacters()` silently keeps only the first of two characters with the same name,
+   so two devices that each made a "Coach" would lose one after a merge. The limit of 10 is per
+   device too.
+8. **The running session** (`ct_session_v1`) and the Web Lock are per browser. Do not sync a
+   running session; decide what happens when a session runs on two devices at the same time.
+9. **Preferences:** decide which are per device (theme, language, screen and sound settings,
+   dismissed tips) and which belong to the account (chosen character, mode, minutes).
+10. **iPhone:** Safari and the Home Screen app already are "two devices" with separate storage;
+    Export and Import are the only bridge today (the tip says so).
+
+---
 
 ---
 
 ## 3. Decisions for the owner
 
-_Filled in at the end of the audit._
+1. **Which day does a session count on? (C13)** Recommendation: the day it started, by the
+   device's clock at that moment, stored with the session (the full fix), before launch, so every
+   session saved from launch day on carries it.
+2. **Session ran out while you were away (C1):** ask the time away question before saving?
+   Recommendation: yes. It is the same card as during a session, and "No" keeps today's result.
+3. **Start with an unfinished older session (C2):** Recommendation: a small question at Start
+   ("Continue it / End it and start the new one").
+4. **The 1000-session limit (C8, C14):** Recommendation: raise it to 5000 now and ask before an
+   import removes anything; replace the limit in December together with sync.
+5. **How strict should import be? (C16)** Recommendation: recompute the derived numbers instead
+   of rejecting a session for them, keep rejecting impossible data, and let Export test its own
+   file.
+6. **Limit for distractions per session (C15):** Recommendation: max(100, 5 per second of session
+   time) on import, and ignore key auto-repeat on the distraction buttons in the app.
+7. **Custom characters in the backup (C17):** Recommendation: keep the per-session name on
+   import now (small); add the characters themselves to the file in December with sync, unless
+   there is time before launch.
+8. **Failed save at the end (C7):** Recommendation: "Try again" and "Download this session" on
+   the summary before launch; automatic retry later.
+9. **Device clock changes (C3):** Recommendation: nothing before launch; handle a backward change
+   in December if it shows up in real use.
+10. **F8 design (C5):** Recommendation: design A (the tab's id travels in the notification).
+11. **Unreadable saved data (C9 to C12):** Recommendation: one "careful loading" PR before
+    launch if time allows; it must be in place before sync starts writing this data.
 
 ## 4. Fix PR plan
 
-_Filled in at the end of the audit._
+For the model that fixes these: one PR per line, each from the latest `main`, in a fresh
+session. Follow `CLAUDE.md`: show the plan and wait for "go", update the README when behaviour
+changes, add every new text to all nine language files in `public/js/i18n/`, update
+`public/privacy.html` when new data is stored, and update `PRECACHE` / `CACHE_VERSION` in
+`public/sw.js` if a start-up file is added. Confirm each finding with its recipe first.
+
+**Before launch**
+
+1. **Day rule (C13, plus C19).** Files: `history-store.js` (helper, export version 8, import of
+   the optional offset), `history.js` (every calculation and the list use the helper), `app.js`
+   (`startSession` stores the offset; `saveFinishedSession` copies it), `privacy.html`, README.
+   Edge cases: sessions without the field, a session over midnight, Sunday night to Monday,
+   daylight saving days, a running session started before the update. Android test: a session
+   from 23:58 to 00:03; then change the phone's timezone by several hours and reopen History:
+   list, streak and both charts must not move.
+2. **Import must not remove sessions unasked; higher limit; sorted save (C14, C8, C18).** Files:
+   `history-store.js`, `history.js`, `history.html` (dialog), language files, README. Edge cases:
+   the history changes in another tab while the dialog is open; storage full during the write;
+   Cancel changes nothing. Android test: import a file from another device into a filled history
+   and use the Back button on the dialog.
+3. **Import limits and repair, export self-test, keep the character name (C15, C16, C17 part
+   1).** Files: `history-store.js`, `history.js`, `app.js` (key auto-repeat on the distraction
+   buttons), language files, README. Edge cases: version 1 to 7 files still import; a one-minute
+   session with 150 distractions imports; a file from the future is refused with a clear reason.
+   Android test: export on the phone, import the same file again ("nothing new"), then clear the
+   site's data and import: every session and every custom character name is back.
+4. **Ask about the time away when the session ended meanwhile (C1).** Files: `app.js`, language
+   files only if a new text is needed, README. Edge cases: the "Welcome back" path, a session
+   ended during a takeover from another tab, Advanced and Simple mode, a level 5 time away (no
+   continue/restart question after the end), the end chime when the user is watching. Android
+   test: start 2 minutes, lock the phone for 4 minutes, unlock.
+5. **Notification opens the right tab, F8 (C5).** Files: `app.js`, `sw.js`. Edge cases: no active
+   service worker yet, the tab was discarded and reloaded, the session was taken over by another
+   tab, tab plus installed app. Android test: both recipes of C5, in Chrome and in the installed
+   app.
+6. **Rescue a session whose save failed (C7).** Files: `app.js`, `index.html`, language files,
+   README. Edge cases: Start over's "first part", storage allowed again before "Try again".
+   Android test: block site data in Chrome's site settings during a session, let it end, allow
+   again, tap "Try again".
+7. **Question at Start when an older session is unfinished (C2, plus C6).** Files: `app.js`,
+   `index.html`, language files, README. Edge cases: the older session is paused, has run out
+   (under and over 30 minutes ago), another tab still runs it, Quick start. Android test: start a
+   session in Chrome, close the tab from the tab switcher, open the site again from a second tab
+   that was already open.
+8. **Careful loading (C9, C10, C11, C12).** Files: `history-store.js`, `history.js`, `app.js`,
+   `custom-characters.js`, README, `privacy.html` if a rescue key is added. Edge cases: storage
+   blocked (never write), nothing saved yet, broken text, one broken entry among good ones.
+   Android test: none needed beyond a normal session; test the broken cases on desktop from the
+   console.
+9. **Small one (C4):** `app.js` only. Android test: keep-screen-on still works after switching
+   apps quickly several times.
+
+**December**
+
+10. Custom characters in the backup file (C17 part 2), designed together with sync.
+11. Replace the history limit and `localStorage` for the history (C8), session ids and delete
+    markers (notes 1 to 4 above).
+12. Device clock change during a session (C3), if still wanted.
+13. Automatic retry of a failed save (C7 part 3).
 
 ## 5. Checked and fine
 
-_Filled in at the end of the audit._
+Nobody needs to re-check these (code reading, commit `b0020a5`):
+
+- **Sleep, screen lock, background throttling:** the timer is worked out from the clock on every
+  tick, never counted, so no time is lost while the page is frozen. On return the end is detected
+  at once (`noteReturn` → `tick`).
+- **Daylight saving start/end, timezone change, midnight:** no effect on the running timer
+  (`Date.now()` is world time). Week and day boundaries on the History page use calendar days
+  (`addDays`), so daylight saving days are right there too. Only C13 remains.
+- **Breaks (Pause / Resume):** time in a break is never counted; a break absorbs a clock change;
+  a paused session never runs out, survives reload, a closed tab and a takeover by another tab;
+  ending during a break ends the session where the break started; the end reason and the numbers
+  of a session with breaks pass the import checks.
+- **Stop dialog with the running timer (#60):** the session can run out behind the dialog; all
+  dialogs close and nothing is saved twice. `ask()` resets the dialog's answer every time.
+- **Reload and closed tab:** every change of the running session is saved at once
+  (`ct_session_v1`); start-up resumes it or shows the right screen; the time away card covers the
+  time the tab was closed (while the session is still running).
+- **Two tabs with Web Locks:** only the lock holder runs timers and saves; "Continue here" stops
+  the other tab before it can save again; open dialogs in the losing tab do nothing afterwards.
+  A session cannot be saved twice (`saveFinishedSession` returns "exists" for the same start).
+- **Tab plus installed app on Android:** same storage and same lock, so it behaves like two tabs.
+- **Preferences from several files:** `app.js`, `theme.js` and `i18n.js` each write only their own
+  fields on top of what is saved now, so they do not undo each other (theme, language).
+- **Storage blocked:** every read and write of `localStorage` in the audited files is wrapped;
+  the app runs, says so on the setup screen, the session screen and the History page.
+- **Delete on the History page:** reads the saved history again before writing, so a session
+  saved in another tab meanwhile is kept.
+- **Custom character saves:** the editor and Delete read the saved list again right before
+  writing.
+- **Import file handling:** size checked before reading (5 MB); broken JSON, a wrong file type
+  and a newer version give clear messages; a broken session is skipped, the rest imports;
+  duplicates inside one file are skipped; imported text never reaches HTML (all `textContent`,
+  chart text is escaped); field names from the file cannot reach built-in object properties
+  (`Object.hasOwn` on the end reasons).
+- **Version handling:** versions 1 to 7 import with the rules of their version; a newer version
+  is refused as a whole. Entries without `pauses` (before version 7) count as never paused
+  everywhere.
+- **iPhone Home Screen tip:** it already says that the Home Screen app has separate storage and
+  to export first.
+- **`sw-register.js`:** registers after load, never reloads the page, failures are ignored.
