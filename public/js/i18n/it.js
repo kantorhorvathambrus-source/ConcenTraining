@@ -39,6 +39,7 @@ I18N_TEXTS.it = {
   "language.buttonLabel": "Lingua: italiano",
   "language.title": "Lingua",
   "language.report": "Segnala un errore di traduzione",
+  "darkMode.label": "Modalità scura",
 
   // ---------- setup screen ----------
   "setup.tagline": "Scegli chi ti accompagna, imposta il timer e concentrati.",

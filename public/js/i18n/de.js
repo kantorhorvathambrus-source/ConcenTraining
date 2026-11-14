@@ -43,6 +43,7 @@ I18N_TEXTS.de = {
   "language.buttonLabel": "Sprache: Deutsch",
   "language.title": "Sprache",
   "language.report": "Übersetzungs\u00adfehler melden",
+  "darkMode.label": "Dunkelmodus",
 
   // ---------- setup screen ----------
   "setup.tagline": "Such dir jemanden aus, stell den Timer und konzentrier dich.",

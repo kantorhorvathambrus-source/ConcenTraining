@@ -45,6 +45,10 @@ I18N_TEXTS.en = {
   "language.title": "Language",
   "language.report": "Report a translation issue",
 
+  // The light/dark switch next to the language button (js/theme.js): what screen readers call it.
+  // It is a switch, so they add "on" or "off" themselves.
+  "darkMode.label": "Dark mode",
+
   // ---------- setup screen ----------
   "setup.tagline": "Pick a buddy, set a timer, and get focused.",
   "setup.howItWorks": "How it works",

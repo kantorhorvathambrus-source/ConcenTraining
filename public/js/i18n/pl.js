@@ -42,6 +42,7 @@ I18N_TEXTS.pl = {
   "language.buttonLabel": "Język: polski",
   "language.title": "Język",
   "language.report": "Zgłoś błąd w tłumaczeniu",
+  "darkMode.label": "Tryb ciemny",
 
   // ---------- setup screen ----------
   "setup.tagline": "Wybierz postać, ustaw minutnik i skup się.",

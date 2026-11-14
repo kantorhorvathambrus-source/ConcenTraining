@@ -37,6 +37,7 @@ I18N_TEXTS.hu = {
   "language.buttonLabel": "Nyelv: magyar",
   "language.title": "Nyelv",
   "language.report": "Fordítási hiba jelzése",
+  "darkMode.label": "Sötét mód",
 
   // ---------- setup screen ----------
   "setup.tagline": "Válassz társat, állítsd be az időt, és fókuszálj.",

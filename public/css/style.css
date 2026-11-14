@@ -1,49 +1,333 @@
+/* ConcenTraining: the one stylesheet of every page. The look is "Night Lamp": parchment by day,
+   midnight blue with lamp amber by night, soft cards without outlines, pill buttons.
+   See "Design system" in the README.
+
+   How it's organised:
+     1. Fonts.
+     2. Design tokens, in three layers: primitives (the raw colours), semantic tokens (what a
+        colour, size or shadow is for) and component tokens (one component's own values).
+        Raw colours are only written in the primitives. The rules below never use a primitive:
+        only semantic and component tokens.
+     3. The rules, screen by screen. */
+
+/* ---------- fonts ---------- */
+
+/* Fraunces 600 (headings) and Figtree (text and digits; one variable file holds every weight),
+   both under the SIL Open Font License: fonts/<family>/OFL.txt. Each family is split in two files.
+   unicode-range tells the browser which characters a file holds, so it only downloads the "Latin
+   Extended" file on a page that really shows such a character (ő, ű, ł, ą, …): English, Spanish
+   or German never load it. font-display: swap shows the text in a system font until the file is
+   there. All four files are in the service worker's precache list (sw.js), so they work offline. */
+@font-face {
+  font-family: "Fraunces";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../fonts/fraunces/fraunces-latin-ext-600-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Fraunces";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../fonts/fraunces/fraunces-latin-600-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Figtree";
+  font-style: normal;
+  font-weight: 300 900;
+  font-display: swap;
+  src: url("../fonts/figtree/figtree-latin-ext-wght-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Figtree";
+  font-style: normal;
+  font-weight: 300 900;
+  font-display: swap;
+  src: url("../fonts/figtree/figtree-latin-wght-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* ---------- design tokens, layer 1: primitives ---------- */
+
+/* The palette. The only place in this file where a raw colour is written (a check enforces it).
+   Nothing below the token blocks uses these names. */
 :root {
-  --bg: #f6f3ee;
-  --surface: #ffffff;
-  --surface-2: #f0ebe4;
-  --text: #1d1b19;
-  --muted: #6b6560;
-  --border: #e3dcd2;
-  --primary: #ff6b35;
-  --primary-hover: #f05a22;
-  --primary-text: #ffffff;
-  --relaxed: #2f9e63;
-  --firm: #7a4fc2;
-  --strict: #3567d4;
-  --ragebait: #d93a2f;
-  --error: #c62828;
-  --error-text: #ffffff; /* text on a filled --error button */
-  --level-1: #f2c94c;
-  --level-2: #f2a93b;
-  --level-3: #ee8434;
-  --level-4: #e2592e;
-  --level-5: #c9302c;
-  --radius: 16px;
-  --shadow: 0 4px 18px rgba(40, 30, 20, 0.08);
-  /* During a break (Stop → Take a break): the timer digits fade, and the progress bar fill turns
-     a light neutral that reads as "stopped": still visible on the track (--surface-2), but quieter
-     than the dimmed timer digits. Redefined for dark mode below. */
-  --paused-opacity: 0.4;
-  --paused-progress: #cdc5ba;
+  /* parchment and espresso: the light theme's paper and ink */
+  --parchment-50: #fffaf2;
+  --parchment-100: #f5ede0;
+  --parchment-200: #eadfce;
+  --parchment-250: #e3d6c1;
+  --parchment-300: #dfd1bb;
+  --parchment-400: #d9cab3;
+  --parchment-500: #b3a58f;
+  --parchment-600: #8f7f6c;
+  --espresso-600: #66584a;
+  --espresso-900: #2b2118;
+  --umber-700: #5c3c18; /* the warm tint of the light theme's shadows */
+
+  /* amber: burnt (light theme) and lamp (dark theme) */
+  --amber-100: #fdebd6;
+  --amber-200: #ffc477;
+  --amber-300: #ffb454;
+  --amber-600: #b4541a;
+  --amber-700: #9a4410;
+  --amber-950: #2b1a05;
+
+  /* midnight: the dark theme's night sky and its light text */
+  --ink-950: #060812;
+  --midnight-900: #12172b;
+  --midnight-800: #1b2240;
+  --midnight-700: #283158;
+  --midnight-600: #323d6b;
+  --midnight-500: #36406b;
+  --midnight-400: #55608f;
+  --midnight-300: #7780a8;
+  --dusk-800: #2c2a3f; /* midnight with a little lamp light on it */
+  --lavender-300: #b0aec4;
+  --cream-100: #f3e9d8;
+
+  --white: #ffffff;
+  --black: #000000;
+
+  /* hues: the personalities, notes and errors */
+  --green-600: #2b7d56;
+  --purple-600: #7650b8;
+  --blue-200: #a9c1ff;
+  --blue-600: #3763c4;
+  --blue-700: #2f58b3;
+  --red-300: #ff9388;
+  --red-600: #c4402f;
+  --red-700: #b3261e;
+  --red-950: #2a0b08;
+
+  /* the distraction ramp, from "barely" to "completely" */
+  --ramp-1: #e6b84a;
+  --ramp-2: #e69d42;
+  --ramp-3: #df7f3c;
+  --ramp-4: #d45d34;
+  --ramp-5: #bd3a2e;
+
+  /* The check mark of a picked card or option, as an image: a colour can't be passed into an
+     image, so there is one per colour (white, amber-950, midnight-900). */
+  --img-check-white: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5 10.5 L8.5 14 L15 6.5' fill='none' stroke='%23ffffff' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --img-check-amber-950: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5 10.5 L8.5 14 L15 6.5' fill='none' stroke='%232b1a05' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --img-check-midnight-900: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5 10.5 L8.5 14 L15 6.5' fill='none' stroke='%2312172b' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+/* ---------- design tokens, layers 2 and 3: the light theme (and everything shared) ---------- */
+
+/* Semantic tokens say what a value is for; component tokens (at the end) belong to one component.
+   A see-through colour is made with color-mix(colour N%, transparent): the colour at N% opacity. */
+:root {
+  /* --- semantic: colour --- */
+  --color-bg: var(--parchment-100); /* the page */
+  --color-surface: var(--parchment-50); /* cards, dialogs, fields */
+  --color-surface-sunken: var(--parchment-200); /* quiet panels on the page or on a card */
+  --color-text: var(--espresso-900);
+  --color-text-muted: var(--espresso-600);
+  --color-divider: var(--parchment-400); /* hairlines between rows, chart grid lines */
+  --color-field-border: var(--parchment-600); /* the edge of a text field: 3:1 on the surface */
+  --color-accent: var(--amber-600); /* amber as a fill or a mark: buttons, picked chips, rings, bars */
+  --color-accent-hover: var(--amber-700);
+  --color-on-accent: var(--white); /* text and icons on the accent fill */
+  --color-accent-text: var(--amber-700); /* amber as text: links, labels. Darker, for 4.5:1 on the page */
+  --color-accent-soft: var(--amber-100); /* the tint of what's picked */
+  --color-focus: var(--amber-700); /* the keyboard focus ring */
+  --color-info-text: var(--blue-700); /* the "Brain fact" label */
+  --color-danger: var(--red-700);
+  --color-on-danger: var(--white);
+  --color-success: var(--green-600); /* the edge of a "done" message */
+  --color-control: var(--parchment-200); /* secondary buttons and chips */
+  --color-control-hover: var(--parchment-300);
+  --color-track: var(--parchment-250); /* the empty part of a progress bar */
+  --color-overlay: color-mix(in srgb, var(--espresso-900) 50%, transparent); /* behind a dialog */
+  --color-overlay-soft: color-mix(in srgb, var(--espresso-900) 28%, transparent);
+  --color-shadow: var(--umber-700); /* what shadows are tinted with */
+  --color-lamp: var(--amber-200); /* warm lamp light: the glow behind the character in the dark theme */
+  --color-paused: var(--parchment-500); /* the progress bar during a break: reads as "stopped" */
+  /* the personalities (badges, the editor's options) and the text on them */
+  --color-relaxed: var(--green-600);
+  --color-firm: var(--purple-600);
+  --color-strict: var(--blue-600);
+  --color-ragebait: var(--red-600);
+  --color-on-personality: var(--white);
+  /* the distraction buttons, from "barely" to "completely" */
+  --color-level-1: var(--ramp-1);
+  --color-level-2: var(--ramp-2);
+  --color-level-3: var(--ramp-3);
+  --color-level-4: var(--ramp-4);
+  --color-level-5: var(--ramp-5);
+  /* The check mark on what is picked, as an image in the on-accent colour, and in the page colour
+     for a mark that sits on the text colour (the editor's personality options). */
+  --img-check-on-accent: var(--img-check-white);
+  --img-check-on-text: var(--img-check-white);
   color-scheme: light;
+
+  /* --- semantic: shadows --- */
+  --shadow-card: 0 6px 20px color-mix(in srgb, var(--color-shadow) 10%, transparent);
+  --shadow-dialog: 0 20px 50px color-mix(in srgb, var(--espresso-900) 30%, transparent);
+  --shadow-selected: 0 0 0 1px var(--color-accent), 0 8px 24px color-mix(in srgb, var(--color-accent) 18%, transparent);
+
+  /* --- semantic: shape --- */
+  --radius-card: 22px; /* cards, dialogs */
+  --radius-tile: 18px; /* smaller panels, option tiles, the distraction buttons */
+  --radius-field: 14px; /* text fields */
+  --radius-pill: 999px; /* buttons, chips, badges, bars */
+
+  /* --- semantic: type --- */
+  --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; /* text, buttons, digits */
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif; /* headings only */
+  --weight-display: 600;
+  --weight-number: 700; /* the timer and the other big numbers */
+  --tracking-display: -0.01em;
+  /* The type scale: every font size in this file is one of these steps. The number is the size in
+     px at the browser's default text size; they're written in rem, so they grow with the phone's
+     or browser's text size setting. */
+  --fs-11: 0.6875rem;
+  --fs-12: 0.75rem;
+  --fs-13: 0.8125rem;
+  --fs-14: 0.875rem;
+  --fs-15: 0.9375rem;
+  --fs-16: 1rem;
+  --fs-18: 1.125rem;
+  --fs-20: 1.25rem;
+  --fs-22: 1.375rem;
+  --fs-26: 1.625rem;
+  --fs-30: 1.875rem;
+  --fs-40: 2.5rem;
+  --fs-48: 3rem;
+
+  /* --- semantic: motion --- */
+  --dur: 180ms; /* a press, a hover */
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+
+  /* --- component tokens (they only use the semantic tokens above) --- */
+  /* the timer: the only fluid sizes (they follow the screen's width between two scale-like ends) */
+  --timer-size: clamp(2.8rem, 14vw, 4rem);
+  --timer-size-wide: clamp(4rem, 6vw, 5.5rem);
+  --timer-glow: none; /* lamp light around the digits, dark theme only */
+  /* During a break (Stop → Take a break) the timer digits fade (and the progress bar fill turns
+     --color-paused: still visible on the track, but quieter than the digits). */
+  --timer-paused-opacity: 0.5;
+  /* the distraction buttons: how much of the level's colour tints the button */
+  --level-tint: 20%;
+  /* the character on its stage: a calm light behind it, and an outline that follows the artwork's
+     own (transparent) edge, so light and dark art both stand out from the page */
+  --stage-glow: radial-gradient(ellipse 46% 50% at 50% 56%, var(--color-surface) 0%, transparent 100%);
+  --char-outline: drop-shadow(0 0 1px color-mix(in srgb, var(--color-text) 60%, transparent))
+    drop-shadow(0 0 1px color-mix(in srgb, var(--color-text) 40%, transparent))
+    drop-shadow(0 8px 12px color-mix(in srgb, var(--color-shadow) 18%, transparent));
+  --swatch-border: color-mix(in srgb, var(--color-text) 30%, transparent); /* the editor's colour swatches */
+  /* the header's two controls (the light/dark switch and the language button) */
+  --header-control-bg: var(--color-surface);
+  --header-control-shadow: var(--shadow-card);
+  /* the light/dark switch: where the knob is, and each icon's colour (the one on the knob is
+     --color-on-accent). Set here, per theme, so the switch is right in the very first paint. */
+  --dark-switch-shift: 0px;
+  --dark-switch-sun: var(--color-on-accent);
+  --dark-switch-moon: var(--color-text-muted);
+}
+
+/* ---------- design tokens: the dark theme ---------- */
+
+/* Only what differs from the light theme. Written twice, with the same content:
+     1. :root[data-theme="dark"]: js/theme.js sets data-theme on <html> before the first paint
+        (the saved choice of the light/dark switch, otherwise the phone's setting).
+     2. the prefers-color-scheme block: the fallback when that script can't run.
+   There is no build step to share one block between the two, so keep them identical (a check
+   compares them). See "Light and dark" in the README. */
+:root[data-theme="dark"] {
+  --color-bg: var(--midnight-900);
+  --color-surface: var(--midnight-800);
+  --color-surface-sunken: var(--midnight-700);
+  --color-text: var(--cream-100);
+  --color-text-muted: var(--lavender-300);
+  --color-divider: var(--midnight-500);
+  --color-field-border: var(--midnight-300);
+  --color-accent: var(--amber-300);
+  --color-accent-hover: var(--amber-200);
+  --color-on-accent: var(--amber-950);
+  --color-accent-text: var(--amber-300);
+  --color-accent-soft: var(--dusk-800);
+  --color-focus: var(--amber-300);
+  --color-info-text: var(--blue-200);
+  --color-danger: var(--red-300);
+  --color-on-danger: var(--red-950);
+  --color-control: var(--midnight-700);
+  --color-control-hover: var(--midnight-600);
+  --color-track: var(--midnight-700);
+  --color-overlay: color-mix(in srgb, var(--ink-950) 70%, transparent);
+  --color-overlay-soft: color-mix(in srgb, var(--ink-950) 45%, transparent);
+  --color-shadow: var(--black);
+  --color-paused: var(--midnight-400);
+  --img-check-on-accent: var(--img-check-amber-950);
+  --img-check-on-text: var(--img-check-midnight-900);
+  color-scheme: dark;
+  --shadow-card: 0 8px 28px color-mix(in srgb, var(--color-shadow) 40%, transparent);
+  --shadow-dialog: 0 24px 60px color-mix(in srgb, var(--color-shadow) 60%, transparent);
+  --shadow-selected: 0 0 0 1px var(--color-accent), 0 0 28px color-mix(in srgb, var(--color-accent) 28%, transparent);
+  /* component tokens */
+  --timer-glow: 0 0 28px color-mix(in srgb, var(--color-accent) 30%, transparent);
+  --level-tint: 16%;
+  --stage-glow: radial-gradient(ellipse 46% 50% at 50% 56%, color-mix(in srgb, var(--color-lamp) 30%, transparent) 0%, transparent 100%);
+  --char-outline: drop-shadow(0 0 1px color-mix(in srgb, var(--color-text) 85%, transparent))
+    drop-shadow(0 0 1px color-mix(in srgb, var(--color-text) 55%, transparent))
+    drop-shadow(0 0 18px color-mix(in srgb, var(--color-lamp) 25%, transparent));
+  --swatch-border: color-mix(in srgb, var(--color-text) 35%, transparent);
+  --dark-switch-shift: 40px;
+  --dark-switch-sun: var(--color-text-muted);
+  --dark-switch-moon: var(--color-on-accent);
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #17161b;
-    --surface: #222027;
-    --surface-2: #2b2832;
-    --text: #f2efe9;
-    --muted: #a7a19a;
-    --border: #3a3641;
-    --primary: #ff7a45;
-    --primary-hover: #ff8e5f;
-    --error: #ff6b6b;
-    --error-text: #17161b; /* white on the lighter red would be too faint */
-    --shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
-    --paused-progress: #4c4753;
+  :root:not([data-theme]) {
+    --color-bg: var(--midnight-900);
+    --color-surface: var(--midnight-800);
+    --color-surface-sunken: var(--midnight-700);
+    --color-text: var(--cream-100);
+    --color-text-muted: var(--lavender-300);
+    --color-divider: var(--midnight-500);
+    --color-field-border: var(--midnight-300);
+    --color-accent: var(--amber-300);
+    --color-accent-hover: var(--amber-200);
+    --color-on-accent: var(--amber-950);
+    --color-accent-text: var(--amber-300);
+    --color-accent-soft: var(--dusk-800);
+    --color-focus: var(--amber-300);
+    --color-info-text: var(--blue-200);
+    --color-danger: var(--red-300);
+    --color-on-danger: var(--red-950);
+    --color-control: var(--midnight-700);
+    --color-control-hover: var(--midnight-600);
+    --color-track: var(--midnight-700);
+    --color-overlay: color-mix(in srgb, var(--ink-950) 70%, transparent);
+    --color-overlay-soft: color-mix(in srgb, var(--ink-950) 45%, transparent);
+    --color-shadow: var(--black);
+    --color-paused: var(--midnight-400);
+    --img-check-on-accent: var(--img-check-amber-950);
+    --img-check-on-text: var(--img-check-midnight-900);
     color-scheme: dark;
+    --shadow-card: 0 8px 28px color-mix(in srgb, var(--color-shadow) 40%, transparent);
+    --shadow-dialog: 0 24px 60px color-mix(in srgb, var(--color-shadow) 60%, transparent);
+    --shadow-selected: 0 0 0 1px var(--color-accent), 0 0 28px color-mix(in srgb, var(--color-accent) 28%, transparent);
+    /* component tokens */
+    --timer-glow: 0 0 28px color-mix(in srgb, var(--color-accent) 30%, transparent);
+    --level-tint: 16%;
+    --stage-glow: radial-gradient(ellipse 46% 50% at 50% 56%, color-mix(in srgb, var(--color-lamp) 30%, transparent) 0%, transparent 100%);
+    --char-outline: drop-shadow(0 0 1px color-mix(in srgb, var(--color-text) 85%, transparent))
+      drop-shadow(0 0 1px color-mix(in srgb, var(--color-text) 55%, transparent))
+      drop-shadow(0 0 18px color-mix(in srgb, var(--color-lamp) 25%, transparent));
+    --swatch-border: color-mix(in srgb, var(--color-text) 35%, transparent);
+    --dark-switch-shift: 40px;
+    --dark-switch-sun: var(--color-text-muted);
+    --dark-switch-moon: var(--color-on-accent);
   }
 }
 
@@ -53,9 +337,9 @@
 
 body {
   margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
 }
@@ -70,20 +354,39 @@ h2 {
   margin: 0 0 12px;
 }
 
+/* Fraunces is for headings only (and the few lines that act as one); everything else is Figtree. */
+h1,
+h2,
+h3,
+.paused-title,
+.char-name,
+.quick-start-line,
+.language-native {
+  font-family: var(--font-display);
+  font-weight: var(--weight-display);
+}
+
+h1,
+h2,
+h3,
+.paused-title {
+  letter-spacing: var(--tracking-display);
+}
+
 h1 {
-  font-size: 1.9rem;
+  font-size: var(--fs-30);
 }
 
 h2 {
-  font-size: 1.1rem;
+  font-size: var(--fs-18);
 }
 
 .muted {
-  color: var(--muted);
+  color: var(--color-text-muted);
 }
 
 .error {
-  color: var(--error);
+  color: var(--color-danger);
   font-weight: 600;
   margin: 8px 0 0;
 }
@@ -132,17 +435,23 @@ button {
   cursor: pointer;
 }
 
+/* A pill without an outline. The 1.5px see-through border keeps every button's measured size,
+   and a few buttons give it a colour (the distraction levels, Undo, Stop in the session bar). */
 .btn {
-  border: 1.5px solid var(--border);
-  background: var(--surface);
-  border-radius: 12px;
+  border: 1.5px solid transparent;
+  background: var(--color-control);
+  border-radius: var(--radius-pill);
   padding: 12px 18px;
   font-weight: 600;
-  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  transition: transform var(--dur) var(--ease), opacity var(--dur) var(--ease);
 }
 
-.btn:hover {
-  border-color: var(--muted);
+/* Only where there is a mouse: on a touch screen a hover would stick after the tap.
+   :where() keeps this rule as weak as .btn, so every button with its own fill keeps it. */
+@media (hover: hover) {
+  .btn:hover:where(:not(:disabled)) {
+    background: var(--color-control-hover);
+  }
 }
 
 .btn:active {
@@ -150,21 +459,19 @@ button {
 }
 
 .btn.primary {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: var(--primary-text);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
 }
 
 .btn.primary:hover {
-  background: var(--primary-hover);
-  border-color: var(--primary-hover);
+  background: var(--color-accent-hover);
 }
 
 .btn.big {
   display: block;
   width: 100%;
   padding: 16px;
-  font-size: 1.15rem;
+  font-size: var(--fs-18);
 }
 
 .btn.wide {
@@ -174,9 +481,8 @@ button {
 
 /* Destructive (Delete in the history page's delete dialog). */
 .btn.danger {
-  background: var(--error);
-  border-color: var(--error);
-  color: var(--error-text);
+  background: var(--color-danger);
+  color: var(--color-on-danger);
 }
 
 .btn.danger:hover {
@@ -190,19 +496,21 @@ button {
   padding: 8px 14px;
 }
 
+/* One visible keyboard focus ring everywhere (the light/dark switch has its own, thinner one). */
 button:focus-visible,
-input:focus-visible {
-  outline: 3px solid var(--primary);
+input:focus-visible,
+a:focus-visible {
+  outline: 3px solid var(--color-focus);
   outline-offset: 2px;
 }
 
 .icon-btn {
   border: none;
   background: none;
-  font-size: 1.4rem;
+  font-size: var(--fs-22);
   line-height: 1;
   padding: 4px 8px;
-  color: var(--muted);
+  color: var(--color-text-muted);
 }
 
 /* Links and text buttons that stand on their own (not inside a sentence): a 44px tall tap
@@ -216,7 +524,7 @@ input:focus-visible {
 }
 
 /* "Privacy" under Start session and at the bottom of history.html: small and grey, but still a
-   44x44px tap target. --muted is at least 4.5:1 on --bg in light and dark mode. */
+   44x44px tap target. --color-text-muted is at least 4.5:1 on --color-bg in both themes. */
 .page-footer {
   margin: 16px 0 0;
   text-align: center;
@@ -229,8 +537,8 @@ input:focus-visible {
   min-height: 44px;
   min-width: 44px;
   padding: 0 8px;
-  font-size: 0.85rem;
-  color: var(--muted);
+  font-size: var(--fs-14);
+  color: var(--color-text-muted);
 }
 
 /* ---------- setup: characters ---------- */
@@ -249,12 +557,13 @@ input:focus-visible {
   align-items: center;
   gap: 6px;
   padding: 14px 10px;
-  background: var(--surface);
-  border: 2px solid var(--border);
-  border-radius: var(--radius);
+  position: relative; /* for the check mark of the picked card */
+  background: var(--color-surface);
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-card);
   text-align: center;
-  box-shadow: var(--shadow);
-  transition: border-color 0.15s, transform 0.1s;
+  box-shadow: var(--shadow-card);
+  transition: transform var(--dur) var(--ease), opacity var(--dur) var(--ease);
 }
 
 .char-card img {
@@ -268,9 +577,25 @@ input:focus-visible {
   overflow-wrap: anywhere;
 }
 
-.char-card[aria-pressed="true"] {
-  border-color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 8%, var(--surface));
+/* Picked (a character, a mode): an amber ring, a tint and a check mark in the corner, so it
+   isn't marked by colour alone. */
+.char-card[aria-pressed="true"],
+.choice[aria-pressed="true"] {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  box-shadow: var(--shadow-selected);
+}
+
+.char-card[aria-pressed="true"]::after,
+.choice[aria-pressed="true"]::after {
+  content: "";
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-accent) var(--img-check-on-accent) center / 100% no-repeat;
 }
 
 .char-card:active {
@@ -278,37 +603,36 @@ input:focus-visible {
 }
 
 .char-name {
-  font-weight: 700;
-  font-size: 1.05rem;
+  font-size: var(--fs-16);
 }
 
 .char-tagline {
-  font-size: 0.85rem;
-  color: var(--muted);
+  font-size: var(--fs-14);
+  color: var(--color-text-muted);
 }
 
 .badge {
-  font-size: 0.75rem;
+  font-size: var(--fs-12);
   font-weight: 700;
   padding: 2px 10px;
-  border-radius: 999px;
-  color: #fff;
+  border-radius: var(--radius-pill);
+  color: var(--color-on-personality);
 }
 
 .badge-relaxed {
-  background: var(--relaxed);
+  background: var(--color-relaxed);
 }
 
 .badge-firm {
-  background: var(--firm);
+  background: var(--color-firm);
 }
 
 .badge-strict {
-  background: var(--strict);
+  background: var(--color-strict);
 }
 
 .badge-ragebait {
-  background: var(--ragebait);
+  background: var(--color-ragebait);
 }
 
 /* "Create your own" (always the last card of the main grid) and "Your characters" below it.
@@ -328,8 +652,8 @@ input:focus-visible {
 }
 
 .badge-free {
-  background: var(--primary);
-  color: var(--primary-text);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
 }
 
 .custom-section {
@@ -337,32 +661,34 @@ input:focus-visible {
 }
 
 .custom-section h3 {
-  font-size: 1.05rem;
+  font-size: var(--fs-16);
   margin: 0 0 12px;
 }
 
 .custom-item {
   display: flex;
   flex-direction: column;
-  background: var(--surface);
-  border: 2px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  background: var(--color-surface);
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
   min-width: 0;
-  transition: border-color 0.15s;
 }
 
 .custom-item.selected {
-  border-color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 8%, var(--surface));
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  box-shadow: var(--shadow-selected);
 }
 
-.custom-item .char-card {
+/* The frame shows what's picked; the select button inside it only adds the check mark. */
+.custom-item .char-card,
+.custom-item .char-card[aria-pressed="true"] {
   flex: 1;
   border: none;
   box-shadow: none;
   background: transparent;
-  border-radius: var(--radius) var(--radius) 0 0;
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
   padding-bottom: 6px;
 }
 
@@ -385,8 +711,8 @@ input:focus-visible {
   align-items: center;
   justify-content: center;
   text-decoration: none;
-  color: var(--text);
-  font-size: 0.9rem;
+  color: var(--color-text);
+  font-size: var(--fs-14);
 }
 
 /* ---------- setup: choices ---------- */
@@ -402,20 +728,18 @@ input:focus-visible {
   flex-direction: column;
   gap: 4px;
   padding: 14px;
+  position: relative; /* for the check mark of the picked one (see .char-card) */
   text-align: left;
-  background: var(--surface);
-  border: 2px solid var(--border);
-  border-radius: var(--radius);
+  background: var(--color-surface);
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  transition: transform var(--dur) var(--ease), opacity var(--dur) var(--ease);
 }
 
 .choice span {
-  font-size: 0.85rem;
-  color: var(--muted);
-}
-
-.choice[aria-pressed="true"] {
-  border-color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 8%, var(--surface));
+  font-size: var(--fs-14);
+  color: var(--color-text-muted);
 }
 
 /* ---------- duration picker ---------- */
@@ -430,35 +754,43 @@ input:focus-visible {
 
 .chip {
   min-height: 44px;
-  border: 1.5px solid var(--border);
-  background: var(--surface);
-  border-radius: 999px;
+  border: 1.5px solid transparent;
+  background: var(--color-control);
+  border-radius: var(--radius-pill);
   padding: 6px 4px;
   font-weight: 600;
   white-space: nowrap;
+  transition: transform var(--dur) var(--ease), opacity var(--dur) var(--ease);
 }
 
 .chip[aria-pressed="true"] {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: var(--primary-text);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+/* The same small press as .btn. */
+.chip:active,
+.choice:active,
+.preset:active,
+.lang-pill:active {
+  transform: scale(0.97);
 }
 
 .custom-minutes {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: var(--muted);
+  color: var(--color-text-muted);
 }
 
 .custom-minutes input {
   width: 80px;
   min-height: 44px;
   padding: 8px 10px;
-  border: 1.5px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface);
-  color: var(--text);
+  border: 1.5px solid var(--color-field-border); /* a field keeps a visible edge */
+  border-radius: var(--radius-field);
+  background: var(--color-surface);
+  color: var(--color-text);
   font: inherit;
 }
 
@@ -466,7 +798,7 @@ input:focus-visible {
    until the field was corrected. Same size as the setting hints. */
 .custom-note {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: var(--fs-14);
 }
 
 .custom-note:not(:empty) {
@@ -477,7 +809,7 @@ input:focus-visible {
 
 .session-info {
   text-align: center;
-  font-size: 0.9rem;
+  font-size: var(--fs-14);
   margin: 0 0 8px;
   text-wrap: balance; /* if it wraps, two even lines instead of "min" alone */
 }
@@ -485,14 +817,16 @@ input:focus-visible {
 /* In the page flow (not on top), so it never covers the character, timer or buttons. */
 .screen-note {
   text-align: center;
-  font-size: 0.85rem;
+  font-size: var(--fs-14);
   margin: -4px 0 8px;
   text-wrap: balance;
 }
 
+/* A calm, pattern-free light behind the character (a warm lamp glow in the dark theme). */
 .stage {
   display: flex;
   justify-content: center;
+  background: var(--stage-glow);
   --mult: 1;
 }
 
@@ -500,9 +834,12 @@ input:focus-visible {
   --mult: 2.2;
 }
 
+/* The outline follows the artwork's own transparent edge (drop-shadow, not a box), so light
+   and dark art both stand out from the page in both themes. */
 .char-img {
   width: min(230px, 60vw);
   height: auto;
+  filter: var(--char-outline);
   transform-origin: 50% 100%;
   animation: breathe 4.2s ease-in-out infinite;
 }
@@ -663,24 +1000,25 @@ input:focus-visible {
 }
 
 .timer {
-  font-size: clamp(2.8rem, 14vw, 4rem);
-  font-weight: 800;
+  font-size: var(--timer-size);
+  font-weight: var(--weight-number);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
+  text-shadow: var(--timer-glow);
 }
 
 .progress {
   height: 10px;
-  background: var(--surface-2);
-  border-radius: 999px;
+  background: var(--color-track);
+  border-radius: var(--radius-pill);
   overflow: hidden;
 }
 
 .progress-bar {
   height: 100%;
   width: 0;
-  background: var(--primary);
-  border-radius: 999px;
+  background: var(--color-accent);
+  border-radius: var(--radius-pill);
   transition: width 0.5s linear;
 }
 
@@ -696,11 +1034,12 @@ input:focus-visible {
 
 /* Instant, no animation: only the opacity and colour change. */
 .paused .timer {
-  opacity: var(--paused-opacity);
+  opacity: var(--timer-paused-opacity);
+  text-shadow: none;
 }
 
 .paused .progress-bar {
-  background: var(--paused-progress);
+  background: var(--color-paused);
 }
 
 /* The prompt and the distraction buttons keep their space under the paused card, so nothing on
@@ -730,12 +1069,11 @@ input:focus-visible {
 }
 
 .paused-title {
-  font-weight: 700;
-  font-size: 1.15rem;
+  font-size: var(--fs-18);
 }
 
 .paused-break {
-  color: var(--muted);
+  color: var(--color-text-muted);
   font-variant-numeric: tabular-nums; /* the counter doesn't wobble as it counts */
 }
 
@@ -749,9 +1087,16 @@ input:focus-visible {
   grid-template-columns: repeat(auto-fit, minmax(76px, 1fr));
 }
 
+/* Softly tinted in the level's colour, with a band under the word that grows from Barely to
+   Completely (--lv-n, in px): yellow can't be told from white by colour alone, so the ramp is
+   never shown by colour only. Rounded corners instead of a pill, so the band reads as a line. */
 .btn.level {
   border-width: 2px;
+  border-color: color-mix(in srgb, var(--lv-c) 60%, transparent);
+  border-radius: var(--radius-tile);
   padding: 12px 8px;
+  background: color-mix(in srgb, var(--lv-c) var(--level-tint), var(--color-surface));
+  box-shadow: inset 0 calc(var(--lv-n) * -1px) 0 var(--lv-c);
 }
 
 /* Simple: always two full rows, 3 + 2. On a 6-column grid the first three buttons span 2 columns,
@@ -777,23 +1122,20 @@ input:focus-visible {
   white-space: nowrap;
 }
 
-.btn.level-1 { border-color: var(--level-1); }
-.btn.level-2 { border-color: var(--level-2); }
-.btn.level-3 { border-color: var(--level-3); }
-.btn.level-4 { border-color: var(--level-4); }
-.btn.level-5 { border-color: var(--level-5); }
-
-.btn.level:hover {
-  background: var(--surface-2);
-}
+.btn.level-1 { --lv-c: var(--color-level-1); --lv-n: 2; }
+.btn.level-2 { --lv-c: var(--color-level-2); --lv-n: 3; }
+.btn.level-3 { --lv-c: var(--color-level-3); --lv-n: 4; }
+.btn.level-4 { --lv-c: var(--color-level-4); --lv-n: 6; }
+.btn.level-5 { --lv-c: var(--color-level-5); --lv-n: 8; }
 
 /* Advanced: a length longer than the free time so far (updateLengthButtons in app.js).
    Greyed out but still readable, and the same size, so nothing moves. */
 .btn.level:disabled {
   opacity: 1;
-  color: var(--muted);
-  border-color: var(--border);
-  background: var(--surface-2);
+  color: var(--color-text-muted);
+  border-color: var(--color-divider);
+  background: var(--color-surface-sunken);
+  box-shadow: none;
   cursor: not-allowed;
   transform: none;
 }
@@ -804,10 +1146,10 @@ input:focus-visible {
 .category-picker {
   grid-column: 1 / -1;
   padding: 4px 12px 12px;
-  background: var(--surface);
-  border: 1.5px solid var(--border);
-  border-radius: 12px;
-  box-shadow: var(--shadow);
+  background: var(--color-surface);
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-tile);
+  box-shadow: var(--shadow-card);
   overflow: hidden;
 }
 
@@ -826,22 +1168,22 @@ input:focus-visible {
 }
 
 /* Secondary to the categories: plain grey text, no border or fill, but still a
-   44px tap target. --muted is at least 4.5:1 on --surface (and on --surface-2 when
-   hovered) in light and dark mode. */
+   44px tap target. --color-text-muted is at least 4.5:1 on --color-surface (and on
+   --color-control-hover when hovered) in both themes. */
 .skip-btn {
   flex: none;
   min-width: 64px;
   min-height: 44px;
   padding: 8px 12px;
   border: none;
-  border-radius: 10px;
+  border-radius: var(--radius-pill);
   background: none;
-  color: var(--muted);
+  color: var(--color-text-muted);
   font-weight: 600;
 }
 
 .skip-btn:hover {
-  background: var(--surface-2);
+  background: var(--color-control-hover);
 }
 
 /* minmax(0, 1fr): three equal columns whatever the labels. Plain 1fr lets a column grow to its
@@ -857,10 +1199,7 @@ input:focus-visible {
 .category-buttons .btn {
   min-height: 44px;
   padding: 8px 4px;
-}
-
-.category-buttons .btn:hover {
-  background: var(--surface-2);
+  border-radius: var(--radius-tile);
 }
 
 /* ---------- undo ---------- */
@@ -869,27 +1208,23 @@ input:focus-visible {
    app.js) are part of its label, not a bar, so they can't be read as a time limit on the
    category picker above it; then Motivate me comes back. */
 .undo-btn {
-  border-color: var(--primary);
-}
-
-.undo-btn:hover {
-  border-color: var(--primary-hover);
+  border-color: var(--color-accent-text);
 }
 
 /* Every digit the same width, so the label doesn't wobble as it counts down. */
 .undo-seconds {
   font-variant-numeric: tabular-nums;
-  color: var(--muted);
+  color: var(--color-text-muted);
 }
 
 .motivation-card {
   position: relative;
   margin-top: 20px;
   padding: 16px 44px 16px 16px;
-  background: var(--surface);
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  background: var(--color-surface);
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .motivation-card p {
@@ -911,15 +1246,15 @@ input:focus-visible {
 }
 
 .motivation-badge {
-  font-size: 0.75rem;
+  font-size: var(--fs-12);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--primary);
+  color: var(--color-accent-text);
 }
 
 .motivation-badge[data-type="fact"] {
-  color: var(--strict);
+  color: var(--color-info-text);
 }
 
 /* Always visible at the bottom of the screen while a session runs. */
@@ -931,8 +1266,17 @@ input:focus-visible {
   gap: 10px;
   margin: 24px -16px 0;
   padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
-  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  background: color-mix(in srgb, var(--color-bg) 92%, transparent);
   backdrop-filter: blur(6px);
+}
+
+/* The secondary button next to the amber one (Stop, Undo) keeps an edge on the page background. */
+.session-bar .btn:not(.primary) {
+  border-color: var(--color-divider);
+}
+
+.session-bar .btn.undo-btn {
+  border-color: var(--color-accent-text);
 }
 
 /* ---------- summary ---------- */
@@ -947,9 +1291,10 @@ input:focus-visible {
 }
 
 .summary-percent {
-  font-size: 3rem;
-  font-weight: 800;
-  color: var(--primary);
+  font-size: var(--fs-48);
+  font-weight: var(--weight-number);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-accent-text);
   margin: 0;
 }
 
@@ -958,12 +1303,12 @@ input:focus-visible {
 }
 
 .summary-text {
-  color: var(--muted);
+  color: var(--color-text-muted);
   margin: 8px 0 0;
 }
 
 .summary-text.error {
-  color: var(--error); /* "Couldn't save this session" */
+  color: var(--color-danger); /* "Couldn't save this session" */
 }
 
 /* ---------- open in another tab ---------- */
@@ -974,7 +1319,7 @@ input:focus-visible {
 }
 
 .elsewhere-title {
-  font-size: 1.4rem;
+  font-size: var(--fs-22);
 }
 
 #elsewhereScreen p {
@@ -986,15 +1331,15 @@ input:focus-visible {
 dialog {
   width: min(440px, calc(100vw - 32px));
   border: none;
-  border-radius: var(--radius);
+  border-radius: var(--radius-card);
   padding: 24px;
-  background: var(--surface);
-  color: var(--text);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-dialog);
 }
 
 dialog::backdrop {
-  background: rgba(20, 15, 10, 0.5);
+  background: var(--color-overlay);
 }
 
 dialog p {
@@ -1010,7 +1355,7 @@ dialog p {
 }
 
 .away-dialog::backdrop {
-  background: rgba(20, 15, 10, 0.3);
+  background: var(--color-overlay-soft);
 }
 
 .away-dialog h2 {
@@ -1030,8 +1375,8 @@ dialog p {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--muted);
-  font-size: 0.9375rem;
+  color: var(--color-text-muted);
+  font-size: var(--fs-15);
 }
 
 dialog .end-running {
@@ -1043,11 +1388,11 @@ dialog .end-running {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--primary);
+  background: var(--color-accent-text);
 }
 
 .end-running strong {
-  color: var(--text);
+  color: var(--color-text);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1056,14 +1401,14 @@ dialog .end-running {
 .end-break {
   margin-bottom: 14px;
   padding-bottom: 14px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--color-divider);
 }
 
 dialog .end-break-note {
   margin: 8px 0 0;
-  color: var(--muted);
+  color: var(--color-text-muted);
   text-align: center;
-  font-size: 0.9375rem;
+  font-size: var(--fs-15);
 }
 
 /* Full-width buttons on top of each other, the primary one first (the continue/restart dialog). */
@@ -1090,7 +1435,7 @@ dialog .end-break-note {
   width: 20px;
   height: 20px;
   margin: 1px 0 0;
-  accent-color: var(--primary);
+  accent-color: var(--color-accent);
 }
 
 .check-row span {
@@ -1120,19 +1465,25 @@ dialog .check-row {
   gap: 12px;
 }
 
+/* The sound setting: the whole 44px row is the tap target, not only the line of text. */
+.setting-row .check-row {
+  align-self: stretch;
+  align-items: center;
+}
+
 .btn.test-sound {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   min-height: 44px;
   padding: 7px 12px;
-  font-size: 0.85rem;
+  font-size: var(--fs-14);
 }
 
 /* Lined up with the checkbox text: checkbox width + gap. */
 .setting-hint {
   margin: 0 0 6px 30px;
-  font-size: 0.85rem;
+  font-size: var(--fs-14);
 }
 
 /* ---------- stats page ---------- */
@@ -1140,10 +1491,10 @@ dialog .check-row {
 .stats-table {
   width: 100%;
   border-collapse: collapse;
-  background: var(--surface);
-  border-radius: var(--radius);
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
   overflow: hidden;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-card);
   margin-bottom: 16px;
 }
 
@@ -1151,7 +1502,7 @@ dialog .check-row {
 .stats-table td {
   padding: 12px 14px;
   text-align: left;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--color-divider);
 }
 
 .stats-table th:not(:first-child),
@@ -1165,7 +1516,7 @@ dialog .check-row {
 }
 
 a {
-  color: var(--primary);
+  color: var(--color-accent-text);
 }
 
 .header-link {
@@ -1176,10 +1527,10 @@ a {
 .tip-card {
   margin-bottom: 28px;
   padding: 16px;
-  background: var(--surface);
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  background: var(--color-surface);
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .tip-card p {
@@ -1198,10 +1549,10 @@ a {
   gap: 12px;
   margin-bottom: 28px;
   padding: 12px;
-  background: var(--surface);
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  background: var(--color-surface);
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .quick-start-img {
@@ -1221,12 +1572,11 @@ a {
 }
 
 .quick-start-label {
-  font-size: 0.85rem;
+  font-size: var(--fs-14);
 }
 
 .quick-start-line {
-  font-weight: 700;
-  font-size: 0.95rem;
+  font-size: var(--fs-15);
 }
 
 /* Less side padding than .btn, so the line has room on a 320px screen. Still 44x44px or more. */
@@ -1254,13 +1604,13 @@ a {
   background: none;
   padding: 0 2px;
   font-weight: 600;
-  color: var(--primary);
+  color: var(--color-accent-text);
   text-decoration: underline;
 }
 
 .header-sep {
   margin: 0 8px;
-  color: var(--muted);
+  color: var(--color-text-muted);
 }
 
 /* Opened from the header button (openHowItWorks): keep a little space above the card. */
@@ -1310,11 +1660,11 @@ a {
   margin-top: 10px;
   text-align: center;
   text-decoration: none;
-  color: var(--text);
+  color: var(--color-text);
 }
 
 .small {
-  font-size: 0.85rem;
+  font-size: var(--fs-14);
 }
 
 /* ---------- history page ---------- */
@@ -1323,9 +1673,9 @@ a {
   margin: 0 0 32px;
   padding: 24px;
   text-align: center;
-  background: var(--surface);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .history-section {
@@ -1335,9 +1685,9 @@ a {
 .storage-note {
   margin: 0 0 24px;
   padding: 12px 14px;
-  font-size: 0.9rem;
-  background: var(--surface-2);
-  border-radius: 12px;
+  font-size: var(--fs-14);
+  background: var(--color-surface-sunken);
+  border-radius: var(--radius-tile);
 }
 
 .backup-actions {
@@ -1346,22 +1696,27 @@ a {
   gap: 10px;
 }
 
+/* Not available right now (Export with nothing to export): hollow, with a hairline edge and grey
+   text. Not faded: the label stays readable (4.5:1) in both themes. */
 .btn:disabled {
-  opacity: 0.5;
+  background: transparent;
+  border-color: var(--color-divider);
+  color: var(--color-text-muted);
   cursor: not-allowed;
+  transform: none;
 }
 
 .backup-status {
   margin: 12px 0 0;
   padding: 10px 14px;
-  border-radius: 12px;
-  border: 1.5px solid var(--relaxed);
-  background: var(--surface);
+  border-radius: var(--radius-tile);
+  border: 1.5px solid var(--color-success);
+  background: var(--color-surface);
 }
 
 .backup-status.error {
-  border-color: var(--error);
-  color: var(--error);
+  border-color: var(--color-danger);
+  color: var(--color-danger);
 }
 
 /* Under the session list (outside #historyContent, after its 32px margin): looks like the backup
@@ -1374,14 +1729,14 @@ a {
 .delete-status:not(:empty) {
   margin: -20px 0 32px;
   padding: 10px 14px;
-  border-radius: 12px;
-  border: 1.5px solid var(--relaxed);
-  background: var(--surface);
+  border-radius: var(--radius-tile);
+  border: 1.5px solid var(--color-success);
+  background: var(--color-surface);
 }
 
 .delete-status.error:not(:empty) {
-  border-color: var(--error);
-  color: var(--error);
+  border-color: var(--color-danger);
+  color: var(--color-danger);
 }
 
 /* Only focused by the script (after the last session is deleted), never by tapping or Tab. */
@@ -1446,27 +1801,29 @@ a {
   flex-direction: column;
   gap: 4px;
   padding: 16px;
-  background: var(--surface);
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  background: var(--color-surface);
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .stat-label {
-  font-size: 0.85rem;
-  color: var(--muted);
+  font-size: var(--fs-14);
+  color: var(--color-text-muted);
 }
 
 .stat-value {
-  font-size: 1.7rem;
-  font-weight: 800;
+  font-size: var(--fs-26);
+  font-weight: var(--weight-number);
+  font-variant-numeric: tabular-nums;
 }
 
 .chart {
   padding: 12px 8px 4px;
-  background: var(--surface);
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius);
+  background: var(--color-surface);
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
   margin-bottom: 10px;
 }
 
@@ -1474,40 +1831,45 @@ a {
   display: none;
 }
 
+/* overflow: a wider axis label ("100 %" in German) may reach into the card's padding instead
+   of being cut off at the drawing's edge. */
 .chart svg {
   display: block;
   width: 100%;
   height: auto;
+  overflow: visible;
 }
 
 .chart-grid {
-  stroke: var(--border);
+  stroke: var(--color-divider);
   stroke-width: 1;
 }
 
+/* 12px, not a step of the type scale: this is a length inside the chart's own drawing (SVG
+   units), which is scaled with the chart, not a text size on the page. */
 .chart-label {
-  fill: var(--muted);
+  fill: var(--color-text-muted);
   font-size: 12px;
   font-family: inherit;
 }
 
 .chart-line {
   fill: none;
-  stroke: var(--primary);
+  stroke: var(--color-accent-text);
   stroke-width: 2.5;
   stroke-linejoin: round;
   stroke-linecap: round;
 }
 
 .chart-point {
-  fill: var(--surface);
-  stroke: var(--primary);
+  fill: var(--color-surface);
+  stroke: var(--color-accent-text);
   stroke-width: 2.5;
 }
 
 /* Time per week: earlier weeks lighter, the current week full color. */
 .chart-bar {
-  fill: var(--primary);
+  fill: var(--color-accent-text);
   opacity: 0.5;
 }
 
@@ -1525,13 +1887,14 @@ a {
 .day-part {
   padding: 12px 14px;
   margin-bottom: 8px;
-  background: var(--surface);
-  border: 1.5px solid var(--border);
-  border-radius: 12px;
+  background: var(--color-surface);
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-tile);
+  box-shadow: var(--shadow-card);
 }
 
 .day-part.best {
-  border-color: var(--primary);
+  border-color: var(--color-accent);
 }
 
 .day-part-head {
@@ -1549,19 +1912,19 @@ a {
 .day-part-track {
   height: 8px;
   margin: 8px 0 4px;
-  background: var(--surface-2);
-  border-radius: 999px;
+  background: var(--color-track);
+  border-radius: var(--radius-pill);
   overflow: hidden;
 }
 
 .day-part-fill {
   height: 100%;
-  background: var(--muted);
-  border-radius: 999px;
+  background: var(--color-text-muted);
+  border-radius: var(--radius-pill);
 }
 
 .day-part.best .day-part-fill {
-  background: var(--primary);
+  background: var(--color-accent);
 }
 
 .session-item {
@@ -1570,7 +1933,7 @@ a {
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--color-divider);
 }
 
 .session-item:last-child {
@@ -1589,35 +1952,36 @@ a {
 .session-delete {
   grid-column: 1 / -1;
   justify-self: end;
-  color: var(--error);
+  color: var(--color-danger);
 }
 
 .session-delete:hover {
-  border-color: var(--error);
+  border-color: var(--color-danger);
 }
 
 .session-list {
-  background: var(--surface);
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius);
+  background: var(--color-surface);
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 /* "restarted": a session kept when Start over was chosen (endedBy "startOver"). */
 .session-tag {
   display: inline-block;
-  font-size: 0.72rem;
+  font-size: var(--fs-12);
   font-weight: 700;
   padding: 1px 8px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  color: var(--muted);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-pill);
+  color: var(--color-text-muted);
   white-space: nowrap;
   vertical-align: 1px;
 }
 
 .session-item-focus {
-  font-size: 1.2rem;
-  font-weight: 800;
+  font-size: var(--fs-20);
+  font-weight: var(--weight-number);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -1629,7 +1993,7 @@ a {
 }
 
 .avatar-page h1 {
-  font-size: 1.6rem;
+  font-size: var(--fs-26);
 }
 
 /* The preview stays at the top while the options scroll under it. Its height follows the screen,
@@ -1643,8 +2007,8 @@ a {
   gap: 12px;
   margin: 0 -16px 20px;
   padding: 8px 16px;
-  background: var(--bg);
-  border-bottom: 1px solid var(--border);
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-divider);
 }
 
 .avatar-preview-img {
@@ -1690,7 +2054,7 @@ a {
 
 .editor-section legend h3 {
   margin: 0 0 10px;
-  font-size: 1.05rem;
+  font-size: var(--fs-16);
   line-height: 1.2;
 }
 
@@ -1698,7 +2062,7 @@ a {
    one. The arrow turns when it's open. */
 .editor-group {
   margin: 0 0 12px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--color-divider);
 }
 
 .editor-group > summary {
@@ -1718,7 +2082,7 @@ a {
 
 .editor-group > summary h2 {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: var(--fs-20);
   min-width: 0;
   overflow-wrap: anywhere;
 }
@@ -1729,8 +2093,8 @@ a {
   width: 11px;
   height: 11px;
   margin: 0 6px 4px 0;
-  border-right: 2.5px solid var(--text);
-  border-bottom: 2.5px solid var(--text);
+  border-right: 2.5px solid var(--color-text);
+  border-bottom: 2.5px solid var(--color-text);
   transform: rotate(45deg);
   transition: transform 0.15s;
 }
@@ -1741,7 +2105,7 @@ a {
 }
 
 .editor-group > summary:focus-visible {
-  outline: 3px solid var(--primary);
+  outline: 3px solid var(--color-focus);
   outline-offset: 2px;
   border-radius: 8px;
 }
@@ -1772,26 +2136,22 @@ a {
   min-height: 44px;
   padding: 4px 4px 6px;
   font: inherit;
-  color: var(--text);
-  background: var(--surface);
-  border: 2px solid var(--border);
-  border-radius: 12px;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 2px solid transparent;
+  border-radius: var(--radius-tile);
   cursor: pointer;
+  transition: transform var(--dur) var(--ease), opacity var(--dur) var(--ease);
 }
 
 @media (hover: hover) {
   .preset:hover {
-    border-color: var(--primary);
+    border-color: var(--color-accent);
   }
 }
 
-.preset:focus-visible {
-  outline: 3px solid var(--primary);
-  outline-offset: 2px;
-}
-
 .preset-label {
-  font-size: 0.8rem;
+  font-size: var(--fs-13);
   font-weight: 600;
   line-height: 1.2;
   text-align: center;
@@ -1848,22 +2208,21 @@ a {
   min-height: 44px;
   padding: 6px 16px;
   font-weight: 600;
-  color: var(--text);
-  background: var(--surface);
-  border: 1.5px solid var(--border);
-  border-radius: 999px;
+  color: var(--color-text);
+  background: var(--color-control);
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-pill);
   cursor: pointer;
   overflow-wrap: anywhere;
 }
 
 .theme-input:checked + .theme-chip-text {
-  color: var(--primary-text);
-  background: var(--primary);
-  border-color: var(--primary);
+  color: var(--color-on-accent);
+  background: var(--color-accent);
 }
 
 .theme-input:focus-visible + .theme-chip-text {
-  outline: 3px solid var(--primary);
+  outline: 3px solid var(--color-focus);
   outline-offset: 2px;
 }
 
@@ -1873,11 +2232,11 @@ a {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--primary);
+  background: var(--color-accent-text);
 }
 
 .theme-input:checked + .theme-chip-text .theme-dot {
-  background: var(--primary-text);
+  background: var(--color-on-accent);
 }
 
 .text-input {
@@ -1885,14 +2244,14 @@ a {
   min-height: 44px;
   padding: 10px 12px;
   font: inherit;
-  color: var(--text);
-  background: var(--surface);
-  border: 1.5px solid var(--border);
-  border-radius: 12px;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-field-border);
+  border-radius: var(--radius-field);
 }
 
 .text-input[aria-invalid="true"] {
-  border-color: var(--error);
+  border-color: var(--color-danger);
 }
 
 /* Radio-style grids: the real radio button is invisible (but focusable, so arrow keys and screen
@@ -1940,17 +2299,17 @@ a {
   min-height: 44px;
   height: 100%;
   padding: 4px;
-  background: var(--surface);
-  border: 2px solid var(--border);
-  border-radius: 12px;
+  background: var(--color-surface);
+  border: 2px solid transparent;
+  border-radius: var(--radius-tile);
   font-weight: 600;
   text-align: center;
 }
 
 .option-input:checked + .option-visual {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px var(--primary);
-  background: color-mix(in srgb, var(--primary) 10%, var(--surface));
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-accent);
+  background: var(--color-accent-soft);
 }
 
 /* A check mark in the corner of the picked option, so it isn't marked by colour alone. */
@@ -1962,11 +2321,11 @@ a {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: var(--primary) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5 10.5 L8.5 14 L15 6.5' fill='none' stroke='white' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 100% no-repeat;
+  background: var(--color-accent) var(--img-check-on-accent) center / 100% no-repeat;
 }
 
 .option-input:focus-visible + .option-visual {
-  outline: 3px solid var(--primary);
+  outline: 3px solid var(--color-focus);
   outline-offset: 2px;
 }
 
@@ -1975,7 +2334,7 @@ a {
 .option-group-title {
   grid-column: 1 / -1;
   margin: 10px 0 0;
-  font-size: 1rem;
+  font-size: var(--fs-16);
 }
 
 .option-img {
@@ -2005,7 +2364,7 @@ a {
   width: 100%;
   aspect-ratio: 1;
   border-radius: 8px;
-  border: 1px solid rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--swatch-border);
 }
 
 .personality-options {
@@ -2018,38 +2377,40 @@ a {
    background otherwise). The picked one gets a ring and the check mark. */
 .personality-option .option-visual {
   padding: 8px 16px;
-  font-size: 0.95rem;
-  color: #fff;
+  font-size: var(--fs-15);
+  color: var(--color-on-personality);
   border: 2px solid transparent;
+  border-radius: var(--radius-pill); /* a badge, not a tile */
 }
 
 .personality-option .option-visual.badge-relaxed,
 .personality-option .option-input:checked + .option-visual.badge-relaxed {
-  background: var(--relaxed);
+  background: var(--color-relaxed);
 }
 
 .personality-option .option-visual.badge-firm,
 .personality-option .option-input:checked + .option-visual.badge-firm {
-  background: var(--firm);
+  background: var(--color-firm);
 }
 
 .personality-option .option-visual.badge-strict,
 .personality-option .option-input:checked + .option-visual.badge-strict {
-  background: var(--strict);
+  background: var(--color-strict);
 }
 
 .personality-option .option-visual.badge-ragebait,
 .personality-option .option-input:checked + .option-visual.badge-ragebait {
-  background: var(--ragebait);
+  background: var(--color-ragebait);
 }
 
 .personality-option .option-input:checked + .option-visual {
-  border-color: var(--surface);
-  box-shadow: 0 0 0 3px var(--text);
+  border-color: var(--color-surface);
+  box-shadow: 0 0 0 3px var(--color-text);
 }
 
 .personality-option .option-input:checked + .option-visual::after {
-  background-color: var(--text);
+  background-color: var(--color-text);
+  background-image: var(--img-check-on-text);
 }
 
 .editor-actions {
@@ -2086,7 +2447,7 @@ a {
 
   /* No side padding: four chips share about 240px, and "90 perc" needs nearly all of its quarter. */
   dialog .chip {
-    font-size: 0.9375rem;
+    font-size: var(--fs-15);
     padding: 6px 0;
   }
 
@@ -2207,7 +2568,7 @@ a {
   }
 
   .timer {
-    font-size: clamp(4rem, 6vw, 5.5rem);
+    font-size: var(--timer-size-wide);
   }
 
   /* Only as wide as its column now, not the whole screen. */
@@ -2251,12 +2612,12 @@ a {
   }
 
   .timer {
-    font-size: 2.5rem;
+    font-size: var(--fs-40);
     line-height: 1.1;
   }
 
   .distraction h2 {
-    font-size: 1rem;
+    font-size: var(--fs-16);
     margin-bottom: 6px;
   }
 
@@ -2358,7 +2719,7 @@ a {
     gap: 6px;
     align-content: start;
     padding: 0;
-    background: var(--bg);
+    background: var(--color-bg);
     border: none;
     border-radius: 0;
     box-shadow: none;
@@ -2373,7 +2734,7 @@ a {
   /* Same size and spacing as the question it replaces ("Got distracted? How much?"). */
   .category-prompt {
     grid-column: 1 / -1;
-    font-size: 1rem;
+    font-size: var(--fs-16);
     line-height: 1.2;
     text-align: center;
   }
@@ -2387,7 +2748,7 @@ a {
   /* A touch smaller, so "Thoughts" fits a third of the picker even on a 568x320 phone. */
   .category-buttons .btn {
     padding: 8px 2px;
-    font-size: 0.9375rem;
+    font-size: var(--fs-15);
   }
 
   /* The card fills the block. If its message doesn't fit, app.js (fitMotivationCard) makes the
@@ -2395,16 +2756,16 @@ a {
      It never grows the block, so it can't push the bar off the screen. */
   .motivation-card {
     padding: 8px 44px 8px 12px;
-    font-size: 0.9375rem;
+    font-size: var(--fs-15);
     overflow-y: auto;
   }
 
   .motivation-card.fit-1 {
-    font-size: 0.875rem;
+    font-size: var(--fs-14);
   }
 
   .motivation-card.fit-2 {
-    font-size: 0.8125rem;
+    font-size: var(--fs-13);
   }
 
   .motivation-card p {
@@ -2421,61 +2782,97 @@ a {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .char-img,
-  .stage {
-    animation: none !important;
-  }
+/* ---------- header controls: the light/dark switch and the language button ---------- */
 
-  .editor-group > summary::after {
-    transition: none;
-  }
-}
-
-/* ---------- language button and sheet (js/language-picker.js) ---------- */
-
-/* The button: top right of the setup screen's and the history page's header. Where it would come
-   near the centred title (every phone), it sits on its own row above the title, right-aligned, so
-   the title stays centred and never overlaps it. 520px: the widest title (ConcenTraining) plus the
-   button on both sides, checked in every language. See "Languages" in the README. */
-.app-header {
-  position: relative;
-}
-
-.header-lang {
+/* On the setup screen and the history page, in a row of their own above the title, right-aligned:
+   the switch, 8px, the language button. Together they are about 183px wide, and the widest title
+   ("La tua cronologia", 251px) centred in the 600px column leaves less than that beside it, so
+   they never sit next to the title, at any width. See "Light and dark" in the README. */
+.header-tools {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
   margin: -8px 0 8px;
 }
 
-@media (min-width: 520px) {
-  .header-lang {
-    position: absolute;
-    top: -6px;
-    right: 0;
-    margin: 0;
-  }
+/* The light/dark switch (js/theme.js): a pill with a sun on the left and a moon on the right, and
+   an amber knob behind the icon of the theme that's showing. 84px = 4 + 36 + 4 + 36 + 4, so the
+   knob moves 40px. Where the knob is and which icon is on it come from the theme's tokens
+   (--dark-switch-*), not from a script, so the switch is right from the very first paint and can
+   never disagree with the page. */
+.dark-switch {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+  width: 84px;
+  height: 44px;
+  padding: 4px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--header-control-bg);
+  box-shadow: var(--header-control-shadow);
+  cursor: pointer;
 }
 
-/* Secondary style: surface, the 1.5px border token, fully rounded, at least 44px tall. */
+.dark-switch:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+.dark-switch-knob {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  transform: translateX(var(--dark-switch-shift));
+  transition: transform 200ms ease-out;
+}
+
+.dark-switch-icon {
+  position: relative;
+  z-index: 1; /* above the knob */
+  flex: none;
+  width: 36px;
+  height: 20px;
+  margin: 8px 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.dark-switch-sun {
+  margin-right: 4px;
+  color: var(--dark-switch-sun);
+}
+
+.dark-switch-moon {
+  color: var(--dark-switch-moon);
+}
+
+/* The language button (js/language-picker.js): the same surface and soft shadow as the switch,
+   fully rounded, at least 44px tall. */
 .lang-pill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   min-height: 44px;
   padding: 0 12px 0 10px;
-  border: 1.5px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--text);
-  font-size: 0.9375rem;
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-pill);
+  background: var(--header-control-bg);
+  box-shadow: var(--header-control-shadow);
+  color: var(--color-text);
+  font-size: var(--fs-15);
   font-weight: 600;
   letter-spacing: 0.02em;
   cursor: pointer;
-}
-
-.lang-pill:hover {
-  border-color: var(--muted);
+  transition: transform var(--dur) var(--ease), opacity var(--dur) var(--ease);
 }
 
 .lang-pill svg {
@@ -2496,7 +2893,7 @@ a {
   width: 16px;
   height: 16px;
   stroke-width: 2;
-  color: var(--muted);
+  color: var(--color-text-muted);
 }
 
 /* The sheet: a <dialog> at the bottom of the screen, as wide as the other dialogs on wide screens.
@@ -2507,7 +2904,7 @@ dialog.language-sheet,
   max-width: 100vw;
   margin: auto auto 0;
   padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
-  border-radius: var(--radius) var(--radius) 0 0;
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
   max-height: calc(100vh - 24px);
   max-height: calc(100svh - 24px);
   overflow-x: hidden;
@@ -2518,7 +2915,7 @@ dialog.language-sheet,
   width: 36px;
   height: 4px;
   border-radius: 2px;
-  background: var(--border);
+  background: var(--color-divider);
   margin: 0 auto 12px;
 }
 
@@ -2531,12 +2928,12 @@ dialog.language-sheet,
   list-style: none;
   margin: 0;
   padding: 0;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
+  border-top: 1px solid var(--color-divider);
+  border-bottom: 1px solid var(--color-divider);
 }
 
 .language-list li + li {
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--color-divider);
 }
 
 .language-row {
@@ -2548,7 +2945,7 @@ dialog.language-sheet,
   padding: 8px 20px;
   border: none;
   background: none;
-  color: var(--text);
+  color: var(--color-text);
   text-align: left;
   cursor: pointer;
 }
@@ -2558,7 +2955,7 @@ dialog.language-sheet,
 }
 
 .language-row[aria-current="true"] {
-  background: color-mix(in srgb, var(--primary) 8%, var(--surface));
+  background: var(--color-accent-soft);
 }
 
 .language-names {
@@ -2569,22 +2966,19 @@ dialog.language-sheet,
   overflow-wrap: anywhere;
 }
 
-.language-native {
-  font-weight: 700;
-}
-
 .language-english {
-  color: var(--muted);
-  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  font-size: var(--fs-14);
 }
 
+/* No outline, like the other pills; the see-through border keeps its size. */
 .language-beta {
   flex: none;
   padding: 2px 8px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  color: var(--muted);
-  font-size: 0.6875rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  color: var(--color-text-muted);
+  font-size: var(--fs-11);
   font-weight: 700;
   letter-spacing: 0.06em;
 }
@@ -2594,7 +2988,7 @@ dialog.language-sheet,
   width: 22px;
   height: 22px;
   fill: none;
-  stroke: var(--primary);
+  stroke: var(--color-accent-text);
   stroke-width: 2.5;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -2603,4 +2997,27 @@ dialog.language-sheet,
 .language-sheet .language-report {
   margin: 4px 0 0;
   text-align: center;
+}
+
+/* ---------- reduced motion ---------- */
+
+/* "Reduce motion" in the phone's or computer's settings: no breathing or reactions, no press
+   movement, and the light/dark switch's knob changes sides without sliding. Kept at the end of the
+   file, so it wins over every rule above. */
+@media (prefers-reduced-motion: reduce) {
+  .char-img,
+  .stage {
+    animation: none !important;
+  }
+
+  .editor-group > summary::after,
+  .btn,
+  .chip,
+  .lang-pill,
+  .char-card,
+  .choice,
+  .preset,
+  .dark-switch-knob {
+    transition: none;
+  }
 }

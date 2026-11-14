@@ -217,7 +217,7 @@ there, see [Domain, redirect and security headers](#domain-redirect-and-security
   line fits, and it covers the lost first part too.
 - **Stop** (the right button of the bottom bar, where End session used to be: same place, style and
   size) asks "Stop for now?". Because the dialog covers the timer, a line right under the title shows
-  that the clock keeps running: a small static orange dot (`--primary`), muted "Timer still running · "
+  that the clock keeps running: a small static amber dot (`--color-accent-text`), muted "Timer still running · "
   and the remaining time in bold ("Timer still running · 16:41"), the same value and format as the
   timer, updated every second with the same tick (tabular numbers, so it doesn't wobble). Screen
   readers read it once as the dialog's description when it opens; it isn't a live region, so the
@@ -246,8 +246,8 @@ there, see [Domain, redirect and security headers](#domain-redirect-and-security
   - The clock stops at the tap, so the planned end moves later by the length of every break. A
     break is never session time: it doesn't count in the elapsed time, the focus %, the result, the
     stats or the 1-minute rule.
-  - **Paused screen:** the timer digits are dimmed (40%, `--paused-opacity` in `style.css`) and the
-    progress bar fill turns a light neutral grey that reads as "stopped" (`--paused-progress`, with
+  - **Paused screen:** the timer digits are dimmed (50%, `--timer-paused-opacity` in `style.css`) and the
+    progress bar fill turns a neutral that reads as "stopped" (`--color-paused`, with
     its own value in dark mode: visible on the track, but quieter than the dimmed digits). The
     distraction block is replaced by centred text, with no box around it: **Paused** and, under it,
     "Break · 2:14", counting up from the start of the break (m:ss, h:mm:ss from 1 hour, no upper
@@ -1227,7 +1227,7 @@ page again after nothing happened draws nothing, and an Import only draws once (
 | `ct_session_v1` | The session that's running right now (removed when it ends). `characterName`: only with a custom character (its name when the session started). `restartPending: true` while the continue/restart question is unanswered; older saved sessions don't have it, which means `false`. `leftAt` (timestamp in ms): only while the page is hidden, for the time away card; missing means the page wasn't left. Never copied into the history. `pausedAt` (timestamp in ms, or `null`): when the current break started (see **Take a break**). `pauses` (`[{ at, ms }]`): the breaks that are over. Sessions saved before breaks existed have neither, which means never paused |
 | `ct_history_v1` | Finished sessions, newest first, max. 1000 |
 | `ct_custom_characters_v1` | Characters made in the editor: `{ v: 1, characters: [ { id, name, personality, createdAt, look: { gender, skin, hairColor, hairStyle, face, outfit, eyewear, earrings, necklace, facialHair, headwear, mask, earsHorns, costumeBeard, costumeOutfit, back, held, pet } } ] }`. The 8 costume fields are optional: characters saved before costumes don't have them, which means None. `id` is `custom-` plus 10 random letters/digits, never reused (a new id also avoids every id in the history). `personality` is the style its sessions run in. Reading never fails: a broken entry is skipped (not the whole list), an unknown look value gets the default. See [Custom characters](#custom-characters) |
-| `ct_prefs_v1` | Last chosen character, mode and duration, plus `endSound` and `keepScreenOn` (the two setup checkboxes, `true`/`false`). Prefs saved before these existed get `true` for both. `leaveReminder`: the **Remind me if I leave the app** checkbox (see [Leave reminder](#leave-reminder)); prefs saved before it existed get `false`. `homeScreenTipDismissed`: `true` once **Got it** was tapped on the iPhone Home Screen tip. `persistRequested`: `true` once persistent storage was asked for (or skipped in Firefox), see [iPhone storage and the Home Screen app](#iphone-storage-and-the-home-screen-app). Prefs saved before these two existed get `false` for both. `howItWorksDismissed`: `true` once **Got it** was tapped on the How it works card; prefs saved before it existed get `false`, so the card shows once. `language`: only once a language was picked in the language sheet (`"en"`, `"hu"`); without it the app follows the browser's language (see [Languages](#languages)). A `style` value saved by older versions is ignored and dropped. Saved field by field (see [Several tabs](#several-tabs-one-tab-at-a-time)) |
+| `ct_prefs_v1` | Last chosen character, mode and duration, plus `endSound` and `keepScreenOn` (the two setup checkboxes, `true`/`false`). Prefs saved before these existed get `true` for both. `leaveReminder`: the **Remind me if I leave the app** checkbox (see [Leave reminder](#leave-reminder)); prefs saved before it existed get `false`. `homeScreenTipDismissed`: `true` once **Got it** was tapped on the iPhone Home Screen tip. `persistRequested`: `true` once persistent storage was asked for (or skipped in Firefox), see [iPhone storage and the Home Screen app](#iphone-storage-and-the-home-screen-app). Prefs saved before these two existed get `false` for both. `howItWorksDismissed`: `true` once **Got it** was tapped on the How it works card; prefs saved before it existed get `false`, so the card shows once. `language`: only once a language was picked in the language sheet (`"en"`, `"hu"`); without it the app follows the browser's language (see [Languages](#languages)). `theme`: `"light"` or `"dark"`, only once the light/dark switch was tapped; without it the app follows the phone's setting (see [Light and dark](#light-and-dark)). A `style` value saved by older versions is ignored and dropped. Saved field by field (see [Several tabs](#several-tabs-one-tab-at-a-time)) |
 
 Each history entry: `startedAt`, `endedAt` (timestamps in ms), `endedBy` (`"timer"`/`"manual"`/`"startOver"`),
 `characterId`, `characterName` (custom characters only, see [Custom characters](#custom-characters);
@@ -1292,9 +1292,11 @@ doesn't do this.
 - **Web app manifest** (`public/manifest.webmanifest`, a small file that tells the phone the app's
   name, icon and colors): makes "Add to Home Screen" on iPhone and "Install app" on Android open the
   app full screen, without the address bar, with the ConcenTraining name and icon. Start page and
-  scope are the site root. Background and theme color are the light theme's `--bg` (`#f6f3ee`). Each
-  page also has two `theme-color` metas (light `#f6f3ee`, dark `#17161b`, each with its own
-  `prefers-color-scheme` media query), so the browser bar matches the page in both modes.
+  scope are the site root. Background and theme color are the light theme's page background
+  (`--color-bg`, `#f5ede0`). Each page also has two `theme-color` metas (light `#f5ede0`, dark
+  `#12172b`, each with its own `prefers-color-scheme` media query), and `js/theme.js` gives both the
+  colour of the theme that's showing, so the browser bar matches the page (see
+  [Light and dark](#light-and-dark)).
 - **Home Screen tip** (setup screen): a small card with why (the 7-day rule), how ("tap Share (or
   ••• → Share), then Add to Home Screen") and the catch: **the Home Screen app has its own separate
   storage on iPhone**, so the current history doesn't move over by itself. Export it in Safari first,
@@ -1320,7 +1322,8 @@ doesn't do this.
   permission bar right after the session. Either way `persistRequested` is set in `ct_prefs_v1`, so
   it's only tried once.
 - **Icons** (`public/icons/`, `public/favicon.ico`): placeholders until the real character art, a
-  white crosshair with a brain in the middle on the app's orange. The source is
+  white crosshair with a brain in the middle on orange (the colour of the look before Night Lamp;
+  they weren't redrawn). The source is
   `public/icons/icon.svg` (edit this one). The PNGs are rendered from it: `apple-touch-icon.png`
   (180, full square without transparency, iOS rounds the corners), `icon-192.png` and
   `icon-512.png` (rounded corners), and `icon-maskable-512.png` (full square, the picture shrunk to
@@ -1424,8 +1427,10 @@ rights (required before launch, GDPR Art. 13). It's linked as a small grey **Pri
 the session or summary screens, or in dialogs. "← Back to the timer" at the top and bottom goes to
 `./`, like on `history.html`; the phone's Back button returns to where you came from.
 
-- The page has **no scripts**: opening it reads and saves nothing in localStorage, takes no session
-  lock and registers nothing (it doesn't load `sw-register.js`).
+- The page has **one script**, `js/theme.js` in `<head>`: it reads the saved light/dark choice, so the
+  page shows in the same theme as the app (see [Light and dark](#light-and-dark)). The page has no
+  switch, so opening it saves nothing; it takes no session lock and registers nothing (it doesn't
+  load `sw-register.js`).
 - **Keep it true:** whenever data handling changes (a new request to a server, new data stored on
   the device or the server, a new third-party service, accounts or payments), update
   `public/privacy.html` and its "Last updated" date in the same pull request (also a rule in
@@ -1508,14 +1513,15 @@ and the **export file is exactly the same in every language**. Import problems a
 ### The language button and sheet
 
 - A pill at the top right of the setup screen's header and the history page's header: a globe icon,
-  the code ("EN", "HU") and a small chevron, secondary style (surface, 1.5px border, fully rounded),
-  44px tall. Screen readers hear "Language: English" / "Nyelv: magyar". Below 520px wide (every phone)
-  it sits on its own row above the title, right-aligned, so the title stays centred and never
-  overlaps it. It's not on the timer, summary or editor screens (they follow the language too).
+  the code ("EN", "HU") and a small chevron, on the card colour with the cards' soft shadow, no
+  outline, fully rounded, 44px tall. Screen readers hear "Language: English" / "Nyelv: magyar". It
+  sits in a row of its own above the title, right-aligned, to the right of the light/dark switch
+  (8px between them), at every width, so the title stays centred and never touches them (see
+  [Light and dark](#light-and-dark)). It's not on the timer, summary or editor screens (they follow the language too).
 - Tapping it opens a bottom sheet (a `<dialog>`, so focus, Esc / Android Back and screen readers work
   like the other dialogs; a tap on the dimmed page closes it too): a grab bar, "Language", one row
   per language (at least 52px), each with its native name in bold (with a matching `lang`), the
-  English name under it in muted text (not for English), a check and a light orange background on
+  English name under it in muted text (not for English), a check and a light amber background on
   the current one, and a "BETA" pill (never translated) on unreviewed ones. At the bottom, "Report a
   translation issue" opens an email to concentrainer@gmail.com with the subject "Translation issue
   (hu)" (always English, so reports can be filtered). No animation, like the app's other dialogs.
@@ -1688,8 +1694,8 @@ without service workers, or if registering fails (e.g. `index.html` opened as a 
 works online exactly as before.
 
 - **First online visit (install):** the service worker downloads every file needed to start a
-  session (the `PRECACHE` list in `sw.js`: the pages, CSS, all JS including every language's texts,
-  manifest, icons, favicon) into a
+  session (the `PRECACHE` list in `sw.js`: the pages, CSS, the four font files, all JS including every
+  language's texts, manifest, icons, favicon) into a
   cache named `concentraining-v<CACHE_VERSION>`. If any file fails, nothing is saved and it tries
   again on a later visit. `stats.html` (and `js/stats.js`) is left out: it needs `api/stats` anyway.
   The install asks with `cache: "no-cache"`: each file is checked with the server, so it's always
@@ -1738,8 +1744,8 @@ works online exactly as before.
   ignored).
 - **Real character artwork** (`public/assets/...`) isn't in the precache list. Each image is saved
   the first time it loads online and is available offline after that.
-- **When you add, remove or rename a file the app needs at startup** (a page, CSS, a JS file, an
-  icon), update `PRECACHE` in `public/sw.js` and raise `CACHE_VERSION`. Forgetting doesn't break
+- **When you add, remove or rename a file the app needs at startup** (a page, CSS, a JS file, a font,
+  an icon), update `PRECACHE` in `public/sw.js` and raise `CACHE_VERSION`. Forgetting doesn't break
   the online app, but a new file wouldn't work offline until it has been loaded online once, and a
   removed one would make the install fail (no offline support at all) until the list is fixed.
 - **Deploy Previews** are separate sites (own address), so they have their own service worker and
@@ -1766,6 +1772,159 @@ combines them. If it happens, it depends on what changed: usually nothing visibl
 JavaScript error, so the app doesn't start properly or a button doesn't work. Saved data is safe
 (the localStorage keys never change, and older code ignores fields it doesn't know). Reloading
 once with a decent connection fixes it, because every online start refreshes all the files.
+
+## Design system
+
+The app has one look, **Night Lamp**: parchment paper by day, midnight blue with amber lamp light by
+night. Soft cards without outlines (a shadow instead of a border), pill buttons, 22px corners, and
+in the dark theme a warm glow behind the character and around the timer. All of it is in
+`public/css/style.css`; there is no second stylesheet and no design switch.
+
+| | Light | Dark |
+|---|---|---|
+| Page | parchment `#F5EDE0` | midnight `#12172B` |
+| Cards, dialogs, fields | `#FFFAF2` | `#1B2240` |
+| Text | espresso `#2B2118` | `#F3E9D8` |
+| Grey text | `#66584A` | `#B0AEC4` |
+| Amber as a fill (primary buttons, picked chips, the switch's knob, progress bar, rings) | burnt amber `#B4541A`, white text on it | lamp amber `#FFB454`, dark ink `#2B1A05` on it |
+| Amber as text (links, labels, chart lines) | `#9A4410` | `#FFB454` |
+
+Burnt amber `#B4541A` is only 4.28:1 as text on the parchment page, so amber *text* uses the darker
+`#9A4410` (5.63:1). In the dark theme one amber does both jobs.
+
+### Tokens (three layers)
+
+A **token** is a named value (a CSS custom property, e.g. `--color-accent`) that the rules use
+instead of writing the value itself, so a colour or size is changed in one place. They are at the
+top of `style.css`, in three layers:
+
+1. **Primitives**: the palette, named by what they are (`--parchment-100`, `--amber-600`,
+   `--midnight-900`, `--ramp-1` …). This is the only place where a raw colour (`#b4541a`) is
+   written. No rule uses a primitive.
+2. **Semantic tokens**: named by what they are for (`--color-bg`, `--color-surface`, `--color-text`,
+   `--color-text-muted`, `--color-accent`, `--color-on-accent`, `--color-accent-text`,
+   `--color-focus`, `--color-danger`, `--color-divider`, `--shadow-card`, `--radius-card`,
+   `--font-body`, the type scale `--fs-…`, `--dur`). Each points at a primitive. The dark theme only
+   changes this layer (and a few component tokens).
+3. **Component tokens**: one component's own values, built from semantic tokens only (`--timer-size`,
+   `--timer-glow`, `--level-tint`, `--stage-glow`, `--char-outline`, `--swatch-border`,
+   `--header-control-bg`, `--dark-switch-shift` …).
+
+Rules for changing the stylesheet:
+
+- A rule uses semantic or component tokens, never a primitive and never a raw colour. A see-through
+  colour is written as `color-mix(in srgb, var(--color-text) 30%, transparent)` (the colour at 30%
+  opacity).
+- A new colour: add the primitive, then a semantic token that points at it, for **both** themes.
+- The dark theme's block is in the file **twice with the same content**: once for
+  `:root[data-theme="dark"]` and once inside `@media (prefers-color-scheme: dark)` (see
+  [Light and dark](#light-and-dark)). There is no build step that could share one block, so a
+  change to one must be made to the other.
+- Every text and its background must reach 4.5:1 (3:1 for large text: 24px, or 18.66px bold), in
+  both themes. Marks that carry meaning (rings, bars, the switch's knob, field edges) reach 3:1.
+
+What isn't a border any more still has one in the CSS: buttons, chips and cards keep a see-through
+`1.5px` border, so their measured sizes didn't change and a picked card can show its amber ring
+without moving anything. Real edges are kept where they carry meaning: text fields, the distraction
+buttons, Undo, Stop next to the amber button, a disabled button, and hairlines between rows.
+
+**Cues that don't rely on colour:** a picked character, mode or editor option gets a ring, a tint and
+a check mark. The five distraction buttons are tinted from yellow to red and also have a band under
+the word that grows from Barely to Completely (yellow can't be told from white by colour alone).
+
+**The character** stands on a calm, pattern-free light (`--stage-glow`: the card colour by day, a
+warm lamp glow by night) and has an outline (`--char-outline`) made with `drop-shadow`, which
+follows the artwork's own transparent edge instead of drawing a box. So light and dark artwork both
+stand out from the page in both themes, and new art needs no background of its own.
+
+### Fonts
+
+| Family | Used for | Files (`public/fonts/…`) | Size |
+|---|---|---|---|
+| **Fraunces 600** | Headings only (`h1`–`h3`, the character names, the Quick start line, "Paused", the language names) | `fraunces/fraunces-latin-600-normal.woff2`, `fraunces/fraunces-latin-ext-600-normal.woff2` | 17.7 KB + 16.9 KB |
+| **Figtree** (variable: one file holds every weight) | Everything else: text, buttons, the timer and all other digits | `figtree/figtree-latin-wght-normal.woff2`, `figtree/figtree-latin-ext-wght-normal.woff2` | 19.7 KB + 10.0 KB |
+
+- **Self-hosted:** the files are part of the site (`public/fonts/`), not loaded from a font service,
+  so no other company sees a visit, the CSP stays `default-src 'self'`, and they work offline. Both
+  are under the SIL Open Font License; each folder has its `OFL.txt`, which must stay next to the
+  files.
+- **Two files per family.** `unicode-range` in `style.css` tells the browser which characters each
+  file holds. The Latin file is always loaded (37 KB for both families); the Latin Extended file
+  only on a page that really shows such a character (ő, ű, ł, ą …), so in practice for Hungarian and
+  Polish.
+- **`font-display: swap`:** text shows at once in a system font and changes when the file arrives.
+  Every page preloads the two Latin files (`<link rel="preload">` in `<head>`: the browser fetches
+  them right away instead of after reading the stylesheet), which keeps that moment short.
+- **Offline:** all four files are in the service worker's `PRECACHE` list.
+- **Not in the fonts:** the arrows (→ ← ↓ in "Your history →", "← Back", "Change ↓") come from the
+  system font. Neither font has the French narrow no-break space (U+202F); the app doesn't use it.
+- Digits that change (timer, counters, percentages) use `font-variant-numeric: tabular-nums`, so
+  every digit is equally wide and nothing wobbles.
+
+### Type scale
+
+Every font size in `style.css` is one of 13 steps (`--fs-11` … `--fs-48`; the number is the size in
+px at the browser's default text size). They are written in `rem`, so they grow with the phone's or
+browser's text size setting.
+
+| Token | Size | Used for (examples) |
+|---|---|---|
+| `--fs-11` | 11px | "BETA" in the language list |
+| `--fs-12` | 12px | Badges, "restarted", the label on the motivation card |
+| `--fs-13` | 13px | Costume names, the smallest step of the motivation card on landscape phones |
+| `--fs-14` | 14px | Small text: taglines, hints, notes, Test sound |
+| `--fs-15` | 15px | The language button, the Quick start line, compact buttons on landscape phones |
+| `--fs-16` | 16px | Body text and buttons (the default), character names |
+| `--fs-18` | 18px | `h2`, the big Start button, "Paused" |
+| `--fs-20` | 20px | The editor's group titles, the focus % in the session list |
+| `--fs-22` | 22px | The "open in another tab" title, the × of the motivation card |
+| `--fs-26` | 26px | The editor's title, the numbers on the history cards |
+| `--fs-30` | 30px | `h1` |
+| `--fs-40` | 40px | The timer on landscape phones |
+| `--fs-48` | 48px | The focus % on the summary |
+
+Two sizes are not steps, on purpose: the timer (`--timer-size`, `--timer-size-wide`: it follows the
+screen's width between a smallest and a largest size) and the chart labels (12 units inside the
+chart's own drawing, which is scaled with the chart).
+
+### Light and dark
+
+- **The switch** is a pill (84×44px) with a sun on the left and a moon on the right, and an amber
+  knob (36px) behind the icon of the theme that's showing; a tap anywhere on it flips the theme, and
+  the knob slides 40px (200 ms, no movement with "reduce motion"). It's on the setup screen and the
+  history page, in a row of its own above the title, right-aligned: the switch, 8px, the language
+  button. Not on the session, summary, editor or privacy screens (they follow the theme too).
+  The pair is about 183px wide and the widest title ("La tua cronologia", 251px) is centred in a
+  column of at most 600px, so the pair can never sit beside the title without touching it: it has
+  its own row at every width, on desktop too.
+- **For screen readers and keyboards** it's a `<button role="switch">` called "Dark mode" (in the
+  page's language, `darkMode.label`), on (`aria-checked="true"`) in the dark theme. Tab reaches it,
+  Enter or Space flips it, and it has a visible focus ring.
+- **Which theme:** until the switch is tapped, the app follows the phone's (or browser's) own
+  light/dark setting, also when that changes while the app is open. The first tap saves the choice
+  as `theme: "light"` or `"dark"` in `ct_prefs_v1` (no new storage key); from then on the phone's
+  setting is ignored, on every page. There's no "back to automatic": clearing the site's data does
+  that. If the browser won't save, the tap still switches this page.
+- **How:** `js/theme.js` sets `data-theme="light"` or `"dark"` on `<html>`, and `style.css` has the
+  dark values under `:root[data-theme="dark"]`. If that script can't run, the same dark values
+  apply through `@media (prefers-color-scheme: dark)`, so the page still follows the phone.
+- **No flash of the wrong theme (no inline scripts):** `js/theme.js` is loaded in `<head>` of all
+  five pages as an ordinary script file, before the stylesheet. The browser runs such a script
+  before it draws anything, so the theme is already set for the first paint. (The CSP forbids inline
+  scripts, so it's a file; the same technique as `js/i18n.js`.) The switch's knob and icon colours
+  come from the theme's tokens in CSS, not from the script, so the switch can't show the wrong side
+  either.
+- **Saving** is read-merge-write like the language: only the `theme` field is written on top of
+  what's saved now, and `app.js`'s `savePrefs` keeps it.
+- **Other tabs and Back:** a tab follows a tap made in another tab (the `storage` event), and a page
+  the browser brings back as it was (Back) reads the choice again.
+- **The browser bar** (Android Chrome's address bar): each page has two `theme-color` metas with the
+  light and the dark page background. `js/theme.js` gives both the colour of the theme that's
+  showing, so the bar also follows a choice that differs from the phone's setting.
+- **The installed app's splash screen** uses the manifest's colours (parchment). The manifest is a
+  fixed file, so that one screen can't follow the switch.
+- `privacy.html` and `stats.html` load `js/theme.js` too, so they show in the same theme; they have
+  no switch.
 
 ## Layout (screen sizes)
 
@@ -1859,12 +2018,14 @@ and the timer keeps counting from the start time as always.
 | `public/index.html` | All screens (setup, session, summary, "open in another tab" notice) and dialogs |
 | `public/history.html` | Your finished sessions, streaks, time per week and focus trends |
 | `public/avatar.html` | The character editor (see [Custom characters](#custom-characters)) |
-| `public/privacy.html` | Privacy page: what stays on the device, what is sent to the server, hosting, your rights (no scripts) |
+| `public/privacy.html` | Privacy page: what stays on the device, what is sent to the server, hosting, your rights (its only script is `js/theme.js`) |
 | `public/stats.html` | Popularity table (not indexed by search engines) |
 | `public/js/stats.js` | Loads `/api/stats` and fills in the tables on `stats.html` (a file of its own because the CSP allows no inline scripts) |
 | `public/sw.js` | Service worker: offline start, network first with a 3-second fallback to the cache, precache list and cache version (see [Offline use](#offline-use)), and taps on the leave reminder notification |
 | `public/js/sw-register.js` | Registers `sw.js` from `index.html`, `history.html` and `avatar.html`; does nothing without service worker support |
-| `public/css/style.css` | Styling, light/dark mode, breathing and reaction animations, the wide and landscape layout (see [Layout](#layout-screen-sizes)) |
+| `public/css/style.css` | The one stylesheet: fonts, design tokens (primitives, semantic, component) for the light and the dark theme, the type scale (see [Design system](#design-system)), breathing and reaction animations, the wide and landscape layout (see [Layout](#layout-screen-sizes)) |
+| `public/fonts/` | Fraunces 600 and Figtree (woff2, Latin and Latin Extended) with their licence files (`OFL.txt`) |
+| `public/js/theme.js` | Light and dark: sets the theme on `<html>` before the first paint, the light/dark switch, the browser bar colour (see [Light and dark](#light-and-dark)) |
 | `public/js/data/characters.js` | Character list, groups and the personality each group gives (`personalityOf`), art paths, pose descriptions for screen readers (`POSE_DESCRIPTIONS`) |
 | `public/js/data/messages.js` | Motivation messages (each with a fixed `id`) and Simple-mode summary messages per result, in English; their translations are in the language files (also loaded by `history.html`) |
 | `public/js/i18n/languages.js` | The languages (code, names, speakers, beta flag, file, Intl settings) and the sheet's order rule (see [Languages](#languages)) |

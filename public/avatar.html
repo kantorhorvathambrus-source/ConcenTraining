@@ -3,6 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Light / dark (see "Light and dark" in the README): sets the theme on <html> before anything is
+       drawn, so the page never shows in the wrong theme first. -->
+  <script src="js/theme.js"></script>
   <!-- Languages (see "Languages" in the README): the list of languages, the English texts, then the
        system that picks the language and translates the page while it's built, so the English below
        never shows in another language. Before <title>, so the title is translated too. -->
@@ -13,10 +16,15 @@
   <meta name="description" content="Design your own ConcenTraining character.">
   <meta name="robots" content="noindex">
   <link rel="stylesheet" href="css/style.css">
-  <!-- Home Screen / install support. Colors: --bg of the light and dark theme (css/style.css). -->
+  <!-- The two font files every page needs, fetched right away (not only once the stylesheet has
+       been read), so the text shows in a system font for a shorter moment. -->
+  <link rel="preload" href="fonts/figtree/figtree-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/fraunces/fraunces-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <!-- Home Screen / install support. Colors: the page background (--color-bg) of the light and the dark
+       theme in css/style.css. js/theme.js gives both the colour of the theme that is showing. -->
   <link rel="manifest" href="manifest.webmanifest">
-  <meta name="theme-color" content="#f6f3ee" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#17161b" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f5ede0" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#12172b" media="(prefers-color-scheme: dark)">
   <link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48">
   <link rel="icon" href="icons/icon-192.png" type="image/png" sizes="192x192">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
