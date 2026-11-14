@@ -66,7 +66,7 @@ I18N_TEXTS.pl = {
 
   "tip.title": "Chroń swoją historię na iPhonie",
   "tip.text": "Safari może usunąć twoją historię i serię, jeśli nie otworzysz ConcenTraining przez 7 dni. Aplikacje na ekranie początkowym ją zachowują.",
-  "tip.howLabel": "Jak:",
+  "tip.howLabel": "Jak to zrobić:",
   "tip.how": "stuknij Udostępnij (lub ••• → Udostępnij), a potem Do ekranu początkowego.",
   "tip.importantLabel": "Ważne:",
   "tip.important":
@@ -104,7 +104,7 @@ I18N_TEXTS.pl = {
   "character.ragebaitText": "{name}: {warning}",
   "character.ragebaitCancel": "Wybiorę kogoś innego",
   "character.ragebaitOk": "Dawaj",
-  "character.poseAlt": "{name}, {pose}",
+  "character.poseAlt": "{name}: {pose}",
 
   "custom.createTitle": "Własna postać",
   "custom.createTagline": "Zaprojektuj własną postać i nadaj jej imię.",
@@ -209,7 +209,7 @@ I18N_TEXTS.pl = {
   "summary.title.okay": "Nieźle poszło!",
   "summary.title.rough": "Trudna sesja",
   "summary.title.early": "Koniec przed czasem",
-  "summary.title.short": "To było szybkie",
+  "summary.title.short": "Szybko poszło",
   "summary.shortNote": "Sesje krótsze niż 1 minuta nie są zapisywane w historii.",
   "summary.saveError":
     "Nie udało się zapisać tej sesji w historii: przeglądarka na to nie pozwoliła. Przyczyną może być pełna pamięć lub zablokowane dane witryny.",
@@ -269,7 +269,7 @@ I18N_TEXTS.pl = {
     other: "{count} rozproszenia",
   },
 
-  "history.timeTitle": "Czas w tygodniu",
+  "history.timeTitle": "Czas tygodniowo",
   "history.timeNote": "Wszystkie sesje z ostatnich 12 tygodni, w trybie Prostym i Szczegółowym.",
   "history.timeNone": "Brak sesji w ostatnich 12 tygodniach.",
   "history.timeNoneThisWeek": "W tym tygodniu nie ma jeszcze sesji.",
@@ -278,7 +278,7 @@ I18N_TEXTS.pl = {
   "history.timeChartLabel": "Czas spędzony na sesjach w każdym z ostatnich {count} tygodni",
   "history.timeBarTitle": "Tydzień od {date}: {time} ({sessions})",
 
-  "history.focusTitle": "Skupienie w tygodniu",
+  "history.focusTitle": "Skupienie tygodniowo",
   "history.focusNote": "Sesje w trybie Szczegółowym z ostatnich 12 tygodni. Dłuższe sesje liczą się bardziej.",
   "history.focusNone": "Brak sesji w trybie Szczegółowym w ostatnich 12 tygodniach. Użyj trybu Szczegółowego, aby zobaczyć, jak zmienia się twoje skupienie.",
   "history.focusNoneThisWeek": "W tym tygodniu nie ma jeszcze sesji w trybie Szczegółowym.",
@@ -328,7 +328,7 @@ I18N_TEXTS.pl = {
 
   "history.backupTitle": "Kopia zapasowa",
   "history.backupText":
-    "Twoje sesje zapisują się automatycznie na tym urządzeniu. Wyeksportuj kopię, jeśli zmieniasz telefon albo czyścisz dane przeglądarki. Eksport zapisuje wszystkie sesje w pliku .json. Import dodaje sesje z takiego pliku; te, które już masz, są pomijane. Przechowywanych jest tylko 1000 najnowszych sesji: jeśli łącznie będzie ich więcej niż 1000, najstarsze zostaną usunięte.",
+    "Twoje sesje zapisują się automatycznie na tym urządzeniu. Wyeksportuj kopię, zanim zmienisz telefon albo wyczyścisz dane przeglądarki. Eksport zapisuje wszystkie sesje w pliku .json. Import dodaje sesje z takiego pliku; te, które już masz, są pomijane. Przechowywanych jest tylko 1000 najnowszych sesji: jeśli łącznie będzie ich więcej niż 1000, najstarsze zostaną usunięte.",
   "history.export": "Eksportuj historię",
   "history.import": "Importuj historię",
   "history.backToTimer": "← Wróć do minutnika",

@@ -112,7 +112,7 @@
       <aside id="howItWorks" class="tip-card how-it-works" aria-labelledby="howItWorksTitle" hidden>
         <h2 id="howItWorksTitle" tabindex="-1" data-i18n="how.title">How it works</h2>
         <ul>
-          <li data-i18n="how.item1">Pick a character and a timer, then start focusing.</li>
+          <li data-i18n="how.item1">Pick a character and set the timer, then start focusing.</li>
           <li data-i18n="how.item2">When you notice your mind has wandered, tap how much (Simple) or how long (Advanced). Your character reacts with a pose, never with words. Noticing and coming back is the skill you're training.</li>
           <li data-i18n="how.item3">Need to step away for a moment? Tap Stop, then Take a break. The timer waits for you, and the break doesn't count against your focus.</li>
           <li data-i18n="how.item4">If you leave the app during a session, it asks when you're back whether you were distracted.</li>
@@ -124,7 +124,7 @@
       <!-- iPhone/iPad Safari only, once there's history to lose (updateHomeScreenTip in app.js). -->
       <aside id="homeScreenTip" class="tip-card" aria-labelledby="homeScreenTipTitle" hidden>
         <h2 id="homeScreenTipTitle" data-i18n="tip.title">Keep your history safe on iPhone</h2>
-        <p data-i18n="tip.text">Safari may erase your history and streak if you don't open ConcenTraining for 7 days. Apps on your Home Screen keep it.</p>
+        <p data-i18n="tip.text">Safari may erase your history and streak if you don't open ConcenTraining for 7 days. Apps on your Home Screen keep them.</p>
         <p><strong data-i18n="tip.howLabel">How:</strong> <span data-i18n="tip.how">tap Share (or ••• → Share), then Add to Home Screen.</span></p>
         <p>
           <strong data-i18n="tip.importantLabel">Important:</strong>
@@ -152,7 +152,7 @@
         <div class="choice-group" data-pref="mode">
           <button type="button" class="choice" data-value="simple">
             <strong data-i18n="mode.simple">Simple</strong>
-            <span data-i18n="setup.simpleText">Say how distracted you were with 5 buttons.</span>
+            <span data-i18n="setup.simpleText">Tap one of 5 buttons to say how distracted you were.</span>
           </button>
           <button type="button" class="choice" data-value="advanced">
             <strong data-i18n="mode.advanced">Advanced</strong>
@@ -203,7 +203,7 @@
         <!-- Gets focus when a session starts, so a screen reader reads it (focusScreenStart in app.js). -->
         <p id="sessionInfo" class="session-info muted" tabindex="-1"></p>
         <!-- Shown while the chime is on but the screen isn't being kept on (updateScreenNote in app.js). -->
-        <p id="screenNote" class="screen-note muted" role="status" hidden data-i18n="session.screenNote">Your screen may turn off. If it does, you won't hear the chime.</p>
+        <p id="screenNote" class="screen-note muted" role="status" hidden data-i18n="session.screenNote">Your screen may turn off. If it does, you won't hear the sound.</p>
         <!-- Shown when a session starts while the browser doesn't let the site save anything, or when
              Start new session couldn't save the abandoned part (showSaveErrorNote in app.js). -->
         <p id="saveErrorNote" class="screen-note error" role="status" hidden></p>

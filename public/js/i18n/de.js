@@ -293,7 +293,7 @@ I18N_TEXTS.de = {
 
   "history.backupTitle": "Sicherung",
   "history.backupText":
-    "Deine Runden werden automatisch auf diesem Gerät gespeichert. Exportiere eine Kopie, wenn du das Handy wechselst oder deine Browserdaten löschst. Beim Exportieren werden alle deine Runden als .json-Datei gespeichert. Beim Importieren werden die Runden aus so einer Datei hinzugefügt; Runden, die du schon hast, werden übersprungen. Nur die neuesten 1000 Runden bleiben erhalten: Wenn es insgesamt mehr als 1000 werden, werden die ältesten entfernt.",
+    "Deine Runden werden automatisch auf diesem Gerät gespeichert. Exportiere eine Kopie, bevor du das Handy wechselst oder deine Browserdaten löschst. Beim Exportieren werden alle deine Runden als .json-Datei gespeichert. Beim Importieren werden die Runden aus so einer Datei hinzugefügt; Runden, die du schon hast, werden übersprungen. Nur die neuesten 1000 Runden bleiben erhalten: Wenn es insgesamt mehr als 1000 werden, werden die ältesten entfernt.",
   "history.export": "Verlauf exportieren",
   "history.import": "Verlauf importieren",
   "history.backToTimer": "← Zurück zum Timer",
@@ -495,8 +495,8 @@ I18N_TEXTS.de = {
 
   // ---------- motivations and Simple summary sentences (js/data/messages.js) ----------
   // The facts stay as hedged as the English ones; their sources are next to the English text.
-  "motivation.general-1": "Bevor du anfängst: Was soll erledigt sein, wenn der Timer abläuft? Sag es in ein paar Worten.",
-  "motivation.general-2": "Ein langsamer Start ist normal. Gib dir ein paar Minuten, bevor du entscheidest, wie die Runde läuft.",
+  "motivation.general-1": "Bevor du anfängst: Was ist die eine Sache, die erledigt sein soll, wenn der Timer abläuft? Sag es in ein paar Worten.",
+  "motivation.general-2": "Ein langsamer Start ist normal. Gib dir ein paar Minuten, bevor du beurteilst, wie die Runde läuft.",
   "motivation.general-3": "Leg dein Handy so weit weg, dass du aufstehen müsstest, um es zu erreichen. Dieser eine Schritt reicht oft schon, um den Reflex zu stoppen.",
   "motivation.general-4": "Einige Studien fanden, dass schon ein Handy in Sichtweite das Denken etwas schwerer machen kann. Nicht alle kamen zu diesem Ergebnis. Ein anderer Raum ist die sichere Wahl.",
   "motivation.general-5": "Mach den ersten Schritt winzig: Datei öffnen, eine Zeile schreiben, einen Absatz lesen. Schwer ist das Anfangen, nicht der Schritt.",
@@ -563,7 +563,7 @@ I18N_TEXTS.de = {
   "summary.simple.okay.1": "Ein paar Ablenkungen haben sich eingeschlichen, aber du bist immer wieder zurückgekommen. Genau darum geht's.",
   "summary.simple.okay.2": "Nicht perfekt, aber solide. Jedes Zurückkommen hat gezählt.",
   "summary.simple.okay.3": "Ein paar Holperer unterwegs. Versuch nächstes Mal, dein Handy weiter weg zu legen.",
-  "summary.simple.okay.4": "Du hast echt was geschafft. Nimm dir fürs nächste Mal ein paar Ablenkungen weniger vor.",
+  "summary.simple.okay.4": "Du hast echt was geschafft. Peil fürs nächste Mal ein paar Ablenkungen weniger an.",
   "summary.simple.rough.1": "Diesmal viele Ablenkungen. Das passiert allen mal.",
   "summary.simple.rough.2": "Das war zäh. Eine kürzere Runde lässt sich nächstes Mal vielleicht leichter schützen.",
   "summary.simple.rough.3": "Dein Fokus wurde heute oft weggezogen. Morgen ist ein neuer Anfang.",

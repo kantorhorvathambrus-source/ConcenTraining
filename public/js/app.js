@@ -1403,7 +1403,7 @@ function askPendingRestart() {
 let restartPicker = null; // built again every time the dialog opens
 
 // Step 1 of the continue/restart dialog (its texts' keys). Simple mode has no times, so it doesn't
-// say "long break".
+// say "long distraction".
 const RESTART_TEXTS = {
   simple: { title: "restart.simpleTitle", text: "restart.simpleText" },
   advanced: { title: "restart.advancedTitle", text: "restart.advancedText" },

@@ -157,7 +157,7 @@ const SIMPLE_SUMMARY_MESSAGES = {
     "Some distractions crept in, but you kept coming back. That's the skill.",
     "Not perfect, but solid. Every time you came back counted.",
     "A few bumps along the way. Next time, try putting your phone further away.",
-    "You got real work done. Aim for a few fewer distractions next time.",
+    "You got real work done. Aim for fewer distractions next time.",
   ],
   rough: [
     "Lots of distractions this time. That happens to everyone.",

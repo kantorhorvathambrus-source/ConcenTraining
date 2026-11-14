@@ -61,7 +61,7 @@ I18N_TEXTS.en = {
   "quickStart.line": "{name}\u00a0· {mode}\u00a0· {minutes}\u00a0min",
 
   "how.title": "How it works",
-  "how.item1": "Pick a character and a timer, then start focusing.",
+  "how.item1": "Pick a character and set the timer, then start focusing.",
   "how.item2":
     "When you notice your mind has wandered, tap how much (Simple) or how long (Advanced). Your character reacts with a pose, never with words. Noticing and coming back is the skill you're training.",
   "how.item3":
@@ -71,7 +71,7 @@ I18N_TEXTS.en = {
   "how.item5Link": "Export on the history page →",
 
   "tip.title": "Keep your history safe on iPhone",
-  "tip.text": "Safari may erase your history and streak if you don't open ConcenTraining for 7 days. Apps on your Home Screen keep it.",
+  "tip.text": "Safari may erase your history and streak if you don't open ConcenTraining for 7 days. Apps on your Home Screen keep them.",
   "tip.howLabel": "How:",
   "tip.how": "tap Share (or ••• → Share), then Add to Home Screen.",
   "tip.importantLabel": "Important:",
@@ -83,7 +83,7 @@ I18N_TEXTS.en = {
   "setup.pickFirst": "Pick a character first.",
   "setup.yourCharacters": "Your characters",
   "setup.step2": "2. Choose a mode",
-  "setup.simpleText": "Say how distracted you were with 5 buttons.",
+  "setup.simpleText": "Tap one of 5 buttons to say how distracted you were.",
   "setup.advancedText": "Log how long you were distracted and see your focus % at the end.",
   "setup.step3": "3. How long do you want to focus?",
   "setup.endSound": "Play a sound when time's up",
@@ -122,7 +122,7 @@ I18N_TEXTS.en = {
   "custom.nameMissing": "Give your character a name.",
   "custom.nameTooLong": "Names can be up to {max} characters.",
   "custom.nameTaken": "You already have a character with this name.",
-  "custom.saveFailed": "Couldn't save your character. Your browser isn't letting this site store data.",
+  "custom.saveFailed": "Couldn't save your character. Your browser isn't letting this site save data.",
   "custom.deletedElsewhere": "This character was deleted in another tab, so it can't be saved.",
   "custom.ghostName": "Custom character",
 
@@ -137,7 +137,7 @@ I18N_TEXTS.en = {
   "session.info": "{name} · {style} · {mode} · {minutes} min",
   "session.promptSimple": "Got distracted? How much?",
   "session.promptAdvanced": "Got distracted? For how long?",
-  "session.screenNote": "Your screen may turn off. If it does, you won't hear the chime.",
+  "session.screenNote": "Your screen may turn off. If it does, you won't hear the sound.",
   "session.paused": "Paused",
   "session.break": "Break",
   "session.hideMessage": "Hide message",
@@ -183,12 +183,12 @@ I18N_TEXTS.en = {
   // ---------- dialogs ----------
   "restart.simpleTitle": "That was a big distraction",
   "restart.simpleText": "Keep going with this session, or start fresh? After a big distraction, starting over is often easier.",
-  "restart.advancedTitle": "That was a long break",
-  "restart.advancedText": "Keep going with this session, or start fresh? After a long break, starting over is often easier.",
+  "restart.advancedTitle": "That was a long distraction",
+  "restart.advancedText": "Keep going with this session, or start fresh? After a long distraction, starting over is often easier.",
   "restart.continue": "Continue this session",
   "restart.over": "Start over",
   "restart.lengthTitle": "How long should the new session be?",
-  "restart.save": "Save the first {duration} to history",
+  "restart.save": "Save the first {duration} to your history",
   "restart.startNew": "Start new session",
 
   "end.titleRunning": "Stop for now?",
@@ -240,8 +240,8 @@ I18N_TEXTS.en = {
   "history.subtitle": "Finished sessions saved on this device.",
   "history.storageBefore":
     "Your history is stored only in this browser. Clearing site data or using private mode deletes it, and it doesn't show up on other devices. Use",
-  // Names the Export button. Other languages keep it exactly as their history.export (checked).
-  "history.storageExport": "Export",
+  // Names the Export button: exactly the text of history.export, in every language (checked).
+  "history.storageExport": "Export history",
   "history.storageAfter": "below before you switch phones or clear your browser data.",
   "history.iosNote":
     "On iPhone and iPad, Safari may also erase it if you don't visit for 7 days. Adding ConcenTraining to your Home Screen (tap Share, or ••• → Share, then Add to Home Screen) keeps it.",
@@ -306,7 +306,7 @@ I18N_TEXTS.en = {
 
   "history.backupTitle": "Backup",
   "history.backupText":
-    "Your sessions are saved automatically on this device. Export a copy if you switch phones or clear your browser data. Export saves all your sessions as a .json file. Import adds the sessions from such a file; sessions you already have are skipped. Only the newest 1000 sessions are kept: if the total goes over 1000, the oldest sessions are removed.",
+    "Your sessions are saved automatically on this device. Export a copy before you switch phones or clear your browser data. Export saves all your sessions as a .json file. Import adds the sessions from such a file; sessions you already have are skipped. Only the newest 1000 sessions are kept: if the total goes over 1000, the oldest sessions are removed.",
   "history.export": "Export history",
   "history.import": "Import history",
   "history.backToTimer": "← Back to the timer",
@@ -399,7 +399,7 @@ I18N_TEXTS.en = {
   "avatar.section.costumeOutfit": "Costume outfit",
   "avatar.section.back": "Back",
   "avatar.section.headwear": "Headwear",
-  "avatar.section.mask": "Masks and face",
+  "avatar.section.mask": "Masks and face paint",
   "avatar.section.earsHorns": "Ears and horns",
   "avatar.section.eyewear": "Eyewear",
   "avatar.section.earrings": "Earrings",
