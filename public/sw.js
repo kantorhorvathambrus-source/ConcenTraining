@@ -15,18 +15,41 @@
 
 // Bump CACHE_VERSION whenever PRECACHE changes (a startup file added, removed or renamed).
 // On activate every older "concentraining-" cache is deleted.
-const CACHE_VERSION = 5;
+const CACHE_VERSION = 9;
 const CACHE_PREFIX = "concentraining-";
 const CACHE_NAME = `${CACHE_PREFIX}v${CACHE_VERSION}`;
 
 // Everything needed to open index.html, run a session to the summary, and open history.html and the
-// character editor (avatar.html) offline.
+// character editor (avatar.html) offline. Every language's texts are here (js/i18n/*.js), not only
+// English: each app update starts a new cache, so a language that was only saved while it was used
+// would be gone right after an update and the app would open in English offline. A new language
+// file goes in this list (and CACHE_VERSION goes up). See "Languages" in the README.
+// The fonts are all here too, both the Latin and the Latin Extended file of each family: a page
+// only downloads the extended one when its language needs it (Hungarian, Polish), so without this
+// those languages would fall back to a system font offline. See "Design system" in the README.
 // stats.html stays online-only (it needs api/stats anyway). index.html is saved as the scope (cacheKey).
 const PRECACHE = [
   "index.html",
   "history.html",
   "avatar.html",
   "css/style.css",
+  "fonts/figtree/figtree-latin-wght-normal.woff2",
+  "fonts/figtree/figtree-latin-ext-wght-normal.woff2",
+  "fonts/fraunces/fraunces-latin-600-normal.woff2",
+  "fonts/fraunces/fraunces-latin-ext-600-normal.woff2",
+  "js/theme.js",
+  "js/i18n/languages.js",
+  "js/i18n/en.js",
+  "js/i18n/hu.js",
+  "js/i18n/es.js",
+  "js/i18n/pt-BR.js",
+  "js/i18n/id.js",
+  "js/i18n/fr.js",
+  "js/i18n/de.js",
+  "js/i18n/it.js",
+  "js/i18n/pl.js",
+  "js/i18n.js",
+  "js/language-picker.js",
   "js/data/characters.js",
   "js/data/messages.js",
   "js/placeholder-art.js",
@@ -244,7 +267,8 @@ function networkFirst(event, timeoutMs) {
 
 // ---------- notifications ----------
 
-// The leave reminder, shown by js/app.js while a session runs and the app has been left.
+// The leave reminder, shown by js/app.js while a session runs and the app has been left. Its text is
+// set there, in the page's language: this file never needs it (and can't read the saved prefs).
 // Tapping it closes it and brings back the app page: the open one if there is one (it runs the
 // session), otherwise a new one at the scope, which picks up the saved session like a reload.
 // history.html isn't used: the session lives on the app page. The page itself closes the

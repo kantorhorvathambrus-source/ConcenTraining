@@ -5,6 +5,9 @@ Plain HTML, CSS and vanilla JS: no build step, no framework. The website is the
 `public/` folder (open `public/index.html` in a browser to try it). The backend is two
 Netlify Functions that store counts in Netlify Blobs, used only for character popularity stats.
 
+The app speaks **English and Hungarian** (it follows the browser's language until one is picked
+with the language button; see [Languages](#languages)).
+
 **Live at https://concentraining.com** (the production site; the old Netlify address redirects
 there, see [Domain, redirect and security headers](#domain-redirect-and-security-headers)).
 
@@ -130,8 +133,10 @@ there, see [Domain, redirect and security headers](#domain-redirect-and-security
     without a second scroll and without a focus outline, so a screen reader carries on reading there.
   - **Dialogs:** every dialog is labelled by its title (and described by its question), so a screen
     reader reads it when focus moves into it, e.g. "You were away for 2 min 10 sec. Were you distracted?"
-- **Simple mode:** 5 severity buttons (A flicker, Drifted, Lost track, Far away, Totally gone), not
-  time-based. They always sit in two full rows: three in the first, two wider ones in the second.
+- **Simple mode:** 5 severity buttons (Barely, A little, Quite a bit, A lot, Completely), not
+  time-based. They answer the prompt "Got distracted? How much?", so they're plain words that
+  clearly increase (Hungarian: Alig, Kicsit, Eléggé, Nagyon, Teljesen). Only the level (1–5) is
+  saved, never the label, so renaming them changed no saved data. They always sit in two full rows: three in the first, two wider ones in the second.
 - **Advanced mode:** 7 duration buttons (30 sec … 10+ min). Ends with the % of the session spent focusing.
   "10+ min" counts as 10 minutes in that %. A length that can't have happened yet is disabled (greyed
   out but readable): one longer than the free time, which is the time so far minus the distraction time
@@ -169,13 +174,13 @@ there, see [Domain, redirect and security headers](#domain-redirect-and-security
   going** it's back with the time it had left, or closes then if its 60 s would have run out meanwhile.
   **Take a break** closes it as Skip (`category: null`). On small phones the open picker covers some of the distraction buttons (never the
   character or the timer); tap a category or Skip first, or scroll down, to log another one.
-- **"Totally gone" / "10+ min"** asks: continue this session, or start over with a new duration.
+- **"Completely" / "10+ min"** asks: continue this session, or start over with a new duration.
   The question comes in two steps of one dialog, so the duration chips can't be read as "how long
   was the distraction?" (the app never asks that):
   - **Step 1** asks only continue or start over. Simple mode (which has no times): "That was a big
     distraction" / "Keep going with this session, or start fresh? After a big distraction, starting
-    over is often easier." Advanced mode: "That was a long break" / "Keep going with this session, or
-    start fresh? After a long break, starting over is often easier." Buttons: **Continue this
+    over is often easier." Advanced mode: "That was a long distraction" / "Keep going with this
+    session, or start fresh? After a long distraction, starting over is often easier." Buttons: **Continue this
     session** (gets the focus) and **Start over**. Esc or Android Back means Continue.
   - **Step 2** (only after **Start over**): "How long should the new session be?", the duration chips
     and Custom field (the current session length preselected), the "Save the first …" checkbox (see
@@ -190,11 +195,11 @@ there, see [Domain, redirect and security headers](#domain-redirect-and-security
   The category picker, the Undo window and the time away card come first: the dialog opens once the
   picker has closed (category picked, Skip, or the 60 s safety close), the 5 s Undo window is over and
   the time away card (see below) has been answered, so they never show at the same time. Undoing the tap means no question
-  (an earlier "10+ min" / "Totally gone" that wasn't undone still asks, right after the Undo). The
+  (an earlier "10+ min" / "Completely" that wasn't undone still asks, right after the Undo). The
   question is saved with the running session (`restartPending`) as soon as the button is tapped, so if
   the page is reloaded before it's answered, it's asked right after the reload.
   If the session has run at least 1 minute, step 2 also has a checkbox above **Start new session**:
-  "Save the first 12 min 30 sec to history" (the time so far, measured when the dialog first opens,
+  "Save the first 12 min 30 sec to your history" (the time so far, measured when the dialog first opens,
   so time spent in the dialog isn't added), ticked by default. With it ticked, **Start new session**
   saves the abandoned part to the history first, as ending
   at that moment, with `endedBy: "startOver"`. Its focus % and stats are calculated the normal way
@@ -212,7 +217,7 @@ there, see [Domain, redirect and security headers](#domain-redirect-and-security
   line fits, and it covers the lost first part too.
 - **Stop** (the right button of the bottom bar, where End session used to be: same place, style and
   size) asks "Stop for now?". Because the dialog covers the timer, a line right under the title shows
-  that the clock keeps running: a small static orange dot (`--primary`), muted "Timer still running · "
+  that the clock keeps running: a small static amber dot (`--color-accent-text`), muted "Timer still running · "
   and the remaining time in bold ("Timer still running · 16:41"), the same value and format as the
   timer, updated every second with the same tick (tabular numbers, so it doesn't wobble). Screen
   readers read it once as the dialog's description when it opens; it isn't a live region, so the
@@ -241,8 +246,8 @@ there, see [Domain, redirect and security headers](#domain-redirect-and-security
   - The clock stops at the tap, so the planned end moves later by the length of every break. A
     break is never session time: it doesn't count in the elapsed time, the focus %, the result, the
     stats or the 1-minute rule.
-  - **Paused screen:** the timer digits are dimmed (40%, `--paused-opacity` in `style.css`) and the
-    progress bar fill turns a light neutral grey that reads as "stopped" (`--paused-progress`, with
+  - **Paused screen:** the timer digits are dimmed (50%, `--timer-paused-opacity` in `style.css`) and the
+    progress bar fill turns a neutral that reads as "stopped" (`--color-paused`, with
     its own value in dark mode: visible on the track, but quieter than the dimmed digits). The
     distraction block is replaced by centred text, with no box around it: **Paused** and, under it,
     "Break · 2:14", counting up from the start of the break (m:ss, h:mm:ss from 1 hour, no upper
@@ -335,11 +340,11 @@ there, see [Domain, redirect and security headers](#domain-redirect-and-security
 
 | Button (Simple) | Button (Advanced) | Pose |
 |---|---|---|
-| A flicker | 30 sec | level1 |
-| Drifted | 1 min | level2 |
-| Lost track | 2 min, 3 min | level3 |
-| Far away | 5 min, 10 min | level4 |
-| Totally gone | 10+ min | level5 |
+| Barely | 30 sec | level1 |
+| A little | 1 min | level2 |
+| Quite a bit | 2 min, 3 min | level3 |
+| A lot | 5 min, 10 min | level4 |
+| Completely | 10+ min | level5 |
 
 - **Motivation button:** always visible. Messages rotate in phases (see `js/data/messages.js`).
   The messages are research-based: every "Brain fact" has a `// source:` comment in
@@ -388,12 +393,12 @@ Every finished session gets a result. The thresholds are constants at the top of
   (`SUMMARY_OKAY_FOCUS`), **rough** below that. The focus % is only 100% when no distraction time was
   logged at all (99.6% shows as 99%).
 - **Simple mode** has no focus % (it's saved as `null`), so it uses distraction points: each logged
-  distraction scores its level (A flicker = 1, Drifted = 2, Lost track = 3, Far away = 4,
-  Totally gone = 5). The points are counted per 25 minutes of session time; sessions shorter than
+  distraction scores its level (Barely = 1, A little = 2, Quite a bit = 3, A lot = 4,
+  Completely = 5). The points are counted per 25 minutes of session time; sessions shorter than
   25 minutes count as 25 minutes. **great** up to 2 points per 25 min (`SIMPLE_GREAT_POINTS`),
-  **rough** from 8 (`SIMPLE_ROUGH_POINTS`), **okay** in between. Example: two "Far away" in a 25-minute
+  **rough** from 8 (`SIMPLE_ROUGH_POINTS`), **okay** in between. Example: two "A lot" in a 25-minute
   session = 8 points = rough. Short sessions are judged like a 25-minute one on purpose, so they
-  aren't harsher: one "Lost track" in a 5-minute session = 3 points = okay (one "Drifted" = great).
+  aren't harsher: one "Quite a bit" in a 5-minute session = 3 points = okay (one "A little" = great).
 - **early:** the session ran less than half of its planned time (`EARLY_END_RATIO` = 0.5), whatever
   the focus % or distraction points. Ending early isn't judged as good or bad: the title is
   "Ended early", the pose is neutral, and Simple mode shows a short neutral message. Advanced mode
@@ -472,7 +477,7 @@ are in `public/js/data/messages.js`.
   up** on, but the screen isn't being kept on (the setting is off, the browser doesn't support Screen
   Wake Lock, the request was refused, or the browser released the lock and getting it again failed),
   a small muted line under the session info says: "Your screen may turn off. If it does, you won't
-  hear the chime." It's in the page flow, so it never covers the character, the timer or the buttons.
+  hear the sound." It's in the page flow, so it never covers the character, the timer or the buttons.
   It disappears as soon as the lock is held (e.g. after the first tap following a reload). It's never
   shown with the sound off, or on the setup and summary screens. While a lock request is out, or the
   page is hidden, it stays as it is, so it doesn't blink on every tap or return (`updateScreenNote()`
@@ -613,11 +618,11 @@ personality, in one place (`GROUPS` and `personalityOf()`). A new character only
 | Group | Personality | How it reacts |
 |---|---|---|
 | `relaxed` (Grandma, Leader, Santa, Study Buddy, Study Partner, Coach, Meditation Guide), label "Relaxed" | `kind` | Happy you're back, cheers you on. Hops. |
-| `firm` (Professor, Librarian, Surgeon), label "Firm but fair" | `firm` | Patient, but expects your best. Never shouts or gets angry: disappointment instead. One slow, calm lean (never shakes); a small nod when you do well. |
+| `firm` (Professor, Librarian, Surgeon), label "Firm" | `firm` | Patient, but expects your best. Never shouts or gets angry: disappointment instead. One slow, calm lean (never shakes); a small nod when you do well. |
 | `strict` (Boss, Soldier, Headmistress, Grandmaster, Judge, Sensei) | `strict` | Stern when you drift off, angrier each level. Shakes. |
 | `ragebait` (Bodybuilder, Influencer, Your Phone) | `ragebait` | Annoying on purpose: mocking, more insulting each level. Cheeky head tilt. |
 
-The app always shows the group's label ("Relaxed", "Firm but fair", "Strict", "Ragebait"): on the
+The app always shows the group's label ("Relaxed", "Firm", "Strict", "Ragebait"): on the
 character cards, in the session info line and in the history list. The personality (`kind`, `firm`, ...)
 is only what's saved. The history list finds the label from the saved `style` (`styleLabel()` in
 `characters.js`), so an old entry shows the personality it actually ran with (a strict Grandma: "Strict").
@@ -767,7 +772,7 @@ saved data, no backend, no service worker version (the file's name stays the sam
   unique among your own characters ignoring case. A name like a built-in character's is fine.
   Errors: "Give your character a name." / "Names can be up to 20 characters." / "You already have
   a character with this name." Checked on **Save**, then live while typing.
-- **Personality:** Relaxed, Firm but fair, Strict or Ragebait (the built-in groups and their
+- **Personality:** Relaxed, Firm, Strict or Ragebait (the built-in groups and their
   expressions), Relaxed at the start, with "You can't change this later." When editing it's shown
   as a read-only badge.
 - **Gender** (Female / Male): the two genders are fully separate. Each has its own faces,
@@ -806,7 +811,7 @@ saved data, no backend, no service worker version (the file's name stays the sam
   runs the normal card tap: a ragebait character shows the warning first). **Cancel** goes back
   without saving. If the browser doesn't let the site store data, the editor shows the same note
   as the setup screen and still works; **Save** then says "Couldn't save your character. Your
-  browser isn't letting this site store data." Editing a character that another tab deleted
+  browser isn't letting this site save data." Editing a character that another tab deleted
   meanwhile says "This character was deleted in another tab, so it can't be saved."
 - **During a session:** the editor can only be opened from the setup screen, so not from a running
   session in the same tab. In another tab it can: the running session keeps the character as it
@@ -878,12 +883,12 @@ shared by both genders and starts with None.
 | Category (look field) | Items |
 |---|---|
 | Headwear (`headwear`, 54) | Bicorne (general's hat), tricorne (pirate hat), Santa-style hat, witch hat, wizard hat, crown, tiara, jester hat, knight helmet (open face), top hat, cowboy hat, captain's hat, chef's toque, graduation cap, hood, pumpkin head, halo, flower crown, beret, party hat, beanie, headphones, bowler hat, sailor hat. B: elf hat, dwarf hood, Viking-style helmet (no horns), laurel wreath, pharaoh-style headdress, musketeer-style hat with feather, coronet, steampunk top hat with goggles, scientist goggles, police-style cap, firefighter helmet, astronaut helmet (a glass bubble, the hair shows inside), deerstalker, explorer's hat, ringmaster's top hat, plague doctor hat, pilot cap, surgical cap, judge's wig, straw hat, sun hat, baseball cap (backwards), black knit cap, bandana, ninja-style hood with a cloth face mask and a red headband knotted at the side, ballet bun ribbon, bunny ears, bear hood, dinosaur hood, robot head (covers the head, with glowing openings) |
-| Masks and face (`mask`, 22) | Masquerade mask, plain white mask, skull mask, superhero eye mask, eye patch, monocle, fake moustache, curly villain moustache, vampire fangs, friendly clown face paint, skeleton face paint, glitter. B: plague doctor mask (light, with a short beak that stops above the mouth), mummy bandages, witch nose with wart, long wooden nose, tiger stripes face paint, butterfly face paint, star-shaped glasses, carrot nose, bunny nose and whiskers, cat-burglar eye mask |
+| Masks and face paint (`mask`, 22) | Masquerade mask, plain white mask, skull mask, superhero eye mask, eye patch, monocle, fake moustache, curly villain moustache, vampire fangs, friendly clown face paint, skeleton face paint, glitter. B: plague doctor mask (light, with a short beak that stops above the mouth), mummy bandages, witch nose with wart, long wooden nose, tiger stripes face paint, butterfly face paint, star-shaped glasses, carrot nose, bunny nose and whiskers, cat-burglar eye mask |
 | Costume beard (`costumeBeard`, 8) | Santa-style white beard, long wizard beard, pirate beard (in the hair colour), fake beard on a string. B: dwarf braided beard, Viking-style beard, musketeer-style moustache and pointed beard (all three in the hair colour), red pointed beard |
 | Ears and horns (`earsHorns`, 11) | Elf ears, devil horns, cat ears (in the hair colour), unicorn horn, antennae. B: ram horns, wolf ears, fairy ears, small horns, bear ears, dragon horns |
 | Costume outfit (`costumeOutfit`, 54) | General's coat with epaulettes and sash, pirate coat, knight armour, king's robe and queen's gown with ermine, prince outfit, princess dress, Santa-style suit, witch dress, wizard robe, vampire suit with high cape collar, ghost sheet, superhero suit, chef's jacket, doctor's scrubs, firefighter jacket, pilot uniform, judge's robe, butler's tailcoat, cowboy shirt and vest, sailor suit, pumpkin costume. B: toga-style robe, Viking-style tunic with fur, pharaoh-style collar and robe, musketeer-style tunic, elf outfit, fairy dress, dwarf tunic, angel robe, red devil suit, jester suit, scarecrow outfit, mummy wraps (also wrap the head, face open), skeleton suit, long dark hooded cloak, astronaut suit, robot suit, alien costume, detective trench coat, mad scientist coat, explorer shirt, steampunk vest, ninja-style black outfit, ballerina tutu, ringmaster jacket, rock star leather jacket, striped burglar shirt, snowman costume, bunny onesie, bear onesie, dinosaur onesie, clown suit, dragon tamer leather vest |
 | Back (`back`, 11) | Cape, royal cloak, angel wings, bat wings, backpack. B: fairy wings, butterfly wings, dragon wings, jetpack, turtle shell, satchel |
-| Held item (`held`, 34) | Magic wand, wizard staff, scepter, lantern, telescope, book, broom, Santa's sack, gift box, candle, balloon, coffee cup. B: map, quill, crystal ball, flag (a plain pennant, no country's flag), trophy, pumpkin basket, Easter basket, umbrella, magnifying glass, potion flask, wrench, electric guitar and game controller (made-up shapes, no brand), microphone, lasso, ringmaster's cane, clipboard, wooden spoon, gavel, loot sack, compass, serving tray with cloche |
+| Held item (`held`, 34) | Magic wand, wizard staff, sceptre, lantern, telescope, book, broom, Santa's sack, gift box, candle, balloon, coffee cup. B: map, quill, crystal ball, flag (a plain pennant, no country's flag), trophy, pumpkin basket, Easter basket, umbrella, magnifying glass, potion flask, wrench, electric guitar and game controller (made-up shapes, no brand), microphone, lasso, ringmaster's cane, clipboard, wooden spoon, gavel, loot sack, compass, serving tray with cloche |
 | Shoulder pet (`pet`, 8) | Parrot, owl, black cat. B: small dragon, raven, frog with a crown, white mouse, small robot |
 
 Plus 6 **fantasy skin colours** (green, blue, purple, grey, red, gold) after the 10 natural tones.
@@ -1153,8 +1158,8 @@ to history" checkbox was unticked (see above). The page shows:
 - **Last 30 sessions** with date, character, mode, length, distractions and focus %. Sessions saved
   by **Start over** have a small "restarted" label. The title says "Last 30 sessions (of N)" once
   there are more than 30, otherwise "N sessions". See [Deleting a session](#deleting-a-session).
-- **Backup:** "Your sessions are saved automatically on this device. Export a copy if you switch
-  phones or clear your browser data.", then Export and Import buttons (see below).
+- **Backup:** "Your sessions are saved automatically on this device. Export a copy before you
+  switch phones or clear your browser data.", then Export and Import buttons (see below).
 
 Simple-mode sessions have no focus % (their buttons aren't time-based). They count for streaks and
 time per week and appear in the list as "—", but are left out of the focus trend and time-of-day
@@ -1222,7 +1227,7 @@ page again after nothing happened draws nothing, and an Import only draws once (
 | `ct_session_v1` | The session that's running right now (removed when it ends). `characterName`: only with a custom character (its name when the session started). `restartPending: true` while the continue/restart question is unanswered; older saved sessions don't have it, which means `false`. `leftAt` (timestamp in ms): only while the page is hidden, for the time away card; missing means the page wasn't left. Never copied into the history. `pausedAt` (timestamp in ms, or `null`): when the current break started (see **Take a break**). `pauses` (`[{ at, ms }]`): the breaks that are over. Sessions saved before breaks existed have neither, which means never paused |
 | `ct_history_v1` | Finished sessions, newest first, max. 1000 |
 | `ct_custom_characters_v1` | Characters made in the editor: `{ v: 1, characters: [ { id, name, personality, createdAt, look: { gender, skin, hairColor, hairStyle, face, outfit, eyewear, earrings, necklace, facialHair, headwear, mask, earsHorns, costumeBeard, costumeOutfit, back, held, pet } } ] }`. The 8 costume fields are optional: characters saved before costumes don't have them, which means None. `id` is `custom-` plus 10 random letters/digits, never reused (a new id also avoids every id in the history). `personality` is the style its sessions run in. Reading never fails: a broken entry is skipped (not the whole list), an unknown look value gets the default. See [Custom characters](#custom-characters) |
-| `ct_prefs_v1` | Last chosen character, mode and duration, plus `endSound` and `keepScreenOn` (the two setup checkboxes, `true`/`false`). Prefs saved before these existed get `true` for both. `leaveReminder`: the **Remind me if I leave the app** checkbox (see [Leave reminder](#leave-reminder)); prefs saved before it existed get `false`. `homeScreenTipDismissed`: `true` once **Got it** was tapped on the iPhone Home Screen tip. `persistRequested`: `true` once persistent storage was asked for (or skipped in Firefox), see [iPhone storage and the Home Screen app](#iphone-storage-and-the-home-screen-app). Prefs saved before these two existed get `false` for both. `howItWorksDismissed`: `true` once **Got it** was tapped on the How it works card; prefs saved before it existed get `false`, so the card shows once. A `style` value saved by older versions is ignored and dropped. Saved field by field (see [Several tabs](#several-tabs-one-tab-at-a-time)) |
+| `ct_prefs_v1` | Last chosen character, mode and duration, plus `endSound` and `keepScreenOn` (the two setup checkboxes, `true`/`false`). Prefs saved before these existed get `true` for both. `leaveReminder`: the **Remind me if I leave the app** checkbox (see [Leave reminder](#leave-reminder)); prefs saved before it existed get `false`. `homeScreenTipDismissed`: `true` once **Got it** was tapped on the iPhone Home Screen tip. `persistRequested`: `true` once persistent storage was asked for (or skipped in Firefox), see [iPhone storage and the Home Screen app](#iphone-storage-and-the-home-screen-app). Prefs saved before these two existed get `false` for both. `howItWorksDismissed`: `true` once **Got it** was tapped on the How it works card; prefs saved before it existed get `false`, so the card shows once. `language`: only once a language was picked in the language sheet (`"en"`, `"hu"`); without it the app follows the browser's language (see [Languages](#languages)). `theme`: `"light"` or `"dark"`, only once the light/dark switch was tapped; without it the app follows the phone's setting (see [Light and dark](#light-and-dark)). A `style` value saved by older versions is ignored and dropped. Saved field by field (see [Several tabs](#several-tabs-one-tab-at-a-time)) |
 
 Each history entry: `startedAt`, `endedAt` (timestamps in ms), `endedBy` (`"timer"`/`"manual"`/`"startOver"`),
 `characterId`, `characterName` (custom characters only, see [Custom characters](#custom-characters);
@@ -1239,7 +1244,8 @@ that as `null`.
 Sessions saved before personalities came from the character keep the style that was chosen then
 (for example a strict Grandma). A session that was still running when this changed continues, and
 is saved, with the character's own personality.
-History lives only in this browser: clearing site data or switching devices starts it over.
+History lives only in this browser: clearing site data or using private mode deletes it, and it
+doesn't show up on other devices.
 The history page says so, too (its storage note at the top: "Use Export below before you switch
 phones or clear your browser data.").
 
@@ -1286,9 +1292,11 @@ doesn't do this.
 - **Web app manifest** (`public/manifest.webmanifest`, a small file that tells the phone the app's
   name, icon and colors): makes "Add to Home Screen" on iPhone and "Install app" on Android open the
   app full screen, without the address bar, with the ConcenTraining name and icon. Start page and
-  scope are the site root. Background and theme color are the light theme's `--bg` (`#f6f3ee`). Each
-  page also has two `theme-color` metas (light `#f6f3ee`, dark `#17161b`, each with its own
-  `prefers-color-scheme` media query), so the browser bar matches the page in both modes.
+  scope are the site root. Background and theme color are the light theme's page background
+  (`--color-bg`, `#f5ede0`). Each page also has two `theme-color` metas (light `#f5ede0`, dark
+  `#12172b`, each with its own `prefers-color-scheme` media query), and `js/theme.js` gives both the
+  colour of the theme that's showing, so the browser bar matches the page (see
+  [Light and dark](#light-and-dark)).
 - **Home Screen tip** (setup screen): a small card with why (the 7-day rule), how ("tap Share (or
   ••• → Share), then Add to Home Screen") and the catch: **the Home Screen app has its own separate
   storage on iPhone**, so the current history doesn't move over by itself. Export it in Safari first,
@@ -1314,7 +1322,8 @@ doesn't do this.
   permission bar right after the session. Either way `persistRequested` is set in `ct_prefs_v1`, so
   it's only tried once.
 - **Icons** (`public/icons/`, `public/favicon.ico`): placeholders until the real character art, a
-  white crosshair with a brain in the middle on the app's orange. The source is
+  white crosshair with a brain in the middle on orange (the colour of the look before Night Lamp;
+  they weren't redrawn). The source is
   `public/icons/icon.svg` (edit this one). The PNGs are rendered from it: `apple-touch-icon.png`
   (180, full square without transparency, iOS rounds the corners), `icon-192.png` and
   `icon-512.png` (rounded corners), and `icon-maskable-512.png` (full square, the picture shrunk to
@@ -1418,12 +1427,295 @@ rights (required before launch, GDPR Art. 13). It's linked as a small grey **Pri
 the session or summary screens, or in dialogs. "← Back to the timer" at the top and bottom goes to
 `./`, like on `history.html`; the phone's Back button returns to where you came from.
 
-- The page has **no scripts**: opening it reads and saves nothing in localStorage, takes no session
-  lock and registers nothing (it doesn't load `sw-register.js`).
+- The page has **one script**, `js/theme.js` in `<head>`: it reads the saved light/dark choice, so the
+  page shows in the same theme as the app (see [Light and dark](#light-and-dark)). The page has no
+  switch, so opening it saves nothing; it takes no session lock and registers nothing (it doesn't
+  load `sw-register.js`).
 - **Keep it true:** whenever data handling changes (a new request to a server, new data stored on
   the device or the server, a new third-party service, accounts or payments), update
   `public/privacy.html` and its "Last updated" date in the same pull request (also a rule in
   `CLAUDE.md`).
+
+## Languages
+
+The app runs in **English**, **Hungarian** (magyar) and, in beta, **Spanish** (español), **Brazilian
+Portuguese** (português), **Indonesian** (Bahasa Indonesia), **French** (français), **German**
+(Deutsch), **Italian** (italiano) and **Polish** (polski), without a build step. English is the source
+of every text and the fallback for any text another language doesn't have. `privacy.html` (legal
+text), `stats.html` (internal), the link preview tags (`og:*`, `meta description`) and
+`manifest.webmanifest` stay English: crawlers and the browser read those without running the app's
+scripts.
+
+### Files
+
+| File | What's in it |
+|---|---|
+| `public/js/i18n/languages.js` | The list of languages without their texts (`LANGUAGES`: code, native name, English name, native speakers, beta flag, file, Intl locale, relative-time style) and the sheet's order rule (`sortLanguages`). The speaker numbers' sources are in a comment there. |
+| `public/js/i18n/en.js` | The English UI texts (setup, session, dialogs, summary, history, import messages, editor), keyed `area.name`. |
+| `public/js/i18n/hu.js` | Every key in Hungarian: the UI texts and the data files' texts (below). |
+| `public/js/i18n/es.js`, `pt-BR.js`, `id.js`, `fr.js`, `de.js`, `it.js`, `pl.js` | Every key in Spanish, Brazilian Portuguese, Indonesian, French, German, Italian and Polish (beta: not yet reviewed by a native speaker). |
+| `public/js/i18n.js` | The system: picks the language, `t(key, values)`, plurals, dates and relative times via Intl, translating the page while it's built, switching (`setLanguage`), the dev check. |
+| `public/js/language-picker.js` | The language button and its bottom sheet (setup screen and history page). |
+
+**Data files keep their English next to their data:** characters, groups and pose descriptions
+(`js/data/characters.js`), motivations and the Simple summary sentences (`js/data/messages.js`),
+distraction categories (`js/history-store.js`) and every avatar option, costume and preset
+(`js/avatar-parts.js`, `js/avatar-costumes.js`). Each file ends with a short "translations" block
+that hands its English to the system (`I18N.localize`): the text field turns into a **getter** (a
+property that's worked out each time it's read), so `character.name` or `option.label` always gives
+the current language and no other code had to change. Their keys:
+
+- `character.<id>.name` / `.tagline`, `group.<id>.label`, `group.ragebait.warning`,
+  `pose.<personality>.<pose>`
+- `motivation.<id>`: each motivation has a fixed `id` (`general-1` …), given once and never reused,
+  so moving a message doesn't mix up its translations. `summary.simple.<result>.<n>` (n from 1).
+- `category.<id>`
+- `avatar.<field>.<option id>` for every option; `avatar.headShape.*`, `avatar.nose.*`,
+  `avatar.mark.*` and `avatar.funny.*` are the parts a face's name is built from ("Face 3: soft
+  oval, straight nose"); `avatar.theme.<id>`, `avatar.preset.<id>`, `avatar.presetDescription.<id>`.
+
+Adding a data item (a character, an avatar option, a motivation) works as before: one entry in its
+list. Without a translation it shows in English in the other languages (and the dev check lists it).
+
+**Copying a data object** freezes its texts in the language of that moment, because the copy gets
+plain values instead of the getters. Every place that does this (checked for this change) builds a
+fresh copy each time it draws, so nothing stays in an old language:
+
+- `countCategories` (`history-store.js`) spreads a category (`{ ...category, count }`), used at once
+  for the summary or the history page.
+- `calcDayParts` (`history.js`) spreads a part of the day; the labels come from `dayPart.<id>` anyway.
+- `FUNNY` (`avatar-parts.js`) spreads `makeFace(…)` while building the list, before its label getter
+  is added; `buildHead` replaces every head shape with a built copy while the file loads, also before
+  the translations block adds the getters.
+- Not affected: `defaultLook`, `cleanLook`, `randomLook`, `applyCostumePreset`, `costumeOf` and the
+  editor copy looks (ids only); `saveFinishedSession`, `buildHistoryExport` and the session in
+  `ct_session_v1` store ids only (`JSON.stringify` never sees a character, option or category);
+  `addThumb` keeps a reference to its preset. No `structuredClone` or `Object.assign` copies a data
+  object.
+
+Saved data holds no display text: prefs, the running session and the history store ids (character,
+style, mode, category, level, end reason). The only text is `characterName` for custom characters,
+the user's own name, which is never changed. So every old session shows in the current language,
+and the **export file is exactly the same in every language**. Import problems are codes
+(`import.reason.*`, `import.file.*`), translated when they're shown.
+
+### Which language
+
+- **Detection:** the first of the browser's languages (`navigator.languages`) that the app has: for
+  each one in order, the exact code first, then its base language (`hu-HU` → `hu`, `en-US` → `en`,
+  `pt-PT` → `pt-BR`). Otherwise English.
+- **Saved only when picked:** a new field `language` in `ct_prefs_v1` (no new storage key), written
+  only by a tap on a row of the language sheet, also on the language already shown. Until then the
+  app follows the browser's language on every load, so prefs saved before this existed behave like a
+  first visit.
+- **Another open tab** keeps its language until it's loaded again (no live sync).
+
+### The language button and sheet
+
+- A pill at the top right of the setup screen's header and the history page's header: a globe icon,
+  the code ("EN", "HU") and a small chevron, on the card colour with the cards' soft shadow, no
+  outline, fully rounded, 44px tall. Screen readers hear "Language: English" / "Nyelv: magyar". It
+  sits in a row of its own above the title, right-aligned, to the right of the light/dark switch
+  (8px between them), at every width, so the title stays centred and never touches them (see
+  [Light and dark](#light-and-dark)). It's not on the timer, summary or editor screens (they follow the language too).
+- Tapping it opens a bottom sheet (a `<dialog>`, so focus, Esc / Android Back and screen readers work
+  like the other dialogs; a tap on the dimmed page closes it too): a grab bar, "Language", one row
+  per language (at least 52px), each with its native name in bold (with a matching `lang`), the
+  English name under it in muted text (not for English), a check and a light amber background on
+  the current one, and a "BETA" pill (never translated) on unreviewed ones. At the bottom, "Report a
+  translation issue" opens an email to concentrainer@gmail.com with the subject "Translation issue
+  (hu)" (always English, so reports can be filtered). No animation, like the app's other dialogs.
+- **Order, worked out from the data** (`sortLanguages`): English first; then the reviewed languages,
+  most native speakers first; then the beta ones, most native speakers first; equal numbers by
+  English name A–Z. So removing a language's `beta` flag moves it up by itself. With today's
+  languages: English, Magyar, then (beta) Español, Português (Brasil), Bahasa Indonesia, Français,
+  Deutsch, Italiano, Polski. Only languages that exist in `LANGUAGES` are listed.
+- **Switching** happens at once, in place: the page's own text, the character cards, Quick start, the
+  duration chips (the typed minutes stay), the category buttons, any note that's showing, the
+  history page with its charts (edit mode stays), `<html lang>` and the page title. Everything else
+  (the session screen, the summary, the dialogs) is built in the current language whenever it's next
+  shown. A session can't be running on screen while the button is visible; a session in another tab
+  keeps its language until that tab is loaded again (it resumes in the new language, its data has no
+  text). If a language's file can't load (offline before it was ever saved), nothing changes.
+
+### No flash of English (no inline scripts)
+
+Each page loads `languages.js`, `en.js` and `i18n.js` in `<head>`, before `<title>`. `i18n.js` picks
+the language, sets `<html lang>`, and for a language other than English writes its file into the
+page with `document.write`: a script added that way loads before the browser goes on to the body,
+so the texts are there in time (the CSP allows it: it's a file from the site itself). Then a
+**MutationObserver** (a browser feature that runs code whenever elements are added) puts every
+element with `data-i18n="key"` (text) or `data-i18n-attr="aria-label:key"` (attributes) into the
+language as the browser builds it. Its code runs before the browser paints those elements, so the
+English in the HTML never shows. One last pass at `DOMContentLoaded`, then it stops; everything the
+scripts build afterwards asks `t()` itself. Elements whose text a script switches later (Stop / End
+session, the Stop dialog's title) have no `data-i18n`, so that last pass can't overwrite them.
+
+If the language's file doesn't load (blocked, or offline and not saved), the page simply shows in
+English, with `<html lang="en">`.
+
+### Formats
+
+- **Plurals:** a text with plural forms is an object with one entry per `Intl.PluralRules` category
+  of the language: `{ one, other }` in English, Hungarian and German; `{ one, many, other }` in
+  Spanish, French, Italian and Brazilian Portuguese ("many" is for very large round numbers and has
+  the same text as "other"); `{ one, few, many, other }` in Polish; only `{ other }` in Indonesian.
+  A text may also have an optional **`zero`** form: for a count of 0, `t()` uses it if it's there,
+  otherwise the `Intl.PluralRules` category as usual. Only Brazilian Portuguese uses it:
+  `Intl.PluralRules("pt-BR")` puts 0 in "one" ("0 dia"), but Brazilians say "0 dias". Its zero forms
+  are on every plural text that can show 0: `summary.logged`, `history.days` (streaks),
+  `history.sessions` and `history.distractions`. The other plural texts are only shown for a count
+  of 1 or more.
+- **Dates and times:** always `Intl.DateTimeFormat` in the language's `intlLocale`, never put
+  together by hand: English (`en-GB`) "Mon 20 Oct · 14:05", Hungarian "okt. 20., hétfő · 14:05". How long the weekday is comes from the language's `weekday`
+  field in `languages.js` (`short` for English and the beta languages, e.g. "mar, 20 oct",
+  "Di., 20. Okt.", "Sel, 20 Okt"; `long` for Hungarian, whose short form is a single letter). Spanish
+  uses plain `es` (not tied to Spain, 24-hour clock; `es-419` would give "02:05 p.m.").
+- **"Ended 3 hours ago":** `Intl.RelativeTimeFormat` in the language's `relativeTimeStyle`. English
+  mixes styles to keep its wording ("45 min ago", "1 hour ago", "3 hours ago", "2 days ago"),
+  Hungarian is `narrow` ("45 perce", "3 órája"). Each beta language's choice is commented in
+  `languages.js`, picked from the real Intl output: `long` for Brazilian Portuguese and German
+  (their short forms end in a full stop: "há 45 min.", "vor 45 Min.") and Indonesian ("45 mnt lalu"
+  is cryptic); short minutes with long hours and days for Spanish, French, Italian and Polish
+  ("hace 45 min", "il y a 3 heures"; French `narrow` would give "-45 min", Italian short days
+  "2 gg fa", Polish narrow "3 g. temu").
+- **Durations** ("24 min 30 sec" / "24 perc 30 mp") and percentages are templates in the language
+  files (`time.*`, `history.percent`).
+- **The leave reminder** is shown by the page (`app.js`), with the page's texts: always in the
+  chosen language. The service worker only handles the tap, so it never needs the language (and it
+  can't read `ct_prefs_v1`).
+
+### Voice and the informal "you"
+
+In every language: translated for meaning and tone, not word by word; factual, no guilt or pressure,
+no emoji; characters never speak (pose descriptions stay neutral image descriptions). Always the
+informal "you", the same across the whole app:
+
+| Language | "You" | Notes |
+|---|---|---|
+| English | you | The source. |
+| Hungarian | te (tegeződés) | Names, modes and durations in a text never get a case ending ("Törlöd: {name}?"), because custom names can be anything. "Munkamenet" (session) only where nothing more natural fits: buttons and headings use verbs or no noun ("Kezdés", "Még egy kör"). Terms: elkalandozás (distraction), fókusz, sorozat (streak), szünet (break), Egyszerű / Részletes (Simple / Advanced), Alig / Kicsit / Eléggé / Nagyon / Teljesen (the Simple levels), Laza / Határozott / Szigorú / Ragebait (groups), Tudtad? / Lendület (Brain fact / Boost). The Stop button keeps its English name, "Stop". The storage note on the history page names the Export button exactly as the button says it ("Exportálás"; the checks compare them). |
+| Spanish | tú (never vosotros; ustedes if a plural is ever needed) | Neutral international Spanish for Latin America and Spain ("teléfono", "temporizador", no regional slang). Gender-neutral: no adjective or participle about the user (listo, cansado, bienvenido); verbs and nouns instead ("¡Hola de nuevo!"). Terms: sesión, distracción ("¿Te distrajiste? ¿Cuánto?"), concentración, racha, descanso, Parar, Simple / Detallado, Apenas / Un poco / Bastante / Mucho / Por completo, Amable / Firme / Inflexible / Ragebait (invariable, so they fit any character), ¿Lo sabías? / Impulso. |
+| Brazilian Portuguese | você | Brazilian vocabulary and spelling (tela, celular, modo anônimo). Gender-neutral: no pronto, cansado, bem-vindo, obrigado about the user ("Que bom te ver de novo!"). Terms: sessão, distração ("Se distraiu? Quanto?"), foco, sequência, pausa, Parar, Simples / Detalhado, Quase nada / Um pouco / Mais ou menos / Muito / Totalmente, Gentil / Firme / Inflexível / Ragebait, Você sabia? / Impulso, "timer" (the Brazilian word). |
+| Indonesian | kamu | No grammatical gender; no gendered address (Mas/Mbak, Kak). Terms: sesi, distraksi ("Terdistraksi? Seberapa banyak?"), fokus, hari beruntun (streak), istirahat, Berhenti, Sederhana / Rinci, Hampir tidak / Sedikit / Lumayan / Banyak / Sepenuhnya, Santai / Tegas / Ketat / Ragebait, Tahukah kamu? / Penyemangat; "timer", "browser" and "HP" are the everyday words. |
+| French | tu | French typography: a narrow no-break space (`\u202f`) before ? ! : ; and % and inside « ». Gender-neutral: past tenses about the user use avoir ("tu as décroché"), never être + participle; no prêt, distrait, fatigué about the user ("Fin anticipée", "Bon retour !"). Terms: séance, distraction ("Tu as décroché ? À quel point ?"), concentration, série, pause, Stop, Simple / Détaillé, À peine / Un peu / Assez / Beaucoup / Complètement, Calme / Ferme / Sévère / Ragebait (invariable), Le savais-tu ? / Coup de pouce, minuteur. |
+| German | du (lowercase) | Gender-neutral: no person nouns for the user (Nutzer, Anfänger, Profi); participles don't inflect ("Abgelenkt?", "du bist zurückgekommen"). Soft hyphens (`\u00ad`) in long compounds ("Weihnachts\u00admann"). Terms: Runde (session: "Letzte 10 Runden"), Ablenkung ("Abgelenkt? Wie sehr?"), Fokus, Serie, Pause, Stopp, Einfach / Detailliert, Kaum / Etwas / Ziemlich / Stark / Völlig, Locker / Konsequent / Streng / Ragebait, Wusstest du? / Ansporn, Figur (character), Timer. |
+| Italian | tu | Gender-neutral: past tenses about the user use avere ("Hai perso il filo?"), never essere + participle ("ti sei distratto"); no pronto, stanco, bentornato about the user ("Rieccoti!"). Terms: sessione, distrazione, concentrazione, serie, pausa, Stop, Semplice / Dettagliata (agrees with "modalità"), Pochissimo / Un po' / Abbastanza / Molto / Del tutto, Gentile / Esigente / Inflessibile / Ragebait (invariable), Lo sapevi? / Carica, timer. |
+| Polish | ty | Gender-neutral: never the 2nd-person past tense (-łeś/-łaś) or adjectives about the user; present tense, imperatives, impersonal forms and nouns instead ("Coś cię rozproszyło?", "Nie było cię przez 5 min."). Names are never declined ("Usunąć: {name}?"). Plurals have one / few / many / other. Terms: sesja, rozproszenie, skupienie, seria, przerwa, Stop, Prosty / Szczegółowy, Ledwo / Trochę / Sporo / Bardzo / Całkowicie, Łagodnie / Stanowczo / Surowo / Ragebait (adverbs, so they don't agree with a gender), Ciekawostka / Zachęta, minutnik. |
+
+**The user's gender is unknown**, so no language uses a gendered form for the user: no slash forms
+("listo/a"), no "(a)", no gender stars. Pose descriptions are written as verbs or invariable words,
+because any character (also a custom one of either gender) uses them, and the "Tired" distraction
+category is a noun everywhere (Cansancio, Cansaço, Kelelahan, Fatigue, Müdigkeit, Stanchezza, Zmęczenie).
+The checks search each language for its typical gendered forms. A pose is read out as
+"{name}, {pose}" ("Grandma, calm and smiling."); Spanish, Italian and Polish, whose pose
+descriptions start with a verb, use "{name}: {pose}" ("Abuela: sonríe con calma."), because after a
+comma the verb reads as an order to the character.
+
+**"Ragebait"** is a loanword in many languages. Each language decides whether to keep it (when the
+word is used locally, as in Hungarian, where the warning dialog explains it: "szándékosan próbál
+felhúzni") or to use a native word. Every language so far keeps it: it's in everyday use on social
+media in all of them. Each ragebait warning explains it in one sentence (es "intenta sacarte de
+quicio a propósito", de "Sie will dich absichtlich auf die Palme bringen", …). The check for leftover
+English allows it.
+
+**Character names and their grammatical gender.** Most languages need a gender for role names
+(Profesor / Profesora, Chirurg / Chirurgin). Each character keeps the gender its **current
+placeholder art** shows (`placeholder-art.js`); this follows the placeholders and will be revisited
+when the real artwork is made.
+
+| Gender | Characters | From the art |
+|---|---|---|
+| Female | Grandma, Study Partner, Meditation Guide, Librarian, Headmistress | name; high bun; long braid; long hair; bun and name |
+| Male | Santa, Professor, Sensei, Boss, Influencer | beard; beard; goatee; tie; "his phone" in the art code |
+| Male (short hair only, no other cue) | Leader, Study Buddy, Grandmaster, Bodybuilder, Judge | short hair |
+| Ambiguous (cap, mask or helmet hides the hair) | Coach, Surgeon, Soldier | a gender-neutral word where the language has a natural one, otherwise the masculine form (below); their taglines are gender-neutral |
+
+Ambiguous characters per language: Coach = Coach (es, pt-BR, fr, de, it), Pelatih (id), Trener (pl).
+Soldier = Soldado (es, pt-BR), Militaire (fr), Militare (it), Tentara (id), Soldat (de), Żołnierz (pl).
+Surgeon = Dokter Bedah (id); the masculine form elsewhere (Cirujano, Cirurgião, Chirurgien, Chirurg,
+Chirurgo, Chirurg). Where a language has no neutral word, the masculine form was chosen to follow the
+placeholders, like the short-haired characters above; all of this is revisited with the real artwork.
+Your Phone is an object. Custom characters' names are never translated.
+
+### For the native-speaker review
+
+Choices the independent reviews flagged and kept on purpose. A native speaker checks these before a
+language loses its `beta` flag:
+
+- **All gendered languages:** the masculine names of Surgeon (es, pt-BR, fr, de, it, pl), Soldier (de,
+  pl) and Coach (pl), and the male short-haired characters (see the table above).
+- **Spanish:** "Gamer" for the gamer costume (an invariable anglicism; "Videojugador" would be
+  masculine). "Atardecer" for evening (17–22 h; Spanish has no exact one-word "evening"). "Gafas"
+  (Spain) and "Aretes" (Latin America), both widely understood.
+- **Brazilian Portuguese:** "Noite" (17–22 h) and "Madrugada" (22–5 h; strictly it starts at midnight,
+  but the hours are shown next to the label).
+- **Indonesian:** "Siang" for 12–17 h and "Malam" for 17–22 h. Duration chips use "mnt" / "dtk" for space; sentences say "menit".
+- **French:** "Binôme" (Study Partner) is a masculine noun for a female character; her tagline doesn't
+  agree with any gender. Pose descriptions are noun phrases ("un sourire encourageant"), because
+  "Mamie, sourit." isn't correct French.
+- **German:** costume presets that are masculine person nouns (Arzt, Koch, Feuerwehrmann, Superheld,
+  Detektiv, Pestarzt, Zirkusdirektor, Außerirdischer, Verrückter Wissenschaftler, Einbrecher) and can
+  be worn by a female custom character. The approved summary sentence "geht's" has a straight
+  apostrophe while the rest uses ’. "Masken und Schminke" as the heading of a section that also has a
+  monocle and noses.
+- **Italian:** "Settimana dal giorno {date}" in the chart labels ("Settimana del {date}" would need
+  "dell'8" / "dell'11"). Long single words carry soft hyphens for 320px phones ("Pochis-simo",
+  "Abba-stanza").
+- **Polish:** the badge "Za darmo na start" ("free to start with") is a little looser than "Free during
+  launch".
+
+### Exporting the texts for review
+
+`tools/export-texts.mjs` writes every text of the app into Markdown tables, so a text can be
+reviewed without reading code:
+
+```
+node tools/export-texts.mjs
+```
+
+It needs only Node (18 or newer): no dependencies, no build step. It writes `docs/texts/en.md`
+(the English source, plus the text of `privacy.html`, which stays English) and
+`docs/texts/<code>.md` for every other language in `LANGUAGES`. These files are generated:
+**never edit them by hand**. Change the text in `public/js/i18n/<code>.js` (or, for English, in
+`en.js` or the data file the text comes from), run the tool again and commit the regenerated
+files in the same change. Running it without a text change gives no difference.
+
+- **One row per key:** `key | English | this language` (`en.md`: `key | English`), grouped by
+  where the text appears: shared words, the language and dark mode buttons, setup, characters,
+  pose descriptions, session, motivations (one group per phase, each marked `fact` with its
+  `// source:` or `boost`), dialogs, summary, history, export and import messages, the editor,
+  its options (base, clothes, accessories) and costumes. A key that fits no group lands under
+  "Other texts" and the tool says so: add a rule to `sectionOf` in the tool.
+- **Plural texts** show every form (`one`, `few`, `many`, `other`, `zero`), one per line.
+- **Invisible characters are shown:** a soft hyphen as `·`, a narrow no-break space as `_`, a
+  no-break space as `~`, and an ordinary space at the very start or end of a text as `␣`. Every
+  text is in a code span, so Markdown shows each character as it is.
+- **No second copy of the texts:** the tool runs the app's own files (`languages.js`, `en.js`,
+  `i18n.js`, the data files and every language file) in Node's `vm` module, an isolated box that
+  runs JavaScript without a browser. What it exports is what the app shows.
+- `docs/` and `tools/` are outside `public/`, so they aren't deployed, cached or covered by the
+  service worker.
+
+### Adding a language
+
+1. Copy `public/js/i18n/hu.js` to `public/js/i18n/<code>.js`, change its first line to
+   `I18N_TEXTS["<code>"] = {` and translate every text (keep every `{placeholder}`, every key, and
+   the leading space of texts that start with one). Plural texts need every category
+   `new Intl.PluralRules("<locale>").resolvedOptions().pluralCategories` lists.
+2. Add an entry to `LANGUAGES` in `public/js/i18n/languages.js`, with `beta: true` and its
+   `nativeSpeakers` from a source written in the comment there.
+3. Add the file to `PRECACHE` in `public/sw.js` and raise `CACHE_VERSION`.
+4. Add its "you" to the table above.
+5. Open the app on localhost (or any address with `?i18n-check`): the console lists every text the
+   language is missing.
+6. Run `node tools/export-texts.mjs` and commit the new `docs/texts/<code>.md` (see above).
+
+**Review process, before removing "beta":** automatic checks (every key, placeholders, plural forms,
+no leftover English, the pages at 320px, 390×844 and 740×340 without overflow) → an independent
+review session (a fresh session that only reviews the translation against the English and the rules
+above) → a native speaker uses the app → remove `beta: true` (the language then moves up in the
+sheet by itself).
 
 ## Offline use
 
@@ -1436,7 +1728,8 @@ without service workers, or if registering fails (e.g. `index.html` opened as a 
 works online exactly as before.
 
 - **First online visit (install):** the service worker downloads every file needed to start a
-  session (the `PRECACHE` list in `sw.js`: both pages, CSS, all JS, manifest, icons, favicon) into a
+  session (the `PRECACHE` list in `sw.js`: the pages, CSS, the four font files, all JS including every
+  language's texts, manifest, icons, favicon) into a
   cache named `concentraining-v<CACHE_VERSION>`. If any file fails, nothing is saved and it tries
   again on a later visit. `stats.html` (and `js/stats.js`) is left out: it needs `api/stats` anyway.
   The install asks with `cache: "no-cache"`: each file is checked with the server, so it's always
@@ -1485,8 +1778,8 @@ works online exactly as before.
   ignored).
 - **Real character artwork** (`public/assets/...`) isn't in the precache list. Each image is saved
   the first time it loads online and is available offline after that.
-- **When you add, remove or rename a file the app needs at startup** (a page, CSS, a JS file, an
-  icon), update `PRECACHE` in `public/sw.js` and raise `CACHE_VERSION`. Forgetting doesn't break
+- **When you add, remove or rename a file the app needs at startup** (a page, CSS, a JS file, a font,
+  an icon), update `PRECACHE` in `public/sw.js` and raise `CACHE_VERSION`. Forgetting doesn't break
   the online app, but a new file wouldn't work offline until it has been loaded online once, and a
   removed one would make the install fail (no offline support at all) until the list is fixed.
 - **Deploy Previews** are separate sites (own address), so they have their own service worker and
@@ -1513,6 +1806,159 @@ combines them. If it happens, it depends on what changed: usually nothing visibl
 JavaScript error, so the app doesn't start properly or a button doesn't work. Saved data is safe
 (the localStorage keys never change, and older code ignores fields it doesn't know). Reloading
 once with a decent connection fixes it, because every online start refreshes all the files.
+
+## Design system
+
+The app has one look, **Night Lamp**: parchment paper by day, midnight blue with amber lamp light by
+night. Soft cards without outlines (a shadow instead of a border), pill buttons, 22px corners, and
+in the dark theme a warm glow behind the character and around the timer. All of it is in
+`public/css/style.css`; there is no second stylesheet and no design switch.
+
+| | Light | Dark |
+|---|---|---|
+| Page | parchment `#F5EDE0` | midnight `#12172B` |
+| Cards, dialogs, fields | `#FFFAF2` | `#1B2240` |
+| Text | espresso `#2B2118` | `#F3E9D8` |
+| Grey text | `#66584A` | `#B0AEC4` |
+| Amber as a fill (primary buttons, picked chips, the switch's knob, progress bar, rings) | burnt amber `#B4541A`, white text on it | lamp amber `#FFB454`, dark ink `#2B1A05` on it |
+| Amber as text (links, labels, chart lines) | `#9A4410` | `#FFB454` |
+
+Burnt amber `#B4541A` is only 4.28:1 as text on the parchment page, so amber *text* uses the darker
+`#9A4410` (5.63:1). In the dark theme one amber does both jobs.
+
+### Tokens (three layers)
+
+A **token** is a named value (a CSS custom property, e.g. `--color-accent`) that the rules use
+instead of writing the value itself, so a colour or size is changed in one place. They are at the
+top of `style.css`, in three layers:
+
+1. **Primitives**: the palette, named by what they are (`--parchment-100`, `--amber-600`,
+   `--midnight-900`, `--ramp-1` …). This is the only place where a raw colour (`#b4541a`) is
+   written. No rule uses a primitive.
+2. **Semantic tokens**: named by what they are for (`--color-bg`, `--color-surface`, `--color-text`,
+   `--color-text-muted`, `--color-accent`, `--color-on-accent`, `--color-accent-text`,
+   `--color-focus`, `--color-danger`, `--color-divider`, `--shadow-card`, `--radius-card`,
+   `--font-body`, the type scale `--fs-…`, `--dur`). Each points at a primitive. The dark theme only
+   changes this layer (and a few component tokens).
+3. **Component tokens**: one component's own values, built from semantic tokens only (`--timer-size`,
+   `--timer-glow`, `--level-tint`, `--stage-glow`, `--char-outline`, `--swatch-border`,
+   `--header-control-bg`, `--dark-switch-shift` …).
+
+Rules for changing the stylesheet:
+
+- A rule uses semantic or component tokens, never a primitive and never a raw colour. A see-through
+  colour is written as `color-mix(in srgb, var(--color-text) 30%, transparent)` (the colour at 30%
+  opacity).
+- A new colour: add the primitive, then a semantic token that points at it, for **both** themes.
+- The dark theme's block is in the file **twice with the same content**: once for
+  `:root[data-theme="dark"]` and once inside `@media (prefers-color-scheme: dark)` (see
+  [Light and dark](#light-and-dark)). There is no build step that could share one block, so a
+  change to one must be made to the other.
+- Every text and its background must reach 4.5:1 (3:1 for large text: 24px, or 18.66px bold), in
+  both themes. Marks that carry meaning (rings, bars, the switch's knob, field edges) reach 3:1.
+
+What isn't a border any more still has one in the CSS: buttons, chips and cards keep a see-through
+`1.5px` border, so their measured sizes didn't change and a picked card can show its amber ring
+without moving anything. Real edges are kept where they carry meaning: text fields, the distraction
+buttons, Undo, Stop next to the amber button, a disabled button, and hairlines between rows.
+
+**Cues that don't rely on colour:** a picked character, mode or editor option gets a ring, a tint and
+a check mark. The five distraction buttons are tinted from yellow to red and also have a band under
+the word that grows from Barely to Completely (yellow can't be told from white by colour alone).
+
+**The character** stands on a calm, pattern-free light (`--stage-glow`: the card colour by day, a
+warm lamp glow by night) and has an outline (`--char-outline`) made with `drop-shadow`, which
+follows the artwork's own transparent edge instead of drawing a box. So light and dark artwork both
+stand out from the page in both themes, and new art needs no background of its own.
+
+### Fonts
+
+| Family | Used for | Files (`public/fonts/…`) | Size |
+|---|---|---|---|
+| **Fraunces 600** | Headings only (`h1`–`h3`, the character names, the Quick start line, "Paused", the language names) | `fraunces/fraunces-latin-600-normal.woff2`, `fraunces/fraunces-latin-ext-600-normal.woff2` | 17.7 KB + 16.9 KB |
+| **Figtree** (variable: one file holds every weight) | Everything else: text, buttons, the timer and all other digits | `figtree/figtree-latin-wght-normal.woff2`, `figtree/figtree-latin-ext-wght-normal.woff2` | 19.7 KB + 10.0 KB |
+
+- **Self-hosted:** the files are part of the site (`public/fonts/`), not loaded from a font service,
+  so no other company sees a visit, the CSP stays `default-src 'self'`, and they work offline. Both
+  are under the SIL Open Font License; each folder has its `OFL.txt`, which must stay next to the
+  files.
+- **Two files per family.** `unicode-range` in `style.css` tells the browser which characters each
+  file holds. The Latin file is always loaded (37 KB for both families); the Latin Extended file
+  only on a page that really shows such a character (ő, ű, ł, ą …), so in practice for Hungarian and
+  Polish.
+- **`font-display: swap`:** text shows at once in a system font and changes when the file arrives.
+  Every page preloads the two Latin files (`<link rel="preload">` in `<head>`: the browser fetches
+  them right away instead of after reading the stylesheet), which keeps that moment short.
+- **Offline:** all four files are in the service worker's `PRECACHE` list.
+- **Not in the fonts:** the arrows (→ ← ↓ in "Your history →", "← Back", "Change ↓") come from the
+  system font. Neither font has the French narrow no-break space (U+202F); the app doesn't use it.
+- Digits that change (timer, counters, percentages) use `font-variant-numeric: tabular-nums`, so
+  every digit is equally wide and nothing wobbles.
+
+### Type scale
+
+Every font size in `style.css` is one of 13 steps (`--fs-11` … `--fs-48`; the number is the size in
+px at the browser's default text size). They are written in `rem`, so they grow with the phone's or
+browser's text size setting.
+
+| Token | Size | Used for (examples) |
+|---|---|---|
+| `--fs-11` | 11px | "BETA" in the language list |
+| `--fs-12` | 12px | Badges, "restarted", the label on the motivation card |
+| `--fs-13` | 13px | Costume names, the smallest step of the motivation card on landscape phones |
+| `--fs-14` | 14px | Small text: taglines, hints, notes, Test sound |
+| `--fs-15` | 15px | The language button, the Quick start line, compact buttons on landscape phones |
+| `--fs-16` | 16px | Body text and buttons (the default), character names |
+| `--fs-18` | 18px | `h2`, the big Start button, "Paused" |
+| `--fs-20` | 20px | The editor's group titles, the focus % in the session list |
+| `--fs-22` | 22px | The "open in another tab" title, the × of the motivation card |
+| `--fs-26` | 26px | The editor's title, the numbers on the history cards |
+| `--fs-30` | 30px | `h1` |
+| `--fs-40` | 40px | The timer on landscape phones |
+| `--fs-48` | 48px | The focus % on the summary |
+
+Two sizes are not steps, on purpose: the timer (`--timer-size`, `--timer-size-wide`: it follows the
+screen's width between a smallest and a largest size) and the chart labels (12 units inside the
+chart's own drawing, which is scaled with the chart).
+
+### Light and dark
+
+- **The switch** is a pill (84×44px) with a sun on the left and a moon on the right, and an amber
+  knob (36px) behind the icon of the theme that's showing; a tap anywhere on it flips the theme, and
+  the knob slides 40px (200 ms, no movement with "reduce motion"). It's on the setup screen and the
+  history page, in a row of its own above the title, right-aligned: the switch, 8px, the language
+  button. Not on the session, summary, editor or privacy screens (they follow the theme too).
+  The pair is about 183px wide and the widest title ("La tua cronologia", 251px) is centred in a
+  column of at most 600px, so the pair can never sit beside the title without touching it: it has
+  its own row at every width, on desktop too.
+- **For screen readers and keyboards** it's a `<button role="switch">` called "Dark mode" (in the
+  page's language, `darkMode.label`), on (`aria-checked="true"`) in the dark theme. Tab reaches it,
+  Enter or Space flips it, and it has a visible focus ring.
+- **Which theme:** until the switch is tapped, the app follows the phone's (or browser's) own
+  light/dark setting, also when that changes while the app is open. The first tap saves the choice
+  as `theme: "light"` or `"dark"` in `ct_prefs_v1` (no new storage key); from then on the phone's
+  setting is ignored, on every page. There's no "back to automatic": clearing the site's data does
+  that. If the browser won't save, the tap still switches this page.
+- **How:** `js/theme.js` sets `data-theme="light"` or `"dark"` on `<html>`, and `style.css` has the
+  dark values under `:root[data-theme="dark"]`. If that script can't run, the same dark values
+  apply through `@media (prefers-color-scheme: dark)`, so the page still follows the phone.
+- **No flash of the wrong theme (no inline scripts):** `js/theme.js` is loaded in `<head>` of all
+  five pages as an ordinary script file, before the stylesheet. The browser runs such a script
+  before it draws anything, so the theme is already set for the first paint. (The CSP forbids inline
+  scripts, so it's a file; the same technique as `js/i18n.js`.) The switch's knob and icon colours
+  come from the theme's tokens in CSS, not from the script, so the switch can't show the wrong side
+  either.
+- **Saving** is read-merge-write like the language: only the `theme` field is written on top of
+  what's saved now, and `app.js`'s `savePrefs` keeps it.
+- **Other tabs and Back:** a tab follows a tap made in another tab (the `storage` event), and a page
+  the browser brings back as it was (Back) reads the choice again.
+- **The browser bar** (Android Chrome's address bar): each page has two `theme-color` metas with the
+  light and the dark page background. `js/theme.js` gives both the colour of the theme that's
+  showing, so the bar also follows a choice that differs from the phone's setting.
+- **The installed app's splash screen** uses the manifest's colours (parchment). The manifest is a
+  fixed file, so that one screen can't follow the switch.
+- `privacy.html` and `stats.html` load `js/theme.js` too, so they show in the same theme; they have
+  no switch.
 
 ## Layout (screen sizes)
 
@@ -1606,14 +2052,20 @@ and the timer keeps counting from the start time as always.
 | `public/index.html` | All screens (setup, session, summary, "open in another tab" notice) and dialogs |
 | `public/history.html` | Your finished sessions, streaks, time per week and focus trends |
 | `public/avatar.html` | The character editor (see [Custom characters](#custom-characters)) |
-| `public/privacy.html` | Privacy page: what stays on the device, what is sent to the server, hosting, your rights (no scripts) |
+| `public/privacy.html` | Privacy page: what stays on the device, what is sent to the server, hosting, your rights (its only script is `js/theme.js`) |
 | `public/stats.html` | Popularity table (not indexed by search engines) |
 | `public/js/stats.js` | Loads `/api/stats` and fills in the tables on `stats.html` (a file of its own because the CSP allows no inline scripts) |
 | `public/sw.js` | Service worker: offline start, network first with a 3-second fallback to the cache, precache list and cache version (see [Offline use](#offline-use)), and taps on the leave reminder notification |
 | `public/js/sw-register.js` | Registers `sw.js` from `index.html`, `history.html` and `avatar.html`; does nothing without service worker support |
-| `public/css/style.css` | Styling, light/dark mode, breathing and reaction animations, the wide and landscape layout (see [Layout](#layout-screen-sizes)) |
+| `public/css/style.css` | The one stylesheet: fonts, design tokens (primitives, semantic, component) for the light and the dark theme, the type scale (see [Design system](#design-system)), breathing and reaction animations, the wide and landscape layout (see [Layout](#layout-screen-sizes)) |
+| `public/fonts/` | Fraunces 600 and Figtree (woff2, Latin and Latin Extended) with their licence files (`OFL.txt`) |
+| `public/js/theme.js` | Light and dark: sets the theme on `<html>` before the first paint, the light/dark switch, the browser bar colour (see [Light and dark](#light-and-dark)) |
 | `public/js/data/characters.js` | Character list, groups and the personality each group gives (`personalityOf`), art paths, pose descriptions for screen readers (`POSE_DESCRIPTIONS`) |
-| `public/js/data/messages.js` | Motivation messages, summary titles, Simple-mode summary messages per result, and the "can't save" notes (also loaded by `history.html`) |
+| `public/js/data/messages.js` | Motivation messages (each with a fixed `id`) and Simple-mode summary messages per result, in English; their translations are in the language files (also loaded by `history.html`) |
+| `public/js/i18n/languages.js` | The languages (code, names, speakers, beta flag, file, Intl settings) and the sheet's order rule (see [Languages](#languages)) |
+| `public/js/i18n/en.js`, `public/js/i18n/hu.js`, `es.js`, `pt-BR.js`, `id.js`, `fr.js`, `de.js`, `it.js`, `pl.js` | The texts: English (the UI texts; the data files keep their own English) and every other language (everything) |
+| `public/js/i18n.js` | Translation system: language detection, `t()`, plurals, Intl dates, translating the page while it loads, switching |
+| `public/js/language-picker.js` | The language button and bottom sheet on the setup screen and the history page |
 | `public/js/placeholder-art.js` | Built-in placeholder drawings (kind, firm, strict and ragebait faces, plus each character's look) for characters without real art; its eyes, brows, mouths and extras are shared with custom characters |
 | `public/js/avatar-parts.js` | Custom characters' parts: head shapes (`buildHead`), each gender's faces, hairstyles, outfits and accessories, the shared skin tones, hair colours and funny faces, how each is drawn, starting looks, Randomize, and `AVATAR_PNG_FILES` |
 | `public/js/avatar-costumes.js` | Costumes: every costume list (headwear, masks, beards, ears and horns, costume outfits, back, held items, pets) and how each is drawn, clashes, Randomize's costume part, and the costume presets |
@@ -1628,6 +2080,8 @@ and the timer keeps counting from the start time as always.
 | `netlify/lib/characters.mjs` | The characters whose picks are counted (id + name); a new character must be added here |
 | `netlify/lib/picks-store.mjs` | Which Blobs store the counts are in (live or test) and the UTC day helper |
 | `test-data/` | Small export files for testing Import (not deployed, see `test-data/README.md`) |
+| `tools/export-texts.mjs` | Writes every text of every language into `docs/texts/` for review (Node, no dependencies; not deployed, see [Exporting the texts for review](#exporting-the-texts-for-review)) |
+| `docs/texts/` | The generated review tables: `en.md` (with the privacy page's text) and one file per other language. Never edited by hand |
 | `public/manifest.webmanifest` | Web app manifest: name, colors and icons for Add to Home Screen / Install |
 | `public/icons/` | Placeholder app icons: `icon.svg` and `icon-small.svg` (sources) and the PNGs rendered from them (Home Screen, Android, maskable) |
 | `public/favicon.ico` | Browser tab icon (placeholder) |

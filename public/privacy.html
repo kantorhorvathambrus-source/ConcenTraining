@@ -3,6 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Light / dark (see "Light and dark" in the README): sets the theme on <html> before anything is
+       drawn, so the page never shows in the wrong theme first. -->
+  <script src="js/theme.js"></script>
   <title>Privacy · ConcenTraining</title>
   <meta name="description" content="What ConcenTraining keeps on your device, what it sends to the server, and your rights.">
   <!-- The official address of this page (also on the GitHub Pages copy), and its link preview
@@ -19,26 +22,32 @@
   <meta property="og:image:alt" content="The ConcenTraining app icon">
   <meta name="twitter:card" content="summary">
   <link rel="stylesheet" href="css/style.css">
-  <!-- Same as history.html. Colors: --bg of the light and dark theme (css/style.css). -->
+  <!-- The two font files every page needs, fetched right away (not only once the stylesheet has
+       been read), so the text shows in a system font for a shorter moment. -->
+  <link rel="preload" href="fonts/figtree/figtree-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/fraunces/fraunces-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <!-- Same as history.html. Colors: the page background (--color-bg) of the light and the dark
+       theme in css/style.css. js/theme.js gives both the colour of the theme that is showing. -->
   <link rel="manifest" href="manifest.webmanifest">
-  <meta name="theme-color" content="#f6f3ee" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#17161b" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f5ede0" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#12172b" media="(prefers-color-scheme: dark)">
   <link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48">
   <link rel="icon" href="icons/icon-192.png" type="image/png" sizes="192x192">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <meta name="apple-mobile-web-app-title" content="ConcenTraining">
 </head>
 <body>
-  <!-- No scripts on purpose: this page reads or saves nothing, takes no session lock and registers
-       nothing. It isn't in the sw.js precache list: an already installed service worker saves a copy
-       the first time it's opened online. Whenever data handling changes, update this text and the
-       "Last updated" date (see CLAUDE.md). -->
+  <!-- One script only, js/theme.js in <head>: it reads the saved light/dark choice so this page shows
+       in the same theme as the app. The page has no switch, so nothing is saved from here; it takes
+       no session lock and registers nothing. It isn't in the sw.js precache list: an already
+       installed service worker saves a copy the first time it's opened online. Whenever data handling
+       changes, update this text and the "Last updated" date (see CLAUDE.md). -->
   <main class="app privacy-page">
     <p class="privacy-top"><a href="./" class="back-link">← Back to the timer</a></p>
 
     <header class="app-header">
       <h1>Privacy</h1>
-      <p class="muted">Last updated: 8 November 2026</p>
+      <p class="muted">Last updated: 13 November 2026</p>
     </header>
 
     <section class="privacy-section">
@@ -70,6 +79,21 @@
         If you turn on "Remind me if I leave the app", your browser asks for permission to show
         notifications. These notifications are created on your device, and nothing about them is sent
         to a server.
+      </p>
+      <p>
+        To show the app in your language, it reads the list of languages your browser is set to, on
+        your device. If you pick a language with the language button, that choice is saved with your
+        settings on this device. Neither is sent to us. "Report a translation issue" in the language
+        list opens your own email app with a message to us; nothing is sent unless you send that email.
+      </p>
+      <p>
+        The app starts in light or dark to match your device's own setting, which it reads on your
+        device. If you tap the light/dark switch, that choice is saved with your settings on this
+        device, like the language. Neither is sent to us.
+      </p>
+      <p>
+        The fonts are part of the app and come from our own site, not from a font service, so no
+        other company learns that you opened it.
       </p>
     </section>
 

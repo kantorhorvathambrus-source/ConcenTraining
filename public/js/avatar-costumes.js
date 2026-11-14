@@ -1730,7 +1730,7 @@ const HELD_ITEMS = [
       ${fist(ctx, 23, 196)}`,
   },
   {
-    id: "c-scepter", label: "Scepter", tags: ["held"],
+    id: "c-scepter", label: "Sceptre", tags: ["held"],
     draw: (ctx) => `<path d="M43 226 L43 138" stroke="#d6a92e" stroke-width="6" stroke-linecap="round"/>
       <circle cx="43" cy="130" r="10" fill="#e2b33a" stroke="#a7811f" stroke-width="2"/><circle cx="43" cy="130" r="4.5" fill="#c0392b"/>
       <path d="M43 108 L49 116 L43 122 L37 116Z" fill="#7fc8f0" stroke="#a7811f" stroke-width="1.5"/>
@@ -2328,4 +2328,17 @@ function wornPreset(look) {
     const worn = applyCostumePreset(look, preset);
     return COSTUME_FIELDS.every((field) => worn[field] === look[field]);
   }) || null;
+}
+
+// ---------- translations ----------
+// The English labels above go to the translation system (localize in js/i18n.js): each becomes a
+// getter that gives the current language. Keys: avatar.<field>.<item id> for the items offered,
+// avatar.theme.<id>, avatar.preset.<id> and avatar.presetDescription.<id>. Only ids are ever saved.
+for (const field of COSTUME_FIELDS) {
+  for (const item of COSTUME_OPTIONS[field]) I18N.localize(item, "label", `avatar.${field}.${item.id}`);
+}
+for (const theme of COSTUME_THEMES) I18N.localize(theme, "label", `avatar.theme.${theme.id}`);
+for (const preset of [NO_COSTUME_PRESET, ...COSTUME_PRESETS]) {
+  I18N.localize(preset, "label", `avatar.preset.${preset.id}`);
+  I18N.localize(preset, "description", `avatar.presetDescription.${preset.id}`);
 }
