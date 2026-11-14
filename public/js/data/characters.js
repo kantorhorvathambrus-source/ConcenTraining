@@ -20,8 +20,8 @@ const GROUPS = {
     label: "Ragebait",
     personality: "ragebait",
     warning:
-      "This is a ragebait character. Their reactions are loud and exaggerated on purpose. " +
-      "It's all for laughs, never meant to actually hurt. Still want to pick them?",
+      "This is a ragebait character: they try to annoy you on purpose. Their reactions are loud and exaggerated, " +
+      "but it's all for laughs, never meant to actually hurt. Still want to pick them?",
   },
 };
 

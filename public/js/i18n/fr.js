@@ -167,7 +167,7 @@ I18N_TEXTS.fr = {
   "motivation.boost": "Coup de pouce",
 
   "notification.title": "Ta séance est toujours en cours",
-  "notification.body": "Est-ce que ça fait partie de ce sur quoi tu te concentres\u202f? Touche pour y revenir.",
+  "notification.body": "Ça fait partie de ta tâche\u202f? Touche pour y revenir.",
 
   // ---------- dialogs ----------
   "restart.simpleTitle": "C'était une grosse distraction",
@@ -304,7 +304,7 @@ I18N_TEXTS.fr = {
 
   "history.backupTitle": "Sauvegarde",
   "history.backupText":
-    "Tes séances sont enregistrées automatiquement sur cet appareil. Exporte une copie si tu changes de téléphone ou effaces les données de ton navigateur. L'export enregistre toutes tes séances dans un fichier .json. L'import ajoute les séances d'un tel fichier\u202f; celles que tu as déjà sont ignorées. Seules les 1\u202f000 séances les plus récentes sont conservées\u202f: si le total dépasse 1\u202f000, les plus anciennes sont supprimées.",
+    "Tes séances sont enregistrées automatiquement sur cet appareil. Exporte une copie avant de changer de téléphone ou d'effacer les données de ton navigateur. L'export enregistre toutes tes séances dans un fichier .json. L'import ajoute les séances d'un tel fichier\u202f; celles que tu as déjà sont ignorées. Seules les 1\u202f000 séances les plus récentes sont conservées\u202f: si le total dépasse 1\u202f000, les plus anciennes sont supprimées.",
   "history.export": "Exporter l'historique",
   "history.import": "Importer l'historique",
   "history.backToTimer": "← Retour au minuteur",
@@ -512,7 +512,7 @@ I18N_TEXTS.fr = {
 
   // ---------- motivations and Simple summary sentences (js/data/messages.js) ----------
   // The facts stay as hedged as the English ones; their sources are next to the English text.
-  "motivation.general-1": "Avant de commencer\u202f: qu'est-ce que tu veux avoir fini quand le minuteur s'arrêtera\u202f? Résume-le en quelques mots.",
+  "motivation.general-1": "Avant de commencer\u202f: quelle est la seule chose que tu veux avoir finie quand le minuteur s'arrêtera\u202f? Résume-la en quelques mots.",
   "motivation.general-2": "Démarrer lentement, c'est normal. Laisse passer quelques minutes avant de juger comment se passe la séance.",
   "motivation.general-3": "Pose ton téléphone là où tu devrais te lever pour l'attraper. Ce petit effort en plus suffit souvent à couper le réflexe.",
   "motivation.general-4": "Selon certaines études, le simple fait d'avoir ton téléphone sous les yeux peut rendre la réflexion un peu plus difficile. Toutes n'ont pas trouvé cet effet. Le mieux reste de le laisser dans une autre pièce.",
@@ -594,7 +594,7 @@ I18N_TEXTS.fr = {
   "category.phone": "Écran",
   "category.thoughts": "Pensées",
   "category.noise": "Bruit",
-  "category.people": "Gens",
+  "category.people": "Entourage",
   "category.tired": "Fatigue",
   "category.other": "Autre",
 

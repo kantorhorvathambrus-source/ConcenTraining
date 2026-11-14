@@ -98,7 +98,7 @@ I18N_TEXTS.it = {
   "character.ragebaitText": "{name}: {warning}",
   "character.ragebaitCancel": "Scegli un altro personaggio",
   "character.ragebaitOk": "Fatti sotto",
-  "character.poseAlt": "{name}, {pose}",
+  "character.poseAlt": "{name}: {pose}",
 
   "custom.createTitle": "Crea il tuo",
   "custom.createTagline": "Disegna un personaggio tutto tuo, con il nome che vuoi.",
@@ -162,8 +162,8 @@ I18N_TEXTS.it = {
   // ---------- dialogs ----------
   "restart.simpleTitle": "È stata una bella distrazione",
   "restart.simpleText": "Continui questa sessione o ricominci da capo? Dopo una grossa distrazione, spesso è più facile ripartire da zero.",
-  "restart.advancedTitle": "È stata una pausa lunga",
-  "restart.advancedText": "Continui questa sessione o ricominci da capo? Dopo una pausa lunga, spesso è più facile ripartire da zero.",
+  "restart.advancedTitle": "È stata una distrazione lunga",
+  "restart.advancedText": "Continui questa sessione o ricominci da capo? Dopo una distrazione lunga, spesso è più facile ripartire da zero.",
   "restart.continue": "Continua questa sessione",
   "restart.over": "Ricomincia",
   "restart.lengthTitle": "Quanto deve durare la nuova sessione?",
@@ -172,7 +172,7 @@ I18N_TEXTS.it = {
 
   "end.titleRunning": "Ti fermi un attimo?",
   "end.titlePaused": "Vuoi terminare la sessione ora?",
-  "end.running": "Il timer è ancora in corso",
+  "end.running": "Il timer è ancora attivo",
   "end.break": "Fai una pausa",
   "end.breakNote": "Il timer ti aspetta.",
   "end.save": "Salva questa sessione nella cronologia",
@@ -277,7 +277,7 @@ I18N_TEXTS.it = {
   "history.deleted": "Sessione eliminata.",
 
   "history.backupTitle": "Copia di sicurezza",
-  "history.backupText": "Le sessioni si salvano automaticamente su questo dispositivo. Esportane una copia se cambi telefono o cancelli i dati del browser. Esporta cronologia salva tutte le sessioni in un file .json. Importa cronologia aggiunge le sessioni di un file di questo tipo; quelle che hai già vengono saltate. Si conservano solo le 1000 sessioni più recenti: se il totale supera 1000, le più vecchie vengono rimosse.",
+  "history.backupText": "Le sessioni si salvano automaticamente su questo dispositivo. Esportane una copia prima di cambiare telefono o cancellare i dati del browser. Esporta cronologia salva tutte le sessioni in un file .json. Importa cronologia aggiunge le sessioni di un file di questo tipo; quelle che hai già vengono saltate. Si conservano solo le 1000 sessioni più recenti: se il totale supera 1000, le più vecchie vengono rimosse.",
   "history.export": "Esporta cronologia",
   "history.import": "Importa cronologia",
   "history.backToTimer": "← Torna al timer",

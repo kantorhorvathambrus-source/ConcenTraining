@@ -60,7 +60,7 @@ I18N_TEXTS.hu = {
   "how.item5Link": "Exportálás az előzmények oldalon →",
 
   "tip.title": "Óvd meg az előzményeidet iPhone-on",
-  "tip.text": "Ha 7 napig nem nyitod meg a ConcenTrainingot, a Safari törölheti az előzményeidet és a sorozatodat. A Főképernyőre tett appnál ez nem történik meg.",
+  "tip.text": "Ha 7 napig nem nyitod meg a ConcenTraining appot, a Safari törölheti az előzményeidet és a sorozatodat. A Főképernyőre tett appnál ez nem történik meg.",
   "tip.howLabel": "Hogyan:",
   "tip.how": "koppints a Megosztás gombra (vagy ••• → Megosztás), majd válaszd a Főképernyőhöz adás lehetőséget.",
   "tip.importantLabel": "Fontos:",
@@ -224,7 +224,7 @@ I18N_TEXTS.hu = {
   "history.storageExport": "Exportálás",
   "history.storageAfter": "gombot.",
   "history.iosNote":
-    "iPhone-on és iPaden a Safari akkor is törölheti őket, ha 7 napig nem nyitod meg az oldalt. Ha a ConcenTrainingot a Főképernyődhöz adod (koppints a Megosztás gombra, vagy ••• → Megosztás, majd Főképernyőhöz adás), megmaradnak.",
+    "iPhone-on és iPaden a Safari akkor is törölheti őket, ha 7 napig nem nyitod meg az oldalt. Ha a ConcenTraining appot a Főképernyődhöz adod (koppints a Megosztás gombra, vagy ••• → Megosztás, majd Főképernyőhöz adás), megmaradnak.",
   "history.empty": "Még nincs befejezett munkamenet. Minden legalább 1 perces munkamenet megjelenik itt, amint véget ér.",
   "history.startOne": "Kezdj el egyet →",
   "history.currentStreak": "Jelenlegi sorozat",
@@ -287,7 +287,7 @@ I18N_TEXTS.hu = {
 
   "history.backupTitle": "Biztonsági mentés",
   "history.backupText":
-    "A munkameneteid automatikusan mentődnek ezen az eszközön. Exportálj egy másolatot, ha telefont cserélsz vagy törlöd a böngészőadataidat. Az exportálás az összes munkamenetedet egy .json fájlba menti. Az importálás hozzáadja egy ilyen fájl munkameneteit; a már meglévőket kihagyja. Csak a legújabb 1000 munkamenet marad meg: ha összesen több lesz 1000-nél, a legrégebbiek törlődnek.",
+    "A munkameneteid automatikusan mentődnek ezen az eszközön. Exportálj egy másolatot, mielőtt telefont cserélsz vagy törlöd a böngészőadataidat. Az exportálás az összes munkamenetedet egy .json fájlba menti. Az importálás hozzáadja egy ilyen fájl munkameneteit; a már meglévőket kihagyja. Csak a legújabb 1000 munkamenet marad meg: ha összesen több lesz 1000-nél, a legrégebbiek törlődnek.",
   "history.export": "Exportálás",
   "history.import": "Importálás",
   "history.backToTimer": "← Vissza az időzítőhöz",

@@ -99,13 +99,13 @@ I18N_TEXTS.es = {
 
   "character.editLabel": "Editar: {name}",
   "character.deleteLabel": "Eliminar: {name}",
-  "character.deleteTitle": "¿Eliminar este personaje: {name}?",
+  "character.deleteTitle": "¿Eliminar el personaje {name}?",
   "character.deleteText": "Tus sesiones anteriores con este personaje se quedan en tu historial.",
   "character.ragebaitTitle": "¡Atención!",
   "character.ragebaitText": "{name}: {warning}",
   "character.ragebaitCancel": "Elegir otro personaje",
   "character.ragebaitOk": "Adelante",
-  "character.poseAlt": "{name}, {pose}",
+  "character.poseAlt": "{name}: {pose}",
 
   "custom.createTitle": "Crea tu personaje",
   "custom.createTagline": "Diseña tu propio personaje, con el nombre que quieras.",
@@ -166,7 +166,7 @@ I18N_TEXTS.es = {
   "motivation.boost": "Impulso",
 
   "notification.title": "Tu sesión sigue en marcha",
-  "notification.body": "¿Esto es parte de aquello en lo que te concentras? Toca para volver.",
+  "notification.body": "¿Esto forma parte de tu tarea? Toca para volver.",
 
   // ---------- dialogs ----------
   "restart.simpleTitle": "Fue una distracción grande",
@@ -201,10 +201,10 @@ I18N_TEXTS.es = {
   "elsewhere.continue": "Seguir aquí",
 
   // ---------- summary ----------
-  "summary.title.great": "¡Sesión redonda!",
+  "summary.title.great": "¡Gran sesión!",
   "summary.title.okay": "¡Buen esfuerzo!",
   "summary.title.rough": "Una sesión difícil",
-  "summary.title.early": "Terminaste antes",
+  "summary.title.early": "Terminaste antes de tiempo",
   "summary.title.short": "Una sesión muy corta",
   "summary.shortNote": "Las sesiones de menos de 1 minuto no se guardan en tu historial.",
   "summary.saveError":
@@ -272,10 +272,10 @@ I18N_TEXTS.es = {
   "dayPart.afternoon": "Tarde",
   "dayPart.evening": "Atardecer",
   "dayPart.night": "Noche",
-  "history.best.morning": "Te concentras mejor por la mañana ({percent}% de media).",
-  "history.best.afternoon": "Te concentras mejor por la tarde ({percent}% de media).",
-  "history.best.evening": "Te concentras mejor al atardecer ({percent}% de media).",
-  "history.best.night": "Te concentras mejor por la noche ({percent}% de media).",
+  "history.best.morning": "Te concentras mejor por la mañana ({percent}% en promedio).",
+  "history.best.afternoon": "Te concentras mejor por la tarde ({percent}% en promedio).",
+  "history.best.evening": "Te concentras mejor al atardecer ({percent}% en promedio).",
+  "history.best.night": "Te concentras mejor por la noche ({percent}% en promedio).",
   "history.bestNotEnough": "Todavía no hay suficientes datos. Un momento del día cuenta cuando tiene {count} sesiones en modo Detallado.",
   "history.dayPartNeeds": "{sessions} · cuenta a partir de {count}",
 
@@ -304,7 +304,7 @@ I18N_TEXTS.es = {
 
   "history.backupTitle": "Copia de seguridad",
   "history.backupText":
-    "Tus sesiones se guardan automáticamente en este dispositivo. Exporta una copia si cambias de teléfono o borras los datos del navegador. Exportar guarda todas tus sesiones en un archivo .json. Importar añade las sesiones de un archivo así; las que ya tienes se omiten. Solo se conservan las 1000 sesiones más recientes: si el total supera 1000, se eliminan las más antiguas.",
+    "Tus sesiones se guardan automáticamente en este dispositivo. Exporta una copia antes de cambiar de teléfono o borrar los datos del navegador. Exportar guarda todas tus sesiones en un archivo .json. Importar añade las sesiones de un archivo así; las que ya tienes se omiten. Solo se conservan las 1000 sesiones más recientes: si el total supera 1000, se eliminan las más antiguas.",
   "history.export": "Exportar historial",
   "history.import": "Importar historial",
   "history.backToTimer": "← Volver al temporizador",
@@ -419,7 +419,7 @@ I18N_TEXTS.es = {
   "avatar.section.pet": "Mascota al hombro",
   "avatar.optionGroup.funny": "De broma",
   "avatar.optionGroup.fantasy": "Fantasía",
-  "avatar.costumeIntro": "Toca un disfraz para ponértelo. Después puedes cambiar cada parte.",
+  "avatar.costumeIntro": "Toca un disfraz para ponérselo a tu personaje. Después puedes cambiar cada parte.",
   "avatar.costumeTheme": "Tema del disfraz",
   "avatar.putOn": "Ponerse el disfraz: {name}",
   "avatar.putOnDescribed": "Ponerse el disfraz: {name}, {description}",
@@ -523,7 +523,7 @@ I18N_TEXTS.es = {
   "motivation.general-1": "Antes de empezar: ¿qué es lo único que quieres tener hecho cuando acabe el tiempo? Dilo en pocas palabras.",
   "motivation.general-2": "Empezar despacio es normal. Date unos minutos antes de juzgar cómo va esta sesión.",
   "motivation.general-3": "Deja el teléfono donde tengas que levantarte para alcanzarlo. Ese paso de más suele bastar para frenar el reflejo.",
-  "motivation.general-4": "Según algunos estudios, basta con tener el teléfono a la vista para que pensar cueste un poco más. No todos los estudios llegaron a esa conclusión. Lo más seguro es dejarlo en otra habitación.",
+  "motivation.general-4": "Según algunos estudios, el simple hecho de tener el teléfono a la vista puede hacer que pensar cueste un poco más. No todos los estudios llegaron a esa conclusión. Lo más seguro es dejarlo en otra habitación.",
   "motivation.general-5": "Haz que el primer paso sea mínimo: abre el archivo, escribe una línea, lee un párrafo. Lo difícil es empezar, no el paso en sí.",
   "motivation.general-6": "Cuando cambias de tarea, parte de tu atención se queda un rato en la anterior. Los investigadores lo llaman residuo de atención.",
   "motivation.general-7": "Decide ahora qué harás cuando llegue la tentación: «Cuando quiera mirar el teléfono, respiraré una vez y seguiré».",
@@ -555,7 +555,7 @@ I18N_TEXTS.es = {
   "motivation.middle-9": "Preguntarte «¿por qué es cierto esto?» y relacionarlo con lo que ya sabes ayuda a fijar lo nuevo.",
   "motivation.middle-10": "Fíjate en dónde estás ahora: qué línea, qué paso. Si luego te distraes, sabrás exactamente adónde volver.",
   "motivation.middle-11": "Llevar un registro de tu progreso hace más probable que alcances una meta, sobre todo si lo pones por escrito.",
-  "motivation.middle-12": "Este tipo de parte es la que más fácil resulta dejar para luego. Y aun así, la estás haciendo.",
+  "motivation.middle-12": "Partes como esta son las más fáciles de dejar para luego. Y aun así, la estás haciendo.",
   "motivation.final-1": "Último tramo. Elige una cosa que puedas terminar del todo antes de que acabe el tiempo, y termínala.",
   "motivation.final-2": "Las personas tienden a acelerar cuando una meta está cerca. Puedes aprovechar ese impulso ahora mismo.",
   "motivation.final-3": "Solemos recordar una experiencia por su momento más intenso y por cómo terminó. Unos buenos minutos finales influyen en cómo recordarás después esta sesión.",
@@ -677,10 +677,10 @@ I18N_TEXTS.es = {
   "avatar.skin.tone10": "Tono de piel 10: marrón muy oscuro",
   "avatar.skin.fantasy-green": "Piel de fantasía 1: verde",
   "avatar.skin.fantasy-blue": "Piel de fantasía 2: azul",
-  "avatar.skin.fantasy-purple": "Piel de fantasía 3: morado",
+  "avatar.skin.fantasy-purple": "Piel de fantasía 3: morada",
   "avatar.skin.fantasy-grey": "Piel de fantasía 4: gris",
-  "avatar.skin.fantasy-red": "Piel de fantasía 5: rojo",
-  "avatar.skin.fantasy-gold": "Piel de fantasía 6: dorado",
+  "avatar.skin.fantasy-red": "Piel de fantasía 5: roja",
+  "avatar.skin.fantasy-gold": "Piel de fantasía 6: dorada",
   "avatar.hairColor.black": "Negro",
   "avatar.hairColor.darkBrown": "Castaño oscuro",
   "avatar.hairColor.brown": "Castaño",

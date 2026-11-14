@@ -179,8 +179,8 @@ there, see [Domain, redirect and security headers](#domain-redirect-and-security
   was the distraction?" (the app never asks that):
   - **Step 1** asks only continue or start over. Simple mode (which has no times): "That was a big
     distraction" / "Keep going with this session, or start fresh? After a big distraction, starting
-    over is often easier." Advanced mode: "That was a long break" / "Keep going with this session, or
-    start fresh? After a long break, starting over is often easier." Buttons: **Continue this
+    over is often easier." Advanced mode: "That was a long distraction" / "Keep going with this
+    session, or start fresh? After a long distraction, starting over is often easier." Buttons: **Continue this
     session** (gets the focus) and **Start over**. Esc or Android Back means Continue.
   - **Step 2** (only after **Start over**): "How long should the new session be?", the duration chips
     and Custom field (the current session length preselected), the "Save the first …" checkbox (see
@@ -199,7 +199,7 @@ there, see [Domain, redirect and security headers](#domain-redirect-and-security
   question is saved with the running session (`restartPending`) as soon as the button is tapped, so if
   the page is reloaded before it's answered, it's asked right after the reload.
   If the session has run at least 1 minute, step 2 also has a checkbox above **Start new session**:
-  "Save the first 12 min 30 sec to history" (the time so far, measured when the dialog first opens,
+  "Save the first 12 min 30 sec to your history" (the time so far, measured when the dialog first opens,
   so time spent in the dialog isn't added), ticked by default. With it ticked, **Start new session**
   saves the abandoned part to the history first, as ending
   at that moment, with `endedBy: "startOver"`. Its focus % and stats are calculated the normal way
@@ -477,7 +477,7 @@ are in `public/js/data/messages.js`.
   up** on, but the screen isn't being kept on (the setting is off, the browser doesn't support Screen
   Wake Lock, the request was refused, or the browser released the lock and getting it again failed),
   a small muted line under the session info says: "Your screen may turn off. If it does, you won't
-  hear the chime." It's in the page flow, so it never covers the character, the timer or the buttons.
+  hear the sound." It's in the page flow, so it never covers the character, the timer or the buttons.
   It disappears as soon as the lock is held (e.g. after the first tap following a reload). It's never
   shown with the sound off, or on the setup and summary screens. While a lock request is out, or the
   page is hidden, it stays as it is, so it doesn't blink on every tap or return (`updateScreenNote()`
@@ -811,7 +811,7 @@ saved data, no backend, no service worker version (the file's name stays the sam
   runs the normal card tap: a ragebait character shows the warning first). **Cancel** goes back
   without saving. If the browser doesn't let the site store data, the editor shows the same note
   as the setup screen and still works; **Save** then says "Couldn't save your character. Your
-  browser isn't letting this site store data." Editing a character that another tab deleted
+  browser isn't letting this site save data." Editing a character that another tab deleted
   meanwhile says "This character was deleted in another tab, so it can't be saved."
 - **During a session:** the editor can only be opened from the setup screen, so not from a running
   session in the same tab. In another tab it can: the running session keeps the character as it
@@ -883,12 +883,12 @@ shared by both genders and starts with None.
 | Category (look field) | Items |
 |---|---|
 | Headwear (`headwear`, 54) | Bicorne (general's hat), tricorne (pirate hat), Santa-style hat, witch hat, wizard hat, crown, tiara, jester hat, knight helmet (open face), top hat, cowboy hat, captain's hat, chef's toque, graduation cap, hood, pumpkin head, halo, flower crown, beret, party hat, beanie, headphones, bowler hat, sailor hat. B: elf hat, dwarf hood, Viking-style helmet (no horns), laurel wreath, pharaoh-style headdress, musketeer-style hat with feather, coronet, steampunk top hat with goggles, scientist goggles, police-style cap, firefighter helmet, astronaut helmet (a glass bubble, the hair shows inside), deerstalker, explorer's hat, ringmaster's top hat, plague doctor hat, pilot cap, surgical cap, judge's wig, straw hat, sun hat, baseball cap (backwards), black knit cap, bandana, ninja-style hood with a cloth face mask and a red headband knotted at the side, ballet bun ribbon, bunny ears, bear hood, dinosaur hood, robot head (covers the head, with glowing openings) |
-| Masks and face (`mask`, 22) | Masquerade mask, plain white mask, skull mask, superhero eye mask, eye patch, monocle, fake moustache, curly villain moustache, vampire fangs, friendly clown face paint, skeleton face paint, glitter. B: plague doctor mask (light, with a short beak that stops above the mouth), mummy bandages, witch nose with wart, long wooden nose, tiger stripes face paint, butterfly face paint, star-shaped glasses, carrot nose, bunny nose and whiskers, cat-burglar eye mask |
+| Masks and face paint (`mask`, 22) | Masquerade mask, plain white mask, skull mask, superhero eye mask, eye patch, monocle, fake moustache, curly villain moustache, vampire fangs, friendly clown face paint, skeleton face paint, glitter. B: plague doctor mask (light, with a short beak that stops above the mouth), mummy bandages, witch nose with wart, long wooden nose, tiger stripes face paint, butterfly face paint, star-shaped glasses, carrot nose, bunny nose and whiskers, cat-burglar eye mask |
 | Costume beard (`costumeBeard`, 8) | Santa-style white beard, long wizard beard, pirate beard (in the hair colour), fake beard on a string. B: dwarf braided beard, Viking-style beard, musketeer-style moustache and pointed beard (all three in the hair colour), red pointed beard |
 | Ears and horns (`earsHorns`, 11) | Elf ears, devil horns, cat ears (in the hair colour), unicorn horn, antennae. B: ram horns, wolf ears, fairy ears, small horns, bear ears, dragon horns |
 | Costume outfit (`costumeOutfit`, 54) | General's coat with epaulettes and sash, pirate coat, knight armour, king's robe and queen's gown with ermine, prince outfit, princess dress, Santa-style suit, witch dress, wizard robe, vampire suit with high cape collar, ghost sheet, superhero suit, chef's jacket, doctor's scrubs, firefighter jacket, pilot uniform, judge's robe, butler's tailcoat, cowboy shirt and vest, sailor suit, pumpkin costume. B: toga-style robe, Viking-style tunic with fur, pharaoh-style collar and robe, musketeer-style tunic, elf outfit, fairy dress, dwarf tunic, angel robe, red devil suit, jester suit, scarecrow outfit, mummy wraps (also wrap the head, face open), skeleton suit, long dark hooded cloak, astronaut suit, robot suit, alien costume, detective trench coat, mad scientist coat, explorer shirt, steampunk vest, ninja-style black outfit, ballerina tutu, ringmaster jacket, rock star leather jacket, striped burglar shirt, snowman costume, bunny onesie, bear onesie, dinosaur onesie, clown suit, dragon tamer leather vest |
 | Back (`back`, 11) | Cape, royal cloak, angel wings, bat wings, backpack. B: fairy wings, butterfly wings, dragon wings, jetpack, turtle shell, satchel |
-| Held item (`held`, 34) | Magic wand, wizard staff, scepter, lantern, telescope, book, broom, Santa's sack, gift box, candle, balloon, coffee cup. B: map, quill, crystal ball, flag (a plain pennant, no country's flag), trophy, pumpkin basket, Easter basket, umbrella, magnifying glass, potion flask, wrench, electric guitar and game controller (made-up shapes, no brand), microphone, lasso, ringmaster's cane, clipboard, wooden spoon, gavel, loot sack, compass, serving tray with cloche |
+| Held item (`held`, 34) | Magic wand, wizard staff, sceptre, lantern, telescope, book, broom, Santa's sack, gift box, candle, balloon, coffee cup. B: map, quill, crystal ball, flag (a plain pennant, no country's flag), trophy, pumpkin basket, Easter basket, umbrella, magnifying glass, potion flask, wrench, electric guitar and game controller (made-up shapes, no brand), microphone, lasso, ringmaster's cane, clipboard, wooden spoon, gavel, loot sack, compass, serving tray with cloche |
 | Shoulder pet (`pet`, 8) | Parrot, owl, black cat. B: small dragon, raven, frog with a crown, white mouse, small robot |
 
 Plus 6 **fantasy skin colours** (green, blue, purple, grey, red, gold) after the 10 natural tones.
@@ -1158,8 +1158,8 @@ to history" checkbox was unticked (see above). The page shows:
 - **Last 30 sessions** with date, character, mode, length, distractions and focus %. Sessions saved
   by **Start over** have a small "restarted" label. The title says "Last 30 sessions (of N)" once
   there are more than 30, otherwise "N sessions". See [Deleting a session](#deleting-a-session).
-- **Backup:** "Your sessions are saved automatically on this device. Export a copy if you switch
-  phones or clear your browser data.", then Export and Import buttons (see below).
+- **Backup:** "Your sessions are saved automatically on this device. Export a copy before you
+  switch phones or clear your browser data.", then Export and Import buttons (see below).
 
 Simple-mode sessions have no focus % (their buttons aren't time-based). They count for streaks and
 time per week and appear in the list as "—", but are left out of the focus trend and time-of-day
@@ -1606,8 +1606,11 @@ informal "you", the same across the whole app:
 **The user's gender is unknown**, so no language uses a gendered form for the user: no slash forms
 ("listo/a"), no "(a)", no gender stars. Pose descriptions are written as verbs or invariable words,
 because any character (also a custom one of either gender) uses them, and the "Tired" distraction
-category is a noun everywhere (Cansancio, Cansaço, Lelah, Fatigue, Müdigkeit, Stanchezza, Zmęczenie).
-The checks search each language for its typical gendered forms.
+category is a noun everywhere (Cansancio, Cansaço, Kelelahan, Fatigue, Müdigkeit, Stanchezza, Zmęczenie).
+The checks search each language for its typical gendered forms. A pose is read out as
+"{name}, {pose}" ("Grandma, calm and smiling."); Spanish, Italian and Polish, whose pose
+descriptions start with a verb, use "{name}: {pose}" ("Abuela: sonríe con calma."), because after a
+comma the verb reads as an order to the character.
 
 **"Ragebait"** is a loanword in many languages. Each language decides whether to keep it (when the
 word is used locally, as in Hungarian, where the warning dialog explains it: "szándékosan próbál
@@ -1647,9 +1650,7 @@ language loses its `beta` flag:
   (Spain) and "Aretes" (Latin America), both widely understood.
 - **Brazilian Portuguese:** "Noite" (17–22 h) and "Madrugada" (22–5 h; strictly it starts at midnight,
   but the hours are shown next to the label).
-- **Indonesian:** the Advanced restart dialog says "a long distraction" ("distraksi yang lama") rather
-  than "a long break", so it isn't confused with the break feature ("Istirahat"). "Siang" for 12–17 h
-  and "Malam" for 17–22 h. Duration chips use "mnt" / "dtk" for space; sentences say "menit".
+- **Indonesian:** "Siang" for 12–17 h and "Malam" for 17–22 h. Duration chips use "mnt" / "dtk" for space; sentences say "menit".
 - **French:** "Binôme" (Study Partner) is a masculine noun for a female character; her tagline doesn't
   agree with any gender. Pose descriptions are noun phrases ("un sourire encourageant"), because
   "Mamie, sourit." isn't correct French.
@@ -1664,6 +1665,38 @@ language loses its `beta` flag:
 - **Polish:** the badge "Za darmo na start" ("free to start with") is a little looser than "Free during
   launch".
 
+### Exporting the texts for review
+
+`tools/export-texts.mjs` writes every text of the app into Markdown tables, so a text can be
+reviewed without reading code:
+
+```
+node tools/export-texts.mjs
+```
+
+It needs only Node (18 or newer): no dependencies, no build step. It writes `docs/texts/en.md`
+(the English source, plus the text of `privacy.html`, which stays English) and
+`docs/texts/<code>.md` for every other language in `LANGUAGES`. These files are generated:
+**never edit them by hand**. Change the text in `public/js/i18n/<code>.js` (or, for English, in
+`en.js` or the data file the text comes from), run the tool again and commit the regenerated
+files in the same change. Running it without a text change gives no difference.
+
+- **One row per key:** `key | English | this language` (`en.md`: `key | English`), grouped by
+  where the text appears: shared words, the language and dark mode buttons, setup, characters,
+  pose descriptions, session, motivations (one group per phase, each marked `fact` with its
+  `// source:` or `boost`), dialogs, summary, history, export and import messages, the editor,
+  its options (base, clothes, accessories) and costumes. A key that fits no group lands under
+  "Other texts" and the tool says so: add a rule to `sectionOf` in the tool.
+- **Plural texts** show every form (`one`, `few`, `many`, `other`, `zero`), one per line.
+- **Invisible characters are shown:** a soft hyphen as `·`, a narrow no-break space as `_`, a
+  no-break space as `~`, and an ordinary space at the very start or end of a text as `␣`. Every
+  text is in a code span, so Markdown shows each character as it is.
+- **No second copy of the texts:** the tool runs the app's own files (`languages.js`, `en.js`,
+  `i18n.js`, the data files and every language file) in Node's `vm` module, an isolated box that
+  runs JavaScript without a browser. What it exports is what the app shows.
+- `docs/` and `tools/` are outside `public/`, so they aren't deployed, cached or covered by the
+  service worker.
+
 ### Adding a language
 
 1. Copy `public/js/i18n/hu.js` to `public/js/i18n/<code>.js`, change its first line to
@@ -1676,6 +1709,7 @@ language loses its `beta` flag:
 4. Add its "you" to the table above.
 5. Open the app on localhost (or any address with `?i18n-check`): the console lists every text the
    language is missing.
+6. Run `node tools/export-texts.mjs` and commit the new `docs/texts/<code>.md` (see above).
 
 **Review process, before removing "beta":** automatic checks (every key, placeholders, plural forms,
 no leftover English, the pages at 320px, 390×844 and 740×340 without overflow) → an independent
@@ -2046,6 +2080,8 @@ and the timer keeps counting from the start time as always.
 | `netlify/lib/characters.mjs` | The characters whose picks are counted (id + name); a new character must be added here |
 | `netlify/lib/picks-store.mjs` | Which Blobs store the counts are in (live or test) and the UTC day helper |
 | `test-data/` | Small export files for testing Import (not deployed, see `test-data/README.md`) |
+| `tools/export-texts.mjs` | Writes every text of every language into `docs/texts/` for review (Node, no dependencies; not deployed, see [Exporting the texts for review](#exporting-the-texts-for-review)) |
+| `docs/texts/` | The generated review tables: `en.md` (with the privacy page's text) and one file per other language. Never edited by hand |
 | `public/manifest.webmanifest` | Web app manifest: name, colors and icons for Add to Home Screen / Install |
 | `public/icons/` | Placeholder app icons: `icon.svg` and `icon-small.svg` (sources) and the PNGs rendered from them (Home Screen, Android, maskable) |
 | `public/favicon.ico` | Browser tab icon (placeholder) |

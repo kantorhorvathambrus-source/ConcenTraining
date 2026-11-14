@@ -163,12 +163,12 @@ I18N_TEXTS.id = {
   "motivation.boost": "Penyemangat",
 
   "notification.title": "Sesimu masih berjalan",
-  "notification.body": "Apakah ini bagian dari hal yang sedang kamu fokuskan? Ketuk untuk kembali.",
+  "notification.body": "Apakah ini bagian dari tugasmu? Ketuk untuk kembali.",
 
   // ---------- dialogs ----------
-  "restart.simpleTitle": "Itu distraksi yang besar",
+  "restart.simpleTitle": "Tadi itu distraksi yang besar",
   "restart.simpleText": "Lanjutkan sesi ini, atau mulai dari awal? Setelah distraksi besar, mulai lagi sering kali lebih mudah.",
-  "restart.advancedTitle": "Itu distraksi yang lama",
+  "restart.advancedTitle": "Tadi itu distraksi yang lama",
   "restart.advancedText": "Lanjutkan sesi ini, atau mulai dari awal? Setelah distraksi yang lama, mulai lagi sering kali lebih mudah.",
   "restart.continue": "Lanjutkan sesi ini",
   "restart.over": "Mulai dari awal",
@@ -290,7 +290,7 @@ I18N_TEXTS.id = {
 
   "history.backupTitle": "Cadangan",
   "history.backupText":
-    "Sesimu tersimpan otomatis di perangkat ini. Ekspor salinannya kalau kamu ganti HP atau menghapus data browser. Ekspor menyimpan semua sesimu sebagai file .json. Impor menambahkan sesi dari file seperti itu; sesi yang sudah kamu punya akan dilewati. Hanya 1000 sesi terbaru yang disimpan: kalau totalnya lebih dari 1000, sesi tertua akan dihapus.",
+    "Sesimu tersimpan otomatis di perangkat ini. Ekspor salinannya sebelum kamu ganti HP atau menghapus data browser. Ekspor menyimpan semua sesimu sebagai file .json. Impor menambahkan sesi dari file seperti itu; sesi yang sudah kamu punya akan dilewati. Hanya 1000 sesi terbaru yang disimpan: kalau totalnya lebih dari 1000, sesi tertua akan dihapus.",
   "history.export": "Ekspor riwayat",
   "history.import": "Impor riwayat",
   "history.backToTimer": "← Kembali ke timer",
@@ -535,7 +535,7 @@ I18N_TEXTS.id = {
   "motivation.short-9": "Menguji diri sendiri lebih ampuh daripada membaca ulang. Tutup catatanmu sebentar dan coba ingat poin utamanya.",
   "motivation.short-10": "Notifikasi yang tidak kamu buka tetap bisa menarik perhatianmu. Mode senyap lebih membantu daripada kelihatannya.",
   "motivation.short-11": "Buntu? Katakan pada dirimu sendiri dalam satu kalimat, apa tepatnya yang tidak kamu pahami. Sering kali langkah berikutnya muncul saat kamu mengatakannya.",
-  "motivation.short-12": "Sesi-sesi singkat itu terkumpul. Beberapa menit fokus hari ini lebih berguna daripada rencana sempurna untuk besok.",
+  "motivation.short-12": "Sesi-sesi singkat lama-lama jadi banyak. Beberapa menit fokus hari ini lebih berguna daripada rencana sempurna untuk besok.",
 
   "summary.simple.great.1": "Kamu hadir dan benar-benar bekerja.",
   "summary.simple.great.2": "Setiap sesi membuat sesi berikutnya sedikit lebih mudah.",
@@ -544,7 +544,7 @@ I18N_TEXTS.id = {
   "summary.simple.okay.1": "Ada beberapa distraksi, tapi kamu terus kembali. Itulah kemampuannya.",
   "summary.simple.okay.2": "Tidak sempurna, tapi solid. Setiap kali kamu kembali, itu berarti.",
   "summary.simple.okay.3": "Ada beberapa hambatan di jalan. Lain kali, coba taruh HP-mu lebih jauh.",
-  "summary.simple.okay.4": "Kamu sudah menyelesaikan pekerjaan nyata. Lain kali, coba kurangi sedikit distraksinya.",
+  "summary.simple.okay.4": "Kamu benar-benar menyelesaikan sesuatu. Lain kali, coba kurangi sedikit distraksinya.",
   "summary.simple.rough.1": "Kali ini banyak distraksi. Itu terjadi pada semua orang.",
   "summary.simple.rough.2": "Sesi yang berat. Lain kali, sesi yang lebih pendek mungkin lebih mudah dijaga.",
   "summary.simple.rough.3": "Hari ini fokusmu sering teralihkan. Besok adalah awal yang baru.",

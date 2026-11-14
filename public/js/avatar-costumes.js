@@ -1730,7 +1730,7 @@ const HELD_ITEMS = [
       ${fist(ctx, 23, 196)}`,
   },
   {
-    id: "c-scepter", label: "Scepter", tags: ["held"],
+    id: "c-scepter", label: "Sceptre", tags: ["held"],
     draw: (ctx) => `<path d="M43 226 L43 138" stroke="#d6a92e" stroke-width="6" stroke-linecap="round"/>
       <circle cx="43" cy="130" r="10" fill="#e2b33a" stroke="#a7811f" stroke-width="2"/><circle cx="43" cy="130" r="4.5" fill="#c0392b"/>
       <path d="M43 108 L49 116 L43 122 L37 116Z" fill="#7fc8f0" stroke="#a7811f" stroke-width="1.5"/>
