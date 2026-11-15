@@ -1321,17 +1321,19 @@ doesn't do this.
   rule; the Home Screen app is the reliable fix. Skipped in Firefox, because Firefox would show a
   permission bar right after the session. Either way `persistRequested` is set in `ct_prefs_v1`, so
   it's only tried once.
-- **Icons** (`public/icons/`, `public/favicon.ico`): placeholders until the real character art, a
-  white crosshair with a brain in the middle on orange (the colour of the look before Night Lamp;
-  they weren't redrawn). The source is
-  `public/icons/icon.svg` (edit this one). The PNGs are rendered from it: `apple-touch-icon.png`
+- **Icons** (`public/icons/`, `public/favicon.ico`): the ConcenTraining logo, a cream crosshair with
+  an amber filled brain in the middle (seen from above: four rounded lobes per hemisphere, a central
+  fissure and two short folds per side, outlined in espresso) on an espresso background. The source
+  is `public/icons/icon.svg` (edit this one). The PNGs are rendered from it: `apple-touch-icon.png`
   (180, full square without transparency, iOS rounds the corners), `icon-192.png` and
   `icon-512.png` (rounded corners), and `icon-maskable-512.png` (full square, the picture shrunk to
   80% so it stays inside the middle safe zone and Android can crop it to any shape). At favicon
-  size the brain would be a blob, so `favicon.ico` (16/32/48 px) is rendered from a simplified
-  `public/icons/icon-small.svg` (crosshair with a filled dot). The PNGs and the favicon were made
-  once with a throwaway script (headless Chromium + Python), which isn't in the repo. After editing an
-  SVG, render the files again at the same names and sizes.
+  size the filled brain would read as a pill, so `favicon.ico` (16/32/48 px) is rendered from a
+  simplified `public/icons/icon-small.svg` (cream crosshair with an amber dot on espresso). The PNGs
+  and the favicon were made with a throwaway script (headless Chromium + Python), which isn't in the
+  repo. After editing an SVG, render the files again at the same names and sizes, and raise
+  `CACHE_VERSION` in `public/sw.js`: the icons are precached, so with unchanged file names the
+  service worker would keep serving the old ones.
 
 **In the Home Screen app** (standalone mode: no address bar and no browser Back button):
 
@@ -2083,8 +2085,8 @@ and the timer keeps counting from the start time as always.
 | `tools/export-texts.mjs` | Writes every text of every language into `docs/texts/` for review (Node, no dependencies; not deployed, see [Exporting the texts for review](#exporting-the-texts-for-review)) |
 | `docs/texts/` | The generated review tables: `en.md` (with the privacy page's text) and one file per other language. Never edited by hand |
 | `public/manifest.webmanifest` | Web app manifest: name, colors and icons for Add to Home Screen / Install |
-| `public/icons/` | Placeholder app icons: `icon.svg` and `icon-small.svg` (sources) and the PNGs rendered from them (Home Screen, Android, maskable) |
-| `public/favicon.ico` | Browser tab icon (placeholder) |
+| `public/icons/` | App icons (the logo): `icon.svg` and `icon-small.svg` (sources) and the PNGs rendered from them (Home Screen, Android, maskable) |
+| `public/favicon.ico` | Browser tab icon (crosshair with a dot, from `icons/icon-small.svg`) |
 | `netlify.toml` | Tells Netlify the site is in `public/`, the redirect from the old Netlify addresses to https://concentraining.com, the security headers and CSP, and `Cache-Control: no-cache` for `sw.js` (see [Domain, redirect and security headers](#domain-redirect-and-security-headers)) |
 | `.github/workflows/pages.yml` | Optional backup: publishes `public/` to the GitHub Pages test site on every push to `main` (see [GitHub Pages backup test site](#github-pages-backup-test-site-optional)) |
 | `package.json` | The one dependency the functions need (`@netlify/blobs`) |
@@ -2224,9 +2226,9 @@ redirect), so search engines treat every copy (including GitHub Pages) as that o
 canonical. The same three pages have Open Graph and Twitter card tags (`og:title`,
 `og:description` = the page's meta description, `og:url` = the canonical address, `og:image`,
 `twitter:card` = `summary`), which apps like Messenger use for the preview of a shared link.
-- **The preview image is the placeholder app icon** (`https://concentraining.com/icons/icon-512.png`,
-  512×512). Replace it (and its `og:image:width`, `og:image:height` and `og:image:alt`) on all three
-  pages once the real character art exists.
+- **The preview image is the app icon** (`https://concentraining.com/icons/icon-512.png`,
+  512×512). If it's ever swapped for another image, update `og:image`, `og:image:width`,
+  `og:image:height` and `og:image:alt` on all three pages.
 - Messenger, Facebook and others keep a copy of a preview for a while. After changing the tags,
   Facebook's Sharing Debugger (https://developers.facebook.com/tools/debug/) shows the new one and
   can refresh it.
