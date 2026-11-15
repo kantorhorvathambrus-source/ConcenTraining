@@ -1,0 +1,175 @@
+/* Logo lab: a throwaway page to compare three app icon drafts (A, B, C) with the current icon.
+   Not part of the app (not linked, not precached). A file of its own because the CSP blocks
+   inline styles. Raw colours are fine here: this page is outside the Night Lamp token system. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 24px 16px 64px;
+  background: #fffaf2;
+  color: #2b2118;
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+main {
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+h1 {
+  margin: 0 0 4px;
+  font-size: 28px;
+}
+
+h2 {
+  margin: 0 0 4px;
+  font-size: 22px;
+}
+
+h3 {
+  margin: 20px 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #66584a;
+}
+
+p {
+  margin: 0 0 8px;
+  max-width: 70ch;
+}
+
+.variant {
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid #dfd1bb;
+}
+
+.note {
+  color: #66584a;
+}
+
+/* a row of icons, bottom-aligned, with a caption under each */
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 20px 24px;
+}
+
+figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+figcaption {
+  font-size: 12px;
+  color: inherit;
+  opacity: 0.7;
+  white-space: nowrap;
+}
+
+img {
+  display: block;
+}
+
+/* the two test backgrounds */
+.panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+}
+
+.panel {
+  padding: 20px;
+  border-radius: 12px;
+}
+
+.panel-light {
+  background: #f5ede0;
+  color: #2b2118;
+}
+
+.panel-dark {
+  background: #12172b;
+  color: #f3e9d8;
+}
+
+.panel-label {
+  margin: 0 0 12px;
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+/* sizes */
+.s512 { width: 512px; height: 512px; }
+.s192 { width: 192px; height: 192px; }
+.s96 { width: 96px; height: 96px; }
+.s60 { width: 60px; height: 60px; }
+.s48 { width: 48px; height: 48px; }
+.s32 { width: 32px; height: 32px; }
+.s16 { width: 16px; height: 16px; }
+
+/* the 512 px version must not overflow a phone screen */
+@media (max-width: 560px) {
+  .s512 {
+    width: 100%;
+    height: auto;
+  }
+}
+
+/* Home Screen shapes. Rounded square: roughly the iPhone/Android corner (22% of the side).
+   Circle: Android's maskable crop; the picture is shrunk to 80% on its own background colour,
+   like icon-maskable-512.png, so everything outside the middle safe zone may be cut. */
+.rounded {
+  border-radius: 22.37%;
+  overflow: hidden;
+}
+
+.circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.circle img {
+  width: 80%;
+  height: 80%;
+}
+
+.bg-a { background: #2b2118; }
+.bg-b { background: #f5ede0; }
+.bg-c { background: #9a4410; }
+.bg-now { background: #ff6b35; }
+
+/* side by side overview */
+.compare {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 16px;
+}
+
+.compare figure {
+  gap: 10px;
+}
+
+.compare .row {
+  justify-content: center;
+  gap: 12px;
+}
+
+.letter {
+  font-size: 18px;
+  font-weight: 700;
+}
