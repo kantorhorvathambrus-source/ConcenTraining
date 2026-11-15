@@ -1,7 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
   <!-- Logo lab, variant A "Night", favicon size (16-48 px): the layout of
        icons/icon-small.svg (crosshair with a filled dot, thicker lines) in the colours of
-       a.svg. The brain does not read at this size. Draft only. -->
+       a.svg; the dot takes the brain's fill colour. The filled brain reads as a pill at
+       32 px, so it is left out. Draft only. -->
   <rect width="32" height="32" rx="7" fill="#2b2118"/>
   <g fill="none" stroke="#ffb454" stroke-width="3" stroke-linecap="round">
     <circle cx="16" cy="16" r="9.5"/>

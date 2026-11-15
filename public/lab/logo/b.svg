@@ -1,22 +1,22 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- Logo lab, variant B "Paper": espresso crosshair (espresso-900) and a burnt amber line brain (amber-600) on parchment (parchment-100).
-       Same idea as icons/icon.svg: a crosshair with a brain in the middle. The brain is seen
-       from above: two hemispheres that meet at the front and back, a narrow central fissure
-       and three folds per side (the right hemisphere mirrors the left). Draft only. -->
-  <rect width="512" height="512" fill="#f5ede0"/>
-  <g fill="none" stroke="#2b2118" stroke-width="26" stroke-linecap="round">
+  <!-- Logo lab, variant B "Lamp": cream crosshair (cream-100) and an amber brain (amber-300) with espresso outline and folds, on espresso (espresso-900).
+       Same idea as icons/icon.svg: a crosshair with a brain in the middle. The brain is filled and
+       seen from above: each hemisphere has four rounded lobes along its outer edge, with notches at
+       the front and back, a central fissure and two short folds per side (the right hemisphere
+       mirrors the left). Draft only. -->
+  <rect width="512" height="512" fill="#2b2118"/>
+  <g fill="none" stroke="#f3e9d8" stroke-width="26" stroke-linecap="round">
     <circle cx="256" cy="256" r="164"/>
     <path d="M256 44V104M256 408V468M44 256H104M408 256H468"/>
   </g>
-  <g transform="translate(256 256) scale(1.12) translate(-256 -256)" fill="none" stroke="#b4541a" stroke-linecap="round" stroke-linejoin="round">
-    <g stroke-width="20">
-      <path d="M256 172C250 156 236 148 220 150C198 152 182 166 180 186C164 196 158 216 164 236C154 256 154 282 168 298C164 322 178 344 202 350C216 364 238 366 248 356C252 352 254 348 256 344"/>
-      <path d="M256 172C250 156 236 148 220 150C198 152 182 166 180 186C164 196 158 216 164 236C154 256 154 282 168 298C164 322 178 344 202 350C216 364 238 366 248 356C252 352 254 348 256 344" transform="translate(512 0) scale(-1 1)"/>
+  <g stroke="#2b2118" stroke-width="22" stroke-linecap="round" stroke-linejoin="round">
+    <g fill="#ffb454">
+      <path d="M256 170A48.9 48.9 0 0 0 169.8 183.7A49.3 49.3 0 0 0 140.3 263.5A47.6 47.6 0 0 0 178.4 336.3A43.6 43.6 0 0 0 256 342Z"/>
+      <path d="M256 170A48.9 48.9 0 0 0 169.8 183.7A49.3 49.3 0 0 0 140.3 263.5A47.6 47.6 0 0 0 178.4 336.3A43.6 43.6 0 0 0 256 342Z" transform="translate(512 0) scale(-1 1)"/>
     </g>
-    <g stroke-width="15">
-      <path d="M256 184V332"/>
-      <g><path d="M180 186C198 190 210 202 214 220"/><path d="M164 236C184 234 202 246 204 266C205 280 198 290 188 294"/><path d="M202 350C204 330 218 316 236 314"/></g>
-      <g transform="translate(512 0) scale(-1 1)"><path d="M180 186C198 190 210 202 214 220"/><path d="M164 236C184 234 202 246 204 266C205 280 198 290 188 294"/><path d="M202 350C204 330 218 316 236 314"/></g>
+    <g fill="none">
+      <path d="M200 212C216 219 224 233 221 250M174 288C192 285 206 296 208 314"/>
+      <path d="M200 212C216 219 224 233 221 250M174 288C192 285 206 296 208 314" transform="translate(512 0) scale(-1 1)"/>
     </g>
   </g>
 </svg>
