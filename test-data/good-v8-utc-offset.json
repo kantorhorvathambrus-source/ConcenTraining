@@ -1,0 +1,64 @@
+{
+  "app": "ConcenTraining",
+  "type": "session-history",
+  "version": 8,
+  "exportedAt": "2026-10-01T09:00:00.000Z",
+  "sessions": [
+    {
+      "startedAt": 1790549400000,
+      "utcOffsetMin": 60,
+      "endedAt": 1790550900000,
+      "endedBy": "timer",
+      "characterId": "grandma",
+      "style": "kind",
+      "mode": "simple",
+      "plannedMs": 1500000,
+      "elapsedMs": 1500000,
+      "distractedMs": 0,
+      "focusPercent": null,
+      "distractions": [
+        {
+          "at": 1790550120000,
+          "level": 2,
+          "ms": 0,
+          "category": "tired"
+        }
+      ]
+    },
+    {
+      "startedAt": 1790150400000,
+      "utcOffsetMin": 120,
+      "endedAt": 1790151900000,
+      "endedBy": "timer",
+      "characterId": "professor",
+      "style": "firm",
+      "mode": "advanced",
+      "plannedMs": 1500000,
+      "elapsedMs": 1500000,
+      "distractedMs": 60000,
+      "focusPercent": 96,
+      "distractions": [
+        {
+          "at": 1790151000000,
+          "level": 2,
+          "ms": 60000,
+          "category": "phone"
+        }
+      ]
+    },
+    {
+      "startedAt": 1790085600000,
+      "utcOffsetMin": 999,
+      "endedAt": 1790086800000,
+      "endedBy": "manual",
+      "characterId": "professor",
+      "style": "firm",
+      "mode": "advanced",
+      "plannedMs": 1500000,
+      "elapsedMs": 1200000,
+      "distractedMs": 0,
+      "focusPercent": 100,
+      "distractions": []
+    }
+  ]
+}
