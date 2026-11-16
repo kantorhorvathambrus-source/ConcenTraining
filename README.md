@@ -1323,7 +1323,7 @@ doesn't do this.
   it's only tried once.
 - **Icons** (`public/icons/`, `public/favicon.ico`): the ConcenTraining logo, a cream crosshair with
   an amber filled brain in the middle (seen from above: four rounded lobes per hemisphere, a central
-  fissure and two short folds per side, outlined in espresso) on an espresso background. The source
+  fissure and five short folds per side, outlined in espresso) on an espresso background. The source
   is `public/icons/icon.svg` (edit this one). The PNGs are rendered from it: `apple-touch-icon.png`
   (180, full square without transparency, iOS rounds the corners), `icon-192.png` and
   `icon-512.png` (rounded corners), and `icon-maskable-512.png` (full square, the picture shrunk to
