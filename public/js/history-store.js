@@ -25,11 +25,13 @@ const SIMPLE_POINTS_PER_MS = 25 * 60 * 1000; // shorter sessions count as 25 min
 // "ragebait". Version 4 allows endedBy "startOver". Version 5 allows the style
 // "firm". Version 6 allows distractions logged from the time away card
 // (source: "away", with a measured length). Version 7 adds the session's breaks
-// (pauses: [{ at, ms }], see "breaks" below). Version 1-6 files still import.
+// (pauses: [{ at, ms }], see "breaks" below). Version 8 adds the device's offset from
+// UTC when the session started (utcOffsetMin, see "the day a session counts on" below).
+// Version 1-7 files still import.
 const EXPORT_APP = "ConcenTraining";
 const EXPORT_TYPE = "session-history";
-const EXPORT_VERSION = 7;
-const IMPORT_VERSIONS = [1, 2, 3, 4, 5, 6, 7];
+const EXPORT_VERSION = 8;
+const IMPORT_VERSIONS = [1, 2, 3, 4, 5, 6, 7, 8];
 const IMPORT_MAX_BYTES = 5 * 1024 * 1024;
 
 // How a session can end, and what that says about its times (see saveFinishedSession):
@@ -167,6 +169,57 @@ function sessionResult(session) {
   return perPeriod >= SIMPLE_ROUGH_POINTS ? "rough" : "okay";
 }
 
+// ---------- the day a session counts on ----------
+
+// ONE rule for every number and every date shown: a session counts on the local calendar day on
+// which it STARTED, by the device's clock at that moment, and that day never changes afterwards.
+// A session over midnight belongs to its start day as a whole (its time, its streak day and its
+// time-of-day slot). So when a session starts, the device's offset from UTC (world time) in
+// minutes is stored with it: utcOffsetMin, e.g. 60 in Budapest in winter, 120 in summer, 0 in
+// Madeira in winter, 330 in India. It already includes daylight saving at that moment. With it,
+// the start's clock reading is the same in any timezone the device is in later.
+// Sessions saved before utcOffsetMin existed (or with a broken value) have no stored offset: they
+// use the device's current timezone, as they always did. Old entries are never rewritten.
+// "Today" and "this week" are always the device's current local date (history.js).
+
+// Real offsets go from UTC-12:00 to UTC+14:00.
+const MIN_UTC_OFFSET = -12 * 60;
+const MAX_UTC_OFFSET = 14 * 60;
+
+function isUtcOffset(value) {
+  return Number.isInteger(value) && value >= MIN_UTC_OFFSET && value <= MAX_UTC_OFFSET;
+}
+
+// The device's offset from UTC at this moment (getTimezoneOffset counts the other way round).
+// "+ 0" turns UTC's -0 into 0.
+function utcOffsetAt(time) {
+  return -new Date(time).getTimezoneOffset() + 0;
+}
+
+// The start of a session as shown and counted: { date, timeZone }, to be read or formatted
+// together. With a stored offset, date is startedAt moved by the offset and read in UTC, which
+// gives the clock reading the device had at the start. Without one, the device's current timezone.
+function sessionClock(entry) {
+  return isUtcOffset(entry.utcOffsetMin)
+    ? { date: new Date(entry.startedAt + entry.utcOffsetMin * 60000), timeZone: "UTC" }
+    : { date: new Date(entry.startedAt), timeZone: undefined };
+}
+
+// The calendar day a session counts on, as a Date at local midnight of that date (only its year,
+// month and day mean anything: compare days with their date, never with the time).
+function sessionDay(entry) {
+  const { date, timeZone } = sessionClock(entry);
+  return timeZone
+    ? new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+    : new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+// The hour (0-23) on the device's clock when the session started: its time-of-day slot.
+function sessionHour(entry) {
+  const { date, timeZone } = sessionClock(entry);
+  return timeZone ? date.getUTCHours() : date.getHours();
+}
+
 function loadHistory() {
   try {
     const parsed = JSON.parse(localStorage.getItem(HISTORY_KEY));
@@ -219,8 +272,12 @@ function saveFinishedSession(session, endedBy) {
   if (history.some((entry) => entry.startedAt === session.startedAt)) return "exists";
 
   const pauses = cleanPauses(session.pauses);
+  // Set when the session started (startSession in app.js). A session that was already running when
+  // the app was updated doesn't have it: its offset is worked out from its start time now.
+  const utcOffsetMin = isUtcOffset(session.utcOffsetMin) ? session.utcOffsetMin : utcOffsetAt(session.startedAt);
   history.unshift({
     startedAt: session.startedAt,
+    ...(isUtcOffset(utcOffsetMin) && { utcOffsetMin }),
     endedAt: session.endedAt,
     endedBy: endedBy || (elapsedMs >= session.durationMs ? "timer" : "manual"),
     characterId: session.characterId,
@@ -306,7 +363,10 @@ const isTime = (value) => Number.isFinite(value) && value >= 0;
 // Before version 6 there are no away distractions: a source field is dropped and
 // every Advanced distraction needs a button length, exactly as those versions did.
 // Before version 7 there are no breaks: a pauses field is dropped, and elapsedMs must
-// be endedAt - startedAt, exactly as those versions did.
+// be endedAt - startedAt, exactly as those versions did. From version 8 a session can have
+// utcOffsetMin (see "the day a session counts on"): a valid one is kept, a missing or invalid one
+// is left out and the session still imports (it then counts in the device's current timezone, like
+// every older session). Before version 8 the field is dropped.
 function cleanImportedSession(raw, version) {
   if (!raw || typeof raw !== "object") throw new Error("notSession");
 
@@ -394,7 +454,9 @@ function cleanImportedSession(raw, version) {
   }
 
   return {
-    startedAt, endedAt, endedBy, characterId, style, mode, plannedMs, elapsedMs, distractedMs, focusPercent, distractions,
+    startedAt,
+    ...(version >= 8 && isUtcOffset(raw.utcOffsetMin) && { utcOffsetMin: raw.utcOffsetMin }),
+    endedAt, endedBy, characterId, style, mode, plannedMs, elapsedMs, distractedMs, focusPercent, distractions,
     ...(pauses.length && { pauses }),
   };
 }

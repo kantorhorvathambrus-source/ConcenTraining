@@ -152,7 +152,10 @@ delete prefs.style; // saved before personalities came from the character; dropp
 // characterName: only for custom characters, so a renamed or deleted one keeps its name in old sessions.
 // pausedAt: when the current break started (Stop → Take a break), null while running. pauses: the
 // breaks that are over, [{ at, ms }]. Sessions saved before breaks existed have neither: never paused.
-let session = null; // { characterId, characterName, style, mode, durationMs, startedAt, distractions: [], endedAt, restartPending, leftAt, pausedAt, pauses: [] }
+// utcOffsetMin: the device's offset from UTC in minutes at startedAt, copied into the history: the
+// session counts on the day it started by that clock (see history-store.js). A session started
+// before the field existed doesn't have it; saveFinishedSession works it out then.
+let session = null; // { characterId, characterName, style, mode, durationMs, startedAt, utcOffsetMin, distractions: [], endedAt, restartPending, leftAt, pausedAt, pauses: [] }
 let tickTimer = 0;
 let nextGoodAt = 0;
 let saveErrorNoteTimer = 0;
@@ -1101,16 +1104,20 @@ async function onStartClick(fromQuickStart) {
 
 // ---------- session ----------
 
-// Start, Quick start and Start new session. Returns whether this browser can save (checkStorage):
-// if it can't, the new session's screen says so (after enterSession, which clears that line).
+// Start, Quick start and Start new session (Start over). Returns whether this browser can save
+// (checkStorage): if it can't, the new session's screen says so (after enterSession, which clears
+// that line). It's the only place that creates a session, so every new startedAt gets its
+// utcOffsetMin (the day it counts on, see history-store.js).
 function startSession(character, mode, minutes) {
+  const startedAt = Date.now();
   session = {
     characterId: character.id,
     ...(character.custom && { characterName: character.name }),
     style: personalityOf(character), // kept in the history
     mode,
     durationMs: minutes * MIN,
-    startedAt: Date.now(),
+    startedAt,
+    utcOffsetMin: utcOffsetAt(startedAt),
     distractions: [],
     endedAt: null,
     pausedAt: null,
