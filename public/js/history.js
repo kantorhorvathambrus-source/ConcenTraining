@@ -2,7 +2,9 @@
 
 // History page: streaks, time per week, weekly focus trend, best time of day,
 // distraction categories, recent sessions.
-// All dates use the device's local time.
+// Each session counts on the day it started, by the device's clock then (sessionDay, sessionHour and
+// sessionClock in history-store.js), and every date and time shown comes from the same place.
+// "Today" and "this week" are the device's current local date.
 
 const TREND_WEEKS = 12;
 const LIST_SIZE = 30;
@@ -24,6 +26,10 @@ let canSave = true;
 // the dialog closes, never under it.
 let drawnFrom = null;
 let renderPending = false;
+
+// Redraws the page just after the next local midnight, so a page left open over midnight shows the
+// new day's streak and week (see scheduleMidnightRedraw).
+let midnightTimer = 0;
 
 // Sessions are grouped by the hour they started. id: the texts (dayPart.<id>, history.best.<id>).
 // hours: shown as it is (numbers only, the same in every language).
@@ -59,11 +65,12 @@ function startOfWeek(time) {
 
 // ---------- calculations ----------
 
-// A day counts once it has at least one finished session (by the time it ended).
+// A day counts once it has at least one finished session (on the day it started, see sessionDay).
+// Days are compared by their date (dayKey), never by time.
 function calcStreaks(history, now) {
   const days = new Map();
   for (const entry of history) {
-    const day = startOfDay(entry.endedAt);
+    const day = sessionDay(entry);
     days.set(dayKey(day), day);
   }
 
@@ -101,37 +108,46 @@ function combinedFocus(entries) {
   return { percent: Math.round((focused / elapsed) * 100), count: timed.length };
 }
 
-function calcWeeklyTrend(history, now) {
+// The last TREND_WEEKS weeks, oldest first, each { start, entries }: start is its Monday, entries
+// the sessions whose day (sessionDay) is in that week. Weeks are matched by the date of their
+// Monday, never by time, so a session from Sunday 23:50 to Monday 00:15 stays in Sunday's week.
+function sessionsByWeek(history, now) {
+  const byMonday = new Map();
+  for (const entry of history) {
+    const key = dayKey(startOfWeek(sessionDay(entry)));
+    if (!byMonday.has(key)) byMonday.set(key, []);
+    byMonday.get(key).push(entry);
+  }
   const thisWeek = startOfWeek(now);
   const weeks = [];
   for (let i = TREND_WEEKS - 1; i >= 0; i--) {
     const start = addDays(thisWeek, -7 * i);
-    const end = addDays(start, 7);
-    const focus = combinedFocus(
-      history.filter((entry) => entry.startedAt >= start.getTime() && entry.startedAt < end.getTime())
-    );
-    weeks.push({ start, percent: focus ? focus.percent : null, count: focus ? focus.count : 0 });
+    weeks.push({ start, entries: byMonday.get(dayKey(start)) || [] });
   }
   return weeks;
+}
+
+function calcWeeklyTrend(history, now) {
+  return sessionsByWeek(history, now).map(({ start, entries }) => {
+    const focus = combinedFocus(entries);
+    return { start, percent: focus ? focus.percent : null, count: focus ? focus.count : 0 };
+  });
 }
 
 // Session time per week, all modes: the sum of elapsedMs, so in Simple mode it
-// includes the distractions. Same weeks as the focus trend (by start time).
+// includes the distractions. Same weeks as the focus trend (by the day a session counts on).
 function calcWeeklyTime(history, now) {
-  const thisWeek = startOfWeek(now);
-  const weeks = [];
-  for (let i = TREND_WEEKS - 1; i >= 0; i--) {
-    const start = addDays(thisWeek, -7 * i);
-    const end = addDays(start, 7);
-    const entries = history.filter((entry) => entry.startedAt >= start.getTime() && entry.startedAt < end.getTime());
-    weeks.push({ start, ms: entries.reduce((sum, entry) => sum + entry.elapsedMs, 0), count: entries.length });
-  }
-  return weeks;
+  return sessionsByWeek(history, now).map(({ start, entries }) => ({
+    start,
+    ms: entries.reduce((sum, entry) => sum + entry.elapsedMs, 0),
+    count: entries.length,
+  }));
 }
 
+// By the hour on the device's clock when the session started (sessionHour).
 function calcDayParts(history) {
   return DAY_PARTS.map((part) => {
-    const focus = combinedFocus(history.filter((entry) => part.matches(new Date(entry.startedAt).getHours())));
+    const focus = combinedFocus(history.filter((entry) => part.matches(sessionHour(entry))));
     return { ...part, percent: focus ? focus.percent : null, count: focus ? focus.count : 0 };
   });
 }
@@ -151,18 +167,26 @@ function formatShortDate(date) {
   return I18N.formatDate(date, { day: "numeric", month: "short" });
 }
 
-// The weekday's length is the language's (weekday in js/i18n/languages.js): "Mon" / "hétfő".
-function formatDay(time) {
-  return I18N.formatDate(new Date(time), { weekday: I18N.language().weekday || "short", day: "numeric", month: "short" });
+// A session's start date and time, as it counts (sessionClock in history-store.js): with a stored
+// offset, the clock the device showed then, whatever timezone it's in now. timeZone is left out
+// when it's undefined (the device's current timezone, for sessions without a stored offset).
+function formatSessionClock(entry, options) {
+  const { date, timeZone } = sessionClock(entry);
+  return I18N.formatDate(date, timeZone ? { ...options, timeZone } : options);
 }
 
-function formatClockTime(time) {
-  return I18N.formatDate(new Date(time), { hour: "2-digit", minute: "2-digit" });
+// The weekday's length is the language's (weekday in js/i18n/languages.js): "Mon" / "hétfő".
+function formatDay(entry) {
+  return formatSessionClock(entry, { weekday: I18N.language().weekday || "short", day: "numeric", month: "short" });
+}
+
+function formatClockTime(entry) {
+  return formatSessionClock(entry, { hour: "2-digit", minute: "2-digit" });
 }
 
 // "Mon 20 Oct · 14:05": the two Intl parts on one line (time.dateAndClock).
-function formatSessionDate(time) {
-  return t("time.dateAndClock", { date: formatDay(time), time: formatClockTime(time) });
+function formatSessionDate(entry) {
+  return t("time.dateAndClock", { date: formatDay(entry), time: formatClockTime(entry) });
 }
 
 // Rounded to whole minutes: "45 min", "1 h", "2 h 15 min".
@@ -186,7 +210,7 @@ function formatSessionSummary(entry) {
   return [
     characterName(entry),
     modeName(entry.mode),
-    formatSessionDate(entry.startedAt),
+    formatSessionDate(entry),
     formatSessionLength(entry),
   ].join(" · ");
 }
@@ -477,7 +501,7 @@ function renderSessionList(history) {
       item.querySelector(".session-item-mode").after(" ", tag);
     }
     item.querySelector(".session-item-meta").textContent = [
-      formatSessionDate(entry.startedAt),
+      formatSessionDate(entry),
       formatSessionLength(entry),
       counted("history.distractions", entry.distractions.length),
     ].join(" · ");
@@ -507,7 +531,7 @@ function renderSessionList(history) {
       button.textContent = t("common.delete");
       button.setAttribute(
         "aria-label",
-        t("history.deleteLabel", { name: characterName(entry), date: formatDay(entry.startedAt), time: formatClockTime(entry.startedAt) })
+        t("history.deleteLabel", { name: characterName(entry), date: formatDay(entry), time: formatClockTime(entry) })
       );
       button.dataset.startedAt = entry.startedAt;
       button.dataset.summary = formatSessionSummary(entry);
@@ -521,6 +545,7 @@ function renderSessionList(history) {
 function render() {
   drawnFrom = historySource();
   renderPending = false;
+  scheduleMidnightRedraw();
   const history = loadHistory();
   const empty = history.length === 0;
   renderStorageNote();
@@ -571,6 +596,22 @@ function historySource() {
   }
   // The custom characters too: a rename or delete in another tab changes the names shown.
   return `${dayKey(new Date())}|${canSave}|${saved}|${readCustomRaw()}`;
+}
+
+// "Today" changes at midnight, and with it the current streak and "this week". A page that stays
+// open and visible gets no other event then, so a timer goes off once, 1 second after the next local
+// midnight, and draws the page again through refreshInBackground (so not under an open Delete
+// dialog, and only if the day really changed). Every draw sets it again; so does the timer itself,
+// in case nothing was drawn (a timer that went off early, or the dialog was open). A timezone
+// change or a sleeping phone can make it late or early: showing the page again (visibilitychange)
+// checks the day anyway.
+function scheduleMidnightRedraw() {
+  clearTimeout(midnightTimer);
+  const nextMidnight = addDays(startOfDay(Date.now()), 1);
+  midnightTimer = setTimeout(() => {
+    refreshInBackground();
+    scheduleMidnightRedraw();
+  }, nextMidnight.getTime() - Date.now() + 1000);
 }
 
 // The page keeps showing what it drew, so it's drawn again when the history (or canSave) may have changed

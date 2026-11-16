@@ -1138,17 +1138,19 @@ Every finished session (timer ran out, or **Stop** → **End session**) that ran
 on the device, except one ended with "Save this session to your history" unticked, and one you chose to **Discard** after coming back long after it ended (see above). A session abandoned with **Start over** is saved too, unless its "Save the first …
 to history" checkbox was unticked (see above). The page shows:
 
-- **Current and longest streak:** days (local time) with at least one finished session.
+- **Current and longest streak:** days with at least one finished session, by the day each session
+  started (see [Which day a session counts on](#which-day-a-session-counts-on)).
   The current streak stays alive until today is over, even if you haven't finished a session yet today.
 - **Time per week:** an SVG bar chart of the time spent in sessions (Simple and Advanced) in the
-  same 12 weeks as the focus trend, by the week a session started. The axis is in minutes while the
+  same 12 weeks as the focus trend, by the week of the day a session counts on. The axis is in minutes while the
   busiest week is under 2 hours, in hours above that. This week's bar is full color, earlier weeks
   are lighter, and the line under it says e.g. "This week: 2 h 15 min across 6 sessions." With no
   sessions in those 12 weeks it only says "No sessions in the last 12 weeks."
 - **Weekly focus trend:** an SVG line chart of the last 12 weeks (weeks start on Monday).
   Each week is total focused time ÷ total session time, so longer sessions count more.
   Weeks without Advanced sessions are a gap in the line.
-- **Best time of day:** focus % by start time: Morning 5–12, Afternoon 12–17, Evening 17–22, Night 22–5.
+- **Best time of day:** focus % by the hour a session started (on the device's clock then): Morning
+  5–12, Afternoon 12–17, Evening 17–22, Night 22–5.
   A slot can only be "best" once it has at least 3 sessions with a focus %
   (`MIN_SESSIONS_FOR_BEST_TIME` at the top of `public/js/history.js`). Until one does, the page says
   "Not enough data yet".
@@ -1164,6 +1166,33 @@ to history" checkbox was unticked (see above). The page shows:
 Simple-mode sessions have no focus % (their buttons aren't time-based). They count for streaks and
 time per week and appear in the list as "—", but are left out of the focus trend and time-of-day
 numbers.
+
+### Which day a session counts on
+
+One rule for every number and every date on the page: **a session counts on the local calendar day
+on which it started, by the device's clock at that moment, and that day never changes afterwards.**
+
+- **Over midnight:** a session from 23:50 to 00:15 belongs to its start day as a whole: its time,
+  its streak day, its week and its time-of-day slot (Night). It's listed with its start date and
+  time. The end doesn't matter, so a session paused overnight and ended the next morning still
+  counts on the day it started. Sunday 23:50 to Monday 00:15 counts in Sunday's week.
+- **Stored with the session:** when a session starts, the device's offset from UTC (world time)
+  in minutes is saved with it (`utcOffsetMin`, e.g. `60` in Budapest in winter, `120` in summer,
+  `0` in Madeira in winter, `330` in India). It already includes daylight saving at that moment.
+  The day, the week, the hour and the date and time shown in the list (and in the Delete dialog)
+  all come from `startedAt` plus this offset, so they're the same wherever the phone is later.
+- **After a timezone change** (travel, or a change in the phone's settings) old sessions keep
+  their day and time. **"Today" and "this week"** are always the phone's current local date. Times
+  in the list then aren't always in clock order: each session shows the time the phone had when it
+  started (the list itself stays in start-time order).
+- **Sessions saved before this rule** (no `utcOffsetMin`) use the phone's current timezone, as
+  they always did; they're never rewritten. A session that was already running when the app was
+  updated gets its offset worked out from its start time when it's saved.
+- **Code:** `sessionDay`, `sessionHour` and `sessionClock` in `public/js/history-store.js` are the
+  only places that turn a session into a day, an hour or a shown date; `public/js/history.js` uses
+  nothing else. Days and weeks are compared by their date (`YYYY-MM-DD`), never by time.
+  `startSession()` in `public/js/app.js` is the only place that creates a running session (Start,
+  Quick start and Start over all go through it), so every new session gets `utcOffsetMin`.
 
 ### Deleting a session
 
@@ -1205,7 +1234,11 @@ The page doesn't keep showing old numbers: it's drawn again from the saved histo
 - it comes back from the browser's back/forward cache (`pageshow` with `persisted`), e.g. Android
   Back after a session was saved on the app page;
 - it's shown again (`visibilitychange`), because Android can freeze a background tab so it misses
-  the storage event. This also happens when the file picker of **Import** closes.
+  the storage event. This also happens when the file picker of **Import** closes;
+- the day changes while it stays open and visible: a timer goes off 1 second after the next local
+  midnight and draws the page again (the new day's current streak and "this week"), then is set for
+  the following midnight. It's set again after every draw (`scheduleMidnightRedraw()` in
+  `public/js/history.js`). With the Delete dialog open it waits like any other redraw.
 
 It's only drawn again if something changed: the saved history (as text) or the date, since the
 streak and "this week" depend on the day (`historySource()` in `public/js/history.js`). So showing the
@@ -1224,12 +1257,14 @@ page again after nothing happened draws nothing, and an Import only draws once (
 
 | Key | What's in it |
 |---|---|
-| `ct_session_v1` | The session that's running right now (removed when it ends). `characterName`: only with a custom character (its name when the session started). `restartPending: true` while the continue/restart question is unanswered; older saved sessions don't have it, which means `false`. `leftAt` (timestamp in ms): only while the page is hidden, for the time away card; missing means the page wasn't left. Never copied into the history. `pausedAt` (timestamp in ms, or `null`): when the current break started (see **Take a break**). `pauses` (`[{ at, ms }]`): the breaks that are over. Sessions saved before breaks existed have neither, which means never paused |
+| `ct_session_v1` | The session that's running right now (removed when it ends). `characterName`: only with a custom character (its name when the session started). `restartPending: true` while the continue/restart question is unanswered; older saved sessions don't have it, which means `false`. `leftAt` (timestamp in ms): only while the page is hidden, for the time away card; missing means the page wasn't left. Never copied into the history. `pausedAt` (timestamp in ms, or `null`): when the current break started (see **Take a break**). `pauses` (`[{ at, ms }]`): the breaks that are over. Sessions saved before breaks existed have neither, which means never paused. `utcOffsetMin`: the device's offset from UTC in minutes when the session started (copied into the history, see [Which day a session counts on](#which-day-a-session-counts-on)); a session started before it existed doesn't have it |
 | `ct_history_v1` | Finished sessions, newest first, max. 1000 |
 | `ct_custom_characters_v1` | Characters made in the editor: `{ v: 1, characters: [ { id, name, personality, createdAt, look: { gender, skin, hairColor, hairStyle, face, outfit, eyewear, earrings, necklace, facialHair, headwear, mask, earsHorns, costumeBeard, costumeOutfit, back, held, pet } } ] }`. The 8 costume fields are optional: characters saved before costumes don't have them, which means None. `id` is `custom-` plus 10 random letters/digits, never reused (a new id also avoids every id in the history). `personality` is the style its sessions run in. Reading never fails: a broken entry is skipped (not the whole list), an unknown look value gets the default. See [Custom characters](#custom-characters) |
 | `ct_prefs_v1` | Last chosen character, mode and duration, plus `endSound` and `keepScreenOn` (the two setup checkboxes, `true`/`false`). Prefs saved before these existed get `true` for both. `leaveReminder`: the **Remind me if I leave the app** checkbox (see [Leave reminder](#leave-reminder)); prefs saved before it existed get `false`. `homeScreenTipDismissed`: `true` once **Got it** was tapped on the iPhone Home Screen tip. `persistRequested`: `true` once persistent storage was asked for (or skipped in Firefox), see [iPhone storage and the Home Screen app](#iphone-storage-and-the-home-screen-app). Prefs saved before these two existed get `false` for both. `howItWorksDismissed`: `true` once **Got it** was tapped on the How it works card; prefs saved before it existed get `false`, so the card shows once. `language`: only once a language was picked in the language sheet (`"en"`, `"hu"`); without it the app follows the browser's language (see [Languages](#languages)). `theme`: `"light"` or `"dark"`, only once the light/dark switch was tapped; without it the app follows the phone's setting (see [Light and dark](#light-and-dark)). A `style` value saved by older versions is ignored and dropped. Saved field by field (see [Several tabs](#several-tabs-one-tab-at-a-time)) |
 
-Each history entry: `startedAt`, `endedAt` (timestamps in ms), `endedBy` (`"timer"`/`"manual"`/`"startOver"`),
+Each history entry: `startedAt`, `endedAt` (timestamps in ms), `utcOffsetMin` (the device's offset
+from UTC in minutes when the session started, a whole number from −720 to 840; entries saved before
+it existed don't have it, see [Which day a session counts on](#which-day-a-session-counts-on)), `endedBy` (`"timer"`/`"manual"`/`"startOver"`),
 `characterId`, `characterName` (custom characters only, see [Custom characters](#custom-characters);
 built-in characters and older entries don't have it), `style` (the character's personality when the session ran: `"kind"`, `"firm"`,
 `"strict"` or `"ragebait"`; shown as its group label, e.g. "Relaxed" for `"kind"`), `mode`, `plannedMs`, `elapsedMs`, `distractedMs`, `focusPercent`
@@ -1358,7 +1393,7 @@ doesn't do this.
   {
     "app": "ConcenTraining",
     "type": "session-history",
-    "version": 7,
+    "version": 8,
     "exportedAt": "2026-10-28T09:00:00.000Z",
     "sessions": [ /* history entries, newest first */ ]
   }
@@ -1400,6 +1435,9 @@ doesn't do this.
     level must match its length by the thresholds above ("away distraction level doesn't match
     its length"). So changing those thresholds later needs a new version, or older version 6
     exports would be rejected. A Simple away distraction has `ms: 0` like any Simple one.
+  - from version 8, `utcOffsetMin` is optional: a whole number from −720 to 840 is kept, anything
+    else is left out and the session still imports (it then counts in the phone's current
+    timezone, like every older session). In version 1–7 files the field is dropped.
   - `distractedMs` and the Advanced `focusPercent` are what the app calculates from the
     distractions. Simple mode's `focusPercent` must be `null`. Before 19 Oct 2026 the app
     rounded a distraction under 0.5% of the session up to 100%, so that old value is accepted too.
@@ -1416,7 +1454,10 @@ doesn't do this.
   a measured length). Version 1–5 files import exactly as before: a `source` field in them is
   dropped, and every Advanced distraction must still be 30 sec to 10 min. Version 7 adds the
   session's breaks (`pauses`, see **Take a break**). Version 1–6 files import exactly as before: a
-  `pauses` field in them is dropped, and `elapsedMs` must be `endedAt − startedAt`.
+  `pauses` field in them is dropped, and `elapsedMs` must be `endedAt − startedAt`. Version 8 adds
+  each session's `utcOffsetMin` (see [Which day a session counts on](#which-day-a-session-counts-on)).
+  Version 1–7 files import exactly as before (a `utcOffsetMin` field in them is dropped). An older
+  app can't keep the field, so the new number makes it say "made by a newer version".
 - If the session fields ever change again, raise `EXPORT_VERSION` in `public/js/history-store.js`,
   add the new number to `IMPORT_VERSIONS`, and teach the import how to read the older files.
 
