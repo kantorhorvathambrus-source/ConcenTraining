@@ -140,12 +140,15 @@ function sessionFocus(session) {
   const elapsedMs = Math.max(0, session.endedAt - session.startedAt - pausedTotal(session.pauses));
   const loggedMs = session.distractions.reduce((sum, d) => sum + (d.ms || 0), 0);
   const distractedMs = Math.min(elapsedMs, loggedMs);
-  let focusPercent = null;
-  if (session.mode === "advanced") {
-    focusPercent = elapsedMs > 0 ? Math.round(((elapsedMs - distractedMs) / elapsedMs) * 100) : 100;
-    if (distractedMs > 0) focusPercent = Math.min(99, focusPercent);
-  }
+  const focusPercent = session.mode === "advanced" ? focusPercentOf(elapsedMs, distractedMs) : null;
   return { elapsedMs, distractedMs, focusPercent };
+}
+
+// The focus % of some session time with some of it distracted (Advanced mode). Also used for the
+// totals of a plan's blocks (app.js).
+function focusPercentOf(elapsedMs, distractedMs) {
+  const percent = elapsedMs > 0 ? Math.round(((elapsedMs - distractedMs) / elapsedMs) * 100) : 100;
+  return distractedMs > 0 ? Math.min(99, percent) : percent;
 }
 
 // How a finished session went: "short" (under HISTORY_MIN_MS, so not saved),
@@ -155,15 +158,21 @@ function sessionFocus(session) {
 // session cut short by Start over is "early" too.
 function sessionResult(session) {
   const { elapsedMs, focusPercent } = sessionFocus(session);
-  if (elapsedMs < HISTORY_MIN_MS) return "short";
-  if (elapsedMs < session.durationMs * EARLY_END_RATIO) return "early";
+  return resultOf({ mode: session.mode, plannedMs: session.durationMs, elapsedMs, focusPercent, distractions: session.distractions });
+}
 
-  if (session.mode === "advanced") {
+// The same rules on totals: one session, or all the counted blocks of a plan (app.js), where
+// plannedMs is the whole plan's planned focus time and distractions are all of its blocks'.
+function resultOf({ mode, plannedMs, elapsedMs, focusPercent, distractions }) {
+  if (elapsedMs < HISTORY_MIN_MS) return "short";
+  if (elapsedMs < plannedMs * EARLY_END_RATIO) return "early";
+
+  if (mode === "advanced") {
     if (focusPercent >= SUMMARY_GREAT_FOCUS) return "great";
     return focusPercent >= SUMMARY_OKAY_FOCUS ? "okay" : "rough";
   }
 
-  const points = session.distractions.reduce((sum, d) => sum + d.level, 0);
+  const points = distractions.reduce((sum, d) => sum + d.level, 0);
   const perPeriod = (points * SIMPLE_POINTS_PER_MS) / Math.max(elapsedMs, SIMPLE_POINTS_PER_MS);
   if (perPeriod <= SIMPLE_GREAT_POINTS) return "great";
   return perPeriod >= SIMPLE_ROUGH_POINTS ? "rough" : "okay";

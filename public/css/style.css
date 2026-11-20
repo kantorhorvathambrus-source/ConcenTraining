@@ -499,6 +499,7 @@ button {
 /* One visible keyboard focus ring everywhere (the light/dark switch has its own, thinner one). */
 button:focus-visible,
 input:focus-visible,
+select:focus-visible,
 a:focus-visible {
   outline: 3px solid var(--color-focus);
   outline-offset: 2px;
@@ -1309,6 +1310,368 @@ a:focus-visible {
 
 .summary-text.error {
   color: var(--color-danger); /* "Couldn't save this session" */
+}
+
+/* ---------- plans (js/plans.js; "Plans" in the README) ---------- */
+
+/* Step 3's "Single block | Plan": a pill on the control colour, the picked half raised on the
+   card colour. aria-pressed says which one is picked. */
+.segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 14px;
+  background: var(--color-control);
+  border-radius: var(--radius-pill);
+}
+
+.segmented-option {
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  transition: transform var(--dur) var(--ease), opacity var(--dur) var(--ease);
+}
+
+.segmented-option[aria-pressed="true"] {
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-card);
+}
+
+.segmented-option:active {
+  transform: scale(0.97);
+}
+
+/* The rows: one card per group of identical blocks. flex-wrap: on a narrow screen a part that
+   doesn't fit moves to the next line instead of scrolling sideways. */
+.plan-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.plan-row {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  background: var(--color-surface);
+  border-radius: var(--radius-tile);
+  box-shadow: var(--shadow-card);
+}
+
+.plan-row-main,
+.plan-row-break {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.plan-badge {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--color-accent-soft);
+  color: var(--color-accent-text);
+  font-size: var(--fs-13);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A native select in a pill, with the app's chevron (an inline SVG in the text colour). */
+.pill-select {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.pill-select select {
+  appearance: none;
+  -webkit-appearance: none;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 8px 32px 8px 14px;
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-pill);
+  background: var(--color-control);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pill-select-chevron {
+  position: absolute;
+  top: 50%;
+  right: 11px;
+  width: 16px;
+  height: 16px;
+  margin-top: -8px;
+  pointer-events: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* − ×2 +: round 44px buttons. aria-disabled (not disabled) at 1 and 6, so focus stays on it. */
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.stepper-btn {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1.5px solid transparent;
+  border-radius: 50%;
+  background: var(--color-control);
+  font-size: var(--fs-20);
+  font-weight: 600;
+  line-height: 1;
+  transition: transform var(--dur) var(--ease), opacity var(--dur) var(--ease);
+}
+
+.stepper-btn:active:not([aria-disabled="true"]) {
+  transform: scale(0.94);
+}
+
+.stepper-btn[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.stepper-count {
+  min-width: 28px;
+  text-align: center;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.plan-break-text {
+  display: inline-flex;
+  flex: 0 1 auto;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text-muted);
+}
+
+/* The last row ×1: "Last block, no break after it" takes the line's free width and wraps inside it,
+   so the × stays on its line instead of dropping under it. */
+.plan-row-break:has(> .plan-break-text > .plan-note:not([hidden])) > .plan-break-text {
+  flex: 1 1 0;
+}
+
+/* "(none after the last one)": a line of its own under the break select, so the × stays up. */
+.plan-row-break > .plan-note {
+  flex-basis: 100%;
+}
+
+.plan-cup {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.plan-note {
+  font-size: var(--fs-14);
+}
+
+.plan-remove {
+  min-width: 44px;
+  min-height: 44px;
+  margin-left: auto;
+}
+
+.plan-add {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  margin-top: 10px;
+  border: 1.5px dashed var(--color-field-border);
+  border-radius: var(--radius-tile);
+  background: transparent;
+  color: var(--color-accent-text);
+  font-weight: 600;
+}
+
+/* The timeline: one thin bar, each segment as wide as its minutes, small gaps, pill ends.
+   Focus blocks in the accent colour, breaks striped. Each segment's fill grows with a transform
+   (the only motion). On the setup screen (preview) everything is shown full; on the session screen
+   what's done is full, the current segment fills, and upcoming breaks keep a faint stripe. */
+.plan-builder .plan-timeline {
+  margin-top: 18px;
+}
+
+.plan-timeline {
+  display: flex;
+  gap: 3px;
+  height: 10px;
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.plan-timeline.dense {
+  gap: 1px;
+}
+
+.plan-seg {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 2px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--color-track);
+}
+
+.plan-seg-break {
+  background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--color-paused) 45%, var(--color-track)) 0 3px, var(--color-track) 3px 6px);
+}
+
+.plan-seg-fill {
+  position: absolute;
+  inset: 0;
+  background: var(--color-accent);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.5s linear;
+}
+
+.plan-seg-break .plan-seg-fill {
+  background: var(--color-paused);
+}
+
+.plan-timeline.preview .plan-seg-fill {
+  transform: none;
+}
+
+.plan-timeline.preview .plan-seg-break .plan-seg-fill {
+  background: repeating-linear-gradient(135deg, var(--color-paused) 0 3px, var(--color-track) 3px 6px);
+}
+
+/* Just built: the fills jump to where they are, no growing from 0. */
+.plan-timeline.fresh .plan-seg-fill {
+  transition: none;
+}
+
+/* Stop → Take a break inside a block: its fill turns "stopped", like the progress bar. */
+.paused .plan-seg.current .plan-seg-fill {
+  background: var(--color-paused);
+}
+
+.plan-timeline-text {
+  margin: 8px 0 0;
+  font-size: var(--fs-14);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Session screen: "BREAK" / "BREAK OVER" above the timer. Its line is kept for the whole plan
+   (empty during a block), so nothing moves when a break starts or ends. */
+.timer-label {
+  margin: 0;
+  min-height: 1.4em;
+  line-height: 1.4;
+  font-size: var(--fs-13);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-accent-text);
+}
+
+/* "Block 2/4 · 10 min break after" (or the break's sound note): one line, kept when empty. */
+.block-line {
+  margin: 8px 0 0;
+  min-height: 1.45em;
+  font-size: var(--fs-14);
+  text-wrap: balance;
+}
+
+/* A planned break: the break card over the distraction block (like the paused text), and once
+   it's over the timer dims to the next block's length. Instant, no animation. */
+.plan-break .distraction > :not(.plan-break-card) {
+  visibility: hidden;
+}
+
+.plan-ready .timer {
+  opacity: var(--timer-paused-opacity);
+  text-shadow: none;
+}
+
+.plan-chip {
+  margin-top: 6px;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--color-control);
+  font-size: var(--fs-14);
+  font-weight: 600;
+}
+
+#endPlanButton {
+  margin-top: 10px;
+}
+
+/* "Start now" / "Start: 120 min" stays on one line, so the bar never grows taller when the break
+   ends. Only when the text doesn't fit (narrow phones, long languages) app.js (fitStartButton)
+   steps it down: a little smaller text and tighter side padding. Stop next to it keeps its size,
+   and the grid row keeps both buttons as tall as Stop. */
+#startNextButton {
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+#startNextButton.bar-fit-1 {
+  padding-left: 12px;
+  padding-right: 12px;
+  font-size: var(--fs-15);
+}
+
+#startNextButton.bar-fit-2 {
+  padding-left: 8px;
+  padding-right: 8px;
+  font-size: var(--fs-14);
+}
+
+#startNextButton.bar-fit-3 {
+  padding-left: 6px;
+  padding-right: 6px;
+  font-size: var(--fs-13);
+}
+
+/* The plan's summary: one short line per block. */
+.summary-blocks {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  color: var(--color-text-muted);
+  font-size: var(--fs-15);
+  font-variant-numeric: tabular-nums;
+}
+
+.summary-blocks li + li {
+  margin-top: 2px;
 }
 
 /* ---------- open in another tab ---------- */
@@ -2435,6 +2798,29 @@ a {
     grid-template-columns: 1fr;
   }
 
+  /* A plan row's first line (badge, length, stepper) fits a 320px phone. */
+  .plan-badge {
+    width: 24px;
+    height: 24px;
+  }
+
+  .pill-select select {
+    padding-left: 12px;
+    padding-right: 28px;
+  }
+
+  .pill-select-chevron {
+    right: 9px;
+  }
+
+  .stepper {
+    gap: 2px;
+  }
+
+  .stepper-count {
+    min-width: 24px;
+  }
+
   /* Narrow dialogs: less padding, so "90 min" fits in a quarter of the continue/restart dialog
      at 320px, and both its steps fit a 320x568 screen without scrolling. */
   dialog {
@@ -2470,6 +2856,19 @@ a {
   }
 }
 
+/* The smallest phones (320px): "After" is hidden visually, so the cup, the break select ("10 min
+   break") and the × fit one line. Screen readers still hear the select's label ("Break after row 1"). */
+@media (max-width: 350px) {
+  .plan-after {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
 /* Short screens: the session image takes only the height that's left, so every
    distraction button fits above the sticky bottom bar without scrolling. 460px is the
    rest of the session screen (header, timer, two rows of buttons, bar) plus a little room.
@@ -2480,6 +2879,13 @@ a {
     height: clamp(120px, calc(100vh - 460px), 260px);
     height: clamp(120px, calc(100svh - 460px), 260px);
     object-fit: contain;
+  }
+
+  /* A plan has two more lines around the timer (its label and the block line, about 46px), so the
+     character gives up that height, down to 76px on the smallest phones (320x568). */
+  .in-plan #sessionImg {
+    height: clamp(76px, calc(100vh - 506px), 260px);
+    height: clamp(76px, calc(100svh - 506px), 260px);
   }
 }
 
@@ -2550,7 +2956,8 @@ a {
   /* Fills the stage, scaled to fit inside it whatever the art's aspect ratio: never cropped or
      stretched (object-fit: contain). Anchored at the bottom, where the animations pivot.
      Absolute, so the image's own size never makes the stage taller. */
-  #sessionImg {
+  #sessionImg,
+  .in-plan #sessionImg {
     position: absolute;
     inset: 0;
     width: 100%;
@@ -2671,11 +3078,22 @@ a {
     padding-bottom: 10px;
   }
 
-  /* Motivate me, Undo and Resume share one cell: only one of them is ever shown. */
+  /* Motivate me, Undo, Resume and a plan's Start now share one cell: only one of them is ever shown. */
   #motivateButton,
   #undoButton,
-  #resumeButton {
+  #resumeButton,
+  #startNextButton {
     grid-area: left;
+  }
+
+  /* A plan's two lines around the timeline, tighter. */
+  .timer-label {
+    font-size: var(--fs-12);
+  }
+
+  .block-line {
+    margin-top: 4px;
+    font-size: var(--fs-13);
   }
 
   #endButton {
@@ -3013,6 +3431,9 @@ dialog.language-sheet,
   .editor-group > summary::after,
   .btn,
   .chip,
+  .segmented-option,
+  .stepper-btn,
+  .plan-seg-fill,
   .lang-pill,
   .char-card,
   .choice,

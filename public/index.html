@@ -162,8 +162,15 @@
       </div>
 
       <div class="step" id="durationStep">
-        <h2 data-i18n="setup.step3">3. How long do you want to focus?</h2>
+        <h2 id="durationStepTitle" data-i18n="setup.step3">3. How long do you want to focus?</h2>
+        <!-- Plans (js/plans.js): "Single block" shows the duration picker, "Plan" the plan builder.
+             Only while plans are on (PLANS_ON); otherwise the toggle stays hidden (bindDurationKind in app.js). -->
+        <div id="durationKind" class="segmented" role="group" aria-labelledby="durationStepTitle" hidden>
+          <button type="button" class="segmented-option" data-kind="single" data-i18n="plan.single">Single block</button>
+          <button type="button" class="segmented-option" data-kind="plan" data-i18n="plan.plan">Plan</button>
+        </div>
         <div id="setupDuration" class="duration-picker"></div>
+        <div id="planBuilder" class="plan-builder" hidden></div>
       </div>
 
       <div class="step session-settings">
@@ -215,8 +222,15 @@
 
       <div class="session-main">
         <div class="timer-block">
+          <!-- In a plan only: "Break" / "Break over" above the timer during a planned break. Its line
+               is there for the whole plan, so nothing moves when a break starts (updatePlanView). -->
+          <p id="timerLabel" class="timer-label" hidden></p>
           <div id="timer" class="timer">00:00</div>
-          <div class="progress" aria-hidden="true"><div id="progressBar" class="progress-bar"></div></div>
+          <div id="progress" class="progress" aria-hidden="true"><div id="progressBar" class="progress-bar"></div></div>
+          <!-- In a plan the segmented timeline replaces the progress bar; the line under it says
+               which block this is ("Block 2/4 · 10 min break after"). -->
+          <div id="planTimeline" class="plan-timeline" aria-hidden="true" hidden></div>
+          <p id="blockLine" class="block-line muted" hidden></p>
         </div>
 
         <div class="distraction">
@@ -227,6 +241,13 @@
           <div id="pausedCard" class="paused-card" hidden>
             <p class="paused-title" data-i18n="session.paused">Paused</p>
             <p class="paused-break"><span data-i18n="session.break">Break</span> · <span id="breakClock">0:00</span></p>
+          </div>
+          <!-- During a planned break (and once it's over): placed over the prompt and buttons like the
+               paused card ("Plans" in app.js). -->
+          <div id="planBreakCard" class="paused-card plan-break-card" hidden>
+            <p id="planBreakHeading" class="paused-title"></p>
+            <p id="planBreakText" class="paused-break"></p>
+            <span id="planBreakChip" class="plan-chip"></span>
           </div>
         </div>
 
@@ -261,7 +282,10 @@
           </button>
           <!-- Resume also takes Motivate me's cell, during a break. -->
           <button id="resumeButton" type="button" class="btn primary" hidden data-i18n="session.resume">Resume</button>
-          <!-- "Stop" while running, "End session" during a break (updatePausedView in app.js). -->
+          <!-- A planned break: "Start now", then "Start: 60 min" once it's over. Motivate me's cell. -->
+          <button id="startNextButton" type="button" class="btn primary" hidden></button>
+          <!-- "Stop" while running, "End session" ("End this block" in a plan) during a break
+               (updatePausedView in app.js). -->
           <button id="endButton" type="button" class="btn">Stop</button>
         </div>
       </div>
@@ -278,6 +302,9 @@
         <p id="summaryMessage" class="summary-text" hidden></p>
         <p id="summaryText" class="summary-text"></p>
         <!-- "Paused once · 2 min": only when the session had breaks (renderSummary in app.js). -->
+        <!-- A plan only: "4 blocks" and one line per block (renderPlanSummary in app.js). -->
+        <p id="summaryBlocks" class="summary-text" hidden></p>
+        <ul id="summaryBlockList" class="summary-blocks" hidden></ul>
         <p id="summaryPauses" class="summary-text" hidden></p>
         <p id="summaryNote" class="summary-text" hidden></p>
         <!-- Shown when the browser refused to store the session (renderSummary in app.js). -->
@@ -371,10 +398,13 @@
         <input id="endSave" type="checkbox" checked>
         <span data-i18n="end.save">Save this session to your history</span>
       </label>
+      <!-- "End session", or "End this block" / "End plan" in a plan (onEndClick sets the text). -->
       <div class="dialog-actions">
         <button value="cancel" class="btn" data-i18n="end.keepGoing">Keep going</button>
-        <button value="end" class="btn primary" data-i18n="session.endSession">End session</button>
+        <button id="endConfirmButton" value="end" class="btn primary">End session</button>
       </div>
+      <!-- A plan, not its last block: ends this block and the whole plan. -->
+      <button id="endPlanButton" value="endPlan" class="btn wide end-plan" hidden data-i18n="end.endPlan">End plan</button>
     </form>
   </dialog>
 
@@ -409,6 +439,7 @@
   <script src="js/avatar-art.js"></script>
   <script src="js/custom-characters.js"></script>
   <script src="js/history-store.js"></script>
+  <script src="js/plans.js"></script>
   <script src="js/language-picker.js"></script>
   <script src="js/app.js"></script>
   <script src="js/sw-register.js"></script>
