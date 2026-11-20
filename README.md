@@ -31,7 +31,8 @@ there, see [Domain, redirect and security headers](#domain-redirect-and-security
 - **Quick start card:** for returning users, a small card right under the header (above How it
   works and the iPhone tip) starts a session in one tap, without scrolling down to **Start session**.
   It shows a small image of the character (initial pose, decorative), a grey "Quick start" label,
-  one line like "Boss · Advanced · 25 min" (character · Simple/Advanced · minutes), a small grey
+  one line like "Boss · Advanced · 25 min" (character · Simple/Advanced · minutes; with Plan picked,
+  "Boss · Advanced · Plan: 2×30 · 60 · 30", see [Plans](#plans)), a small grey
   underlined **Change ↓** under that line and a **Start** button. **Change ↓** is for anyone who
   doesn't realise the setup can be changed further down: it scrolls to step 1 (`scrollToStep`, an
   instant jump with reduced motion) and changes nothing else. The card only shows when the saved
@@ -51,7 +52,8 @@ there, see [Domain, redirect and security headers](#domain-redirect-and-security
   a fixed size (56 px wide, 200:240) with `object-fit: contain`, so nothing moves when the image
   loads and real artwork fits the same slot. At 320 × 568 the header and the whole card fit on the
   first screen.
-- **Setup:** 1. pick a character, 2. a mode (Simple / Advanced), 3. a focus duration.
+- **Setup:** 1. pick a character, 2. a mode (Simple / Advanced), 3. a focus duration, or (while
+  plans are on, see [Plans](#plans)) a plan of several blocks with planned breaks.
   The character decides the personality (see below). While custom characters are on
   (`CUSTOM_CHARACTERS_ENABLED`, now on in production, and always on on Netlify's test sites), the
   last card of step 1 is **Create your own**, and characters you made appear under the grid in
@@ -236,7 +238,8 @@ there, see [Domain, redirect and security headers](#domain-redirect-and-security
   straight back to the setup screen with no summary, like **Discard** in the "Welcome back" dialog.
   The setup keeps the last character, mode and length. Under 1 minute there's no checkbox (nothing is
   saved anyway, and the summary is shown as before). If the timer runs out while the dialog is open,
-  the session is saved as a full session.
+  the session is saved as a full session. In a plan the dialog ends blocks instead: **End this
+  block** and **End plan** (see [Plans](#plans)).
   Tapped during the 5 s Undo window, it closes Undo first: the distraction stays logged and Undo
   doesn't come back after **Keep going**. A waiting continue/restart question doesn't open on top of
   the dialog; after Keep going it opens once the category picker has closed, as usual.
@@ -360,7 +363,8 @@ there, see [Domain, redirect and security headers](#domain-redirect-and-security
   (120–260 px tall) so every distraction button fits above the bottom bar without scrolling; the
   summary image and taller phones keep the normal size. Advanced labels like "10+ min" stay on one line.
 - **Summary screen:** the character's pose, the title and the message follow how the session went
-  (see "Summary result" below). It also shows the session's top 3 picked categories, e.g.
+  (see "Summary result" below). A plan gets one summary for all its blocks (see
+  [The plan's summary](#the-plans-summary)). It also shows the session's top 3 picked categories, e.g.
   "Most common distractions: Screen (2), Thoughts (1)". Hidden if nothing was picked.
   Times are shown with seconds when there are any ("24 min 30 sec out of 25 min"). They're session
   time: breaks aren't included. A session with breaks adds one line, "Paused once · 2 min 14 sec" or
@@ -411,7 +415,8 @@ Every finished session gets a result. The thresholds are constants at the top of
   session: early from 1:00 to 4:59.
 
 The result is only used on the summary screen. It isn't saved, and the history page and stats
-don't use it.
+don't use it. A plan's summary applies the same rules to the totals of its blocks (`resultOf`, see
+[The plan's summary](#the-plans-summary)).
 
 | Result | Kind | Firm | Strict | Ragebait | Title |
 |---|---|---|---|---|---|
@@ -447,6 +452,8 @@ are in `public/js/data/messages.js`.
   because browsers run background timers late. Never on **End session**, **Start over**, a page
   reopened or reloaded after the end, a phone unlocked after the end, or the "Welcome back" question.
   The notes, volume and vibration pattern are constants at the top of `public/js/app.js`.
+  In a plan the same chime also marks the end of a planned break, under the same rule (see
+  [Plans](#plans)).
 - **Why there's a tap first:** browsers only allow sound after a tap. The sound is unlocked by the
   **Start session** tap, and every tap or key press during a session unlocks it again if the browser
   has paused it (after a reload, a phone call, or another app taking over the audio). The chime itself
@@ -468,7 +475,9 @@ are in `public/js/data/messages.js`.
 - **Keep the screen on:** while a session is on screen, the app asks the browser to keep the screen
   on (the Screen Wake Lock API), so the phone doesn't lock and pause the page. A locked phone pauses
   the page, so without this the chime would rarely play on a phone. The lock is released when the
-  session ends, during a break (Resume takes it back), and on the setup and summary screens. The browser drops it whenever the
+  session ends, during a break (Resume takes it back), and on the setup and summary screens. During a
+  plan's planned break it's kept (so the break's end sound can play) and released once the break is
+  over: the next block waits for a tap. The browser drops it whenever the
   page is hidden (another tab or app), so it's asked for again when the page is visible. After a reload
   the browser may refuse it until the first tap, so taps during a session ask again. Browsers without
   support (or a refused request, e.g. in battery saver mode) just carry on without it. Needs HTTPS,
@@ -516,6 +525,7 @@ An optional system notification that brings you back when you leave the app duri
     never more than one. Every new leave shows it again. It's shown with `renotify: true`, so it
     still plays the phone's sound and vibration when it replaces an older one that's still in the
     notification shade (without it, a replacement is silent; Safari and Firefox ignore the option).
+  - Not shown during a plan's planned break (there's no session then, see [Plans](#plans)).
   - Not shown if the session has 15 s or less left when you leave (`AWAY_ASK_AFTER_MS`; the end chime
     and summary come instead), if it ended meanwhile, or in a tab that doesn't run the session (see
     [Several tabs](#several-tabs-one-tab-at-a-time)). Not during the "Welcome back" question either.
@@ -558,15 +568,16 @@ a session at a time, so two tabs never overwrite each other's distractions or bo
 - **How:** the Web Locks API (`navigator.locks`, a browser feature that gives a named lock to one
   tab at a time and frees it by itself when that tab is closed, reloaded or crashes). The tab holding
   the lock `ct_session` runs the session; it's held from **Start session** (or a resume) until the
-  session is finished or discarded. The lock lives only in the browser's memory: nothing is saved
+  session is finished or discarded. A plan holds it from its first block to its summary, its breaks
+  included (see [Plans](#plans)). The lock lives only in the browser's memory: nothing is saved
   under it, and no saved data or storage key changed.
 - **The other tabs** show a calm notice instead of the session: "This session is open in another tab."
   with a **Continue here** button. They run no timers, reactions, sounds, wake lock or time away card,
   and save nothing. Focus moves to the notice's heading, so a screen reader reads it.
 - **A tab on the setup screen switches to the notice by itself** as soon as another tab runs a
   session, so you don't have to tap Start to find out. Two things trigger it:
-  - the `storage` event for `ct_session_v1` (the browser sends it to the other tabs whenever saved
-    data changes), if a running session is saved;
+  - the `storage` event for `ct_session_v1` or `ct_plan_v1` (the browser sends it to the other tabs
+    whenever saved data changes), if a running session (or a running plan, also in its break) is saved;
   - the tab being shown again (`visibilitychange`, or `pageshow` after the back/forward cache), because
     Android can freeze a background tab so it misses the event. Here it also asks the browser
     (`navigator.locks.query()`) whether another tab holds the lock: a saved session whose tab was
@@ -609,6 +620,179 @@ a session at a time, so two tabs never overwrite each other's distractions or bo
   saves, deletes or imports sessions, and when it's shown again (see
   [Changes from other tabs](#changes-from-other-tabs)). Delete reads the saved history again and
   removes only that one session, never writing back the page's older copy.
+
+## Plans
+
+Many people study in blocks, e.g. 2×30 min, then 60 min, then 30 min, with a 10 min break after each
+30 min block and 20 min after the 60 min block. A **plan** runs such a sequence by itself: block →
+planned break → next block … → one summary for the whole plan. The single-block flow is unchanged.
+The code is in `public/js/plans.js` (the switch, the rules, the plan builder and the timeline) and in
+`public/js/app.js` (running a plan, the "plans" section).
+
+### The switch (`PLANS_ENABLED`)
+
+The whole feature is behind one switch, `PLANS_ENABLED` at the top of `public/js/plans.js`. It is
+now **`false`**: plans are off on the production site (https://concentraining.com) and on the GitHub
+Pages backup. They are **always on**, whatever the switch says, on Netlify's test sites (every Deploy
+Preview, `deploy-preview-…`, and the main branch deploy, `main--…`) and on `localhost` /
+`127.0.0.1`, so they can be tried before launch. The code checks `PLANS_ON` (`PLANS_ENABLED` or one
+of those hostnames), never the switch alone.
+
+While plans are off there's no "Single block | Plan" toggle and the app works exactly as before:
+step 3 shows the duration picker, Quick start shows minutes and Start starts one session. A plan saved
+in the prefs (`usePlan`, `plan`) is ignored but kept, so switching plans on brings it back. A leftover
+`ct_plan_v1` is ignored and cleared (a block that's already running carries on as a normal single
+session). To switch plans on for everyone, set it to `true`; nothing else needs to change.
+
+### Building a plan (setup, step 3)
+
+- At the top of step 3, a pill-shaped toggle: **Single block** | **Plan** (the picked half is raised
+  on the card colour; `aria-pressed` says which). It's saved as `usePlan` in `ct_prefs_v1`.
+  **Single block** shows today's duration picker, unchanged.
+- **Plan** shows one card per **row**; a row is a group of identical blocks:
+  - first line: a round number badge, the block length (a pill-styled native select: 5, 10, 15, 20,
+    25, 30, 35, 40, 45, 50, 60, 75, 90 or 120 min) and a stepper, **−** ×N **+**, N from 1 to 6.
+    At 1 and 6 the button is marked unavailable (`aria-disabled`) but keeps keyboard focus. Screen
+    readers hear the count as "2 blocks" (a live region) and the stepper as "Number of blocks in
+    row 1".
+  - second line: a cup icon, **After** and the break after each block of this row (a select: No
+    break, 5, 10, 15, 20, 25, 30, 40, 45 or 60 min, shown as "10 min break"), and the **×** that
+    removes the row (hidden while there's only one row). On phones under 350px wide "After" is
+    hidden visually (screen readers still hear "Break after row 1"), so the line fits.
+  - The very last block of the plan never has a break after it. Last row ×1: its break line reads
+    "Last block, no break after it" instead. Last row ×2 or more: the break select stays (it applies
+    between its blocks) with "(none after the last one)" under it. Adding or removing rows updates
+    which row is last.
+- **Default break:** one third of the block, rounded to the nearest 5, at least 5 (30 → 10, 60 → 20,
+  90 → 30; `defaultBreak`). Changing a row's length resets its break to that, unless that row's break
+  was picked by hand (`breakPicked`).
+- **+ Add block** (full width, dashed edge) adds a row copying the last row's length and break, ×1.
+  At 6 rows it hides. Focus moves to the new row's length; after × it moves to the length of the row
+  that took its place (or the one before).
+- **The timeline** under it: one thin bar split into segments as wide as their minutes, small gaps,
+  pill ends; focus blocks amber, breaks striped. Under it: "2 h 30 min focus · 3 h 10 min with breaks
+  · ends around 17:13" (just "… focus · ends around …" without breaks; the end time is now + the
+  total, in the language's time format, updated on every change and every minute while the setup
+  screen shows).
+- The first time Plan is picked: one row, 30 min ×2, 10 min break. The plan is saved as `plan` in
+  `ct_prefs_v1` on every change and comes back next time. A broken saved plan falls back to that.
+- **Quick start** with Plan picked: "Leader · Simple · Plan: 2×30 · 60 · 30", and **Start** starts
+  the plan.
+- Mode, character and the setup checkboxes apply to every block. The character pick is counted once
+  per plan (`countCharacterPick`), not per block.
+- A language switch rebuilds the rows in the new language and keeps the plan and the focused control.
+
+### Running a plan
+
+- **Each block is a normal session:** `ct_session_v1` with its usual fields, saved to the history on
+  its own as always. Everything inside a block works as before: distractions, Undo, the category
+  picker, motivation, Stop → Take a break, the time away card, the leave reminder, the level-5
+  continue/start over question, the wake lock.
+- **Session screen:** the info line reads "Grandma · Relaxed · Simple · Plan" (no minutes). The
+  progress bar is replaced by the same timeline: finished blocks and breaks full, the current segment
+  filling as time passes, upcoming segments empty (upcoming breaks keep a faint stripe). Under it:
+  "Block 2/4 · 10 min break after", "Block 4/4 · last block", or just "Block 2/4" before "No break".
+  Screen readers hear "Block 2 of 4, 30 min." when a block starts (focus goes to the info line, as
+  always).
+- **A block's timer runs out:** the chime and vibration as always (same rules), the block is saved,
+  then the plan's summary (last block) or its planned break, which starts at once.
+- **Planned break**, in the session's layout (nothing moves): "BREAK" above the timer (its line is
+  kept for the whole plan), the timer counts the break down, the timeline's break segment fills, the
+  tab title reads "09:41 · Break · ConcenTraining", and under the timeline "A sound plays when the
+  break is over." (only with the end sound on). The distraction block is replaced by a card:
+  "1/4 blocks done", "Next: block 2/4" and a chip "30 min focus". The character plays its "doing
+  well" pose once, then stays in its normal pose (blinks and breathing go on). The bar: **Start now**
+  (ends the break early and starts the next block; it gets the focus) and **Stop** ("End the plan
+  now?" with Keep going / End plan → the plan's summary). Screen readers hear "Block 1 of 4 done.
+  10 min break." No distractions, no time away card and no leave reminder during a planned break. The
+  screen is kept on if "Keep the screen on" is ticked (so the end sound can play); the "Your screen
+  may turn off" note works as during a session.
+- **Break over:** the chime and vibration, only if it's seen as it happens (the same windows as the
+  session's end, never when the app is opened or shown again later). The label reads "BREAK OVER",
+  the timer shows the next block's full length dimmed, the card says "Break's over" / "When you're
+  back, start the next block.", and the button reads **Start: 60 min**. The screen lock is released.
+  **The next block never starts by itself**, however long it waits: only that tap starts it, so no
+  focus is measured while you're not back. Screen readers hear "Break's over."
+- **No break** between two blocks: the same screen at once, labelled "NEXT BLOCK", with "1/4 blocks
+  done" / "Start the next block when you're ready." and **Start: 30 min** (no second sound).
+- **Stop during a block:** the usual dialog. In a plan, **End session** reads **End this block** (saves
+  it as always, then its break, or the summary after the last block), and a full-width **End plan**
+  under Keep going / End this block ends this block the same way and goes straight to the plan's
+  summary (not shown on the last block, where both would do the same). Take a break, Keep going and
+  the save checkbox stay. During Take a break the bar's button reads **End this block** and the dialog
+  "End this block now?".
+- **Start over** (after "Completely" / "10+ min") restarts the current block: step 2 preselects its
+  planned length, the length picked there replaces that block's length in the plan, and the rest of
+  the plan is unchanged. A first part saved with "Save the first …" counts in the plan's summary,
+  marked "started over".
+
+### The plan's summary
+
+One summary for the whole plan, on the summary screen:
+
+- **Which blocks count:** the ones that went into the history (or were meant to and the browser
+  refused: "Couldn't save every block to your history…" then shows). A block under 1 minute
+  ("Under 1 minute, not saved"), one ended with "Save this session" unticked or discarded in "Welcome
+  back" ("Not saved") is listed, but left out of every total. Nothing is estimated.
+- **Result:** the session rules (`resultOf` in `public/js/history-store.js`) on the totals:
+  Advanced uses the focus % over all counted blocks (summed distraction time / summed time), Simple the
+  distraction points per 25 minutes of the summed time. **early** only by the times, like a session:
+  the summed time of the counted blocks is under half (`EARLY_END_RATIO`) of the whole plan's planned
+  focus time. End plan with blocks left doesn't make it early by itself ("3 of 4 blocks" shows that).
+  **short** when no block counts but one was under 1 minute. If no block counts and none was short,
+  there's nothing to sum up: back to the setup screen, as after an unticked single session.
+- **Lines:** the title and pose as always; Advanced "92% focused" and "You focused for 1 h 52 min out
+  of 2 h (2 h 30 min planned), with 6 distractions logged."; Simple the character's sentence and
+  "Your blocks ran 2 h in total (2 h 30 min planned), with 6 distractions logged." (totals from an hour
+  up in hours and whole minutes); "4 blocks" or "3 of 4 blocks"; one line per block that ran
+  ("1. 30 min · 2 distractions", Advanced "1. 30 min · 92% focused · 2 distractions", "2. 12 min 30
+  sec · 3 distractions · started over"); the breaks taken with Take a break, summed ("Paused twice ·
+  4 min"); the top 3 categories.
+- The history page, stats and export are unchanged: each block is already in the history as its own
+  session (no new history fields, no new `EXPORT_VERSION`).
+
+### Storage, reloads and tabs
+
+- **`ct_plan_v1`** holds the running plan (see [Browser storage keys](#browser-storage-keys)) and is
+  removed when its summary shows. `ct_session_v1` holds the running block as a normal session and got
+  no new fields, so a session saved by an older version still resumes, and everything that reads it
+  works unchanged. Between blocks no session is saved at all. A block belongs to the plan only if its
+  `startedAt` is the plan's `blockStartedAt`; otherwise the saved session runs as a single block.
+- **Write order** at the end of a block: the history, then the plan (now in its break), then the
+  session is removed, so a reload at any moment comes back to the same place, and a block is never
+  counted twice (blocks are keyed by their start time, like the history).
+- **"Break over" isn't saved:** it's the break's start plus its length in the past. So a reload, an
+  Android tab discard, reopening the app or **Continue here** comes back to the same place: mid-block
+  (as always), mid-break (the countdown continues from the saved start), or break over (no sound then).
+- **One tab at a time** covers the whole plan: the lock is held from the first block to the summary,
+  breaks and "break over" included. Other tabs show "This session is open in another tab." (also during
+  a break, through the `storage` event for `ct_plan_v1`), and **Continue here** takes the plan over.
+
+### Edge cases
+
+- **A block runs out while the page is hidden or the phone is locked:** back within 30 minutes, it's
+  saved as always (the chime only if it's happening now) and the break started when the block ended,
+  so you land on the break or on break over. Back later than `REOPEN_ASK_AFTER_MS`: the "Welcome back"
+  question for that block, as always; Save or Discard, then the plan goes on (the break or break over).
+- **A plan left for a long time:** if a plan is in its break and that break ended more than 12 hours
+  ago (`PLAN_STALE_MS`) when the app is opened again (start-up, reopening, a reload or Continue here),
+  the plan is closed instead of showing "Break over": its summary shows (blocks that didn't run simply
+  aren't there, as after End plan) and `ct_plan_v1` is removed. While the page stays open, "Break
+  over" keeps waiting.
+- **A block under 1 minute, or with "Save this session" unticked:** the plan goes on; the summary lists
+  it as not saved and leaves it out of the totals.
+- **The switch off with a plan saved in the prefs:** ignored; the single-block picker shows.
+- **Language switch on the setup screen:** the rows are built again in the new language, the plan is
+  kept.
+- **Screen sizes:** on landscape phones (740×340, 568×320) and in the wide two-column layout the
+  timeline, block line and break card fit without scrolling, like the session. In portrait on short
+  screens the character gives up the two lines' height (down to 76px at 320×568), so the distraction
+  buttons sit where they do without a plan. At 320px each row takes two lines and nothing scrolls
+  sideways; where a language's break text is long (Spanish between 351 and 374px), the break select
+  moves to the next line.
+- **Light and dark, reduced motion, keyboard:** the timeline uses theme tokens only; its fills grow
+  with a transform and don't animate with "reduce motion"; every control can be reached with Tab, has
+  the app's focus ring, and every select has a label.
 
 ## Personalities
 
@@ -1260,7 +1444,8 @@ page again after nothing happened draws nothing, and an Import only draws once (
 | `ct_session_v1` | The session that's running right now (removed when it ends). `characterName`: only with a custom character (its name when the session started). `restartPending: true` while the continue/restart question is unanswered; older saved sessions don't have it, which means `false`. `leftAt` (timestamp in ms): only while the page is hidden, for the time away card; missing means the page wasn't left. Never copied into the history. `pausedAt` (timestamp in ms, or `null`): when the current break started (see **Take a break**). `pauses` (`[{ at, ms }]`): the breaks that are over. Sessions saved before breaks existed have neither, which means never paused. `utcOffsetMin`: the device's offset from UTC in minutes when the session started (copied into the history, see [Which day a session counts on](#which-day-a-session-counts-on)); a session started before it existed doesn't have it |
 | `ct_history_v1` | Finished sessions, newest first, max. 1000 |
 | `ct_custom_characters_v1` | Characters made in the editor: `{ v: 1, characters: [ { id, name, personality, createdAt, look: { gender, skin, hairColor, hairStyle, face, outfit, eyewear, earrings, necklace, facialHair, headwear, mask, earsHorns, costumeBeard, costumeOutfit, back, held, pet } } ] }`. The 8 costume fields are optional: characters saved before costumes don't have them, which means None. `id` is `custom-` plus 10 random letters/digits, never reused (a new id also avoids every id in the history). `personality` is the style its sessions run in. Reading never fails: a broken entry is skipped (not the whole list), an unknown look value gets the default. See [Custom characters](#custom-characters) |
-| `ct_prefs_v1` | Last chosen character, mode and duration, plus `endSound` and `keepScreenOn` (the two setup checkboxes, `true`/`false`). Prefs saved before these existed get `true` for both. `leaveReminder`: the **Remind me if I leave the app** checkbox (see [Leave reminder](#leave-reminder)); prefs saved before it existed get `false`. `homeScreenTipDismissed`: `true` once **Got it** was tapped on the iPhone Home Screen tip. `persistRequested`: `true` once persistent storage was asked for (or skipped in Firefox), see [iPhone storage and the Home Screen app](#iphone-storage-and-the-home-screen-app). Prefs saved before these two existed get `false` for both. `howItWorksDismissed`: `true` once **Got it** was tapped on the How it works card; prefs saved before it existed get `false`, so the card shows once. `language`: only once a language was picked in the language sheet (`"en"`, `"hu"`); without it the app follows the browser's language (see [Languages](#languages)). `theme`: `"light"` or `"dark"`, only once the light/dark switch was tapped; without it the app follows the phone's setting (see [Light and dark](#light-and-dark)). A `style` value saved by older versions is ignored and dropped. Saved field by field (see [Several tabs](#several-tabs-one-tab-at-a-time)) |
+| `ct_prefs_v1` | Last chosen character, mode and duration, plus `endSound` and `keepScreenOn` (the two setup checkboxes, `true`/`false`). Prefs saved before these existed get `true` for both. `leaveReminder`: the **Remind me if I leave the app** checkbox (see [Leave reminder](#leave-reminder)); prefs saved before it existed get `false`. `homeScreenTipDismissed`: `true` once **Got it** was tapped on the iPhone Home Screen tip. `persistRequested`: `true` once persistent storage was asked for (or skipped in Firefox), see [iPhone storage and the Home Screen app](#iphone-storage-and-the-home-screen-app). Prefs saved before these two existed get `false` for both. `howItWorksDismissed`: `true` once **Got it** was tapped on the How it works card; prefs saved before it existed get `false`, so the card shows once. `language`: only once a language was picked in the language sheet (`"en"`, `"hu"`); without it the app follows the browser's language (see [Languages](#languages)). `theme`: `"light"` or `"dark"`, only once the light/dark switch was tapped; without it the app follows the phone's setting (see [Light and dark](#light-and-dark)). A `style` value saved by older versions is ignored and dropped. `usePlan` (`true` while **Plan** is picked in step 3; missing means `false`) and `plan` (`{ rows: [{ minutes, count, breakMinutes, breakPicked }] }`, the plan built there; `breakPicked`: that row's break was picked by hand): see [Plans](#plans); prefs saved before them have neither, which means Single block and, once Plan is picked, the first-time plan. Saved field by field (see [Several tabs](#several-tabs-one-tab-at-a-time)) |
+| `ct_plan_v1` | The running plan (see [Plans](#plans)), removed when its summary shows: `{ v: 1, startedAt, characterId, characterName?, style, mode, blocks: [{ minutes, breakMinutes }], index, phase, blockStartedAt, breakStartedAt, parts }`. `index`: the block that runs (`phase: "block"`, whose session in `ct_session_v1` has `startedAt` = `blockStartedAt`) or the next one (`phase: "break"`, the break after block `index − 1`, started at `breakStartedAt`). `parts`: what each finished block measured, for the plan's summary (`{ block, startedAt, plannedMs, elapsedMs, distractedMs, focusPercent, distractions: [{ level, category }], pauses, status, startedOver? }`, `status` `"saved"`, `"exists"`, `"failed"`, `"short"`, `"unsaved"` or `"discarded"`). Never copied into the history. Ignored and cleared while plans are off |
 
 Each history entry: `startedAt`, `endedAt` (timestamps in ms), `utcOffsetMin` (the device's offset
 from UTC in minutes when the session started, a whole number from −720 to 840; entries saved before
@@ -1705,6 +1890,9 @@ language loses its `beta` flag:
 - **Italian:** "Settimana dal giorno {date}" in the chart labels ("Settimana del {date}" would need
   "dell'8" / "dell'11"). Long single words carry soft hyphens for 320px phones ("Pochis-simo",
   "Abba-stanza").
+- **Plans:** "After" in the plan rows is the shorter "Luego" (es), "Puis" (fr) and "Lalu" (id), so
+  the break line fits a 360px phone. Hungarian uses short units on the setup timeline only ("2 ó 30
+  p").
 - **Polish:** the badge "Za darmo na start" ("free to start with") is a little looser than "Free during
   launch".
 
@@ -1905,6 +2093,13 @@ What isn't a border any more still has one in the CSS: buttons, chips and cards 
 without moving anything. Real edges are kept where they carry meaning: text fields, the distraction
 buttons, Undo, Stop next to the amber button, a disabled button, and hairlines between rows.
 
+**Plans** (see [Plans](#plans)): the "Single block | Plan" toggle is a pill on `--color-control`
+with the picked half on `--color-surface` and `--shadow-card`; the plan rows are cards; the selects
+are native `<select>`s styled as pills, with the app's chevron as an inline SVG in the text colour
+(no image, so it follows the theme); the timeline's blocks are `--color-accent`, its breaks stripes
+of `--color-track` and `--color-paused`, and its fills grow with `transform: scaleX()` (no width
+animation).
+
 **Cues that don't rely on colour:** a picked character, mode or editor option gets a ring, a tint and
 a check mark. The five distraction buttons are tinted from yellow to red and also have a band under
 the word that grows from Barely to Completely (yellow can't be told from white by colour alone).
@@ -2085,6 +2280,11 @@ as many cards per row as fit at 150px or more each: 7 on a typical laptop (3 row
 and 3, the settings and Start session) keeps the 600px column, centred, so lines of text stay short.
 The summary and the "open in another tab" notice also keep the 600px column.
 
+**Plans** add two short lines around the timer (the "BREAK" label line and "Block 2/4 · …" under the
+timeline). Landscape phones and the two-column layout have room for them; in portrait on short
+screens the character gives up their height (see [Plans](#plans)). The planned break's card sits
+over the distraction block like the paused text, and **Start now** takes Motivate me's cell.
+
 **Rotating the phone** during a session only switches CSS: nothing is reset, nothing is saved again,
 and the timer keeps counting from the start time as always.
 
@@ -2115,8 +2315,9 @@ and the timer keeps counting from the start time as always.
 | `public/js/avatar-art.js` | Draws a custom character from its layers (SVG, or listed PNGs with skin/hair tint) |
 | `public/js/custom-characters.js` | Saving and reading `ct_custom_characters_v1`, name rules, the 10 limit, `CUSTOM_PAID`, the feature switch `CUSTOM_CHARACTERS_ENABLED` (and `CUSTOM_CHARACTERS_ON`, which is also true on Netlify's test sites), stand-in for deleted characters (used by all three pages and `stats.html`) |
 | `public/js/avatar.js` | The editor on `avatar.html` |
-| `public/js/app.js` | Timer, reaction engine, distraction category picker, Undo, Stop and breaks (Take a break / Resume), disabled Advanced lengths, time away card, leave reminder notification, motivation rotation, the picker and card in the distraction buttons' place on landscape phones, end chime, screen wake lock and the "screen may turn off" note, summary, How it works card, iPhone Home Screen tip, persistent storage request, one tab at a time (Web Locks) |
-| `public/js/history-store.js` | Saving/loading history, focus % and summary result (with their thresholds), break totals and the "Paused …" line, distraction categories, export/import checks, iPhone/iPad and iPhone Safari checks, the "can this browser save?" test (`storageWorks`) (used by both pages) |
+| `public/js/plans.js` | Plans: the switch `PLANS_ENABLED` (and `PLANS_ON`, also true on Netlify's test sites and localhost), the block and break lengths, the default break, cleaning saved plans (`cleanPlanRows`, `cleanStoredPlan`), the plan builder in step 3 and the segmented timeline (see [Plans](#plans)) |
+| `public/js/app.js` | Running a plan (blocks, planned breaks, the plan's summary), timer, reaction engine, distraction category picker, Undo, Stop and breaks (Take a break / Resume), disabled Advanced lengths, time away card, leave reminder notification, motivation rotation, the picker and card in the distraction buttons' place on landscape phones, end chime, screen wake lock and the "screen may turn off" note, summary, How it works card, iPhone Home Screen tip, persistent storage request, one tab at a time (Web Locks) |
+| `public/js/history-store.js` | Saving/loading history, focus % and summary result (with their thresholds; `resultOf` also judges a plan's totals), break totals and the "Paused …" line, distraction categories, export/import checks, iPhone/iPad and iPhone Safari checks, the "can this browser save?" test (`storageWorks`) (used by both pages) |
 | `public/js/history.js` | Streaks, weekly time and focus charts, time of day, distraction categories, session list and backup buttons on `history.html` |
 | `netlify/functions/picks.mjs` | `POST /api/picks`: counts one session started with a character |
 | `netlify/functions/stats.mjs` | `GET /api/stats`: popularity + which characters are paid |

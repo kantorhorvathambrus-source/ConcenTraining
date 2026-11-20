@@ -135,11 +135,13 @@ function countCharacterPick(character) {
 // homeScreenTipDismissed: "Got it" was tapped on the iPhone Home Screen tip.
 // persistRequested: persistent storage was asked for (or skipped, in Firefox).
 // howItWorksDismissed: "Got it" was tapped on the How it works card.
+// usePlan / plan: "Plan" picked in step 3 and the plan built there (see js/plans.js). Ignored while
+// plans are off (PLANS_ON).
 // Prefs saved before any of these existed get these defaults.
 const prefs = Object.assign(
   {
     characterId: null, mode: "simple", minutes: 25, endSound: true, keepScreenOn: true, leaveReminder: false,
-    homeScreenTipDismissed: false, persistRequested: false, howItWorksDismissed: false,
+    homeScreenTipDismissed: false, persistRequested: false, howItWorksDismissed: false, usePlan: false,
   },
   load(PREFS_KEY, {}),
 );
@@ -156,6 +158,9 @@ delete prefs.style; // saved before personalities came from the character; dropp
 // session counts on the day it started by that clock (see history-store.js). A session started
 // before the field existed doesn't have it; saveFinishedSession works it out then.
 let session = null; // { characterId, characterName, style, mode, durationMs, startedAt, utcOffsetMin, distractions: [], endedAt, restartPending, leftAt, pausedAt, pauses: [] }
+// The running plan (ct_plan_v1, see cleanStoredPlan in js/plans.js), or null outside a plan. During
+// a block, session is that block; during a planned break session is null and plan.phase is "break".
+let plan = null;
 let tickTimer = 0;
 let nextGoodAt = 0;
 let saveErrorNoteTimer = 0;
@@ -202,6 +207,7 @@ function showScreen(id) {
     updateHowItWorks();
     updateHomeScreenTip();
     refreshQuickStart();
+    if (planChosen()) setupPlan.refreshTime();
   }
   document.querySelectorAll(".screen").forEach((screen) => {
     screen.hidden = screen.id !== id;
@@ -426,11 +432,10 @@ function announceEnd() {
 
 const wakeLock = { sentinel: null, pending: false };
 
+// Also during a planned break that's still running, so its end sound can play. Not once it's over.
 function wakeLockWanted() {
-  return Boolean(
-    prefs.keepScreenOn && session && !session.endedAt && !session.pausedAt &&
-    !$("#sessionScreen").hidden && document.visibilityState === "visible",
-  );
+  if (!prefs.keepScreenOn || $("#sessionScreen").hidden || document.visibilityState !== "visible") return false;
+  return Boolean((session && !session.endedAt && !session.pausedAt) || planBreakRunning());
 }
 
 // Holds the lock while a session is on screen, releases it everywhere else and during a break
@@ -472,10 +477,12 @@ async function updateWakeLock() {
 // (and move the page) on every tap or return to the page.
 function updateScreenNote() {
   const note = $("#screenNote");
-  const running = Boolean(session && !session.endedAt && !$("#sessionScreen").hidden);
+  // A planned break counts as running until it's over (its end sound needs the screen on).
+  const running = !$("#sessionScreen").hidden && Boolean((session && !session.endedAt) || planBreakShown());
   // During a break it doesn't apply (the screen may turn off then): invisible, but it keeps its
   // space, so the screen doesn't move when the break starts or ends. Resume brings it back as it was.
-  const paused = running && Boolean(session.pausedAt);
+  // The same once a planned break is over: the next block waits for a tap.
+  const paused = running && Boolean(session ? session.pausedAt : !planBreakRunning());
   note.style.visibility = paused ? "hidden" : "";
   if (!running || !prefs.endSound) {
     note.hidden = true;
@@ -515,9 +522,9 @@ function releaseWakeLock() {
   if (sentinel) sentinel.release().catch(() => {});
 }
 
-// Every tap or key press while a session is running.
+// Every tap or key press while a session (or a planned break) is running.
 function onSessionInput() {
-  if (!session || session.endedAt || $("#sessionScreen").hidden) return;
+  if ($("#sessionScreen").hidden || !((session && !session.endedAt) || planBreakShown())) return;
   if (prefs.endSound) unlockAudio();
   updateWakeLock();
 }
@@ -719,6 +726,49 @@ function updateSetupStorageNote(ok) {
 // ---------- setup screen ----------
 
 let setupPicker = { read: () => prefs.minutes, value: () => prefs.minutes, clearNote() {}, relabel() {} };
+// The plan builder (planBuilder in js/plans.js), only while plans are on.
+let setupPlan = null;
+
+// "Plan" is picked in step 3 (and plans are on): Start and Quick start start the plan.
+function planChosen() {
+  return Boolean(PLANS_ON && prefs.usePlan && setupPlan);
+}
+
+// Step 3's "Single block | Plan" toggle. While plans are off it stays hidden and the duration
+// picker shows, whatever the prefs say.
+function bindDurationKind() {
+  if (!PLANS_ON) return;
+  setupPlan = planBuilder($("#planBuilder"), cleanPlanRows(prefs.plan), (rows) => {
+    savePrefs({ plan: { rows } });
+    updateQuickStart();
+  });
+  const toggle = $("#durationKind");
+  toggle.hidden = false;
+  toggle.querySelectorAll(".segmented-option").forEach((button) => {
+    button.addEventListener("click", () => {
+      const usePlan = button.dataset.kind === "plan";
+      // The first time Plan is picked, the first-time plan is saved too, so it comes back next time.
+      savePrefs(usePlan && !prefs.plan ? { usePlan, plan: { rows: setupPlan.rows() } } : { usePlan });
+      syncDurationKind();
+      updateQuickStart();
+    });
+  });
+  syncDurationKind();
+  // "ends around 17:13" follows the clock while the setup screen shows.
+  setInterval(() => {
+    if (planChosen() && !$("#setupScreen").hidden && !document.hidden) setupPlan.refreshTime();
+  }, 15 * 1000);
+}
+
+function syncDurationKind() {
+  const usePlan = planChosen();
+  $("#durationKind").querySelectorAll(".segmented-option").forEach((button) => {
+    button.setAttribute("aria-pressed", String((button.dataset.kind === "plan") === usePlan));
+  });
+  $("#setupDuration").hidden = usePlan;
+  $("#planBuilder").hidden = !usePlan;
+  if (usePlan) setupPlan.refreshTime();
+}
 
 // Saves only the given fields on top of what's saved now, so a field another tab changed since
 // this page loaded isn't undone. This page's copy fills in fields that were never saved, so the
@@ -790,9 +840,10 @@ function updateQuickStart() {
     quickStart.artKey = artKey;
   }
   // No-break spaces in the text: a narrow screen wraps after a "·", never before it or inside "25 min".
-  $("#quickStartLine").textContent = t("quickStart.line", {
-    name: character.name, mode: modeName(prefs.mode), minutes: setupPicker.value(),
-  });
+  // With Plan picked: the plan instead of the minutes ("Leader · Simple · Plan: 2×30 · 60 · 30").
+  $("#quickStartLine").textContent = planChosen()
+    ? t("plan.quickStart", { name: character.name, mode: modeName(prefs.mode), plan: planShortText(setupPlan.rows()) })
+    : t("quickStart.line", { name: character.name, mode: modeName(prefs.mode), minutes: setupPicker.value() });
 }
 
 // A restore from the browser's back/forward cache (e.g. Back from history.html after deleting
@@ -1075,21 +1126,24 @@ async function onStartClick(fromQuickStart) {
     scrollToStep($("#characterStep"));
     return;
   }
-  const minutes = setupPicker.read();
-  if (minutes === null) {
-    // This tap corrected the custom field: its message shows first. The Quick start card is
-    // far above it, so the page goes to step 3, where the message is. Focus stays on the button.
-    if (fromQuickStart) scrollToStep($("#durationStep"));
-    return;
+  const usePlan = planChosen();
+  if (!usePlan) {
+    const minutes = setupPicker.read();
+    if (minutes === null) {
+      // This tap corrected the custom field: its message shows first. The Quick start card is
+      // far above it, so the page goes to step 3, where the message is. Focus stays on the button.
+      if (fromQuickStart) scrollToStep($("#durationStep"));
+      return;
+    }
+    // The setup picker is kept, so the message would still be there after the session.
+    setupPicker.clearNote();
+    savePrefs({ minutes });
   }
-  // The setup picker is kept, so the message would still be there after the session.
-  setupPicker.clearNote();
-  savePrefs({ minutes });
   if (prefs.endSound) unlockAudio(); // this tap is what allows the chime later
-  // A session saved by another tab is never replaced (see "one tab at a time"): it carries on here
-  // if its tab was closed, or the notice shows if that tab still runs it. Without Web Locks the
-  // tabs can't tell, so Start works as it always has.
-  if (locks && savedRunningSession()) {
+  // A session (or plan) saved by another tab is never replaced (see "one tab at a time"): it carries
+  // on here if its tab was closed, or the notice shows if that tab still runs it. Without Web Locks
+  // the tabs can't tell, so Start works as it always has.
+  if (locks && (savedRunningSession() || savedActivePlan())) {
     continueSavedSession(false);
     return;
   }
@@ -1097,9 +1151,12 @@ async function onStartClick(fromQuickStart) {
     showElsewhere();
     return;
   }
-  if (session) return; // a quick second tap: already started
-  countCharacterPick(character); // here, not in startSession(): Start over is not a new choice
-  startSession(character, prefs.mode, prefs.minutes);
+  if (session || plan) return; // a quick second tap: already started
+  // Here, not in startSession(): Start over and a plan's next block are not a new choice. A plan
+  // counts once, however many blocks it has.
+  countCharacterPick(character);
+  if (usePlan) startPlan(character, prefs.mode, expandPlan(setupPlan.rows()));
+  else startSession(character, prefs.mode, prefs.minutes);
 }
 
 // ---------- session ----------
@@ -1124,26 +1181,26 @@ function startSession(character, mode, minutes) {
     pauses: [],
   };
   save(SESSION_KEY, session);
+  // A plan's block: the plan points at this session (blockStartedAt), written right after it.
+  if (plan) {
+    Object.assign(plan, { phase: "block", blockStartedAt: startedAt, breakStartedAt: null });
+    savePlan();
+  }
   enterSession();
   const ok = checkStorage();
   if (!ok) showSaveErrorNote(t("storage.sessionNote"));
   return ok;
 }
 
-function enterSession() {
-  const character = sessionCharacter(session);
-  const options = session.mode === "advanced" ? ADVANCED_OPTIONS : SIMPLE_OPTIONS;
-
-  $("#sessionInfo").textContent = t("session.info", {
-    name: character.name, style: styleLabel(session.style), mode: modeName(session.mode),
-    minutes: Math.round(session.durationMs / MIN),
-  });
-  $("#distractionPrompt").textContent = t(session.mode === "advanced" ? "session.promptAdvanced" : "session.promptSimple");
-
+// The prompt and the distraction buttons of a mode. Also built for a planned break (where they're
+// invisible under the break card), so the block keeps its height after a reload during a break.
+function buildDistractionButtons(mode) {
+  const options = mode === "advanced" ? ADVANCED_OPTIONS : SIMPLE_OPTIONS;
+  $("#distractionPrompt").textContent = t(mode === "advanced" ? "session.promptAdvanced" : "session.promptSimple");
   const buttons = $("#distractionButtons");
   buttons.innerHTML = "";
-  buttons.classList.toggle("advanced", session.mode === "advanced");
-  buttons.classList.toggle("simple", session.mode !== "advanced");
+  buttons.classList.toggle("advanced", mode === "advanced");
+  buttons.classList.toggle("simple", mode !== "advanced");
   for (const option of options) {
     const button = document.createElement("button");
     button.type = "button";
@@ -1152,6 +1209,20 @@ function enterSession() {
     button.addEventListener("click", () => logDistraction(option, button));
     buttons.append(button);
   }
+}
+
+function enterSession() {
+  const character = sessionCharacter(session);
+
+  // In a plan: "… · Plan" instead of the minutes (the block line under the timeline has them).
+  $("#sessionInfo").textContent = plan
+    ? t("session.infoPlan", { name: character.name, style: styleLabel(session.style), mode: modeName(session.mode) })
+    : t("session.info", {
+      name: character.name, style: styleLabel(session.style), mode: modeName(session.mode),
+      minutes: Math.round(session.durationMs / MIN),
+    });
+  buildDistractionButtons(session.mode);
+  if (plan) planView.segments = buildTimeline($("#planTimeline"), plan.blocks);
 
   closePicker(false);
   closeUndo(false);
@@ -1160,6 +1231,7 @@ function enterSession() {
   motivation.phase = null;
   $("#motivationCard").hidden = true;
   nextGoodAt = Date.now() + GOOD_EVERY_MS;
+  updatePlanView();
   updatePausedView(); // a session reloaded or taken over during a break comes back paused
 
   showScreen("sessionScreen");
@@ -1174,6 +1246,10 @@ function enterSession() {
 }
 
 function tick() {
+  if (planBreakShown()) {
+    breakTick();
+    return;
+  }
   if (!session || session.endedAt) return;
   const now = Date.now();
   const elapsed = activeElapsed(session, now);
@@ -1183,6 +1259,7 @@ function tick() {
   $("#timer").textContent = clock;
   $("#endClock").textContent = clock; // Stop's dialog covers #timer, so it shows the same clock
   $("#progressBar").style.width = `${(elapsed / session.durationMs) * 100}%`;
+  if (plan) updatePlanTimeline(elapsed / session.durationMs);
 
   // During a break the clock stands still and only the break counter moves: no motivation phase,
   // no "doing well" pose, and the session can't run out.
@@ -1494,6 +1571,12 @@ async function askContinueOrRestart() {
     // The checkbox only matters here: "Continue" keeps the session running.
     const saved = canSave && $("#restartSave").checked ? saveFinishedSession({ ...session, endedAt: cutAt }, "startOver") : "";
     if (saved === "saved" || saved === "exists") requestPersistentStorage();
+    // In a plan, Start over restarts this block with the new length; the rest of the plan stays.
+    // A first part that went into the history counts in the plan's summary ("started over").
+    if (plan) {
+      if (COUNTED_PARTS.includes(saved)) recordPart({ ...session, endedAt: cutAt }, saved, true);
+      plan.blocks[plan.index].minutes = restartPicker.value();
+    }
     // value(), not read(): Start new session's click already let it through, so it must never block here.
     // a waiting time away card is dropped with the old session
     const canSaveNow = startSession(character, mode, restartPicker.value());
@@ -1509,13 +1592,20 @@ async function askContinueOrRestart() {
 // now?" and offers Take a break above the divider; the save checkbox below it belongs to ending.
 // During a break pausing is no longer an option: the old "End this session now?" without that part.
 async function onEndClick() {
+  if (!session) {
+    if (planBreakShown()) endPlanFromBreak();
+    return;
+  }
   const paused = Boolean(session.pausedAt);
+  // In a plan: "End this block", and "End plan" too unless this is the last block.
+  $("#endConfirmButton").textContent = t(plan ? "session.endBlock" : "session.endSession");
+  $("#endPlanButton").hidden = !plan || plan.index >= plan.blocks.length - 1;
   // Tapped during the Undo window: the distraction stays logged and Undo is over for good (it
   // doesn't come back after Keep going). false: a waiting restart question doesn't open now.
   closeUndo(false);
   // The picker waits behind this dialog, and a waiting restart question waits until it's answered.
   pausePicker();
-  $("#endTitle").textContent = t(paused ? "end.titlePaused" : "end.titleRunning");
+  $("#endTitle").textContent = t(paused ? (plan ? "end.titlePausedBlock" : "end.titlePaused") : "end.titleRunning");
   $("#endBreak").hidden = paused;
   // Running: "Timer still running · 16:41" under the title, ticked by tick(). It's the dialog's
   // description, read once when it opens; no live region, so the ticking time isn't announced.
@@ -1537,9 +1627,10 @@ async function onEndClick() {
   const asked = session;
   const answer = await ask(endDialog);
   if (session !== asked) return; // another tab took the session over meanwhile (loseControl)
-  if (answer === "end" && session && !session.endedAt) {
+  if ((answer === "end" || answer === "endPlan") && session && !session.endedAt) {
     // During a break the session ends where the break started: the break isn't session time.
-    finishSession(session.pausedAt || Date.now(), !canSave || $("#endSave").checked);
+    // In a plan, End plan ends this block the same way and goes straight to the plan's summary.
+    finishSession(session.pausedAt || Date.now(), !canSave || $("#endSave").checked, answer === "endPlan");
   } else if (answer === "break" && session && !session.endedAt && !session.pausedAt && Date.now() < effectiveEnd(session)) {
     takeBreak();
   } else {
@@ -1578,7 +1669,7 @@ function updatePausedView() {
   $("#pausedCard").hidden = !paused;
   $("#resumeButton").hidden = !paused;
   $("#motivateButton").hidden = paused || Boolean(undo.distraction);
-  $("#endButton").textContent = t(paused ? "session.endSession" : "session.stop");
+  $("#endButton").textContent = t(paused ? (plan ? "session.endBlock" : "session.endSession") : "session.stop");
   if (paused) {
     $("#motivationCard").hidden = true;
     $("#categoryPicker").hidden = true;
@@ -1636,6 +1727,401 @@ function formatBreak(ms) {
   return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${ss}` : `${m}:${ss}`;
 }
 
+// ---------- plans (several blocks with planned breaks, see "Plans" in the README) ----------
+
+// A plan runs its blocks one after the other. Each block is a normal session (ct_session_v1, saved
+// to the history on its own as always); the plan's progress is in ct_plan_v1 (savePlan). After a
+// block comes its planned break: no session then, plan.phase is "break". The next block never
+// starts by itself, however long it waits: only a tap on Start now / "Start: 60 min" starts it, so
+// no focus is measured while the user isn't back. One tab runs the whole plan: the lock is held
+// from the first block until the plan's summary.
+
+// What a block's status means for the plan's summary: these went into the history (or were meant
+// to, and the browser refused), so they count in its totals. "short" (under 1 minute), "unsaved"
+// (Save unticked) and "discarded" ("Welcome back" → Discard) are listed, but don't count.
+const COUNTED_PARTS = ["saved", "exists", "failed"];
+// segments: the timeline's segments on the session screen (buildTimeline in js/plans.js).
+// watched: this page saw the break running, so its end may chime (not when opened after it ended).
+const planView = { segments: [], watched: false };
+
+function savePlan() {
+  save(PLAN_KEY, plan);
+}
+
+// A planned break (or its "Break over") is on: there's a plan and no block running.
+function planBreakShown() {
+  return Boolean(plan && !session && plan.phase === "break");
+}
+
+// …and it isn't over yet.
+function planBreakRunning() {
+  return planBreakShown() && Date.now() < planBreakEnd(plan);
+}
+
+// Start (or Quick start) with Plan picked. The character pick was counted once, for the whole plan.
+function startPlan(character, mode, blocks) {
+  plan = {
+    v: 1,
+    startedAt: Date.now(),
+    characterId: character.id,
+    ...(character.custom && { characterName: character.name }),
+    style: personalityOf(character),
+    mode,
+    blocks,
+    index: 0,
+    phase: "block",
+    blockStartedAt: null,
+    breakStartedAt: null,
+    parts: [],
+  };
+  startSession(character, mode, blocks[0].minutes); // saves the plan with its first block
+  announceBlockStart();
+}
+
+// Screen readers: which block this is ("Block 2 of 4, 30 min."). Focus is on the info line.
+function announceBlockStart() {
+  if (!plan || !session) return;
+  announce(t("announce.blockStart", { n: plan.index + 1, total: plan.blocks.length, minutes: plan.blocks[plan.index].minutes }));
+}
+
+// "Block 2/4 · 10 min break after", "Block 4/4 · last block", or just "Block 2/4" before no break.
+function blockLineText() {
+  const total = plan.blocks.length;
+  const head = t("session.blockOf", { n: plan.index + 1, total });
+  if (plan.index === total - 1) return `${head} · ${t("session.lastBlock")}`;
+  const minutes = plan.blocks[plan.index].breakMinutes;
+  return minutes ? `${head} · ${t("session.breakAfter", { minutes })}` : head;
+}
+
+// What a finished block measured, for the plan's summary. Keyed by startedAt like the history, so a
+// block is never counted twice. startedOver: the first part of a block that was started over.
+function recordPart(s, status, startedOver = false) {
+  const { elapsedMs, distractedMs, focusPercent } = sessionFocus(s);
+  plan.parts = plan.parts.filter((part) => part.startedAt !== s.startedAt);
+  plan.parts.push({
+    block: plan.index,
+    startedAt: s.startedAt,
+    plannedMs: s.durationMs,
+    elapsedMs,
+    distractedMs,
+    focusPercent,
+    distractions: s.distractions.map((d) => ({ level: d.level, category: isCategory(d.category) ? d.category : null })),
+    pauses: cleanPauses(s.pauses),
+    status,
+    ...(startedOver && { startedOver: true }),
+  });
+}
+
+// A block has ended (saved or not; finishSession, or Discard in "Welcome back"). The last block, or
+// End plan: the plan's summary. Otherwise its planned break starts: when the block ended if its
+// timer ran out (so a phone unlocked later finds the break partly or fully over), now if it was
+// ended by hand. Written in this order: the history (already done), the plan, then the session is
+// removed, so a reload at any moment comes back to the same place.
+function afterPlanBlock(status, endPlan) {
+  const ended = session;
+  const ranOut = ended.endedAt >= effectiveEnd(ended);
+  recordPart(ended, status);
+  session = null;
+  document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
+  document.title = BASE_TITLE;
+  if (endPlan || plan.index >= plan.blocks.length - 1) {
+    finishPlan();
+    return;
+  }
+  Object.assign(plan, {
+    index: plan.index + 1, phase: "break", blockStartedAt: null, breakStartedAt: ranOut ? ended.endedAt : Date.now(),
+  });
+  savePlan();
+  remove(SESSION_KEY);
+  enterBreak(true);
+}
+
+// The planned break's screen, in the session's layout so nothing jumps. fresh: it starts right now
+// (the block just ended here), not after a reload, reopen or Continue here. A break that ended more
+// than PLAN_STALE_MS ago (the app opened again much later) closes the plan instead: its summary.
+function enterBreak(fresh) {
+  if (Date.now() - planBreakEnd(plan) > PLAN_STALE_MS) {
+    finishPlan();
+    return;
+  }
+  clearInterval(tickTimer);
+  const character = sessionCharacter(plan);
+  $("#sessionInfo").textContent = t("session.infoPlan", {
+    name: character.name, style: styleLabel(plan.style), mode: modeName(plan.mode),
+  });
+  buildDistractionButtons(plan.mode); // invisible under the break card, keeping the block's height
+  closePicker(false);
+  closeUndo(false);
+  hideSaveErrorNote();
+  Object.assign(away, { from: 0, ms: 0, open: false, yes: false, hiddenAt: 0 });
+  motivation.phase = null;
+  planView.segments = buildTimeline($("#planTimeline"), plan.blocks);
+  planView.watched = planBreakRunning();
+  updatePausedView();
+  updatePlanView();
+  // Straight from the block, the screen stays where it is (nothing jumps, no scroll to the top).
+  if ($("#sessionScreen").hidden) showScreen("sessionScreen");
+  else updateWakeLock();
+  mountStage(character);
+  const running = planBreakRunning();
+  // The "doing well" pose once as the break starts, then the initial pose (blinks go on).
+  if (fresh && running) react("good", 0);
+  $("#startNextButton").focus({ preventScroll: true });
+  tick();
+  tickTimer = setInterval(tick, 500);
+  if (!fresh) return;
+  const done = plan.index;
+  const total = plan.blocks.length;
+  if (running) announce(t("announce.breakStart", { done, total, minutes: plan.blocks[done - 1].breakMinutes }));
+  else announce(planBreakMs(plan) ? t("announce.breakOver") : t("session.blocksDone", { done, total }));
+}
+
+// The plan's parts of the session screen: the timeline and the block line instead of the progress
+// bar, and during a planned break its label, card and Start button. Outside a plan: as before.
+// Only shows, hides and sets text, so nothing on the screen moves.
+function updatePlanView() {
+  const screen = $("#sessionScreen");
+  const inPlan = Boolean(plan);
+  const onBreak = planBreakShown();
+  const ready = onBreak && !planBreakRunning();
+  screen.classList.toggle("in-plan", inPlan);
+  screen.classList.toggle("plan-break", onBreak);
+  screen.classList.toggle("plan-ready", ready);
+  $("#progress").hidden = inPlan;
+  $("#planTimeline").hidden = !inPlan;
+  $("#blockLine").hidden = !inPlan;
+  $("#timerLabel").hidden = !inPlan;
+  $("#planBreakCard").hidden = !onBreak;
+  $("#startNextButton").hidden = !onBreak;
+  if (!inPlan) return;
+  if (!onBreak) {
+    $("#timerLabel").textContent = "";
+    $("#blockLine").textContent = blockLineText();
+    return;
+  }
+  // The bar: Start now / "Start: 60 min" in Motivate me's cell, and Stop.
+  $("#motivateButton").hidden = true;
+  $("#undoButton").hidden = true;
+  $("#resumeButton").hidden = true;
+  $("#motivationCard").hidden = true;
+  $("#categoryPicker").hidden = true;
+  $("#endButton").textContent = t("session.stop");
+  const next = plan.blocks[plan.index];
+  const total = plan.blocks.length;
+  const noBreak = planBreakMs(plan) === 0; // "No break" before this block: ready at once
+  $("#timerLabel").textContent = t(!ready ? "session.break" : noBreak ? "session.nextUp" : "session.breakOver");
+  $("#blockLine").textContent = !ready ? (prefs.endSound ? t("session.breakSound") : "") : blockLineText();
+  $("#planBreakHeading").textContent = ready && !noBreak
+    ? t("session.breakOverTitle")
+    : t("session.blocksDone", { done: plan.index, total });
+  $("#planBreakText").textContent = !ready
+    ? t("session.nextBlock", { n: plan.index + 1, total })
+    : t(noBreak ? "session.readyText" : "session.breakOverText");
+  $("#planBreakChip").textContent = t("session.focusChip", { minutes: next.minutes });
+  $("#startNextButton").textContent = ready ? t("session.startBlock", { minutes: next.minutes }) : t("session.startNow");
+}
+
+// The timeline on the session screen: what's done is full, the current segment fills as time
+// passes. During a break its segment fills; once it's over (or with no break) the next block's
+// segment waits empty.
+function updatePlanTimeline(fraction) {
+  const segments = planView.segments;
+  const blockSegment = (block) => segments.findIndex((s) => s.kind === "block" && s.block === block);
+  let current;
+  let amount = fraction;
+  if (session) {
+    current = blockSegment(plan.index);
+  } else {
+    current = segments.findIndex((s) => s.kind === "break" && s.block === plan.index - 1);
+    if (current === -1) {
+      current = blockSegment(plan.index);
+      amount = 0;
+    }
+  }
+  updateTimeline($("#planTimeline"), current, amount);
+}
+
+// Every tick during a planned break: the countdown, then "Break over" once. The chime and the
+// vibration follow the session's rule: only if the end is seen as it happens, never when the app
+// is opened or shown again later. Then the screen lock is released: the next block waits for a tap.
+function breakTick() {
+  const now = Date.now();
+  const end = planBreakEnd(plan);
+  if (now < end) {
+    const clock = formatClock(end - now);
+    $("#timer").textContent = clock;
+    document.title = `${clock} · ${t("session.break")} · ${BASE_TITLE}`;
+    updatePlanTimeline(1 - (end - now) / planBreakMs(plan));
+    return;
+  }
+  if (!$("#sessionScreen").classList.contains("plan-ready")) {
+    const watched = planView.watched;
+    planView.watched = false;
+    updatePlanView();
+    if (watched && now - end <= (document.hidden ? END_SOUND_HIDDEN_MS : END_SOUND_VISIBLE_MS)) announceEnd();
+    if (watched) announce(t("announce.breakOver"));
+    updateWakeLock();
+  }
+  $("#timer").textContent = formatClock(plan.blocks[plan.index].minutes * MIN); // dimmed (CSS)
+  document.title = `${$("#timerLabel").textContent} · ${BASE_TITLE}`;
+  updatePlanTimeline(1);
+}
+
+// Start now (during the break) or "Start: 60 min" (after it): the next block starts now.
+function startNextBlock() {
+  if (!planBreakShown()) return;
+  if (prefs.endSound) unlockAudio(); // this tap allows the chime at the block's end
+  clearInterval(tickTimer);
+  startSession(sessionCharacter(plan), plan.mode, plan.blocks[plan.index].minutes);
+  announceBlockStart();
+}
+
+// Stop during a planned break: "End the plan now?" (Keep going / End plan), in Stop's dialog
+// without its session parts.
+async function endPlanFromBreak() {
+  const dialog = $("#endDialog");
+  $("#endTitle").textContent = t("end.planTitle");
+  $("#endRunning").hidden = true;
+  $("#endBreak").hidden = true;
+  $("#endSaveRow").hidden = true;
+  $("#endPlanButton").hidden = true;
+  dialog.removeAttribute("aria-describedby");
+  $("#endConfirmButton").textContent = t("end.endPlan");
+  const asked = plan;
+  const answer = await ask(dialog);
+  if (plan !== asked || session) return; // another tab took it over meanwhile
+  if (answer === "end") finishPlan();
+}
+
+// The plan is over: the last block ended, End plan, or a break that ended long ago (enterBreak).
+// Blocks that didn't run simply aren't in its summary. ct_plan_v1 (and a session still saved for a
+// block that's already in it) is removed, and the lock is freed. If no block counts and none was
+// under 1 minute (all unticked or discarded), there's nothing to sum up: back to the setup screen,
+// as after an unticked single session.
+function finishPlan() {
+  const done = plan;
+  clearInterval(tickTimer);
+  cancelLeaveReminder();
+  stopStage();
+  closePicker(false);
+  closeUndo(false);
+  plan = null;
+  session = null;
+  remove(PLAN_KEY);
+  remove(SESSION_KEY);
+  releaseControl();
+  document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
+  document.title = BASE_TITLE;
+  const counted = done.parts.filter((part) => COUNTED_PARTS.includes(part.status));
+  if (!counted.length && !done.parts.some((part) => part.status === "short")) {
+    renderCharacterList();
+    showScreen("setupScreen");
+    return;
+  }
+  renderPlanSummary(done);
+  showScreen("summaryScreen");
+  $("#summaryTitle").focus({ preventScroll: true });
+}
+
+// "2 h 30 min" from an hour on (whole minutes, like the history page), otherwise "24 min 30 sec".
+function formatTotal(ms) {
+  if (ms < 60 * MIN) return formatDuration(ms);
+  const minutes = Math.floor(ms / MIN);
+  const hours = Math.floor(minutes / 60);
+  return minutes % 60 ? t("time.hMin", { hours, minutes: minutes % 60 }) : t("time.h", { hours });
+}
+
+// One summary for the whole plan, on the summary screen. The totals are only what the counted
+// blocks measured (COUNTED_PARTS), never estimated. The result follows the session rules on those
+// totals (resultOf in history-store.js): "early" only by the times, against the whole plan's
+// planned focus time, whatever ended it. "3 of 4 blocks" shows when blocks didn't run.
+function renderPlanSummary(p) {
+  const character = sessionCharacter(p);
+  const counted = p.parts.filter((part) => COUNTED_PARTS.includes(part.status));
+  const elapsed = counted.reduce((sum, part) => sum + part.elapsedMs, 0);
+  const distracted = counted.reduce((sum, part) => sum + part.distractedMs, 0);
+  const plannedMs = p.blocks.reduce((sum, block) => sum + block.minutes * MIN, 0);
+  const distractions = counted.flatMap((part) => part.distractions);
+  const percent = focusPercentOf(elapsed, distracted);
+  const result = resultOf({ mode: p.mode, plannedMs, elapsedMs: elapsed, focusPercent: percent, distractions });
+  const short = result === "short";
+
+  const img = $("#summaryImg");
+  const pose = (SUMMARY_POSES[personalityOf(character)] || SUMMARY_POSES.kind)[result];
+  img.alt = describePose(character, pose);
+  setPoseImage(img, character, pose);
+  $("#summaryTitle").textContent = t(`summary.title.${result}`);
+
+  const noteEl = $("#summaryNote");
+  noteEl.textContent = t("summary.shortNote");
+  noteEl.hidden = !short;
+  const failed = counted.some((part) => part.status === "failed");
+  const saveErrorEl = $("#summarySaveError");
+  saveErrorEl.textContent = failed ? t("summary.planSaveError") : "";
+  saveErrorEl.hidden = !failed;
+
+  const logged = t("summary.logged", { count: distractions.length });
+  const planned = elapsed < plannedMs ? t("summary.planned", { duration: formatTotal(plannedMs) }) : "";
+  const percentEl = $("#summaryPercent");
+  const messageEl = $("#summaryMessage");
+  const textEl = $("#summaryText");
+  textEl.hidden = short;
+  if (p.mode === "advanced") {
+    messageEl.hidden = true;
+    percentEl.textContent = t("summary.percent", { percent });
+    percentEl.hidden = short;
+    textEl.textContent = t("summary.advancedLine", {
+      focused: formatTotal(elapsed - distracted), elapsed: formatTotal(elapsed), planned, logged,
+    });
+  } else {
+    percentEl.hidden = true;
+    const messages = SIMPLE_SUMMARY_MESSAGES[result];
+    messageEl.hidden = !messages;
+    if (messages) messageEl.textContent = messages[Math.floor(Math.random() * messages.length)];
+    textEl.textContent = t("summary.planSimpleLine", { elapsed: formatTotal(elapsed), planned, logged });
+  }
+
+  // "4 blocks" / "3 of 4 blocks", then one line per block that ran.
+  const ran = new Set(p.parts.map((part) => part.block)).size;
+  const total = p.blocks.length;
+  const blocksEl = $("#summaryBlocks");
+  blocksEl.textContent = ran >= total ? t("summary.blocks", { count: total }) : t("summary.blocksOf", { done: ran, total });
+  blocksEl.hidden = false;
+  const list = $("#summaryBlockList");
+  list.textContent = "";
+  for (const part of p.parts) {
+    const n = part.block + 1;
+    let text;
+    if (COUNTED_PARTS.includes(part.status)) {
+      const blockLogged = t("summary.blockDistractions", { count: part.distractions.length });
+      text = p.mode === "advanced"
+        ? t("summary.blockItemAdvanced", { n, duration: formatDuration(part.elapsedMs), percent: part.focusPercent, logged: blockLogged })
+        : t("summary.blockItem", { n, duration: formatDuration(part.elapsedMs), logged: blockLogged });
+      if (part.startedOver) text += t("summary.blockStartedOver");
+    } else {
+      text = t(part.status === "short" ? "summary.blockShort" : "summary.blockUnsaved", { n });
+    }
+    const li = document.createElement("li");
+    li.textContent = text;
+    list.append(li);
+  }
+  list.hidden = !p.parts.length;
+
+  // Breaks taken with Stop → Take a break inside the blocks (planned breaks aren't session time).
+  const pauses = counted.flatMap((part) => part.pauses);
+  const pausesEl = $("#summaryPauses");
+  pausesEl.hidden = short || pauses.length === 0;
+  pausesEl.textContent = pauses.length ? formatPauses(pauses, formatDuration) : "";
+
+  const top = countCategories(distractions).slice(0, 3);
+  const categoriesEl = $("#summaryCategories");
+  categoriesEl.hidden = short || top.length === 0;
+  categoriesEl.textContent = t("summary.categories", {
+    count: top.length,
+    list: top.map((category) => t("summary.categoryCount", { label: category.label, count: category.count })).join(t("common.listSeparator")),
+  });
+}
+
 // ---------- one tab at a time (Web Locks API) ----------
 
 // With the app open in several tabs (or a tab and the installed app), only the tab holding the
@@ -1662,6 +2148,23 @@ const control = { hold: null, pending: null };
 function savedRunningSession() {
   const saved = load(SESSION_KEY, null);
   return saved && !saved.endedAt && sessionCharacter(saved) ? saved : null;
+}
+
+// The plan saved in ct_plan_v1, if it's running: its block is the saved session (same startedAt),
+// or it's in a break and no session is saved. Anything else (plans off, a block that isn't the
+// saved session) is no plan: the saved session then runs as a single block. A session left saved
+// after its block was already finished (a reload between the two writes) is removed here.
+function savedActivePlan(saved = savedRunningSession()) {
+  if (!PLANS_ON) return null;
+  const p = cleanStoredPlan(load(PLAN_KEY, null));
+  if (!p || !sessionCharacter(p)) return null;
+  if (p.phase === "block") return saved && saved.startedAt === p.blockStartedAt ? p : null;
+  if (!saved) return p;
+  if (p.parts.some((part) => part.startedAt === saved.startedAt)) {
+    remove(SESSION_KEY);
+    return p;
+  }
+  return null;
 }
 
 // Resolves true once this tab holds the lock, false if another tab holds it. steal: take it from
@@ -1711,6 +2214,7 @@ function loseControl() {
   closeUndo(false);
   Object.assign(away, { from: 0, ms: 0, open: false, yes: false, hiddenAt: 0 });
   session = null;
+  plan = null; // a plan (also in its break) is taken over as a whole
   document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
   document.title = BASE_TITLE;
   showElsewhere();
@@ -1722,8 +2226,14 @@ function loseControl() {
 // this tab) counts like a normal return, so 15 s or more away asks the time away card, here only.
 // Returns false if there's no running session any more (it ended in the meantime).
 function resumeSavedSession() {
+  const savedPlan = savedActivePlan(); // first: it also clears a block that was already finished
   const saved = savedRunningSession();
-  if (!saved) return false;
+  if (!saved && !savedPlan) return false;
+  plan = savedPlan;
+  if (!saved) {
+    enterBreak(false); // a plan in its break, or with its break over (no sound now)
+    return true;
+  }
   session = saved;
   // A session saved before personalities came from the character can hold any
   // style: it continues (and goes into the history) with the character's own.
@@ -1751,7 +2261,7 @@ async function continueSavedSession(steal) {
     showElsewhere();
     return;
   }
-  if (session) return; // a quick second tap: it's already running here
+  if (session || plan) return; // a quick second tap: it's already running here
   if (resumeSavedSession()) return;
   releaseControl();
   renderCharacterList();
@@ -1780,8 +2290,8 @@ function showElsewhere() {
 // Without Web Locks the tabs can't tell, so nothing changes there.
 function canShowElsewhere() {
   return Boolean(
-    locks && !$("#setupScreen").hidden && !session && !control.hold && !control.pending &&
-    !document.querySelector("dialog[open]") && savedRunningSession()
+    locks && !$("#setupScreen").hidden && !session && !plan && !control.hold && !control.pending &&
+    !document.querySelector("dialog[open]") && (savedRunningSession() || savedActivePlan())
   );
 }
 
@@ -1852,13 +2362,14 @@ async function checkSessionElsewhere() {
 // the running session fires it (each distraction, each leave), so both cases only act once:
 // a session started in another tab replaces the setup screen with the notice, and the notice goes
 // when the session ends there (finished or discarded), bringing the setup screen back as it was.
+// A plan's progress (ct_plan_v1) counts the same: during its breaks no session is saved.
 function onStorage(event) {
-  if (event.key !== SESSION_KEY && event.key !== null) return; // null: all storage was cleared
+  if (event.key !== SESSION_KEY && event.key !== PLAN_KEY && event.key !== null) return; // null: all storage was cleared
   if (canShowElsewhere()) {
     showElsewhereByItself();
     return;
   }
-  if ($("#elsewhereScreen").hidden || savedRunningSession()) return;
+  if ($("#elsewhereScreen").hidden || savedRunningSession() || savedActivePlan()) return;
   backToSetup();
 }
 
@@ -2116,7 +2627,9 @@ function requestPersistentStorage() {
 // keep: false when "Save this session to your history" was unticked: the session
 // doesn't count, so nothing is saved and there's no summary to judge it. Straight back
 // to the setup screen instead, like Discard in the "Welcome back" dialog.
-function finishSession(endedAt, keep = true) {
+// endPlan: End plan in a plan's Stop dialog: this block ends the same way, then the plan's summary.
+// In a plan the block's end leads to its planned break (afterPlanBlock), not to a summary.
+function finishSession(endedAt, keep = true, endPlan = false) {
   clearInterval(tickTimer);
   cancelLeaveReminder();
   stopStage();
@@ -2127,6 +2640,11 @@ function finishSession(endedAt, keep = true) {
   session.pausedAt = null;
   const saved = keep ? saveFinishedSession(session) : "";
   if (saved === "saved" || saved === "exists") requestPersistentStorage();
+  if (plan) {
+    afterPlanBlock(keep ? saved : "unsaved", endPlan);
+    return;
+  }
+  remove(PLAN_KEY); // a leftover plan this session wasn't part of (e.g. while plans were off)
   remove(SESSION_KEY);
   releaseControl();
   document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
@@ -2189,6 +2707,8 @@ async function askSaveLateSession(endedAt) {
 
   if (answer === "save") {
     finishSession(endedAt);
+  } else if (plan) {
+    afterPlanBlock("discarded", false); // the plan goes on: its break started when the block ended
   } else {
     remove(SESSION_KEY);
     releaseControl();
@@ -2289,6 +2809,8 @@ function showMotivation() {
 // A short session only shows the title and the "not saved" note, in both modes.
 // saveFailed: the browser refused to store the session, so the summary says so.
 function renderSummary(saveFailed) {
+  $("#summaryBlocks").hidden = true; // a plan's lines (renderPlanSummary)
+  $("#summaryBlockList").hidden = true;
   const character = sessionCharacter(session);
   const result = sessionResult(session);
   const short = result === "short";
@@ -2399,6 +2921,7 @@ function onLanguageChange() {
   buildCategoryButtons();
   setupPicker.relabel();
   setupPicker.clearNote(); // a correction message in the old language: it comes back on the next Start
+  if (setupPlan) setupPlan.relabel(); // the rows in the new language, the plan kept
   updateQuickStart();
   // Notes that are showing get their text again (they're only set when they appear).
   const storageNote = $("#setupStorageNote");
@@ -2422,6 +2945,7 @@ function init() {
   buildCategoryButtons();
   initMotivationFit();
   setupPicker = durationPicker($("#setupDuration"), prefs.minutes);
+  bindDurationKind();
   // Capture phase, so the count goes up before the press moves focus (see pressCount).
   for (const type of ["pointerdown", "keydown"]) document.addEventListener(type, () => pressCount++, true);
 
@@ -2444,9 +2968,11 @@ function init() {
   $("#endButton").addEventListener("click", onEndClick);
   $("#undoButton").addEventListener("click", onUndoClick);
   $("#resumeButton").addEventListener("click", resumeFromBreak);
+  $("#startNextButton").addEventListener("click", startNextBlock);
   $("#skipCategoryButton").addEventListener("click", () => closePicker(true));
   $("#newSessionButton").addEventListener("click", () => {
     session = null;
+    plan = null;
     renderCharacterList();
     showScreen("setupScreen");
   });
@@ -2483,12 +3009,14 @@ function init() {
     updateQuickStart();
   });
 
-  // Resume a session that was running when the page was closed or reloaded,
-  // unless another tab runs it (see "one tab at a time").
-  if (savedRunningSession()) {
+  // Resume a session (or a plan, also in its break) that was running when the page was closed or
+  // reloaded, unless another tab runs it (see "one tab at a time"). A plan that isn't running any
+  // more (see savedActivePlan) is cleared.
+  if (savedRunningSession() || savedActivePlan()) {
     continueSavedSession(false);
     return;
   }
+  remove(PLAN_KEY);
   showScreen("setupScreen");
   pickNewCharacter();
 }
