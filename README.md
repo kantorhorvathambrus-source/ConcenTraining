@@ -660,7 +660,7 @@ session). To switch plans on for everyone, set it to `true`; nothing else needs 
     removes the row (hidden while there's only one row). On phones under 350px wide "After" is
     hidden visually (screen readers still hear "Break after row 1"), so the line fits.
   - The very last block of the plan never has a break after it. Last row ×1: its break line reads
-    "Last block, no break after it" instead. Last row ×2 or more: the break select stays (it applies
+    "Last block, no break after it" instead (the text wraps inside the line, so the × stays on it). Last row ×2 or more: the break select stays (it applies
     between its blocks) with "(none after the last one)" under it. Adding or removing rows updates
     which row is last.
 - **Default break:** one third of the block, rounded to the nearest 5, at least 5 (30 → 10, 60 → 20,
@@ -673,7 +673,8 @@ session). To switch plans on for everyone, set it to `true`; nothing else needs 
   pill ends; focus blocks amber, breaks striped. Under it: "2 h 30 min focus · 3 h 10 min with breaks
   · ends around 17:13" (just "… focus · ends around …" without breaks; the end time is now + the
   total, in the language's time format, updated on every change and every minute while the setup
-  screen shows).
+  screen shows). "ends around 17:13" is joined with no-break spaces in every language, so the time
+  never wraps onto a line of its own.
 - The first time Plan is picked: one row, 30 min ×2, 10 min break. The plan is saved as `plan` in
   `ct_prefs_v1` on every change and comes back next time. A broken saved plan falls back to that.
 - **Quick start** with Plan picked: "Leader · Simple · Plan: 2×30 · 60 · 30", and **Start** starts
@@ -700,7 +701,11 @@ session). To switch plans on for everyone, set it to `true`; nothing else needs 
   kept for the whole plan), the timer counts the break down, the timeline's break segment fills, the
   tab title reads "09:41 · Break · ConcenTraining", and under the timeline "A sound plays when the
   break is over." (only with the end sound on). The distraction block is replaced by a card:
-  "1/4 blocks done", "Next: block 2/4" and a chip "30 min focus". The character plays its "doing
+  "1/4 blocks done", "Next: block 2/4" and a chip "30 min focus". **Start now** and **Start: 120 min**
+  always stay on one line, so the bar keeps its height when the break ends: when the text doesn't fit
+  (narrow phones, longer languages), the button alone gets slightly smaller text and tighter side
+  padding, in up to three steps (`fitStartButton` in `app.js`, `bar-fit-1` … `bar-fit-3` in
+  `style.css`; at 320px every language fits by the second step). The character plays its "doing
   well" pose once, then stays in its normal pose (blinks and breathing go on). The bar: **Start now**
   (ends the break early and starts the next block; it gets the focus) and **Stop** ("End the plan
   now?" with Keep going / End plan → the plan's summary). Screen readers hear "Block 1 of 4 done.
@@ -1891,7 +1896,9 @@ language loses its `beta` flag:
   "dell'8" / "dell'11"). Long single words carry soft hyphens for 320px phones ("Pochis-simo",
   "Abba-stanza").
 - **Plans:** "After" in the plan rows is the shorter "Luego" (es), "Puis" (fr) and "Lalu" (id), so
-  the break line fits a 360px phone. Hungarian uses short units on the setup timeline only ("2 ó 30
+  the break line fits a 360px phone. French uses "Lancer maintenant" / "Lancer : 120 min" for the
+  break's Start button (like "lance le bloc suivant" in its text): "Commencer maintenant" doesn't fit
+  half of a 320px bar on one line. Hungarian uses short units on the setup timeline only ("2 ó 30
   p").
 - **Polish:** the badge "Za darmo na start" ("free to start with") is a little looser than "Free during
   launch".

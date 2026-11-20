@@ -1474,6 +1474,12 @@ a:focus-visible {
   color: var(--color-text-muted);
 }
 
+/* The last row ×1: "Last block, no break after it" takes the line's free width and wraps inside it,
+   so the × stays on its line instead of dropping under it. */
+.plan-row-break:has(> .plan-break-text > .plan-note:not([hidden])) > .plan-break-text {
+  flex: 1 1 0;
+}
+
 /* "(none after the last one)": a line of its own under the break select, so the × stays up. */
 .plan-row-break > .plan-note {
   flex-basis: 100%;
@@ -1625,6 +1631,33 @@ a:focus-visible {
 
 #endPlanButton {
   margin-top: 10px;
+}
+
+/* "Start now" / "Start: 120 min" stays on one line, so the bar never grows taller when the break
+   ends. Only when the text doesn't fit (narrow phones, long languages) app.js (fitStartButton)
+   steps it down: a little smaller text and tighter side padding. Stop next to it keeps its size,
+   and the grid row keeps both buttons as tall as Stop. */
+#startNextButton {
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+#startNextButton.bar-fit-1 {
+  padding-left: 12px;
+  padding-right: 12px;
+  font-size: var(--fs-15);
+}
+
+#startNextButton.bar-fit-2 {
+  padding-left: 8px;
+  padding-right: 8px;
+  font-size: var(--fs-14);
+}
+
+#startNextButton.bar-fit-3 {
+  padding-left: 6px;
+  padding-right: 6px;
+  font-size: var(--fs-13);
 }
 
 /* The plan's summary: one short line per block. */

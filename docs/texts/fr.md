@@ -111,8 +111,8 @@ How to read it:
 | `plan.lastNoBreak` | `Last block, no break after it` | `Dernier bloc, pas de pause après` |
 | `plan.noneAfterLast` | `(none after the last one)` | `(aucune après le dernier)` |
 | `plan.add` | `+ Add block` | `+ Ajouter un bloc` |
-| `plan.timeline` | `{focus} focus · {total} with breaks · ends around {time}` | `{focus} de concentration · {total} avec les pauses · fin vers {time}` |
-| `plan.timelineNoBreaks` | `{focus} focus · ends around {time}` | `{focus} de concentration · fin vers {time}` |
+| `plan.timeline` | `{focus} focus · {total} with breaks · ends~around~{time}` | `{focus} de concentration · {total} avec les pauses · fin~vers~{time}` |
+| `plan.timelineNoBreaks` | `{focus} focus · ends~around~{time}` | `{focus} de concentration · fin~vers~{time}` |
 | `plan.min` | `{minutes} min` | `{minutes}~min` |
 | `plan.h` | `{hours} h` | `{hours}~h` |
 | `plan.hMin` | `{hours} h {minutes} min` | `{hours}~h {minutes}~min` |
@@ -261,11 +261,11 @@ How to read it:
 | `session.blocksDone` | `{done}/{total} blocks done` | `Blocs terminés_: {done}/{total}` |
 | `session.nextBlock` | `Next: block {n}/{total}` | `Ensuite_: bloc {n}/{total}` |
 | `session.focusChip` | `{minutes} min focus` | `{minutes}~min de concentration` |
-| `session.startNow` | `Start now` | `Commencer maintenant` |
+| `session.startNow` | `Start now` | `Lancer maintenant` |
 | `session.breakOverTitle` | `Break's over` | `La pause est finie` |
 | `session.breakOverText` | `When you're back, start the next block.` | `Quand tu es de retour, lance le bloc suivant.` |
 | `session.readyText` | `Start the next block when you're ready.` | `Lance le bloc suivant quand tu veux.` |
-| `session.startBlock` | `Start: {minutes} min` | `Commencer_: {minutes}~min` |
+| `session.startBlock` | `Start: {minutes} min` | `Lancer_: {minutes}~min` |
 | `session.endBlock` | `End this block` | `Terminer ce bloc` |
 | `announce.blockStart` | `Block {n} of {total}, {minutes} min.` | `Bloc {n} sur {total}, {minutes}~min.` |
 | `announce.breakStart` | `Block {done} of {total} done. {minutes} min break.` | `Blocs terminés_: {done} sur {total}. Pause de {minutes}~min.` |

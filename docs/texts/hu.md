@@ -111,8 +111,8 @@ How to read it:
 | `plan.lastNoBreak` | `Last block, no break after it` | `Utolsó blokk, utána nincs szünet` |
 | `plan.noneAfterLast` | `(none after the last one)` | `(a legutolsó után nincs)` |
 | `plan.add` | `+ Add block` | `+ Blokk hozzáadása` |
-| `plan.timeline` | `{focus} focus · {total} with breaks · ends around {time}` | `{focus} fókusz · {total} szünetekkel · vége kb. {time}` |
-| `plan.timelineNoBreaks` | `{focus} focus · ends around {time}` | `{focus} fókusz · vége kb. {time}` |
+| `plan.timeline` | `{focus} focus · {total} with breaks · ends~around~{time}` | `{focus} fókusz · {total} szünetekkel · vége~kb.~{time}` |
+| `plan.timelineNoBreaks` | `{focus} focus · ends~around~{time}` | `{focus} fókusz · vége~kb.~{time}` |
 | `plan.min` | `{minutes} min` | `{minutes}~p` |
 | `plan.h` | `{hours} h` | `{hours}~ó` |
 | `plan.hMin` | `{hours} h {minutes} min` | `{hours}~ó {minutes}~p` |

@@ -111,8 +111,8 @@ How to read it:
 | `plan.lastNoBreak` | `Last block, no break after it` | `Ostatni blok, bez przerwy po nim` |
 | `plan.noneAfterLast` | `(none after the last one)` | `(bez przerwy po ostatnim)` |
 | `plan.add` | `+ Add block` | `+ Dodaj blok` |
-| `plan.timeline` | `{focus} focus · {total} with breaks · ends around {time}` | `{focus} skupienia · {total} z przerwami · koniec ok. {time}` |
-| `plan.timelineNoBreaks` | `{focus} focus · ends around {time}` | `{focus} skupienia · koniec ok. {time}` |
+| `plan.timeline` | `{focus} focus · {total} with breaks · ends~around~{time}` | `{focus} skupienia · {total} z przerwami · koniec~ok.~{time}` |
+| `plan.timelineNoBreaks` | `{focus} focus · ends~around~{time}` | `{focus} skupienia · koniec~ok.~{time}` |
 | `plan.min` | `{minutes} min` | `{minutes} min` |
 | `plan.h` | `{hours} h` | `{hours} h` |
 | `plan.hMin` | `{hours} h {minutes} min` | `{hours} h {minutes} min` |

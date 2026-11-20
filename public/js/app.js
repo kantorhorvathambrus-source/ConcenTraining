@@ -1919,6 +1919,36 @@ function updatePlanView() {
     : t(noBreak ? "session.readyText" : "session.breakOverText");
   $("#planBreakChip").textContent = t("session.focusChip", { minutes: next.minutes });
   $("#startNextButton").textContent = ready ? t("session.startBlock", { minutes: next.minutes }) : t("session.startNow");
+  fitStartButton();
+}
+
+// "Start now" / "Start: 120 min" on one line (see style.css): the smallest step it fits at, from
+// none to bar-fit-3. Again whenever its text or its size changes (initPlanFit: rotating the phone).
+const START_FIT_STEPS = ["bar-fit-1", "bar-fit-2", "bar-fit-3"];
+
+// The text's own width (a Range around it) against the button's inner width: a button's scrollWidth
+// doesn't report text that overflows it.
+function startButtonFits(button) {
+  const range = document.createRange();
+  range.selectNodeContents(button);
+  const style = getComputedStyle(button);
+  const inner = button.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+  return range.getBoundingClientRect().width <= inner + 0.5;
+}
+
+function fitStartButton() {
+  const button = $("#startNextButton");
+  button.classList.remove(...START_FIT_STEPS);
+  if (button.hidden || !button.clientWidth) return;
+  for (const step of START_FIT_STEPS) {
+    if (startButtonFits(button)) return;
+    button.classList.remove(...START_FIT_STEPS);
+    button.classList.add(step);
+  }
+}
+
+function initPlanFit() {
+  if (typeof ResizeObserver === "function") new ResizeObserver(fitStartButton).observe($("#startNextButton"));
 }
 
 // The timeline on the session screen: what's done is full, the current segment fills as time
@@ -2944,6 +2974,7 @@ function init() {
   cancelLeaveReminder(); // e.g. its tap reopened the app after the browser discarded the page
   buildCategoryButtons();
   initMotivationFit();
+  initPlanFit();
   setupPicker = durationPicker($("#setupDuration"), prefs.minutes);
   bindDurationKind();
   // Capture phase, so the count goes up before the press moves focus (see pressCount).
