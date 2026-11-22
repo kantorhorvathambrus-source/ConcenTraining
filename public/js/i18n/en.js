@@ -105,6 +105,8 @@ I18N_TEXTS.en = {
 
   // Character cards. editLabel / deleteLabel: what a screen reader says for the buttons.
   "character.editLabel": "Edit {name}",
+  "character.rename": "Rename",
+  "character.renameLabel": "Rename {name}",
   "character.deleteLabel": "Delete {name}",
   "character.deleteTitle": "Delete {name}?",
   "character.deleteText": "Your past sessions with this character stay in your history.",
@@ -125,6 +127,7 @@ I18N_TEXTS.en = {
   "custom.saveFailed": "Couldn't save your character. Your browser isn't letting this site save data.",
   "custom.deletedElsewhere": "This character was deleted in another tab, so it can't be saved.",
   "custom.ghostName": "Custom character",
+  "custom.timeLeft": "Time left to make changes: {time}",
 
   // ---------- storage notes ----------
   "storage.setupNote":
@@ -233,6 +236,68 @@ I18N_TEXTS.en = {
 
   // "Paused once · 2 min" (summary and history list).
   "pauses.line": { one: "Paused once · {duration}", other: "Paused {count} times · {duration}" },
+
+  // ---------- plans (js/plans.js; "Plans" in the README) ----------
+  // Step 3 of the setup screen: the "Single block | Plan" toggle and the plan builder. plan.min / .h /
+  // .hMin: the short lengths of the line under the plan's timeline ("2 h 30 min focus").
+  "plan.single": "Single block",
+  "plan.plan": "Plan",
+  "plan.after": "After",
+  "plan.breakOption": "{minutes} min break",
+  "plan.noBreak": "No break",
+  "plan.lastNoBreak": "Last block, no break after it",
+  "plan.noneAfterLast": "(none after the last one)",
+  "plan.add": "+ Add block",
+  "plan.timeline": "{focus} focus · {total} with breaks · ends\u00a0around\u00a0{time}",
+  "plan.timelineNoBreaks": "{focus} focus · ends\u00a0around\u00a0{time}",
+  "plan.min": "{minutes} min",
+  "plan.h": "{hours} h",
+  "plan.hMin": "{hours} h {minutes} min",
+  "plan.count": { one: "{count} block", other: "{count} blocks" },
+  "plan.stepperLabel": "Number of blocks in row {n}",
+  "plan.fewer": "Fewer",
+  "plan.more": "More",
+  "plan.removeRow": "Remove row {n}",
+  "plan.lengthLabel": "Length of row {n}",
+  "plan.breakLabel": "Break after row {n}",
+  "plan.quickStart": "{name}\u00a0· {mode}\u00a0· Plan: {plan}",
+
+  // A plan on the session screen: its blocks, the planned break and "Break over".
+  "session.infoPlan": "{name} · {style} · {mode} · Plan",
+  "session.blockOf": "Block {n}/{total}",
+  "session.breakAfter": "{minutes} min break after",
+  "session.lastBlock": "last block",
+  "session.breakOver": "Break over",
+  "session.nextUp": "Next block",
+  "session.breakSound": "A sound plays when the break is over.",
+  "session.blocksDone": "{done}/{total} blocks done",
+  "session.nextBlock": "Next: block {n}/{total}",
+  "session.focusChip": "{minutes} min focus",
+  "session.startNow": "Start now",
+  "session.breakOverTitle": "Break's over",
+  "session.breakOverText": "When you're back, start the next block.",
+  "session.readyText": "Start the next block when you're ready.",
+  "session.startBlock": "Start: {minutes} min",
+  "session.endBlock": "End this block",
+  "announce.blockStart": "Block {n} of {total}, {minutes} min.",
+  "announce.breakStart": "Block {done} of {total} done. {minutes} min break.",
+  "announce.breakOver": "Break's over.",
+
+  "end.endPlan": "End plan",
+  "end.planTitle": "End the plan now?",
+  "end.titlePausedBlock": "End this block now?",
+
+  // The plan's summary.
+  "summary.blocks": { one: "{count} block", other: "{count} blocks" },
+  "summary.blocksOf": "{done} of {total} blocks",
+  "summary.blockItem": "{n}. {duration} · {logged}",
+  "summary.blockItemAdvanced": "{n}. {duration} · {percent}% focused · {logged}",
+  "summary.blockDistractions": { zero: "no distractions", one: "{count} distraction", other: "{count} distractions" },
+  "summary.blockStartedOver": " · started over",
+  "summary.blockShort": "{n}. Under 1 minute, not saved",
+  "summary.blockUnsaved": "{n}. Not saved",
+  "summary.planSimpleLine": "Your blocks ran {elapsed} in total{planned}, {logged}",
+  "summary.planSaveError": "Couldn't save every block to your history: your browser didn't allow it. Full storage or blocked site data can cause this.",
 
   // ---------- history page ----------
   "history.pageTitle": "Your History · ConcenTraining",
@@ -377,14 +442,19 @@ I18N_TEXTS.en = {
   // ---------- character editor (avatar.html) ----------
   "avatar.pageTitle": "Your Character · ConcenTraining",
   "avatar.pageTitleEdit": "Edit Your Character · ConcenTraining",
+  "avatar.pageTitleRename": "Rename Your Character · ConcenTraining",
   "avatar.back": "← Back",
   "avatar.title": "Create your character",
   "avatar.titleEdit": "Edit your character",
+  "avatar.titleRename": "Rename your character",
+  "avatar.editWindowIntro": "After you save, you can still change everything for 10 minutes. After that, the look and personality are final.",
+  "avatar.editWindowEnded": "The 10 minutes are up. What you see is saved, and the look and personality are now final.",
+  "avatar.lockedNote": "This character is final. Its look and personality could be changed for 10 minutes after it was created. You can still change its name.",
   "avatar.preview": "Preview reactions",
   "avatar.randomize": "Randomize",
   "avatar.name": "Name",
   "avatar.personality": "Personality",
-  "avatar.personalityFixed": "You can't change this later.",
+  "avatar.personalityWindow": "You can change it in the first 10 minutes after saving.",
   "avatar.defaultName": "Your character",
   "avatar.group.base": "Base",
   "avatar.group.costumes": "Costumes",
