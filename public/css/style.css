@@ -524,8 +524,9 @@ a:focus-visible {
   min-height: 44px;
 }
 
-/* "Privacy" under Start session and at the bottom of history.html: small and grey, but still a
-   44x44px tap target. --color-text-muted is at least 4.5:1 on --color-bg in both themes. */
+/* "Privacy · About" under Start session and "Privacy" at the bottom of history.html: small and
+   grey, but still a 44x44px tap target. --color-text-muted is at least 4.5:1 on --color-bg in both
+   themes. */
 .page-footer {
   margin: 16px 0 0;
   text-align: center;
@@ -538,6 +539,12 @@ a:focus-visible {
   min-height: 44px;
   min-width: 44px;
   padding: 0 8px;
+  font-size: var(--fs-14);
+  color: var(--color-text-muted);
+}
+
+/* The dot between Privacy and About under Start session. */
+.page-footer-sep {
   font-size: var(--fs-14);
   color: var(--color-text-muted);
 }
@@ -2163,6 +2170,16 @@ a {
 
 .privacy-section p {
   margin: 0 0 12px;
+}
+
+/* about.html: the feature list. */
+.about-list {
+  margin: 0;
+  padding-left: 1.2em;
+}
+
+.about-list li + li {
+  margin-top: 10px;
 }
 
 .stat-cards {

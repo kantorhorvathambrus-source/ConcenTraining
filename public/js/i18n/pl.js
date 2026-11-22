@@ -22,6 +22,7 @@ I18N_TEXTS.pl = {
   "common.save": "Zapisz",
   "common.yes": "Tak",
   "common.privacy": "Prywatność",
+  "common.about": "O aplikacji",
   "common.listSeparator": ", ",
 
   // Adjectives that agree with "tryb" (mode).

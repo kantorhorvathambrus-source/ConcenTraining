@@ -1735,7 +1735,8 @@ doesn't do this.
 `privacy.html` explains in plain words what stays on the device, what is sent to the server (only
 the character count on **Start session**), hosting by Netlify, the legal basis and the user's GDPR
 rights (required before launch, GDPR Art. 13). It's linked as a small grey **Privacy** link below
-**Start session** on the setup screen and at the very bottom of `history.html`; not on `stats.html`,
+**Start session** on the setup screen, at the very bottom of `history.html` and in the "Your data"
+part of `about.html`; not on `stats.html`,
 the session or summary screens, or in dialogs. "← Back to the timer" at the top and bottom goes to
 `./`, like on `history.html`; the phone's Back button returns to where you came from.
 
@@ -1748,13 +1749,39 @@ the session or summary screens, or in dialogs. "← Back to the timer" at the to
   `public/privacy.html` and its "Last updated" date in the same pull request (also a rule in
   `CLAUDE.md`).
 
+## About page (`about.html`)
+
+`about.html` (https://concentraining.com/about) is the public page that says what the app does
+today, for visitors, search engines and AI assistants: everything else is only visible inside the
+app. It's short (one h1, "What you can do" and "Your data", about 250 words) and built like
+`privacy.html` (same layout and CSS classes, "← Back to the timer" at the top, "Start a session →"
+and a link to the privacy page at the bottom, all relative links).
+
+- **English only, never translated**, like `privacy.html`: all its text is in the HTML itself, so
+  crawlers that don't run JavaScript read it. It doesn't load the translation system; the only
+  thing translated is the link to it, **About**, next to **Privacy** under **Start session**
+  (`common.about` in every language file: "Az appról", "Über die App", …). The two links share one
+  line, small and grey, each a 44px tap target, with a dot between them.
+- **One script**, `js/theme.js` in `<head>` (same theme as the app); nothing is saved from the page,
+  it takes no session lock and registers nothing. **Not in the precache list** (not needed at
+  startup); the service worker keeps a copy after the first online visit, like `privacy.html`.
+- **Indexed:** it has a canonical address (`https://concentraining.com/about`), link preview tags,
+  no `noindex`, and it's in `sitemap.xml` (see [Search engines (SEO)](#search-engines-seo)).
+  Netlify serves it as `/about` and `/about.html`; the canonical is always `/about`.
+- **Keep it true:** it only lists features that are on in production (the switches in `plans.js`
+  and `custom-characters.js`), never anything behind a switch that's off, prices, "free" or future
+  plans. Characters never speak, so it never describes them talking. Whenever a user-visible
+  feature is added, changed or removed, update the English text of `about.html` (and the meta
+  description and JSON-LD in `index.html` if they're affected) in the same pull request (a rule in
+  `CLAUDE.md`). No translations are needed.
+
 ## Languages
 
 The app runs in **English**, **Hungarian** (magyar) and, in beta, **Spanish** (español), **Brazilian
 Portuguese** (português), **Indonesian** (Bahasa Indonesia), **French** (français), **German**
 (Deutsch), **Italian** (italiano) and **Polish** (polski), without a build step. English is the source
 of every text and the fallback for any text another language doesn't have. `privacy.html` (legal
-text), `stats.html` (internal), the link preview tags (`og:*`, `meta description`) and
+text), `about.html` (the public About page; only the link to it is translated), `stats.html` (internal), the link preview tags (`og:*`, `meta description`) and
 `manifest.webmanifest` stay English: crawlers and the browser read those without running the app's
 scripts.
 
@@ -1992,7 +2019,7 @@ node tools/export-texts.mjs
 ```
 
 It needs only Node (18 or newer): no dependencies, no build step. It writes `docs/texts/en.md`
-(the English source, plus the text of `privacy.html`, which stays English) and
+(the English source, plus the text of `privacy.html` and `about.html`, which stay English) and
 `docs/texts/<code>.md` for every other language in `LANGUAGES`. These files are generated:
 **never edit them by hand**. Change the text in `public/js/i18n/<code>.js` (or, for English, in
 `en.js` or the data file the text comes from), run the tool again and commit the regenerated
@@ -2086,10 +2113,11 @@ works online exactly as before.
   reloads or interrupts an open page:** a running session keeps the code it started with, and the
   new version shows up the next time the app is opened or reloaded. A reload during a session
   still resumes it from `ct_session_v1`. No localStorage key changed for offline use.
-- **`privacy.html`** isn't in the precache list either: it isn't needed at startup. Once the service
-  worker is installed, the first online visit saves a copy (as `/privacy` and `privacy.html`, see
-  above), so it opens offline after that. Opened offline before any online visit, it shows the
+- **`privacy.html`** and **`about.html`** aren't in the precache list either: they aren't needed at
+  startup. Once the service worker is installed, the first online visit saves a copy (as `/privacy`
+  and `privacy.html`, `/about` and `about.html`, see above), so they open offline after that. Opened offline before any online visit, it shows the
   browser's offline page; Back works as usual.
+- **`robots.txt` and `sitemap.xml`** are only for search engines and aren't in the precache list.
 - **The character editor** (`avatar.html` and its scripts) is in the precache list, so characters can
   be made and edited offline too (`avatar.html?id=…` is found under `avatar.html`: the `?query` is
   ignored).
@@ -2281,13 +2309,13 @@ chart's own drawing, which is scaled with the chart).
   showing, so the bar also follows a choice that differs from the phone's setting.
 - **The installed app's splash screen** uses the manifest's colours (parchment). The manifest is a
   fixed file, so that one screen can't follow the switch.
-- `privacy.html` and `stats.html` load `js/theme.js` too, so they show in the same theme; they have
-  no switch.
+- `privacy.html`, `about.html` and `stats.html` load `js/theme.js` too, so they show in the same
+  theme; they have no switch.
 
 ## Layout (screen sizes)
 
 Only `index.html` (the setup and session screens) changes with the screen size. The editor,
-history, stats and privacy pages keep one column of at most 600px everywhere. All of it is CSS
+history, stats, privacy and about pages keep one column of at most 600px everywhere. All of it is CSS
 (media queries at the end of `style.css`); no JavaScript decides the layout.
 
 | Screen | Layout |
@@ -2382,6 +2410,8 @@ and the timer keeps counting from the start time as always.
 | `public/history.html` | Your finished sessions, streaks, time per week and focus trends |
 | `public/avatar.html` | The character editor (see [Custom characters](#custom-characters)) |
 | `public/privacy.html` | Privacy page: what stays on the device, what is sent to the server, hosting, your rights (its only script is `js/theme.js`) |
+| `public/about.html` | The public About page: what the app does today, English only (its only script is `js/theme.js`; see [About page](#about-page-abouthtml)) |
+| `public/robots.txt`, `public/sitemap.xml` | For search engines: crawling allowed everywhere, and the list of pages to index (see [Search engines (SEO)](#search-engines-seo)) |
 | `public/stats.html` | Popularity table (not indexed by search engines) |
 | `public/js/stats.js` | Loads `/api/stats` and fills in the tables on `stats.html` (a file of its own because the CSP allows no inline scripts) |
 | `public/sw.js` | Service worker: offline start, network first with a 3-second fallback to the cache, precache list and cache version (see [Offline use](#offline-use)), and taps on the leave reminder notification |
@@ -2411,12 +2441,12 @@ and the timer keeps counting from the start time as always.
 | `netlify/lib/picks-store.mjs` | Which Blobs store the counts are in (live or test) and the UTC day helper |
 | `test-data/` | Small export files for testing Import (not deployed, see `test-data/README.md`) |
 | `tools/export-texts.mjs` | Writes every text of every language into `docs/texts/` for review (Node, no dependencies; not deployed, see [Exporting the texts for review](#exporting-the-texts-for-review)) |
-| `docs/texts/` | The generated review tables: `en.md` (with the privacy page's text) and one file per other language. Never edited by hand |
+| `docs/texts/` | The generated review tables: `en.md` (with the privacy and About pages' text) and one file per other language. Never edited by hand |
 | `public/manifest.webmanifest` | Web app manifest: name, colors and icons for Add to Home Screen / Install |
 | `public/icons/` | App icons (the logo): `icon.svg` and `icon-small.svg` (sources) and the PNGs rendered from them (Home Screen, Android, maskable) |
 | `public/favicon.ico` | Browser tab icon (crosshair with a dot, from `icons/icon-small.svg`) |
-| `netlify.toml` | Tells Netlify the site is in `public/`, the redirect from the old Netlify addresses to https://concentraining.com, the security headers and CSP, and `Cache-Control: no-cache` for `sw.js` (see [Domain, redirect and security headers](#domain-redirect-and-security-headers)) |
-| `.github/workflows/pages.yml` | Optional backup: publishes `public/` to the GitHub Pages test site on every push to `main` (see [GitHub Pages backup test site](#github-pages-backup-test-site-optional)) |
+| `netlify.toml` | Tells Netlify the site is in `public/`, the redirect from the old Netlify addresses to https://concentraining.com, the security headers and CSP, `Cache-Control: no-cache` for `sw.js` (see [Domain, redirect and security headers](#domain-redirect-and-security-headers)), and the `noindex` header for branch deploys (see [Search engines (SEO)](#search-engines-seo)) |
+| `.github/workflows/pages.yml` | Optional backup: publishes a copy of `public/` (every page with `noindex`) to the GitHub Pages test site on every push to `main` (see [GitHub Pages backup test site](#github-pages-backup-test-site-optional)) |
 | `package.json` | The one dependency the functions need (`@netlify/blobs`) |
 
 ## Adding real character artwork
@@ -2504,7 +2534,8 @@ could overwrite another pick). The deployed sites aren't affected.
 ## Deploying
 
 Connect this GitHub repo to the Netlify site (Site configuration → Build & deploy → Link repository).
-Leave the build command empty; `netlify.toml` already sets the publish directory to `public`.
+Leave the build command empty; `netlify.toml` already sets the publish directory to `public` (and a
+one-line build command for branch deploys only, see [Search engines (SEO)](#search-engines-seo)).
 On every push Netlify installs `package.json` and deploys the functions. The Blobs stores are
 created automatically by the first pick.
 
@@ -2545,18 +2576,18 @@ test-site hostname check still matches the previews and `main--`.
   redirect, the old address can't be opened any more (that was decided: only test data was there).
   A Home Screen app added from the old address opens the new site; add it again from the new one.
 
-**Canonical address and link previews.** `index.html`, `history.html` and `privacy.html` have
+**Canonical address and link previews.** `index.html`, `history.html`, `privacy.html` and `about.html` have
 `<link rel="canonical">` with their https://concentraining.com address (`index.html` →
 `https://concentraining.com/`, `history.html` → `https://concentraining.com/history`,
-`privacy.html` → `https://concentraining.com/privacy`: Netlify serves a page without `.html` and,
+`privacy.html` → `https://concentraining.com/privacy`, `about.html` → `https://concentraining.com/about`: Netlify serves a page without `.html` and,
 with Pretty URLs on, redirects the `.html` address there, so the canonical address is never a
 redirect), so search engines treat every copy (including GitHub Pages) as that one. `stats.html` and `avatar.html` have `noindex` instead (not pages for search results), and no
-canonical. The same three pages have Open Graph and Twitter card tags (`og:title`,
+canonical. The same four pages have Open Graph and Twitter card tags (`og:title`,
 `og:description` = the page's meta description, `og:url` = the canonical address, `og:image`,
 `twitter:card` = `summary`), which apps like Messenger use for the preview of a shared link.
 - **The preview image is the app icon** (`https://concentraining.com/icons/icon-512.png`,
   512×512). If it's ever swapped for another image, update `og:image`, `og:image:width`,
-  `og:image:height` and `og:image:alt` on all three pages.
+  `og:image:height` and `og:image:alt` on all four pages.
 - Messenger, Facebook and others keep a copy of a preview for a while. After changing the tags,
   Facebook's Sharing Debugger (https://developers.facebook.com/tools/debug/) shows the new one and
   can refresh it.
@@ -2598,6 +2629,65 @@ form-action 'self'; frame-ancestors 'none'
   show on Deploy Previews and the console shows Netlify's own CSP error for it. That's expected; the
   toolbar can also be switched off in the Netlify project's Deploy Preview settings.
 
+### Search engines (SEO)
+
+Goal: searching "concentraining" or "ConcenTraining" shows https://concentraining.com first, search
+engines and AI assistants know what the app does today, and **only concentraining.com is ever
+indexed** (never the GitHub Pages copy or a Netlify test address).
+
+- **`public/robots.txt`** allows crawling of everything and names the sitemap. Pages with `noindex`
+  are deliberately **not** blocked there: a search engine has to be able to open a page to see its
+  `noindex`.
+- **`public/sitemap.xml`** lists the indexable pages with their absolute concentraining.com
+  addresses: `/`, `/about`, `/history`, `/privacy`. Not `avatar.html` or `stats.html` (`noindex`).
+  It has no `<lastmod>`, because there's no real date to put there. Add a page here when a new
+  indexable page is added.
+- **`index.html`**: the title is "ConcenTraining – Focus timer with characters" (not translated;
+  during a session the tab shows the clock before "ConcenTraining", and `app.js` puts this title back
+  afterwards, `PAGE_TITLE`). The meta description (also `og:description`, English, static): "A focus
+  timer with characters that react when you get distracted. Plan your session, create your own
+  character, use it in 9 languages." No price and no "free".
+- **Structured data (JSON-LD)** in `index.html`: one `<script type="application/ld+json">` in the
+  HTML itself with a `WebSite` and a `WebApplication` (name, address, the same description,
+  `UtilitiesApplication`, `operatingSystem` "Any", "Requires JavaScript", the 9 language codes). It's a
+  data block that is never run, so the CSP (`script-src 'self'`) doesn't block it and didn't change.
+  Only true facts: no offers, prices or ratings.
+- **The About page** (`about.html`, see [About page](#about-page-abouthtml)) is the readable
+  description of today's features. Keep it, the meta description and the JSON-LD true whenever a
+  feature changes (a rule in `CLAUDE.md`).
+- **Only concentraining.com is indexed:**
+
+  | Address | How it stays out of search results |
+  |---|---|
+  | `concentraining.netlify.app`, `live--concentraining.netlify.app` | 301 redirect to concentraining.com |
+  | Deploy Previews (`deploy-preview-N--…`) | Netlify sends `X-Robots-Tag: noindex` itself |
+  | The main branch deploy (`main--concentraining.netlify.app`) | `[context.branch-deploy]` in `netlify.toml`: a one-line build command writes `public/_headers` (Netlify's file of extra headers) with `X-Robots-Tag: noindex` for every file, on that deploy's build machine only. Production (`live`) uses the production context and never runs it |
+  | GitHub Pages copy | the workflow adds `<meta name="robots" content="noindex">` to every page of the uploaded copy |
+  | All of them | the canonical tags point to concentraining.com |
+
+  To check the branch deploy's header after a push to `main`: open
+  https://main--concentraining.netlify.app on a computer, DevTools (F12) → **Network** → reload →
+  click the first request → **Response Headers** should list `x-robots-tag: noindex`. The same check
+  on https://concentraining.com must **not** show it.
+
+**Google Search Console** (free; tells Google about the site and shows how it's indexed). Once:
+
+1. Open https://search.google.com/search-console, **Add property** → **Domain** →
+   `concentraining.com`.
+2. Google shows a TXT record. In Netlify: **Domains** → `concentraining.com` → **DNS settings** →
+   **Add new record**: type `TXT`, name `@`, value the text from Google. Back in Search Console,
+   **Verify** (it can take a few minutes up to a day).
+3. **Sitemaps** → enter `sitemap.xml` → **Submit**.
+4. **URL Inspection** → `https://concentraining.com/` → **Request indexing**; the same for
+   `https://concentraining.com/about`.
+5. Optional: Bing Webmaster Tools (https://www.bing.com/webmasters) can import the site from Search
+   Console in one step; Bing's index is also used by other search engines and assistants.
+
+New pages usually show up within days to a few weeks. To check the structured data, paste
+https://concentraining.com/ into https://search.google.com/test/rich-results and
+https://validator.schema.org/ (the second one also shows the `WebSite` and `WebApplication` details;
+the first may say no rich result type applies, which is fine as long as it reports no errors).
+
 ### GitHub Pages backup test site (optional)
 
 The normal way to test is the Netlify Deploy Preview of each pull request (and the `main` branch
@@ -2607,8 +2697,11 @@ need it for everyday testing.
 
 - **Backup site:** https://kantorhorvathambrus-source.github.io/ConcenTraining/, published from `main`.
 - **How it's published:** a GitHub Actions workflow (`.github/workflows/pages.yml`: a small file
-  that tells GitHub to run steps on its own servers when something happens) uploads `public/` as it
-  is, with no build step, on every push to `main`. It can also be started by hand: **Actions** tab →
+  that tells GitHub to run steps on its own servers when something happens) uploads a copy of
+  `public/` on every push to `main`, with no build step. The only change in the copy: every page gets
+  `<meta name="robots" content="noindex">` right after `<head>` (unless it already has a robots tag),
+  so search engines never list this duplicate; the workflow stops if any page is left without one.
+  The files in the repository are never changed. It can also be started by hand: **Actions** tab →
   **Deploy to GitHub Pages** → **Run workflow**. The repo's Pages setting must stay on
   **Source: GitHub Actions**.
 - **If Netlify is paused:** there are no Deploy Previews and no `main` branch deploy. Pull requests
@@ -2623,7 +2716,10 @@ need it for everyday testing.
   so the app, history and offline start work the same as on Netlify.
 - **Separate saved data:** it's a different address from the Netlify sites, so its history,
   settings and offline cache are separate too.
-- **Canonical tags, no headers:** its pages point search engines to https://concentraining.com
-  (`<link rel="canonical">`), and the security headers and CSP from `netlify.toml` don't apply there.
+- **noindex and canonical tags, no headers:** its pages carry `noindex` (above) and point search
+  engines to https://concentraining.com (`<link rel="canonical">`); the security headers and CSP
+  from `netlify.toml` don't apply there. Its `robots.txt` is at `/ConcenTraining/robots.txt`, where
+  crawlers never look (they only read it at the domain root), so crawling isn't blocked and the
+  `noindex` can be seen.
 - **Doesn't affect Netlify:** the workflow only publishes to GitHub Pages and can be deleted any
   time without changing the Netlify sites.
