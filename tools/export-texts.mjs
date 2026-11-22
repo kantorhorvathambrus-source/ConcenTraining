@@ -1,6 +1,6 @@
 // Exports every text of the app into Markdown tables for review: docs/texts/en.md (the English
-// source, plus the text of privacy.html) and docs/texts/<code>.md for every other language
-// (key | English | that language).
+// source, plus the text of privacy.html and about.html, which stay English) and
+// docs/texts/<code>.md for every other language (key | English | that language).
 //
 //   node tools/export-texts.mjs
 //
@@ -189,7 +189,13 @@ function keyCell(key, notes) {
   return `\`${key}\`<br>${note.type}${note.source ? ` · source: ${note.source.replace(/\|/g, "\\|")}` : ""}`;
 }
 
-// ---------- the privacy page (English only, never translated) ----------
+// ---------- the English-only pages (privacy.html, about.html: never translated) ----------
+
+// Each page's text is listed at the end of docs/texts/en.md under its own heading.
+const ENGLISH_ONLY_PAGES = [
+  { file: "privacy.html", title: "Privacy page" },
+  { file: "about.html", title: "About page" },
+];
 
 const ENTITIES = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ", middot: "·", larr: "←", rarr: "→", ndash: "–", mdash: "—" };
 
@@ -200,9 +206,9 @@ function decodeEntities(text) {
     .replace(/&(\w+);/g, (match, name) => ENTITIES[name] ?? match);
 }
 
-// Every heading, paragraph and list item of privacy.html's body, in order.
-function privacyRows() {
-  const html = fs.readFileSync(path.join(PUBLIC, "privacy.html"), "utf8").replace(/<!--[\s\S]*?-->/g, "");
+// Every heading, paragraph and list item of an English-only page's body, in order.
+function pageRows(file) {
+  const html = fs.readFileSync(path.join(PUBLIC, file), "utf8").replace(/<!--[\s\S]*?-->/g, "");
   const body = html.slice(html.search(/<body\b/i));
   const rows = [];
   for (const match of body.matchAll(/<(h1|h2|h3|p|li)\b[^>]*>([\s\S]*?)<\/\1>/gi)) {
@@ -250,10 +256,12 @@ function buildFile(language, { texts, notes, keysBySection }) {
   }
 
   if (isSource) {
-    lines.push("## Privacy page (`privacy.html`): English only, never translated", "");
-    lines.push("| # | Element | English |", "|---|---|---|");
-    privacyRows().forEach((row, i) => lines.push(`| ${i + 1} | ${row.element} | ${code(row.text)} |`));
-    lines.push("");
+    for (const page of ENGLISH_ONLY_PAGES) {
+      lines.push(`## ${page.title} (\`${page.file}\`): English only, never translated`, "");
+      lines.push("| # | Element | English |", "|---|---|---|");
+      pageRows(page.file).forEach((row, i) => lines.push(`| ${i + 1} | ${row.element} | ${code(row.text)} |`));
+      lines.push("");
+    }
   }
   return lines.join("\n");
 }

@@ -1,8 +1,19 @@
-# The website is the public/ folder. There is no build command: Netlify only
-# installs package.json dependencies for the functions in netlify/functions/
-# (they store the pick counts in Netlify Blobs).
+# The website is the public/ folder. There is no build command for production and Deploy Previews:
+# Netlify only installs package.json dependencies for the functions in netlify/functions/
+# (they store the pick counts in Netlify Blobs). Branch deploys have a one-line command (below).
 [build]
   publish = "public"
+
+# ---------- branch deploys: never in search results ----------
+# Branch deploys (main--concentraining.netlify.app) are copies of the site that search engines
+# could list. Only for them, this build command writes a public/_headers file (Netlify's file of
+# extra response headers) that sends "X-Robots-Tag: noindex" with every file. It only exists on
+# that deploy's build machine, never in the repository. Production (the live branch, and its
+# live--concentraining.netlify.app address) uses the production context and never runs this
+# command; Deploy Previews have their own context, and Netlify already sends noindex for them.
+# See "Search engines (SEO)" in the README.
+[context.branch-deploy]
+  command = "printf '/*\\n  X-Robots-Tag: noindex\\n' > public/_headers"
 
 # ---------- one official address ----------
 # The production site's Netlify addresses send every visitor on to https://concentraining.com,
