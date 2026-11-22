@@ -144,16 +144,20 @@ function countCharacterPick(character) {
 // plans are off (PLANS_ON).
 // ragebaitAccepted: the ids of the characters whose ragebait warning was accepted on Start
 // (see confirmRagebait).
+// focusSound / focusVolume: the Focus sound setting ("off", "brown", "pink" or "white") and its
+// volume in % (see "focus sound"). A value that isn't one of these reads as Off / 40% here.
 // Prefs saved before any of these existed get these defaults.
 const prefs = Object.assign(
   {
     characterId: null, mode: "simple", minutes: 25, endSound: true, keepScreenOn: true, leaveReminder: false,
     homeScreenTipDismissed: false, persistRequested: false, howItWorksDismissed: false, usePlan: false,
-    ragebaitAccepted: [],
+    ragebaitAccepted: [], focusSound: "off", focusVolume: FOCUS_VOLUME_DEFAULT,
   },
   load(PREFS_KEY, {}),
 );
 delete prefs.style; // saved before personalities came from the character; dropped on the next save
+prefs.focusSound = cleanFocusSound(prefs.focusSound);
+prefs.focusVolume = cleanFocusVolume(prefs.focusVolume);
 // style: the character's personality when the session ran ("kind", "firm", "strict" or "ragebait")
 // restartPending: "Completely" / "10+ min" was tapped and the continue/restart question
 // hasn't been answered yet. Saved, so a reload still asks it.
@@ -217,11 +221,13 @@ function showScreen(id) {
     refreshQuickStart();
     if (planChosen()) setupPlan.refreshTime();
   }
+  if (id !== "setupScreen") stopPreview();
   document.querySelectorAll(".screen").forEach((screen) => {
     screen.hidden = screen.id !== id;
   });
   window.scrollTo(0, 0);
   updateWakeLock();
+  updateFocusSound();
 }
 
 // Opens a <dialog> and resolves with the value of the button that closed it ("" for Esc).
@@ -436,6 +442,172 @@ function announceEnd() {
   }
 }
 
+// ---------- focus sound ----------
+
+// A steady noise during focus time, generated in js/focus-sound.js (no audio file). It plays only
+// while a block is running on the session screen: never during a break (Take a break or a planned
+// break), on the summary, after giving up, or once another tab has taken the session over. It fades
+// in when focus starts or resumes and out when it stops. Nothing plays on page load: a tap must
+// allow it first (allowed), and only these taps do: Start (and Quick start, and the ragebait
+// warning's Bring it on), Resume, Start now / "Start: 60 min", Continue here and the mute button.
+// After a reload during focus the noise waits for the mute button ("Turn sound on"), Resume or
+// Start now; other taps on the session screen don't start it.
+// muted: the mute button was tapped. Only for this session or plan (memory only): the saved choice
+// stays, and the next Start begins unmuted.
+// previewing: Preview on the setup screen is playing (previewTimer stops it after PREVIEW_MS).
+const FOCUS_FADE_IN_S = 2;
+const FOCUS_FADE_OUT_S = 1;
+const PREVIEW_MS = 3000;
+const PREVIEW_FADE_S = 0.3;
+const focusSound = {
+  player: null, supported: focusSoundSupported(), allowed: false, muted: false, previewing: false, previewTimer: 0,
+};
+
+// A noise is picked (and this browser can play it).
+function focusSoundOn() {
+  return focusSound.supported && prefs.focusSound !== "off";
+}
+
+// A focus block is running on screen, so the noise belongs here (if it's on, allowed and unmuted).
+function focusTimeShown() {
+  return Boolean(!$("#sessionScreen").hidden && session && !session.endedAt && !session.pausedAt);
+}
+
+function focusSoundWanted() {
+  return focusSoundOn() && focusSound.allowed && !focusSound.muted && focusTimeShown();
+}
+
+// Called inside one of the taps listed above: from now on the noise may play on this page.
+function allowFocusSound() {
+  if (!focusSoundOn()) return;
+  focusSound.allowed = true;
+  unlockAudio();
+}
+
+// Starts or stops the noise to match the state. Called on every screen change and wherever focus
+// starts, pauses or ends without one (Take a break, Resume, a block's end, Start now), so nothing
+// is missed. Calling it again changes nothing: a fade that's under way goes on.
+function updateFocusSound() {
+  updateFocusSoundButton();
+  if (!focusSound.player || focusSound.previewing) return;
+  if (focusSoundWanted()) {
+    focusSound.player.play(prefs.focusSound, FOCUS_FADE_IN_S);
+  } else {
+    focusSound.player.stop(FOCUS_FADE_OUT_S);
+  }
+}
+
+// The session screen's button: there for the whole session (breaks too, so nothing moves) while a
+// noise is picked. Its label says what a tap does: "Mute sound" while the noise is on, "Turn sound
+// on" while muted or not allowed yet (after a reload).
+function updateFocusSoundButton() {
+  const button = $("#focusSoundButton");
+  const shown = focusSoundOn();
+  button.hidden = !shown;
+  $("#sessionScreen").classList.toggle("has-sound-toggle", shown);
+  const on = focusSound.allowed && !focusSound.muted;
+  button.classList.toggle("is-off", !on);
+  button.setAttribute("aria-label", t(on ? "session.muteSound" : "session.unmuteSound"));
+}
+
+function onFocusSoundButtonClick() {
+  if (focusSound.allowed && !focusSound.muted) {
+    focusSound.muted = true;
+  } else {
+    focusSound.muted = false;
+    allowFocusSound();
+  }
+  updateFocusSound();
+}
+
+// ---------- focus sound: the setup screen ----------
+
+// The row of chips, and Volume with Preview under it while a noise is picked.
+function syncFocusSoundSetting() {
+  $("#focusSoundChips").querySelectorAll(".chip").forEach((chip) => {
+    chip.setAttribute("aria-pressed", String(chip.dataset.sound === prefs.focusSound));
+  });
+  $("#focusSoundControls").hidden = prefs.focusSound === "off";
+  const slider = $("#focusVolume");
+  slider.value = prefs.focusVolume;
+  showFocusVolume(prefs.focusVolume);
+  $("#focusPreviewButton").textContent = t(focusSound.previewing ? "setup.previewStop" : "setup.preview");
+}
+
+// "40%" in the current language's way of writing it ("40 %" in German and French).
+function showFocusVolume(percent) {
+  let text = `${percent}%`;
+  try {
+    text = new Intl.NumberFormat(I18N.current(), { style: "percent" }).format(percent / 100);
+  } catch {
+    // the plain "40%"
+  }
+  $("#focusVolumeValue").textContent = text;
+  $("#focusVolume").setAttribute("aria-valuetext", text);
+}
+
+function onFocusSoundChipClick(chip) {
+  savePrefs({ focusSound: chip.dataset.sound });
+  if (focusSound.previewing) {
+    if (prefs.focusSound === "off") stopPreview();
+    else focusSound.player.play(prefs.focusSound, PREVIEW_FADE_S); // crossfades to the new noise
+  }
+  syncFocusSoundSetting();
+}
+
+// Preview: the picked noise for PREVIEW_MS, at the slider's volume. A tap while it plays stops it.
+function onPreviewClick() {
+  if (focusSound.previewing) {
+    stopPreview();
+    return;
+  }
+  if (!focusSoundOn() || !unlockAudio()) return;
+  focusSound.previewing = true;
+  focusSound.player.play(prefs.focusSound, PREVIEW_FADE_S);
+  clearTimeout(focusSound.previewTimer);
+  focusSound.previewTimer = setTimeout(stopPreview, PREVIEW_MS);
+  syncFocusSoundSetting();
+}
+
+// Ends a preview (if one is playing): Stop, its time is up, Off, Start, or the setup screen goes.
+function stopPreview() {
+  clearTimeout(focusSound.previewTimer);
+  if (!focusSound.previewing) return;
+  focusSound.previewing = false;
+  if (focusSound.player) focusSound.player.stop(PREVIEW_FADE_S);
+  syncFocusSoundSetting();
+}
+
+function initFocusSound() {
+  if (!focusSound.supported) return; // the setting stays hidden, and the mute button too
+  focusSound.player = createFocusSoundPlayer(() => audioContext);
+  focusSound.player.setVolume(prefs.focusVolume); // from then on the slider keeps it up to date
+  $("#focusSoundSetting").hidden = false;
+  $("#focusSoundChips").querySelectorAll(".chip").forEach((chip) => {
+    chip.addEventListener("click", () => onFocusSoundChipClick(chip));
+  });
+  const slider = $("#focusVolume");
+  // While dragging: the number and a preview that's playing follow at once. Saved on release.
+  slider.addEventListener("input", () => {
+    const percent = cleanFocusVolume(slider.value);
+    prefs.focusVolume = percent;
+    showFocusVolume(percent);
+    focusSound.player.setVolume(percent);
+  });
+  slider.addEventListener("change", () => savePrefs({ focusVolume: cleanFocusVolume(slider.value) }));
+  $("#focusPreviewButton").addEventListener("click", onPreviewClick);
+  $("#focusSoundButton").addEventListener("click", onFocusSoundButtonClick);
+  syncFocusSoundSetting();
+}
+
+// Back on the page during focus: if the browser suspended the sound while the page was hidden
+// (iPhone does, when the screen locks), it's resumed here. If the browser refuses without a tap,
+// the next tap on the session screen resumes it (onSessionInput). No tricks beyond that.
+function resumeFocusSoundIfNeeded() {
+  if (document.hidden || !audioContext || !focusSoundWanted()) return;
+  if (audioContext.state !== "running") audioContext.resume().catch(() => {});
+}
+
 // ---------- keep the screen on (Screen Wake Lock API) ----------
 
 const wakeLock = { sentinel: null, pending: false };
@@ -533,7 +705,9 @@ function releaseWakeLock() {
 // Every tap or key press while a session (or a planned break) is running.
 function onSessionInput() {
   if ($("#sessionScreen").hidden || !((session && !session.endedAt) || planBreakShown())) return;
-  if (prefs.endSound) unlockAudio();
+  // The focus sound too, once a tap allowed it: after a phone call or another app took the audio
+  // over, any tap brings it back. Before that, other taps never start it (see "focus sound").
+  if (prefs.endSound || (focusSoundOn() && focusSound.allowed)) unlockAudio();
   updateWakeLock();
 }
 
@@ -1192,6 +1366,9 @@ async function onStartClick(fromQuickStart) {
     savePrefs({ minutes });
   }
   if (prefs.endSound) unlockAudio(); // this tap is what allows the chime later
+  stopPreview();
+  focusSound.muted = false; // a new start is unmuted, whatever the last session did
+  allowFocusSound(); // and the focus sound, which fades in once the session is on screen
   if (resumeSavedElsewhere()) return;
   // After every check that can stop the start, so nobody accepts and then gets an error. While the
   // warning is open nothing else can be tapped (a modal dialog), and another tab may start a
@@ -1258,6 +1435,7 @@ async function confirmRagebait(character) {
 function bindRagebaitDialog() {
   $("#ragebaitDialog").querySelector('button[value="ok"]').addEventListener("click", () => {
     if (prefs.endSound) unlockAudio();
+    allowFocusSound();
   });
 }
 
@@ -1804,6 +1982,7 @@ function takeBreak() {
   $("#resumeButton").focus({ preventScroll: true });
   announce(t("announce.paused"));
   updateWakeLock(); // released: the screen may turn off now
+  updateFocusSound(); // fades out
 }
 
 // Resume: the break is saved, the clock runs again from where it stopped and the character shows
@@ -1826,6 +2005,8 @@ function resumeFromBreak() {
   $("#distractionPrompt").focus({ preventScroll: true });
   announce(t("announce.resumed"));
   updateWakeLock(); // this tap lets the browser keep the screen on again
+  allowFocusSound(); // also after a reload during the break: this tap allows the sound
+  updateFocusSound(); // fades back in
   askPendingAway();
   askPendingRestart();
 }
@@ -1934,6 +2115,7 @@ function afterPlanBlock(status, endPlan) {
   const ranOut = ended.endedAt >= effectiveEnd(ended);
   recordPart(ended, status);
   session = null;
+  updateFocusSound(); // the planned break (or the plan's summary): fades out
   document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
   document.title = PAGE_TITLE;
   if (endPlan || plan.index >= plan.blocks.length - 1) {
@@ -2113,6 +2295,7 @@ function breakTick() {
 function startNextBlock() {
   if (!planBreakShown()) return;
   if (prefs.endSound) unlockAudio(); // this tap allows the chime at the block's end
+  allowFocusSound(); // and the focus sound, which fades in with the block
   clearInterval(tickTimer);
   startSession(sessionCharacter(plan), plan.mode, plan.blocks[plan.index].minutes);
   announceBlockStart();
@@ -2417,6 +2600,7 @@ async function continueSavedSession(steal) {
 function onContinueHereClick() {
   setupView.saved = null; // the setup screen comes back after this session, as after any other
   if (prefs.endSound) unlockAudio(); // this tap is what allows the chime later, as on Start
+  allowFocusSound(); // and the focus sound, as on Start
   continueSavedSession(true);
 }
 
@@ -3076,6 +3260,8 @@ function onLanguageChange() {
   if (!characterError.hidden) characterError.textContent = t("setup.pickFirst");
   const hint = $("#leaveReminderHint");
   if (!hint.hidden) hint.textContent = t("setup.leaveReminderBlocked");
+  if (focusSound.supported) syncFocusSoundSetting(); // "Preview" / "Stop", and "40 %" in some languages
+  updateFocusSoundButton();
 }
 
 // ---------- start-up ----------
@@ -3086,6 +3272,7 @@ function init() {
   renderCharacterList();
   bindChoiceGroups();
   bindSettingChecks();
+  initFocusSound();
   initLeaveReminder();
   cancelLeaveReminder(); // e.g. its tap reopened the app after the browser discarded the page
   buildCategoryButtons();
@@ -3129,6 +3316,7 @@ function init() {
   document.addEventListener("visibilitychange", updateWakeLock);
   document.addEventListener("visibilitychange", onVisibilityChange);
   document.addEventListener("visibilitychange", checkSessionElsewhere);
+  document.addEventListener("visibilitychange", resumeFocusSoundIfNeeded);
   // Back from the browser's site settings: the setup note follows what's allowed now.
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) checkStorage();

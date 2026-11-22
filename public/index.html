@@ -223,6 +223,29 @@
         </label>
         <!-- Only after a tick was refused. Text is set when shown, so screen readers announce it. -->
         <p id="leaveReminderHint" class="setting-hint muted" role="status" hidden></p>
+        <!-- Focus sound (js/focus-sound.js): a generated noise during focus time. Hidden where the
+             browser has no Web Audio (initFocusSound in app.js). Volume and Preview only show while
+             a noise is picked. -->
+        <div id="focusSoundSetting" class="focus-sound-setting" hidden>
+          <p id="focusSoundLabel" class="setting-label" data-i18n="setup.focusSound">Focus sound</p>
+          <div id="focusSoundChips" class="sound-chips" role="group" aria-labelledby="focusSoundLabel" aria-describedby="focusSoundHint">
+            <button type="button" class="chip" data-sound="off" data-i18n="setup.focusSoundOff">Off</button>
+            <button type="button" class="chip" data-sound="brown" data-i18n="setup.focusSoundBrown">Brown</button>
+            <button type="button" class="chip" data-sound="pink" data-i18n="setup.focusSoundPink">Pink</button>
+            <button type="button" class="chip" data-sound="white" data-i18n="setup.focusSoundWhite">White</button>
+          </div>
+          <p id="focusSoundHint" class="setting-hint sound-hint muted" data-i18n="setup.focusSoundHint">A steady background noise that covers distracting sounds. Brown is the deepest, white the brightest.</p>
+          <div id="focusSoundControls" class="focus-sound-controls" hidden>
+            <label class="volume-label" for="focusVolume">
+              <span data-i18n="setup.volume">Volume</span>
+              <output id="focusVolumeValue" for="focusVolume"></output>
+            </label>
+            <div class="volume-row">
+              <input id="focusVolume" class="volume-slider" type="range" min="5" max="100" step="5">
+              <button id="focusPreviewButton" type="button" class="btn test-sound" data-i18n="setup.preview">Preview</button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <button id="startButton" type="button" class="btn primary big" data-i18n="setup.start">Start session</button>
@@ -241,7 +264,22 @@
            screen lays out exactly as without them ("Layout" in the README). -->
       <div class="session-side">
         <!-- Gets focus when a session starts, so a screen reader reads it (focusScreenStart in app.js). -->
-        <p id="sessionInfo" class="session-info muted" tabindex="-1"></p>
+        <!-- The info line, with the focus sound's mute button at its end (only while a noise is
+             picked, updateFocusSoundButton in app.js). An empty cell on the left keeps the text
+             centred. -->
+        <div class="session-top">
+          <p id="sessionInfo" class="session-info muted" tabindex="-1"></p>
+          <button id="focusSoundButton" type="button" class="icon-btn sound-toggle" hidden>
+            <svg class="sound-icon sound-icon-on" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
+              <path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor"/>
+              <path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+            <svg class="sound-icon sound-icon-off" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
+              <path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor"/>
+              <path d="M15.5 9.5l5 5M20.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
         <!-- Shown while the chime is on but the screen isn't being kept on (updateScreenNote in app.js). -->
         <p id="screenNote" class="screen-note muted" role="status" hidden data-i18n="session.screenNote">Your screen may turn off. If it does, you won't hear the sound.</p>
         <!-- Shown when a session starts while the browser doesn't let the site save anything, or when
@@ -475,6 +513,7 @@
   <script src="js/plans.js"></script>
   <script src="js/duration-sheet.js"></script>
   <script src="js/language-picker.js"></script>
+  <script src="js/focus-sound.js"></script>
   <script src="js/app.js"></script>
   <script src="js/sw-register.js"></script>
 </body>
