@@ -24,6 +24,7 @@ I18N_TEXTS["pt-BR"] = {
   "common.save": "Salvar",
   "common.yes": "Sim",
   "common.privacy": "Privacidade",
+  "common.about": "Sobre",
   "common.listSeparator": ", ",
 
   "mode.simple": "Simples",

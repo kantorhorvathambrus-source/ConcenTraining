@@ -25,6 +25,7 @@ I18N_TEXTS.en = {
   "common.save": "Save",
   "common.yes": "Yes",
   "common.privacy": "Privacy",
+  "common.about": "About",
   "common.listSeparator": ", ",
 
   "mode.simple": "Simple",

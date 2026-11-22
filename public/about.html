@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Light / dark (see "Light and dark" in the README): sets the theme on <html> before anything is
+       drawn, so the page never shows in the wrong theme first. -->
+  <script src="js/theme.js"></script>
+  <title>About · ConcenTraining</title>
+  <meta name="description" content="What ConcenTraining does: a focus timer with characters that react with poses, plans with breaks, your own characters, history and 9 languages.">
+  <!-- The official address of this page (also on the GitHub Pages copy), and its link preview
+       (Open Graph and Twitter card tags). See "Domain, redirect and security headers" in the README. -->
+  <link rel="canonical" href="https://concentraining.com/about">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="ConcenTraining">
+  <meta property="og:title" content="About · ConcenTraining">
+  <meta property="og:description" content="What ConcenTraining does: a focus timer with characters that react with poses, plans with breaks, your own characters, history and 9 languages.">
+  <meta property="og:url" content="https://concentraining.com/about">
+  <meta property="og:image" content="https://concentraining.com/icons/icon-512.png">
+  <meta property="og:image:width" content="512">
+  <meta property="og:image:height" content="512">
+  <meta property="og:image:alt" content="The ConcenTraining app icon">
+  <meta name="twitter:card" content="summary">
+  <link rel="stylesheet" href="css/style.css">
+  <!-- The two font files every page needs, fetched right away (not only once the stylesheet has
+       been read), so the text shows in a system font for a shorter moment. -->
+  <link rel="preload" href="fonts/figtree/figtree-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/fraunces/fraunces-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <!-- Same as privacy.html. Colors: the page background (--color-bg) of the light and the dark
+       theme in css/style.css. js/theme.js gives both the colour of the theme that is showing. -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#f5ede0" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#12172b" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48">
+  <link rel="icon" href="icons/icon-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-title" content="ConcenTraining">
+</head>
+<body>
+  <!-- The public About page (see "About page" in the README): what the app does today, for visitors,
+       search engines and AI assistants. English only, never translated, like privacy.html: all the
+       text is here in the HTML, so crawlers that don't run JavaScript can read it. One script only,
+       js/theme.js in <head> (same theme as the app); nothing is saved from here, it takes no session
+       lock and registers nothing. Not in the sw.js precache list (not needed at startup).
+       Whenever a user-visible feature is added, changed or removed, update this text (and the meta
+       description and JSON-LD in index.html if affected) in the same pull request (see CLAUDE.md). -->
+  <main class="app privacy-page">
+    <p class="privacy-top"><a href="./" class="back-link">← Back to the timer</a></p>
+
+    <header class="app-header">
+      <!-- <wbr>: with large text at 320px the name breaks as "Concen / Training", not anywhere. -->
+      <h1>About Concen<wbr>Training</h1>
+    </header>
+
+    <section class="privacy-section">
+      <p>
+        ConcenTraining is a focus timer with characters. Pick a character, set your time and start a
+        session. When you notice your mind has wandered, tap a button and your character reacts with a
+        pose and a facial expression, never with words.
+      </p>
+    </section>
+
+    <section class="privacy-section">
+      <h2>What you can do</h2>
+      <ul class="about-list">
+        <li>Choose a character with the personality you need: relaxed and encouraging, firm, strict, or
+          ragebait characters that annoy you on purpose with mocking poses.</li>
+        <li>Pick a mode: in Simple you tap how distracted you were; in Advanced you log how long, and see
+          your focus % at the end.</li>
+        <li>Focus in a single block, or build a plan of several focus blocks with planned breaks in
+          between.</li>
+        <li>Take a break when you need one: the timer waits, and the break doesn't count against your
+          focus.</li>
+        <li>Create your own character: pick the look, the personality and a name. For 10 minutes after
+          saving you can still change everything; after that, only the name.</li>
+        <li>See your past sessions, streaks and focus trends on the History page, and export them as a
+          backup.</li>
+        <li>Use it in 9 languages: English, Hungarian, German, Spanish, Brazilian Portuguese, French,
+          Italian, Indonesian and Polish.</li>
+        <li>It works in the browser on your phone or computer, and offline once you've opened it. No
+          account needed.</li>
+      </ul>
+    </section>
+
+    <section class="privacy-section">
+      <h2>Your data</h2>
+      <p>
+        Your sessions, history, settings and the characters you create stay on your device. When you
+        start a session, the app sends only the name of the character you chose to our server
+        (“custom” for one you created), so we can count which characters are popular.
+      </p>
+      <p><a href="privacy.html" class="back-link">Read the privacy page →</a></p>
+    </section>
+
+    <p><a href="./" class="back-link">Start a session →</a></p>
+  </main>
+</body>
+</html>

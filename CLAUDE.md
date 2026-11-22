@@ -25,6 +25,7 @@
 - New character: besides public/js/data/characters.js, add it with the same id and name to CHARACTERS in netlify/lib/characters.mjs. Only ids listed there are counted and shown on stats.html.
 - Offline: whenever a file in public/ that the app needs at startup (a page, CSS, JS, manifest, icon, favicon) is added, removed or renamed, update the PRECACHE list in public/sw.js and raise CACHE_VERSION in the same change.
 - Whenever data handling changes (a new request to a server, new data stored on the device or the server, a new third-party service, accounts or payments), update public/privacy.html and its 'Last updated' date in the same PR.
+- Whenever a user-visible feature is added, changed or removed, update the English text of public/about.html in the same PR, and the meta description and JSON-LD in public/index.html if they're affected. about.html is English only: no translations needed. Only describe what is on in production (no features behind a disabled flag, no prices, no "free", no future plans).
 
 ## Communication
 - I'm not a professional developer. When you use a technical term or tool, explain it in one sentence.
