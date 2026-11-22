@@ -2377,6 +2377,10 @@ function resumeSavedSession() {
     return true;
   }
   session = saved;
+  // A length outside MIN_MINUTES–MAX_MINUTES (or not in whole minutes) becomes the nearest whole
+  // minute inside the limits, once (it's saved right below), so the session goes on as usual.
+  const minutes = Number.isFinite(session.durationMs) ? Math.round(session.durationMs / MIN) : DEFAULT_MINUTES;
+  session.durationMs = Math.min(MAX_MINUTES, Math.max(MIN_MINUTES, minutes)) * MIN;
   // A session saved before personalities came from the character can hold any
   // style: it continues (and goes into the history) with the character's own.
   // A custom character that still exists keeps its current name.

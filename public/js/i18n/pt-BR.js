@@ -255,6 +255,16 @@ I18N_TEXTS["pt-BR"] = {
   "plan.lengthLabel": "Duração da linha {n}",
   "plan.breakLabel": "Pausa depois da linha {n}",
   "plan.quickStart": "{name} · {mode} · Plano: {plan}",
+  "plan.pillLabel": "{label}: {value}",
+
+  "durationSheet.focusTitle": "Tempo de foco",
+  "durationSheet.breakTitle": "Duração da pausa",
+  "durationSheet.custom": "Personalizado",
+  "durationSheet.set": "Definir",
+  "durationSheet.hint": "Escolha entre {min} e {max} minutos.",
+  "durationSheet.less": "1 minuto a menos",
+  "durationSheet.more": "1 minuto a mais",
+  "durationSheet.close": "Fechar",
 
   "session.infoPlan": "{name} · {style} · {mode} · Plano",
   "session.blockOf": "Bloco {n}/{total}",

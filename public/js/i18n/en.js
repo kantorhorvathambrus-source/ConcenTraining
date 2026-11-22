@@ -262,6 +262,20 @@ I18N_TEXTS.en = {
   "plan.lengthLabel": "Length of row {n}",
   "plan.breakLabel": "Break after row {n}",
   "plan.quickStart": "{name}\u00a0· {mode}\u00a0· Plan: {plan}",
+  // The name of a row's length or break button for screen readers: "Length of row 1: 37 min".
+  "plan.pillLabel": "{label}: {value}",
+
+  // The duration sheet (js/duration-sheet.js): a plan row's length or break. Its presets use
+  // duration.chip and plan.noBreak, the field's unit duration.customAfter. durationSheet.less /
+  // .more / .close: the names of −, + and × for screen readers.
+  "durationSheet.focusTitle": "Focus length",
+  "durationSheet.breakTitle": "Break length",
+  "durationSheet.custom": "Custom",
+  "durationSheet.set": "Set",
+  "durationSheet.hint": "Choose between {min} and {max} minutes.",
+  "durationSheet.less": "1 minute less",
+  "durationSheet.more": "1 minute more",
+  "durationSheet.close": "Close",
 
   // A plan on the session screen: its blocks, the planned break and "Break over".
   "session.infoPlan": "{name} · {style} · {mode} · Plan",

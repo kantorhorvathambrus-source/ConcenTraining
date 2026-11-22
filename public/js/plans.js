@@ -8,8 +8,9 @@
 // Saved data:
 //   ct_prefs_v1.usePlan: true while "Plan" is picked in step 3 (missing: false, "Single block").
 //   ct_prefs_v1.plan = { rows: [ { minutes, count, breakMinutes, breakPicked } ] }: the plan as
-//     built on the setup screen. breakPicked: this row's break was picked by hand, so changing its
-//     length doesn't reset it. Broken or missing: the first-time plan (30 min ×2, 10 min break).
+//     built on the setup screen. minutes: any whole number from PLAN_MIN_MINUTES to
+//     PLAN_MAX_MINUTES; breakMinutes: 0 ("No break") or 1 to PLAN_MAX_BREAK (presets or custom).
+//     breakPicked: this row's break was picked by hand, so changing its length doesn't reset it. Broken or missing: the first-time plan (30 min ×2, 10 min break).
 //   ct_plan_v1: the running plan's progress (cleanStoredPlan below; written by app.js). Removed
 //     when the plan's summary shows. ct_session_v1 holds the block that's running, as a normal
 //     session: it has no plan fields.
@@ -38,8 +39,13 @@ const PLANS_TEST_SITE = (() => {
 // Whether plans are on in this page: every check in the app uses this.
 const PLANS_ON = PLANS_ENABLED || PLANS_TEST_SITE;
 
+// The presets of the duration sheet (js/duration-sheet.js). Any whole minute inside the limits
+// below can be set with its Custom row too.
 const PLAN_BLOCK_MINUTES = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 75, 90, 120];
 const PLAN_BREAK_MINUTES = [0, 5, 10, 15, 20, 25, 30, 40, 45, 60]; // 0: "No break"
+const PLAN_MIN_MINUTES = 1;
+const PLAN_MAX_MINUTES = 240; // the same as a single block (MAX_MINUTES in app.js)
+const PLAN_MAX_BREAK = 120;
 const PLAN_MAX_ROWS = 6;
 const PLAN_MAX_COUNT = 6;
 const PLAN_FIRST_ROW = { minutes: 30, count: 2, breakMinutes: 10, breakPicked: false };
@@ -54,7 +60,12 @@ function defaultBreak(minutes) {
   return Math.max(5, Math.round(minutes / 3 / 5) * 5);
 }
 
-// The rows saved in the prefs, or the first-time plan if anything about them is wrong.
+function clampPlanMinutes(minutes, min, max) {
+  return Math.min(max, Math.max(min, minutes));
+}
+
+// The rows saved in the prefs, or the first-time plan if anything about them is wrong. Whole
+// minutes outside the limits are moved to the nearest limit (saved again with the next change).
 function cleanPlanRows(saved) {
   const rows = saved && Array.isArray(saved.rows) ? saved.rows : null;
   const first = () => [{ ...PLAN_FIRST_ROW }];
@@ -62,12 +73,17 @@ function cleanPlanRows(saved) {
   const clean = [];
   for (const row of rows) {
     if (
-      !row || !PLAN_BLOCK_MINUTES.includes(row.minutes) || !PLAN_BREAK_MINUTES.includes(row.breakMinutes) ||
+      !row || !Number.isInteger(row.minutes) || !Number.isInteger(row.breakMinutes) ||
       !Number.isInteger(row.count) || row.count < 1 || row.count > PLAN_MAX_COUNT
     ) {
       return first();
     }
-    clean.push({ minutes: row.minutes, count: row.count, breakMinutes: row.breakMinutes, breakPicked: row.breakPicked === true });
+    clean.push({
+      minutes: clampPlanMinutes(row.minutes, PLAN_MIN_MINUTES, PLAN_MAX_MINUTES),
+      count: row.count,
+      breakMinutes: clampPlanMinutes(row.breakMinutes, 0, PLAN_MAX_BREAK),
+      breakPicked: row.breakPicked === true,
+    });
   }
   return clean;
 }
@@ -112,13 +128,18 @@ function planShortText(rows) {
 // measured, for the plan's summary ({ block, startedAt, plannedMs, elapsedMs, distractedMs,
 // focusPercent, distractions: [{ level, category }], pauses, status, startedOver }); status is
 // "saved", "exists", "failed", "short", "unsaved" or "discarded". null if anything is wrong.
+// Whole minutes outside the limits are moved to the nearest limit, so the plan goes on (the block
+// in ct_session_v1 is corrected the same way when it's picked up, see resumeSavedSession).
 function cleanStoredPlan(raw) {
   if (!raw || raw.v !== 1 || !Array.isArray(raw.blocks) || !Array.isArray(raw.parts)) return null;
-  const { blocks } = raw;
-  const okBlock = (b) =>
-    b && Number.isInteger(b.minutes) && b.minutes >= 1 && b.minutes <= 240 &&
-    Number.isInteger(b.breakMinutes) && b.breakMinutes >= 0 && b.breakMinutes <= 60;
-  if (blocks.length < 1 || blocks.length > PLAN_MAX_ROWS * PLAN_MAX_COUNT || !blocks.every(okBlock)) return null;
+  const okBlock = (b) => b && Number.isInteger(b.minutes) && Number.isInteger(b.breakMinutes);
+  if (raw.blocks.length < 1 || raw.blocks.length > PLAN_MAX_ROWS * PLAN_MAX_COUNT || !raw.blocks.every(okBlock)) return null;
+  const blocks = raw.blocks.map((b) => ({
+    ...b,
+    minutes: clampPlanMinutes(b.minutes, PLAN_MIN_MINUTES, PLAN_MAX_MINUTES),
+    breakMinutes: clampPlanMinutes(b.breakMinutes, 0, PLAN_MAX_BREAK),
+  }));
+  raw = { ...raw, blocks };
   if (typeof raw.characterId !== "string" || !["simple", "advanced"].includes(raw.mode)) return null;
   if (!Number.isInteger(raw.index) || raw.index < 0 || raw.index >= blocks.length) return null;
   const isTimeValue = (value) => Number.isFinite(value) && value >= 0;
@@ -204,18 +225,30 @@ const CHEVRON_PATHS = ["M7 10l5 5 5-5"];
 // A cup with steam, in the same stroke style as the app's other icons.
 const CUP_PATHS = ["M4 10h12v4a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z", "M16 11h1.5a2.5 2.5 0 0 1 0 5H16", "M8 3.5c-.8 1 .8 2 0 3", "M12 3.5c-.8 1 .8 2 0 3"];
 
-// A native <select> in a pill, with the app's chevron (inline SVG in currentColor, no image).
-function pillSelect(options) {
-  const wrap = document.createElement("span");
-  wrap.className = "pill-select";
-  const select = document.createElement("select");
-  for (const value of options) {
-    const option = document.createElement("option");
-    option.value = String(value);
-    select.append(option);
-  }
-  wrap.append(select, svgIcon("pill-select-chevron", CHEVRON_PATHS));
-  return { wrap, select };
+// A pill button with the app's chevron (inline SVG in currentColor, no image) that opens the
+// duration sheet (js/duration-sheet.js). The text shows the current value ("30 min", "No break").
+function pillButton() {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "pill-button";
+  button.setAttribute("aria-haspopup", "dialog");
+  const text = document.createElement("span");
+  text.className = "pill-button-text";
+  button.append(text, svgIcon("pill-button-chevron", CHEVRON_PATHS));
+  return { button, text };
+}
+
+// The texts of a block length and a break: on the row's pill and on the sheet's presets.
+function blockLengthText(minutes) {
+  return t("duration.chip", { minutes });
+}
+
+function breakLengthText(minutes) {
+  return minutes ? t("plan.breakOption", { minutes }) : t("plan.noBreak");
+}
+
+function breakPresetText(minutes) {
+  return minutes ? t("duration.chip", { minutes }) : t("plan.noBreak");
 }
 
 // Builds the plan's rows, "+ Add block", the timeline and its line into container.
@@ -262,9 +295,10 @@ function planBuilder(container, initialRows, onChange) {
     const n = i + 1;
     const els = li.planEls;
     els.badge.textContent = String(n);
-    els.length.value = String(row.minutes);
-    els.length.setAttribute("aria-label", t("plan.lengthLabel", { n }));
-    Array.from(els.length.options).forEach((option) => (option.textContent = t("duration.chip", { minutes: option.value })));
+    // The name says which row and the value, e.g. "Length of row 1: 37 min".
+    const lengthText = blockLengthText(row.minutes);
+    els.lengthText.textContent = lengthText;
+    els.length.setAttribute("aria-label", t("plan.pillLabel", { label: t("plan.lengthLabel", { n }), value: lengthText }));
     els.stepper.setAttribute("aria-label", t("plan.stepperLabel", { n }));
     els.fewer.setAttribute("aria-label", t("plan.fewer"));
     els.more.setAttribute("aria-label", t("plan.more"));
@@ -278,12 +312,9 @@ function planBuilder(container, initialRows, onChange) {
     els.after.hidden = noBreakAtAll;
     els.breakWrap.hidden = noBreakAtAll;
     els.after.textContent = t("plan.after");
-    els.breakSelect.value = String(row.breakMinutes);
-    els.breakSelect.setAttribute("aria-label", t("plan.breakLabel", { n }));
-    Array.from(els.breakSelect.options).forEach((option) => {
-      const minutes = Number(option.value);
-      option.textContent = minutes ? t("plan.breakOption", { minutes }) : t("plan.noBreak");
-    });
+    const breakText = breakLengthText(row.breakMinutes);
+    els.breakText.textContent = breakText;
+    els.breakButton.setAttribute("aria-label", t("plan.pillLabel", { label: t("plan.breakLabel", { n }), value: breakText }));
     els.noneAfter.hidden = !(last && row.count > 1);
     els.noneAfter.textContent = t("plan.noneAfterLast");
     els.remove.hidden = rows.length === 1;
@@ -299,8 +330,8 @@ function planBuilder(container, initialRows, onChange) {
     const badge = document.createElement("span");
     badge.className = "plan-badge";
     badge.setAttribute("aria-hidden", "true");
-    const length = pillSelect(PLAN_BLOCK_MINUTES);
-    length.select.dataset.focus = "length";
+    const length = pillButton();
+    length.button.dataset.focus = "length";
     const stepper = document.createElement("div");
     stepper.className = "stepper";
     stepper.setAttribute("role", "group");
@@ -323,14 +354,14 @@ function planBuilder(container, initialRows, onChange) {
     more.textContent = "+";
     more.dataset.focus = "more";
     stepper.append(fewer, count, more);
-    main.append(badge, length.wrap, stepper);
+    main.append(badge, length.button, stepper);
 
     const breakLine = document.createElement("div");
     breakLine.className = "plan-row-break";
     const after = document.createElement("span");
     after.className = "plan-after";
-    const breakSel = pillSelect(PLAN_BREAK_MINUTES);
-    breakSel.select.dataset.focus = "break";
+    const breakPill = pillButton();
+    breakPill.button.dataset.focus = "break";
     const noneAfter = document.createElement("span");
     noneAfter.className = "plan-note muted";
     const lastNote = document.createElement("span");
@@ -343,27 +374,52 @@ function planBuilder(container, initialRows, onChange) {
     const cupAndText = document.createElement("span");
     cupAndText.className = "plan-break-text";
     cupAndText.append(svgIcon("plan-cup", CUP_PATHS), after, lastNote);
-    breakLine.append(cupAndText, breakSel.wrap, remove, noneAfter); // the note gets a line of its own (CSS)
+    breakLine.append(cupAndText, breakPill.button, remove, noneAfter); // the note gets a line of its own (CSS)
 
     li.append(main, breakLine);
     li.planEls = {
-      badge, length: length.select, stepper, fewer, more, countShown, countSpoken,
-      after, breakWrap: breakSel.wrap, breakSelect: breakSel.select, noneAfter, lastNote, remove,
+      badge, length: length.button, lengthText: length.text, stepper, fewer, more, countShown, countSpoken,
+      after, breakWrap: breakPill.button, breakButton: breakPill.button, breakText: breakPill.text, noneAfter, lastNote, remove,
     };
 
     const index = () => Array.from(list.children).indexOf(li);
-    length.select.addEventListener("change", () => {
-      const row = rows[index()];
-      row.minutes = Number(length.select.value);
-      if (!row.breakPicked) row.breakMinutes = defaultBreak(row.minutes);
-      syncRow(li, index());
-      changed();
+    length.button.addEventListener("click", () => {
+      openDurationSheet({
+        title: t("durationSheet.focusTitle"),
+        presets: PLAN_BLOCK_MINUTES,
+        min: PLAN_MIN_MINUTES,
+        max: PLAN_MAX_MINUTES,
+        value: rows[index()].minutes,
+        label: blockLengthText,
+        trigger: length.button,
+        onPick: (minutes) => {
+          const row = rows[index()];
+          if (!row || row.minutes === minutes) return;
+          row.minutes = minutes;
+          if (!row.breakPicked) row.breakMinutes = defaultBreak(row.minutes);
+          syncRow(li, index());
+          changed();
+        },
+      });
     });
-    breakSel.select.addEventListener("change", () => {
-      const row = rows[index()];
-      row.breakMinutes = Number(breakSel.select.value);
-      row.breakPicked = true;
-      changed();
+    breakPill.button.addEventListener("click", () => {
+      openDurationSheet({
+        title: t("durationSheet.breakTitle"),
+        presets: PLAN_BREAK_MINUTES,
+        min: PLAN_MIN_MINUTES,
+        max: PLAN_MAX_BREAK,
+        value: rows[index()].breakMinutes,
+        label: breakPresetText,
+        trigger: breakPill.button,
+        onPick: (minutes) => {
+          const row = rows[index()];
+          if (!row || row.breakMinutes === minutes) return;
+          row.breakMinutes = minutes;
+          row.breakPicked = true;
+          syncRow(li, index());
+          changed();
+        },
+      });
     });
     // aria-disabled instead of disabled at 1 and 6, so keyboard focus isn't lost.
     const step = (by) => {

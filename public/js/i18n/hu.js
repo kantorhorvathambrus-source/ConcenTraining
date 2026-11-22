@@ -241,6 +241,16 @@ I18N_TEXTS.hu = {
   "plan.lengthLabel": "{n}. sor hossza",
   "plan.breakLabel": "{n}. sor: szünet utána",
   "plan.quickStart": "{name}\u00a0· {mode}\u00a0· Terv: {plan}",
+  "plan.pillLabel": "{label}, {value}",
+
+  "durationSheet.focusTitle": "Fókuszidő",
+  "durationSheet.breakTitle": "Szünet hossza",
+  "durationSheet.custom": "Egyéni",
+  "durationSheet.set": "Beállítás",
+  "durationSheet.hint": "{min} és {max} perc között választhatsz.",
+  "durationSheet.less": "1 perccel kevesebb",
+  "durationSheet.more": "1 perccel több",
+  "durationSheet.close": "Bezárás",
 
   "session.infoPlan": "{name} · {style} · {mode} · Terv",
   "session.blockOf": "{n}/{total}. blokk",

@@ -256,6 +256,16 @@ I18N_TEXTS.es = {
   "plan.lengthLabel": "Duración de la fila {n}",
   "plan.breakLabel": "Descanso después de la fila {n}",
   "plan.quickStart": "{name} · {mode} · Plan: {plan}",
+  "plan.pillLabel": "{label}: {value}",
+
+  "durationSheet.focusTitle": "Tiempo de concentración",
+  "durationSheet.breakTitle": "Duración del descanso",
+  "durationSheet.custom": "Personalizado",
+  "durationSheet.set": "Aplicar",
+  "durationSheet.hint": "Elige entre {min} y {max} minutos.",
+  "durationSheet.less": "1 minuto menos",
+  "durationSheet.more": "1 minuto más",
+  "durationSheet.close": "Cerrar",
 
   "session.infoPlan": "{name} · {style} · {mode} · Plan",
   "session.blockOf": "Bloque {n}/{total}",

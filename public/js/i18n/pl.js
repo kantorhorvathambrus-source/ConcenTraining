@@ -268,6 +268,16 @@ I18N_TEXTS.pl = {
   "plan.lengthLabel": "Długość wiersza {n}",
   "plan.breakLabel": "Przerwa po wierszu {n}",
   "plan.quickStart": "{name} · {mode} · Plan: {plan}",
+  "plan.pillLabel": "{label}: {value}",
+
+  "durationSheet.focusTitle": "Czas skupienia",
+  "durationSheet.breakTitle": "Długość przerwy",
+  "durationSheet.custom": "Własny czas",
+  "durationSheet.set": "Ustaw",
+  "durationSheet.hint": "Wybierz od {min} do {max} minut.",
+  "durationSheet.less": "O 1 minutę mniej",
+  "durationSheet.more": "O 1 minutę więcej",
+  "durationSheet.close": "Zamknij",
 
   "session.infoPlan": "{name} · {style} · {mode} · Plan",
   "session.blockOf": "Blok {n}/{total}",

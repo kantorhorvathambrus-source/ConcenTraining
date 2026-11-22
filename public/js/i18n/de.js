@@ -247,6 +247,16 @@ I18N_TEXTS.de = {
   "plan.lengthLabel": "Länge von Zeile {n}",
   "plan.breakLabel": "Pause nach Zeile {n}",
   "plan.quickStart": "{name}\u00a0· {mode}\u00a0· Plan: {plan}",
+  "plan.pillLabel": "{label}: {value}",
+
+  "durationSheet.focusTitle": "Fokuszzeit",
+  "durationSheet.breakTitle": "Pausenlänge",
+  "durationSheet.custom": "Eigene Dauer",
+  "durationSheet.set": "Übernehmen",
+  "durationSheet.hint": "Wähle zwischen {min} und {max}\u00a0Minuten.",
+  "durationSheet.less": "1\u00a0Minute weniger",
+  "durationSheet.more": "1\u00a0Minute mehr",
+  "durationSheet.close": "Schließen",
 
   "session.infoPlan": "{name} · {style} · {mode} · Plan",
   "session.blockOf": "Block {n}/{total}",

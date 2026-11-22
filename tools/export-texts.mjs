@@ -121,7 +121,7 @@ function sectionOf(key, notes) {
   if (["language", "darkMode"].includes(area)) return "buttons";
   if (area === "storage") return { setupNote: "setup", sessionNote: "session", historyNote: "history" }[second] || "other";
   if (EDITOR_MESSAGES.includes(key)) return "editor";
-  if (["setup", "quickStart", "how", "tip", "duration", "custom", "plan"].includes(area)) return "setup";
+  if (["setup", "quickStart", "how", "tip", "duration", "durationSheet", "custom", "plan"].includes(area)) return "setup";
   if (key === "group.ragebait.warning") return "dialogs";
   if (area === "group") return "characters";
   if (area === "pose" || key === "character.poseAlt") return "poses";

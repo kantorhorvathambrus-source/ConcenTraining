@@ -1408,37 +1408,40 @@ a:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 
-/* A native select in a pill, with the app's chevron (an inline SVG in the text colour). */
-.pill-select {
-  position: relative;
+/* A plan row's length and break: a pill button with the app's chevron (an inline SVG in the text
+   colour) that opens the duration sheet. */
+.pill-button {
   display: inline-flex;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
   max-width: 100%;
-}
-
-.pill-select select {
-  appearance: none;
-  -webkit-appearance: none;
-  max-width: 100%;
   min-height: 44px;
-  padding: 8px 32px 8px 14px;
+  padding: 8px 11px 8px 14px;
   border: 1.5px solid transparent;
   border-radius: var(--radius-pill);
   background: var(--color-control);
   color: var(--color-text);
   font: inherit;
   font-weight: 600;
+  text-align: left;
   cursor: pointer;
+  transition: transform var(--dur) var(--ease), opacity var(--dur) var(--ease);
 }
 
-.pill-select-chevron {
-  position: absolute;
-  top: 50%;
-  right: 11px;
+.pill-button:active {
+  transform: scale(0.97);
+}
+
+.pill-button-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.pill-button-chevron {
+  flex: none;
   width: 16px;
   height: 16px;
-  margin-top: -8px;
-  pointer-events: none;
   fill: none;
   stroke: currentColor;
   stroke-width: 2;
@@ -2866,13 +2869,10 @@ a {
     height: 24px;
   }
 
-  .pill-select select {
+  .pill-button {
+    gap: 4px;
     padding-left: 12px;
-    padding-right: 28px;
-  }
-
-  .pill-select-chevron {
-    right: 9px;
+    padding-right: 9px;
   }
 
   .stepper {
@@ -3377,7 +3377,8 @@ a {
 }
 
 /* The sheet: a <dialog> at the bottom of the screen, as wide as the other dialogs on wide screens.
-   No animation, like the app's other dialogs. */
+   It slides up when it opens (not with reduced motion, see the end of the file); the duration
+   sheet below does the same. */
 dialog.language-sheet,
 .app-timer ~ dialog.language-sheet {
   width: min(440px, 100vw);
@@ -3479,6 +3480,162 @@ dialog.language-sheet,
   text-align: center;
 }
 
+/* ---------- the duration sheet (js/duration-sheet.js) ---------- */
+
+/* A bottom sheet like the language sheet. --keyboard: the on-screen keyboard's height (set by the
+   script while the sheet is open), so the sheet sits above it and scrolls inside if it's too tall. */
+dialog.duration-sheet,
+.app-timer ~ dialog.duration-sheet {
+  width: min(440px, 100vw);
+  max-width: 100vw;
+  margin: auto auto var(--keyboard, 0px);
+  padding: 0;
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
+  max-height: calc(100vh - 24px - var(--keyboard, 0px));
+  max-height: calc(100svh - 24px - var(--keyboard, 0px));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* The padding is here, so a tap whose target is the <dialog> itself is on the backdrop. */
+.duration-sheet-body {
+  padding: 8px 20px calc(16px + env(safe-area-inset-bottom));
+}
+
+.duration-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.duration-sheet-head h2 {
+  margin: 0;
+  min-width: 0;
+}
+
+.duration-sheet-close {
+  flex: none;
+  min-width: 44px;
+  min-height: 44px;
+  margin-right: -8px;
+}
+
+/* The presets wrap into as many columns as fit (4 on a 320px phone, fewer with bigger text). */
+.duration-presets {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(4.25em, 1fr));
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.duration-preset {
+  min-height: 48px;
+  padding: 6px 8px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-size: var(--fs-16);
+}
+
+.duration-preset[aria-checked="true"] {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.duration-custom {
+  padding-top: 16px;
+  border-top: 1px solid var(--color-divider);
+}
+
+.duration-custom-label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+/* − field min +, then Set: on one line when there's room, Set on a full-width line under it if not. */
+.duration-custom-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.duration-custom-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.duration-step {
+  flex: none;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.duration-custom-field input {
+  width: 4.5em;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1.5px solid var(--color-field-border); /* a field keeps a visible edge */
+  border-radius: var(--radius-field);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 600;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.duration-custom-field input[aria-invalid="true"] {
+  border-color: var(--color-danger);
+}
+
+.duration-set {
+  flex: 1 0 auto;
+  min-height: 44px;
+}
+
+.duration-set:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.duration-hint {
+  margin: 8px 0 0;
+  font-size: var(--fs-14);
+  font-weight: 400;
+}
+
+/* Both sheets slide up when they open, and the page behind them dims in. */
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+
+dialog.language-sheet[open],
+dialog.duration-sheet[open] {
+  animation: sheet-up 240ms var(--ease);
+}
+
+dialog.language-sheet[open]::backdrop,
+dialog.duration-sheet[open]::backdrop {
+  animation: backdrop-in 240ms var(--ease);
+}
+
 /* ---------- reduced motion ---------- */
 
 /* "Reduce motion" in the phone's or computer's settings: no breathing or reactions, no press
@@ -3495,6 +3652,7 @@ dialog.language-sheet,
   .chip,
   .segmented-option,
   .stepper-btn,
+  .pill-button,
   .plan-seg-fill,
   .lang-pill,
   .char-card,
@@ -3502,5 +3660,12 @@ dialog.language-sheet,
   .preset,
   .dark-switch-knob {
     transition: none;
+  }
+
+  dialog.language-sheet[open],
+  dialog.duration-sheet[open],
+  dialog.language-sheet[open]::backdrop,
+  dialog.duration-sheet[open]::backdrop {
+    animation: none;
   }
 }
