@@ -1166,7 +1166,7 @@ How to read it:
 | 4 | h2 | `What you can do` |
 | 5 | li | `Choose a character with the personality you need: relaxed and encouraging, firm, strict, or ragebait characters that annoy you on purpose with mocking poses.` |
 | 6 | li | `Pick a mode: in Simple you tap how distracted you were; in Advanced you log how long, and see your focus % at the end.` |
-| 7 | li | `Focus in a single block, or build a plan of several focus blocks with planned breaks in between.` |
+| 7 | li | `Focus in a single block, or build a plan of several focus blocks with planned breaks in between. Pick a common length with one tap, or set any length to the minute (up to 4 hours of focus, breaks up to 2 hours).` |
 | 8 | li | `Take a break when you need one: the timer waits, and the break doesn't count against your focus.` |
 | 9 | li | `Create your own character: pick the look, the personality and a name. For 10 minutes after saving you can still change everything; after that, only the name.` |
 | 10 | li | `See your past sessions, streaks and focus trends on the History page, and export them as a backup.` |
