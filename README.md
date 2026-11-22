@@ -646,17 +646,19 @@ The code is in `public/js/plans.js` (the switch, the rules, the plan builder and
 ### The switch (`PLANS_ENABLED`)
 
 The whole feature is behind one switch, `PLANS_ENABLED` at the top of `public/js/plans.js`. It is
-now **`false`**: plans are off on the production site (https://concentraining.com) and on the GitHub
-Pages backup. They are **always on**, whatever the switch says, on Netlify's test sites (every Deploy
-Preview, `deploy-preview-…`, and the main branch deploy, `main--…`) and on `localhost` /
-`127.0.0.1`, so they can be tried before launch. The code checks `PLANS_ON` (`PLANS_ENABLED` or one
-of those hostnames), never the switch alone.
+now **`true`**: plans are on for everyone, on the production site (https://concentraining.com) and on
+the GitHub Pages backup. They are also **always on**, whatever the switch says, on Netlify's test
+sites (every Deploy Preview, `deploy-preview-…`, and the main branch deploy, `main--…`) and on
+`localhost` / `127.0.0.1`. The code checks `PLANS_ON` (`PLANS_ENABLED` or one of those hostnames),
+never the switch alone.
 
-While plans are off there's no "Single block | Plan" toggle and the app works exactly as before:
-step 3 shows the duration picker, Quick start shows minutes and Start starts one session. A plan saved
-in the prefs (`usePlan`, `plan`) is ignored but kept, so switching plans on brings it back. A leftover
-`ct_plan_v1` is ignored and cleared (a block that's already running carries on as a normal single
-session). To switch plans on for everyone, set it to `true`; nothing else needs to change.
+Setting the switch back to `false` turns plans off on production and the GitHub Pages backup (the
+test sites and localhost keep them on). Then there's no "Single block | Plan" toggle and the app
+works exactly as before plans existed: step 3 shows the duration picker, Quick start shows minutes
+and Start starts one session. A plan saved in the prefs (`usePlan`, `plan`) is ignored but kept, so
+switching plans on again brings it back. A leftover `ct_plan_v1` is ignored and cleared (a block
+that's already running carries on as a normal single session). Nothing else needs to change either
+way.
 
 ### Building a plan (setup, step 3)
 
