@@ -236,6 +236,16 @@ I18N_TEXTS.it = {
   "plan.lengthLabel": "Durata della riga {n}",
   "plan.breakLabel": "Pausa dopo la riga {n}",
   "plan.quickStart": "{name}\u00a0· {mode}\u00a0· Piano: {plan}",
+  "plan.pillLabel": "{label}: {value}",
+
+  "durationSheet.focusTitle": "Tempo di concentrazione",
+  "durationSheet.breakTitle": "Durata della pausa",
+  "durationSheet.custom": "Personalizza",
+  "durationSheet.set": "Imposta",
+  "durationSheet.hint": "Scegli tra {min} e {max} minuti.",
+  "durationSheet.less": "1 minuto in meno",
+  "durationSheet.more": "1 minuto in più",
+  "durationSheet.close": "Chiudi",
 
   "session.infoPlan": "{name} · {style} · {mode} · Piano",
   "session.blockOf": "Blocco {n}/{total}",

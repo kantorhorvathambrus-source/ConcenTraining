@@ -243,6 +243,16 @@ I18N_TEXTS.id = {
   "plan.lengthLabel": "Durasi baris {n}",
   "plan.breakLabel": "Istirahat setelah baris {n}",
   "plan.quickStart": "{name} · {mode} · Rencana: {plan}",
+  "plan.pillLabel": "{label}: {value}",
+
+  "durationSheet.focusTitle": "Durasi fokus",
+  "durationSheet.breakTitle": "Durasi istirahat",
+  "durationSheet.custom": "Atur sendiri",
+  "durationSheet.set": "Terapkan",
+  "durationSheet.hint": "Pilih antara {min} dan {max} menit.",
+  "durationSheet.less": "Kurangi 1 menit",
+  "durationSheet.more": "Tambah 1 menit",
+  "durationSheet.close": "Tutup",
 
   "session.infoPlan": "{name} · {style} · {mode} · Rencana",
   "session.blockOf": "Blok {n}/{total}",

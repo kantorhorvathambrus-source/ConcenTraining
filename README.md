@@ -640,8 +640,9 @@ a session at a time, so two tabs never overwrite each other's distractions or bo
 Many people study in blocks, e.g. 2×30 min, then 60 min, then 30 min, with a 10 min break after each
 30 min block and 20 min after the 60 min block. A **plan** runs such a sequence by itself: block →
 planned break → next block … → one summary for the whole plan. The single-block flow is unchanged.
-The code is in `public/js/plans.js` (the switch, the rules, the plan builder and the timeline) and in
-`public/js/app.js` (running a plan, the "plans" section).
+The code is in `public/js/plans.js` (the switch, the rules, the plan builder and the timeline),
+`public/js/duration-sheet.js` (the sheet for a row's length and break) and `public/js/app.js` (running
+a plan, the "plans" section).
 
 ### The switch (`PLANS_ENABLED`)
 
@@ -666,21 +667,23 @@ way.
   on the card colour; `aria-pressed` says which). It's saved as `usePlan` in `ct_prefs_v1`.
   **Single block** shows today's duration picker, unchanged.
 - **Plan** shows one card per **row**; a row is a group of identical blocks:
-  - first line: a round number badge, the block length (a pill-styled native select: 5, 10, 15, 20,
-    25, 30, 35, 40, 45, 50, 60, 75, 90 or 120 min) and a stepper, **−** ×N **+**, N from 1 to 6.
+  - first line: a round number badge, the block length (a pill button showing "30 min" that opens
+    the [duration sheet](#the-duration-sheet): any whole minute from 1 to 240) and a stepper,
+    **−** ×N **+**, N from 1 to 6.
     At 1 and 6 the button is marked unavailable (`aria-disabled`) but keeps keyboard focus. Screen
     readers hear the count as "2 blocks" (a live region) and the stepper as "Number of blocks in
     row 1".
-  - second line: a cup icon, **After** and the break after each block of this row (a select: No
-    break, 5, 10, 15, 20, 25, 30, 40, 45 or 60 min, shown as "10 min break"), and the **×** that
+  - second line: a cup icon, **After** and the break after each block of this row (a pill button
+    showing "10 min break" or "No break" that opens the duration sheet: No break or any whole minute
+    from 1 to 120), and the **×** that
     removes the row (hidden while there's only one row). On phones under 350px wide "After" is
     hidden visually (screen readers still hear "Break after row 1"), so the line fits.
   - The very last block of the plan never has a break after it. Last row ×1: its break line reads
-    "Last block, no break after it" instead (the text wraps inside the line, so the × stays on it). Last row ×2 or more: the break select stays (it applies
+    "Last block, no break after it" instead (the text wraps inside the line, so the × stays on it). Last row ×2 or more: the break button stays (it applies
     between its blocks) with "(none after the last one)" under it. Adding or removing rows updates
     which row is last.
 - **Default break:** one third of the block, rounded to the nearest 5, at least 5 (30 → 10, 60 → 20,
-  90 → 30; `defaultBreak`). Changing a row's length resets its break to that, unless that row's break
+  90 → 30, a custom 37 → 10; `defaultBreak`). Changing a row's length resets its break to that, unless that row's break
   was picked by hand (`breakPicked`).
 - **+ Add block** (full width, dashed edge) adds a row copying the last row's length and break, ×1.
   At 6 rows it hides. Focus moves to the new row's length; after × it moves to the length of the row
@@ -693,6 +696,51 @@ way.
   never wraps onto a line of its own.
 - The first time Plan is picked: one row, 30 min ×2, 10 min break. The plan is saved as `plan` in
   `ct_prefs_v1` on every change and comes back next time. A broken saved plan falls back to that.
+  Lengths and breaks are saved as plain whole minutes, presets or custom alike, so plans saved
+  before custom values existed load unchanged. A whole number outside the limits (only possible in
+  edited data) is moved to the nearest limit (`cleanPlanRows`).
+- A pill button's screen reader name says the row and the value: "Length of row 1: 37 min",
+  "Break after row 1: 7 min break" (`plan.pillLabel`).
+
+### The duration sheet
+
+A plan row's length and break buttons open a bottom sheet (`public/js/duration-sheet.js`) instead of
+a native `<select>`, whose system list ignores the app's design on Android and only offers presets.
+
+- **Look:** the language sheet's look (grab bar, rounded top corners, the app's theme tokens, 440px
+  wide at most), with a title ("Focus length" / "Break length") and a **×** close button. It slides
+  up when it opens; with "reduce motion" it just appears.
+- **Presets** on top, as large chips that wrap into as many columns as fit (3 on a 320px phone, 2 at
+  200% text): block length 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 75, 90, 120 min
+  (`PLAN_BLOCK_MINUTES`); break No break, 5, 10, 15, 20, 25, 30, 40, 45, 60 min
+  (`PLAN_BREAK_MINUTES`). The current one is filled amber. One tap picks a preset and closes the
+  sheet.
+- **Custom** under them: a visible "Custom" label, **−**, a number field (`inputmode="numeric"`, so
+  phones show the number pad), "min", **+** and **Set**. −/+ change the value by 1 minute and
+  repeat while held (after 0.4 s, then every 70 ms). They step on the press itself, so quick taps
+  aren't dropped by the **Tap guard** (see [How it works](#how-it-works)). At the limit the button is
+  marked unavailable (`aria-disabled`) but keeps focus. An empty field steps from the current value
+  ("No break": + gives 1). **Set** (or Enter in the field) applies the value and closes the sheet.
+- **Limits:** block length 1–240 min (`PLAN_MIN_MINUTES`, `PLAN_MAX_MINUTES`, the same as a single
+  block), break No break or 1–120 min (`PLAN_MAX_BREAK`). Whole minutes only. "Choose between 1 and
+  240 minutes." is always shown under the field. While the field is empty, not a whole number or out
+  of range, that line turns red, the field is marked invalid (`aria-invalid`) and **Set** is
+  disabled. What was typed is never changed or rounded.
+- **The field's value when the sheet opens:** the current value ("37" for a custom 37 min, "30"
+  for the 30 min preset), empty for "No break" (Set then waits for a number).
+- **Closing** without a pick: a tap on the dimmed page, **×**, Esc or Android Back. Nothing changes.
+  Back closes the sheet instead of leaving the app because it's a modal `<dialog>`, like the
+  language sheet.
+- **On-screen keyboard:** while the sheet is open it follows the visual viewport (the part of the
+  page the keyboard leaves visible). It sits right above the keyboard, gets shorter and scrolls
+  inside, so the Custom row and **Set** stay visible. Anything taller than the screen scrolls inside
+  the sheet too.
+- **Screen readers and keyboard:** the sheet is a dialog labelled by its title. Focus moves to the
+  current preset when it opens (to the first one when the value is custom) and back to the pill
+  button when it closes. The presets are a radio group with one Tab stop: the arrow keys, Home and
+  End move between them, and Enter or Space picks one. (Arrows don't pick, because picking closes
+  the sheet.) The field has its visible label, and the limits line is its description. −/+ are
+  named "1 minute less" / "1 minute more", × "Close". Every tap target is at least 44px.
 - **Quick start** with Plan picked: "Leader · Simple · Plan: 2×30 · 60 · 30", and **Start** starts
   the plan.
 - Mode, character and the setup checkboxes apply to every block. The character pick is counted once
@@ -775,7 +823,11 @@ One summary for the whole plan, on the summary screen:
 ### Storage, reloads and tabs
 
 - **`ct_plan_v1`** holds the running plan (see [Browser storage keys](#browser-storage-keys)) and is
-  removed when its summary shows. `ct_session_v1` holds the running block as a normal session and got
+  removed when its summary shows. Its blocks hold plain whole minutes (custom values too). A length
+  or break outside the limits (1–240, 0–120; only possible in edited data) is moved to the nearest
+  limit when it's read (`cleanStoredPlan`), and a running single block or session longer than 240
+  min (or shorter than 1) is set to the limit once when it's picked up (`resumeSavedSession`), so
+  it goes on instead of being dropped. `ct_session_v1` holds the running block as a normal session and got
   no new fields, so a session saved by an older version still resumes, and everything that reads it
   works unchanged. Between blocks no session is saved at all. A block belongs to the plan only if its
   `startedAt` is the plan's `blockStartedAt`; otherwise the saved session runs as a single block.
@@ -809,11 +861,11 @@ One summary for the whole plan, on the summary screen:
   timeline, block line and break card fit without scrolling, like the session. In portrait on short
   screens the character gives up the two lines' height (down to 76px at 320×568), so the distraction
   buttons sit where they do without a plan. At 320px each row takes two lines and nothing scrolls
-  sideways; where a language's break text is long (Spanish between 351 and 374px), the break select
+  sideways; where a language's break text is long (Spanish between 351 and 374px), the break button
   moves to the next line.
 - **Light and dark, reduced motion, keyboard:** the timeline uses theme tokens only; its fills grow
   with a transform and don't animate with "reduce motion"; every control can be reached with Tab, has
-  the app's focus ring, and every select has a label.
+  the app's focus ring, and every length and break button has a name that says its row and value.
 
 ## Personalities
 
@@ -1836,7 +1888,8 @@ and the **export file is exactly the same in every language**. Import problems a
   English name under it in muted text (not for English), a check and a light amber background on
   the current one, and a "BETA" pill (never translated) on unreviewed ones. At the bottom, "Report a
   translation issue" opens an email to concentrainer@gmail.com with the subject "Translation issue
-  (hu)" (always English, so reports can be filtered). No animation, like the app's other dialogs.
+  (hu)" (always English, so reports can be filtered). It slides up when it opens (240 ms, like the
+  [duration sheet](#the-duration-sheet)); with "reduce motion" it just appears.
 - **Order, worked out from the data** (`sortLanguages`): English first; then the reviewed languages,
   most native speakers first; then the beta ones, most native speakers first; equal numbers by
   English name A–Z. So removing a language's `beta` flag moves it up by itself. With today's
@@ -2180,9 +2233,10 @@ without moving anything. Real edges are kept where they carry meaning: text fiel
 buttons, Undo, Stop next to the amber button, a disabled button, and hairlines between rows.
 
 **Plans** (see [Plans](#plans)): the "Single block | Plan" toggle is a pill on `--color-control`
-with the picked half on `--color-surface` and `--shadow-card`; the plan rows are cards; the selects
-are native `<select>`s styled as pills, with the app's chevron as an inline SVG in the text colour
-(no image, so it follows the theme); the timeline's blocks are `--color-accent`, its breaks stripes
+with the picked half on `--color-surface` and `--shadow-card`; the plan rows are cards; a row's
+length and break are pill buttons on `--color-control`, with the app's chevron as an inline SVG in
+the text colour (no image, so it follows the theme), that open the duration sheet (the language
+sheet's look, the setup screen's chips); the timeline's blocks are `--color-accent`, its breaks stripes
 of `--color-track` and `--color-paused`, and its fills grow with `transform: scaleX()` (no width
 animation).
 
@@ -2401,7 +2455,8 @@ and the timer keeps counting from the start time as always.
 | `public/js/avatar-art.js` | Draws a custom character from its layers (SVG, or listed PNGs with skin/hair tint) |
 | `public/js/custom-characters.js` | Saving and reading `ct_custom_characters_v1`, name rules, the 10 limit, `CUSTOM_PAID`, the feature switch `CUSTOM_CHARACTERS_ENABLED` (and `CUSTOM_CHARACTERS_ON`, which is also true on Netlify's test sites), stand-in for deleted characters (used by all three pages and `stats.html`) |
 | `public/js/avatar.js` | The editor on `avatar.html` |
-| `public/js/plans.js` | Plans: the switch `PLANS_ENABLED` (and `PLANS_ON`, also true on Netlify's test sites and localhost), the block and break lengths, the default break, cleaning saved plans (`cleanPlanRows`, `cleanStoredPlan`), the plan builder in step 3 and the segmented timeline (see [Plans](#plans)) |
+| `public/js/plans.js` | Plans: the switch `PLANS_ENABLED` (and `PLANS_ON`, also true on Netlify's test sites and localhost), the block and break presets and limits, the default break, cleaning saved plans (`cleanPlanRows`, `cleanStoredPlan`), the plan builder in step 3 and the segmented timeline (see [Plans](#plans)) |
+| `public/js/duration-sheet.js` | The duration sheet: the bottom sheet a plan row's length and break buttons open (presets, Custom with −/+ and Set; see [The duration sheet](#the-duration-sheet)) |
 | `public/js/app.js` | Running a plan (blocks, planned breaks, the plan's summary), timer, reaction engine, distraction category picker, Undo, Stop and breaks (Take a break / Resume), disabled Advanced lengths, time away card, leave reminder notification, motivation rotation, the picker and card in the distraction buttons' place on landscape phones, end chime, screen wake lock and the "screen may turn off" note, summary, How it works card, iPhone Home Screen tip, persistent storage request, one tab at a time (Web Locks) |
 | `public/js/history-store.js` | Saving/loading history, focus % and summary result (with their thresholds; `resultOf` also judges a plan's totals), break totals and the "Paused …" line, distraction categories, export/import checks, iPhone/iPad and iPhone Safari checks, the "can this browser save?" test (`storageWorks`) (used by both pages) |
 | `public/js/history.js` | Streaks, weekly time and focus charts, time of day, distraction categories, session list and backup buttons on `history.html` |
