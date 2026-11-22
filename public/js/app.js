@@ -444,13 +444,14 @@ function announceEnd() {
 
 // ---------- focus sound ----------
 
-// A steady noise during focus time, generated in js/focus-sound.js (no audio file). It plays only
+// A steady sound during focus time (a noise or an ambient sound), generated in js/focus-sound.js
+// and js/focus-sound-worklet.js (no audio file). It plays only
 // while a block is running on the session screen: never during a break (Take a break or a planned
 // break), on the summary, after giving up, or once another tab has taken the session over. It fades
 // in when focus starts or resumes and out when it stops. Nothing plays on page load: a tap must
 // allow it first (allowed), and only these taps do: Start (and Quick start, and the ragebait
 // warning's Bring it on), Resume, Start now / "Start: 60 min", Continue here and the mute button.
-// After a reload during focus the noise waits for the mute button ("Turn sound on"), Resume or
+// After a reload during focus the sound waits for the mute button ("Turn sound on"), Resume or
 // Start now; other taps on the session screen don't start it.
 // muted: the mute button was tapped. Only for this session or plan (memory only): the saved choice
 // stays, and the next Start begins unmuted.
@@ -463,12 +464,18 @@ const focusSound = {
   player: null, supported: focusSoundSupported(), allowed: false, muted: false, previewing: false, previewTimer: 0,
 };
 
-// A noise is picked (and this browser can play it).
+// A sound is picked, and this browser can play it (a saved Ambient choice on a browser without
+// AudioWorklet acts as Off there).
 function focusSoundOn() {
-  return focusSound.supported && prefs.focusSound !== "off";
+  return focusSound.supported && focusSoundTypeSupported(prefs.focusSound);
 }
 
-// A focus block is running on screen, so the noise belongs here (if it's on, allowed and unmuted).
+// Every chip, in both groups (Noise and Ambient): one choice in total.
+function focusSoundChips() {
+  return document.querySelectorAll("#focusSoundSetting .sound-chips .chip");
+}
+
+// A focus block is running on screen, so the sound belongs here (if it's on, allowed and unmuted).
 function focusTimeShown() {
   return Boolean(!$("#sessionScreen").hidden && session && !session.endedAt && !session.pausedAt);
 }
@@ -477,14 +484,14 @@ function focusSoundWanted() {
   return focusSoundOn() && focusSound.allowed && !focusSound.muted && focusTimeShown();
 }
 
-// Called inside one of the taps listed above: from now on the noise may play on this page.
+// Called inside one of the taps listed above: from now on the sound may play on this page.
 function allowFocusSound() {
   if (!focusSoundOn()) return;
   focusSound.allowed = true;
   unlockAudio();
 }
 
-// Starts or stops the noise to match the state. Called on every screen change and wherever focus
+// Starts or stops the sound to match the state. Called on every screen change and wherever focus
 // starts, pauses or ends without one (Take a break, Resume, a block's end, Start now), so nothing
 // is missed. Calling it again changes nothing: a fade that's under way goes on.
 function updateFocusSound() {
@@ -498,7 +505,7 @@ function updateFocusSound() {
 }
 
 // The session screen's button: there for the whole session (breaks too, so nothing moves) while a
-// noise is picked. Its label says what a tap does: "Mute sound" while the noise is on, "Turn sound
+// sound is picked. Its label says what a tap does: "Mute sound" while the sound is on, "Turn sound
 // on" while muted or not allowed yet (after a reload).
 function updateFocusSoundButton() {
   const button = $("#focusSoundButton");
@@ -522,12 +529,13 @@ function onFocusSoundButtonClick() {
 
 // ---------- focus sound: the setup screen ----------
 
-// The row of chips, and Volume with Preview under it while a noise is picked.
+// The chips (Noise and Ambient), and Volume with Preview under them while a sound is picked.
 function syncFocusSoundSetting() {
-  $("#focusSoundChips").querySelectorAll(".chip").forEach((chip) => {
-    chip.setAttribute("aria-pressed", String(chip.dataset.sound === prefs.focusSound));
+  const picked = focusSoundOn() ? prefs.focusSound : "off"; // a saved choice this browser can't play shows as Off
+  focusSoundChips().forEach((chip) => {
+    chip.setAttribute("aria-pressed", String(chip.dataset.sound === picked));
   });
-  $("#focusSoundControls").hidden = prefs.focusSound === "off";
+  $("#focusSoundControls").hidden = !focusSoundOn();
   const slider = $("#focusVolume");
   slider.value = prefs.focusVolume;
   showFocusVolume(prefs.focusVolume);
@@ -549,13 +557,13 @@ function showFocusVolume(percent) {
 function onFocusSoundChipClick(chip) {
   savePrefs({ focusSound: chip.dataset.sound });
   if (focusSound.previewing) {
-    if (prefs.focusSound === "off") stopPreview();
-    else focusSound.player.play(prefs.focusSound, PREVIEW_FADE_S); // crossfades to the new noise
+    if (!focusSoundOn()) stopPreview();
+    else focusSound.player.play(prefs.focusSound, PREVIEW_FADE_S); // crossfades to the new sound
   }
   syncFocusSoundSetting();
 }
 
-// Preview: the picked noise for PREVIEW_MS, at the slider's volume. A tap while it plays stops it.
+// Preview: the picked sound for PREVIEW_MS, at the slider's volume. A tap while it plays stops it.
 function onPreviewClick() {
   if (focusSound.previewing) {
     stopPreview();
@@ -583,7 +591,8 @@ function initFocusSound() {
   focusSound.player = createFocusSoundPlayer(() => audioContext);
   focusSound.player.setVolume(prefs.focusVolume); // from then on the slider keeps it up to date
   $("#focusSoundSetting").hidden = false;
-  $("#focusSoundChips").querySelectorAll(".chip").forEach((chip) => {
+  $("#focusAmbientGroup").hidden = !focusSoundTypeSupported(FOCUS_AMBIENTS[0]);
+  focusSoundChips().forEach((chip) => {
     chip.addEventListener("click", () => onFocusSoundChipClick(chip));
   });
   const slider = $("#focusVolume");

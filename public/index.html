@@ -223,18 +223,31 @@
         </label>
         <!-- Only after a tick was refused. Text is set when shown, so screen readers announce it. -->
         <p id="leaveReminderHint" class="setting-hint muted" role="status" hidden></p>
-        <!-- Focus sound (js/focus-sound.js): a generated noise during focus time. Hidden where the
-             browser has no Web Audio (initFocusSound in app.js). Volume and Preview only show while
-             a noise is picked. -->
+        <!-- Focus sound (js/focus-sound.js): a generated sound during focus time. Hidden where the
+             browser has no Web Audio, and the Ambient group where it has no AudioWorklet
+             (initFocusSound in app.js). Two groups, one choice in total. Volume and Preview only show
+             while a sound is picked. -->
         <div id="focusSoundSetting" class="focus-sound-setting" hidden>
           <p id="focusSoundLabel" class="setting-label" data-i18n="setup.focusSound">Focus sound</p>
-          <div id="focusSoundChips" class="sound-chips" role="group" aria-labelledby="focusSoundLabel" aria-describedby="focusSoundHint">
+          <p id="focusNoiseLabel" class="chip-group-label muted" data-i18n="setup.focusSoundNoise">Noise</p>
+          <div class="sound-chips" role="group" aria-labelledby="focusSoundLabel focusNoiseLabel" aria-describedby="focusSoundHint">
             <button type="button" class="chip" data-sound="off" data-i18n="setup.focusSoundOff">Off</button>
             <button type="button" class="chip" data-sound="brown" data-i18n="setup.focusSoundBrown">Brown</button>
             <button type="button" class="chip" data-sound="pink" data-i18n="setup.focusSoundPink">Pink</button>
             <button type="button" class="chip" data-sound="white" data-i18n="setup.focusSoundWhite">White</button>
+            <button type="button" class="chip" data-sound="green" data-i18n="setup.focusSoundGreen">Green</button>
           </div>
-          <p id="focusSoundHint" class="setting-hint sound-hint muted" data-i18n="setup.focusSoundHint">A steady background noise that covers distracting sounds. Brown is the deepest, white the brightest.</p>
+          <div id="focusAmbientGroup">
+            <p id="focusAmbientLabel" class="chip-group-label muted" data-i18n="setup.focusSoundAmbient">Ambient</p>
+            <div class="sound-chips" role="group" aria-labelledby="focusSoundLabel focusAmbientLabel" aria-describedby="focusSoundHint">
+              <button type="button" class="chip" data-sound="waves" data-i18n="setup.focusSoundWaves">Waves</button>
+              <button type="button" class="chip" data-sound="rain" data-i18n="setup.focusSoundRain">Rain</button>
+              <button type="button" class="chip" data-sound="fire" data-i18n="setup.focusSoundFire">Fire</button>
+              <button type="button" class="chip" data-sound="fan" data-i18n="setup.focusSoundFan">Fan</button>
+              <button type="button" class="chip" data-sound="vacuum" data-i18n="setup.focusSoundVacuum">Vacuum</button>
+            </div>
+          </div>
+          <p id="focusSoundHint" class="setting-hint sound-hint muted" data-i18n="setup.focusSoundHint">Steady background sound that covers distracting noises. Pick one and tap Preview.</p>
           <div id="focusSoundControls" class="focus-sound-controls" hidden>
             <label class="volume-label" for="focusVolume">
               <span data-i18n="setup.volume">Volume</span>

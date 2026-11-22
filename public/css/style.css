@@ -1923,6 +1923,16 @@ dialog .check-row {
   margin: 0 0 8px;
 }
 
+/* "Noise" and "Ambient" above their chips. */
+.chip-group-label {
+  margin: 0 0 6px;
+  font-size: var(--fs-14);
+}
+
+#focusAmbientGroup {
+  margin-top: 12px;
+}
+
 .sound-chips {
   display: flex;
   flex-wrap: wrap;

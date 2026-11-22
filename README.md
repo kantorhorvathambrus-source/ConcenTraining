@@ -86,10 +86,11 @@ there, see [Domain, redirect and security headers](#domain-redirect-and-security
   See "Sound and screen" below. A third one, **Remind me if I leave the app**, is off by default and
   only shown where it can work (on iPhone and iPad only in the Home Screen app, never in a Safari
   tab); see [Leave reminder](#leave-reminder).
-  Below them, **Focus sound**: chips **Off · Brown · Pink · White** (Off by default) and the hint "A
-  steady background noise that covers distracting sounds. Brown is the deepest, white the
-  brightest." While a noise is picked, a **Volume** slider (40% by default) and a **Preview** button
-  show under it. See [Focus sound](#focus-sound).
+  Below them, **Focus sound**: two chip groups, **Noise** (Off · Brown · Pink · White · Green) and
+  **Ambient** (Waves · Rain · Fire · Fan · Vacuum), one choice in total (Off by default), and the hint
+  "Steady background sound that covers distracting noises. Pick one and tap Preview." While a sound
+  is picked, a **Volume** slider (40% by default) and a **Preview** button show under it. See
+  [Focus sound](#focus-sound).
 - **Ragebait warning:** a ragebait character (built-in or custom) shows "Heads up!" with its
   warning on **Start session** or Quick start's **Start**, not when its card is tapped, so creating
   a ragebait character or tapping its card never asks. It shows after every check that can stop the
@@ -513,47 +514,89 @@ are in `public/js/data/messages.js`.
 
 ### Focus sound
 
-A steady noise that plays during focus time to cover distracting sounds, picked in the setup
-screen's **Focus sound** row. It's generated in the browser with the Web Audio API, like the chime:
-no audio file, nothing downloaded, no Netlify bandwidth. The sound is in `public/js/focus-sound.js`;
-when it plays is decided in `public/js/app.js` ("focus sound").
+A steady background sound that plays during focus time to cover distracting noises, picked in the
+setup screen's **Focus sound** row. Everything is generated in the browser with the Web Audio API,
+like the chime: no audio file, nothing downloaded, no Netlify bandwidth. The sounds are in
+`public/js/focus-sound.js` (the noises and the player) and `public/js/focus-sound-worklet.js` (the
+ambient sounds); when they play is decided in `public/js/app.js` ("focus sound").
 
-- **The noises:** **Brown** (the deepest, like a distant waterfall), **Pink** (softer, like rain) and
-  **White** (the brightest, like a fan). About 8 seconds of each are generated the first time they're
-  needed (`NOISE_SECONDS`), in stereo (each ear gets its own random noise, which sounds wider and
-  calmer on headphones), and looped. White is plain random samples; pink is white noise through Paul
-  Kellet's filter; brown is white noise through a leaky integrator with a 20 Hz high-pass. The end
-  of the loop is crossfaded into its start (`NOISE_CROSSFADE_SECONDS`), so the loop point can't be
-  heard, and every start, stop and change is a short volume ramp, so there's never a click.
+- **Two groups, one choice:** **Noise**: Off · Brown · Pink · White · Green, and **Ambient**: Waves ·
+  Rain · Fire · Fan · Vacuum. Picking a chip in one group unpicks the other group, so there's always
+  exactly one choice (Off by default). Hint under the chips: "Steady background sound that covers
+  distracting noises. Pick one and tap Preview."
+- **The noises (looped buffers):** **Brown** (the deepest, like a distant waterfall), **Pink**
+  (softer, like rain), **White** (the brightest, like a fan) and **Green** (the middle frequencies
+  around 500 Hz: softer than pink, like a forest). Steady sounds, so about 8 seconds of the picked one
+  are generated the first time it's needed (`NOISE_SECONDS`), in stereo (each ear gets its own random
+  noise, which sounds wider and calmer on headphones), and looped. White is plain random samples;
+  pink is white noise through Paul Kellet's filter; brown is white noise through a leaky integrator
+  with a 20 Hz high-pass; green is pink noise through a soft 180 Hz high-pass and 1400 Hz low-pass.
+  The end of the loop is crossfaded into its start (`NOISE_CROSSFADE_SECONDS`), so the loop point
+  can't be heard. Only the picked noise's buffer is kept (about 3 MB): picking another drops it.
+- **The ambient sounds (generated live):** an AudioWorklet (a small script the browser runs on its
+  audio thread, `focus-sound-worklet.js`) makes them sample by sample while they play, from random
+  numbers. Why not a loop: drops, crackles and waves are events, and a loop short enough to keep in
+  memory would audibly repeat them (a loop long enough not to would take 25–45 MB and a pause to
+  build). Live, nothing ever repeats, nothing is kept in memory, and there are no timers involved,
+  which browsers pause in the background: it plays exactly as long as the page's audio does.
+  - **Waves:** brown and pink noise whose level follows one wave after another. Each wave has its own
+    length (6–12 s), height, crest point and low point, so it never sounds like a metronome. It gets
+    brighter at the crest (a low-pass opening up, with a little foam hiss) and drifts slowly between
+    left and right.
+  - **Rain:** a soft pink and brown bed plus about 500 droplets a second: tiny ticks of filtered noise
+    that die away in a few ms, and now and then a soft "plink" (a short sine whose pitch rises a
+    little). Every drop has its own time, loudness (mostly quiet, a few louder), brightness and place
+    between left and right, and the rain slowly gets heavier and lighter.
+  - **Fire:** a low, warm rumble and flame whoosh that slowly "breathe", a faint hiss, crackles
+    (1–4 ms bursts, in irregular clusters: a few now and then, and every few seconds a quick run of
+    them) and rarer, lower pops. Most crackles are quiet and a few stand out; the rare loudest one is
+    rounded off (a soft limit) so it never gets close to full scale.
+  - **Fan:** airy noise (pink and a little brown, low-passed at 1.4 kHz) with a soft 100 Hz hum.
+  - **Vacuum:** band-passed air noise plus a motor tone (140 Hz with harmonics that get quieter)
+    whose speed wobbles slightly and irregularly, and a quiet whine.
+  - Browsers without AudioWorklet (Safari before 14.1, from 2021) don't show the Ambient group; a
+    saved Ambient choice acts as Off there (and stays saved). AudioWorklet also needs HTTPS (or
+    localhost), so these don't play when `index.html` is opened as a local file.
+- **How they were checked:** each sound was rendered offline (through the same code) to WAV and
+  measured: spectrum per octave, A-weighted loudness (which follows how ears hear), peaks, clicks,
+  event rates and how irregular they are, tonal peaks, and the autocorrelation of the loudness over
+  10 minutes, which shows a repeating pattern clearly (the looped noises show their 8 s loop; the
+  ambient sounds show none).
 - **Volume:** a slider from 5% to 100% in steps of 5, 40% by default. Its curve is squared, the way
-  ears hear loudness, so 40% sounds about halfway. The three noises are matched to sound equally
-  loud (`NOISE_LEVELS`, measured with A-weighting, which follows how ears hear), and even at 100%
-  they stay well under the end chime, which is always clearly heard over them.
-- **Preview:** plays the picked noise for 3 seconds (`PREVIEW_MS`) at the slider's volume; the
-  button reads **Stop** meanwhile, and a tap on it stops it. Picking another noise or moving the
-  slider while it plays changes it at once. Picking **Off**, tapping **Start** or leaving the setup
-  screen stops it.
+  ears hear loudness, so 40% sounds about halfway. All sounds are matched to sound equally loud
+  (`NOISE_LEVELS`, A-weighted, within about 1 dB); Waves are matched on their crests (a little
+  above the others), so on average they're about 2 dB quieter. At 100% the steady sounds peak
+  between about −19 and −6 dBFS, and over 10 minutes Waves' highest crest reaches about −4 dBFS and
+  Fire's loudest crackle about −5 dBFS: all under full scale, and the end chime is always clearly
+  heard over them. Every start, stop and change is
+  a short volume ramp, so there's never a click.
+- **Preview:** plays the picked sound for 3 seconds (`PREVIEW_MS`) at the slider's volume; the
+  button reads **Stop** meanwhile, and a tap on it stops it. Picking another sound (in either group)
+  or moving the slider while it plays changes it at once. Picking **Off**, tapping **Start** or
+  leaving the setup screen stops it.
 - **When it plays:** only while a focus block is running on the session screen: a single session and
   every block of a plan. It fades in over 2 seconds when focus starts or resumes
   (`FOCUS_FADE_IN_S`) and fades out over 1 second (`FOCUS_FADE_OUT_S`) on **Take a break**, a planned
   break, the end of a session or block (the chime plays over the fade), giving up, the summary, the
   "Welcome back" question, and when another tab takes the session over (**Continue here** there:
-  the noise moves to that tab). Once faded out, the sound is stopped, so nothing runs in silence.
+  the sound moves to that tab). Once faded out, the sound is stopped (an ambient sound's worklet
+  stops running too), so nothing runs in silence.
 - **Taps first:** browsers only allow sound after a tap, and nothing ever plays on page load. These
   taps allow it: **Start session** and Quick start's **Start** (and **Bring it on** in the ragebait
   warning), **Resume**, **Start now** / "Start: 30 min" in a plan, **Continue here**, **Preview** and
-  the mute button. After a reload during focus the noise waits: the mute button shows its "Turn sound
+  the mute button. After a reload during focus the sound waits: the mute button shows its "Turn sound
   on" state, and only that button, **Resume** or **Start now** starts it (other taps, like a
   distraction button, don't).
 - **Mute button:** a small speaker button at the end of the session info line, there for the whole
-  session (breaks too, so nothing moves) while a noise is picked. Its label is "Mute sound" while
-  the noise plays and "Turn sound on" while it's muted. Muting lasts for this session or plan only
+  session (breaks too, so nothing moves) while a sound is picked. Its label is "Mute sound" while
+  the sound plays and "Turn sound on" while it's muted. Muting lasts for this session or plan only
   (in memory): the saved choice stays, and the next **Start session** begins unmuted.
 - **Phone locked or app in the background:** Chrome on Android keeps Web Audio playing with the
-  screen off or another app in front, so the noise carries on. iPhone and iPad Safari suspend it
-  while the screen is locked; when the page is visible again during focus the app resumes it, and if
-  the browser wants a tap first, the next tap on the session screen brings it back. No tricks
-  (no silent `<audio>` element, no media controls). iPhone silent mode mutes it, like the chime.
+  screen off or another app in front, so the sound carries on (the ambient sounds too: they run on
+  the audio thread). iPhone and iPad Safari suspend it while the screen is locked; when the page is
+  visible again during focus the app resumes it, and if the browser wants a tap first, the next tap
+  on the session screen brings it back. No tricks (no silent `<audio>` element, no media controls).
+  iPhone silent mode mutes it, like the chime.
 - **Browsers without Web Audio:** the **Focus sound** row and the mute button aren't shown.
 - **Saved:** `focusSound` and `focusVolume` in `ct_prefs_v1` (see [Browser storage keys](#browser-storage-keys)).
   Nothing is sent anywhere.
@@ -1631,7 +1674,7 @@ page again after nothing happened draws nothing, and an Import only draws once (
 | `ct_session_v1` | The session that's running right now (removed when it ends). `characterName`: only with a custom character (its name when the session started). `restartPending: true` while the continue/restart question is unanswered; older saved sessions don't have it, which means `false`. `leftAt` (timestamp in ms): only while the page is hidden, for the time away card; missing means the page wasn't left. Never copied into the history. `pausedAt` (timestamp in ms, or `null`): when the current break started (see **Take a break**). `pauses` (`[{ at, ms }]`): the breaks that are over. Sessions saved before breaks existed have neither, which means never paused. `utcOffsetMin`: the device's offset from UTC in minutes when the session started (copied into the history, see [Which day a session counts on](#which-day-a-session-counts-on)); a session started before it existed doesn't have it |
 | `ct_history_v1` | Finished sessions, newest first, max. 1000 |
 | `ct_custom_characters_v1` | Characters made in the editor: `{ v: 1, characters: [ { id, name, personality, createdAt, look: { gender, skin, hairColor, hairStyle, face, outfit, eyewear, earrings, necklace, facialHair, headwear, mask, earsHorns, costumeBeard, costumeOutfit, back, held, pet } } ] }`. The 8 costume fields are optional: characters saved before costumes don't have them, which means None. `id` is `custom-` plus 10 random letters/digits, never reused (a new id also avoids every id in the history). `personality` is the style its sessions run in. `createdAt`: `Date.now()` at the first Save, never changed by an edit; the look and personality can be changed for 10 minutes after it (see [The 10-minute rule](#the-10-minute-rule)), and 0 or a missing value means final. Reading never fails: a broken entry is skipped (not the whole list), an unknown look value gets the default. See [Custom characters](#custom-characters) |
-| `ct_prefs_v1` | Last chosen character, mode and duration, plus `endSound` and `keepScreenOn` (the two setup checkboxes, `true`/`false`). Prefs saved before these existed get `true` for both. `leaveReminder`: the **Remind me if I leave the app** checkbox (see [Leave reminder](#leave-reminder)); prefs saved before it existed get `false`. `homeScreenTipDismissed`: `true` once **Got it** was tapped on the iPhone Home Screen tip. `persistRequested`: `true` once persistent storage was asked for (or skipped in Firefox), see [iPhone storage and the Home Screen app](#iphone-storage-and-the-home-screen-app). Prefs saved before these two existed get `false` for both. `howItWorksDismissed`: `true` once **Got it** was tapped on the How it works card; prefs saved before it existed get `false`, so the card shows once. `language`: only once a language was picked in the language sheet (`"en"`, `"hu"`); without it the app follows the browser's language (see [Languages](#languages)). `theme`: `"light"` or `"dark"`, only once the light/dark switch was tapped; without it the app follows the phone's setting (see [Light and dark](#light-and-dark)). A `style` value saved by older versions is ignored and dropped. `ragebaitAccepted`: the ids of the characters whose ragebait warning was accepted on Start (see **Ragebait warning** in [How it works](#how-it-works)); prefs saved before it existed count the ragebait character chosen then as accepted. `usePlan` (`true` while **Plan** is picked in step 3; missing means `false`) and `plan` (`{ rows: [{ minutes, count, breakMinutes, breakPicked }] }`, the plan built there; `breakPicked`: that row's break was picked by hand): see [Plans](#plans); prefs saved before them have neither, which means Single block and, once Plan is picked, the first-time plan. `focusSound` (`"off"`, `"brown"`, `"pink"` or `"white"`) and `focusVolume` (5–100, in %): the **Focus sound** setting (see [Focus sound](#focus-sound)); prefs saved before them, or with any other value, mean Off and 40%. Saved field by field (see [Several tabs](#several-tabs-one-tab-at-a-time)) |
+| `ct_prefs_v1` | Last chosen character, mode and duration, plus `endSound` and `keepScreenOn` (the two setup checkboxes, `true`/`false`). Prefs saved before these existed get `true` for both. `leaveReminder`: the **Remind me if I leave the app** checkbox (see [Leave reminder](#leave-reminder)); prefs saved before it existed get `false`. `homeScreenTipDismissed`: `true` once **Got it** was tapped on the iPhone Home Screen tip. `persistRequested`: `true` once persistent storage was asked for (or skipped in Firefox), see [iPhone storage and the Home Screen app](#iphone-storage-and-the-home-screen-app). Prefs saved before these two existed get `false` for both. `howItWorksDismissed`: `true` once **Got it** was tapped on the How it works card; prefs saved before it existed get `false`, so the card shows once. `language`: only once a language was picked in the language sheet (`"en"`, `"hu"`); without it the app follows the browser's language (see [Languages](#languages)). `theme`: `"light"` or `"dark"`, only once the light/dark switch was tapped; without it the app follows the phone's setting (see [Light and dark](#light-and-dark)). A `style` value saved by older versions is ignored and dropped. `ragebaitAccepted`: the ids of the characters whose ragebait warning was accepted on Start (see **Ragebait warning** in [How it works](#how-it-works)); prefs saved before it existed count the ragebait character chosen then as accepted. `usePlan` (`true` while **Plan** is picked in step 3; missing means `false`) and `plan` (`{ rows: [{ minutes, count, breakMinutes, breakPicked }] }`, the plan built there; `breakPicked`: that row's break was picked by hand): see [Plans](#plans); prefs saved before them have neither, which means Single block and, once Plan is picked, the first-time plan. `focusSound` (`"off"`, `"brown"`, `"pink"`, `"white"`, `"green"`, `"waves"`, `"rain"`, `"fire"`, `"fan"` or `"vacuum"`) and `focusVolume` (5–100, in %): the **Focus sound** setting (see [Focus sound](#focus-sound)); prefs saved before them, or with any other value, mean Off and 40%. Saved field by field (see [Several tabs](#several-tabs-one-tab-at-a-time)) |
 | `ct_plan_v1` | The running plan (see [Plans](#plans)), removed when its summary shows: `{ v: 1, startedAt, characterId, characterName?, style, mode, blocks: [{ minutes, breakMinutes }], index, phase, blockStartedAt, breakStartedAt, parts }`. `index`: the block that runs (`phase: "block"`, whose session in `ct_session_v1` has `startedAt` = `blockStartedAt`) or the next one (`phase: "break"`, the break after block `index − 1`, started at `breakStartedAt`). `parts`: what each finished block measured, for the plan's summary (`{ block, startedAt, plannedMs, elapsedMs, distractedMs, focusPercent, distractions: [{ level, category }], pauses, status, startedOver? }`, `status` `"saved"`, `"exists"`, `"failed"`, `"short"`, `"unsaved"` or `"discarded"`). Never copied into the history. Ignored and cleared while plans are off |
 
 Each history entry: `startedAt`, `endedAt` (timestamps in ms), `utcOffsetMin` (the device's offset
@@ -2538,7 +2581,8 @@ and the timer keeps counting from the start time as always.
 | `public/js/avatar.js` | The editor on `avatar.html` |
 | `public/js/plans.js` | Plans: the switch `PLANS_ENABLED` (and `PLANS_ON`, also true on Netlify's test sites and localhost), the block and break presets and limits, the default break, cleaning saved plans (`cleanPlanRows`, `cleanStoredPlan`), the plan builder in step 3 and the segmented timeline (see [Plans](#plans)) |
 | `public/js/duration-sheet.js` | The duration sheet: the bottom sheet a plan row's length and break buttons open (presets, Custom with −/+ and Set; see [The duration sheet](#the-duration-sheet)) |
-| `public/js/focus-sound.js` | The focus sound: generating the brown, pink and white noise loops, their levels and the volume curve, and the player that fades them in and out (see [Focus sound](#focus-sound)) |
+| `public/js/focus-sound.js` | The focus sound: generating the brown, pink, white and green noise loops, every sound's level and the volume curve, and the player that fades them in and out and runs the ambient sounds' worklet (see [Focus sound](#focus-sound)) |
+| `public/js/focus-sound-worklet.js` | The ambient focus sounds (Waves, Rain, Fire, Fan, Vacuum), generated live on the browser's audio thread (an AudioWorklet module, loaded by `focus-sound.js`) |
 | `public/js/app.js` | Running a plan (blocks, planned breaks, the plan's summary), timer, reaction engine, distraction category picker, Undo, Stop and breaks (Take a break / Resume), disabled Advanced lengths, time away card, leave reminder notification, motivation rotation, the picker and card in the distraction buttons' place on landscape phones, end chime, when the focus sound plays (its setup row, Preview and the mute button), screen wake lock and the "screen may turn off" note, summary, How it works card, iPhone Home Screen tip, persistent storage request, one tab at a time (Web Locks) |
 | `public/js/history-store.js` | Saving/loading history, focus % and summary result (with their thresholds; `resultOf` also judges a plan's totals), break totals and the "Paused …" line, distraction categories, export/import checks, iPhone/iPad and iPhone Safari checks, the "can this browser save?" test (`storageWorks`) (used by both pages) |
 | `public/js/history.js` | Streaks, weekly time and focus charts, time of day, distraction categories, session list and backup buttons on `history.html` |
