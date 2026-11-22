@@ -91,6 +91,8 @@ I18N_TEXTS.it = {
   "duration.rounded": "Arrotondato a {minutes} min.",
 
   "character.editLabel": "Modifica {name}",
+  "character.rename": "Rinomina",
+  "character.renameLabel": "Rinomina {name}",
   "character.deleteLabel": "Elimina {name}",
   "character.deleteTitle": "Vuoi eliminare {name}?",
   "character.deleteText": "Le sessioni passate con questo personaggio restano nella cronologia.",
@@ -110,6 +112,7 @@ I18N_TEXTS.it = {
   "custom.saveFailed": "Impossibile salvare il personaggio. Il browser non permette a questo sito di salvare dati.",
   "custom.deletedElsewhere": "Questo personaggio è stato eliminato in un'altra scheda, quindi non si può salvare.",
   "custom.ghostName": "Personaggio personalizzato",
+  "custom.timeLeft": "Tempo rimasto per le modifiche: {time}",
 
   // ---------- storage notes ----------
   "storage.setupNote": "Il browser non permette a questo sito di salvare dati: le sessioni non finiranno nella cronologia e le impostazioni non verranno ricordate. Puoi consentirlo nelle impostazioni del sito del browser.",
@@ -392,14 +395,19 @@ I18N_TEXTS.it = {
   // ---------- character editor (avatar.html) ----------
   "avatar.pageTitle": "Il tuo personaggio · ConcenTraining",
   "avatar.pageTitleEdit": "Modifica il personaggio · ConcenTraining",
+  "avatar.pageTitleRename": "Rinomina il personaggio · ConcenTraining",
   "avatar.back": "← Indietro",
   "avatar.title": "Crea il tuo personaggio",
   "avatar.titleEdit": "Modifica il tuo personaggio",
+  "avatar.titleRename": "Rinomina il tuo personaggio",
+  "avatar.editWindowIntro": "Dopo il salvataggio puoi ancora cambiare tutto per 10\u00a0minuti. Poi l'aspetto e la personalità diventano definitivi.",
+  "avatar.editWindowEnded": "I 10\u00a0minuti sono finiti. Quello che vedi è salvato, e ora l'aspetto e la personalità sono definitivi.",
+  "avatar.lockedNote": "Questo personaggio è definitivo. L'aspetto e la personalità si potevano cambiare per 10\u00a0minuti dopo la creazione. Il nome puoi ancora cambiarlo.",
   "avatar.preview": "Anteprima delle reazioni",
   "avatar.randomize": "Casuale",
   "avatar.name": "Nome",
   "avatar.personality": "Personalità",
-  "avatar.personalityFixed": "Non potrai cambiarla in seguito.",
+  "avatar.personalityWindow": "Puoi cambiarla nei primi 10\u00a0minuti dopo il salvataggio.",
   "avatar.defaultName": "Il tuo personaggio",
   "avatar.group.base": "Aspetto",
   "avatar.group.costumes": "Costumi",

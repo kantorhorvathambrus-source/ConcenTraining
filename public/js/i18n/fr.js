@@ -99,6 +99,8 @@ I18N_TEXTS.fr = {
   "duration.rounded": "Durée arrondie à {minutes}\u00a0min.",
 
   "character.editLabel": "Modifier {name}",
+  "character.rename": "Renommer",
+  "character.renameLabel": "Renommer {name}",
   "character.deleteLabel": "Supprimer {name}",
   "character.deleteTitle": "Supprimer {name}\u202f?",
   "character.deleteText": "Tes séances passées avec ce personnage restent dans ton historique.",
@@ -118,6 +120,7 @@ I18N_TEXTS.fr = {
   "custom.saveFailed": "Impossible d'enregistrer ton personnage. Ton navigateur ne permet pas à ce site de stocker des données.",
   "custom.deletedElsewhere": "Ce personnage a été supprimé dans un autre onglet, il ne peut donc pas être enregistré.",
   "custom.ghostName": "Personnage personnalisé",
+  "custom.timeLeft": "Temps restant pour modifier\u202f: {time}",
 
   // ---------- storage notes ----------
   "storage.setupNote":
@@ -436,14 +439,19 @@ I18N_TEXTS.fr = {
   // ---------- character editor (avatar.html) ----------
   "avatar.pageTitle": "Ton personnage · ConcenTraining",
   "avatar.pageTitleEdit": "Modifier ton personnage · ConcenTraining",
+  "avatar.pageTitleRename": "Renommer ton personnage · ConcenTraining",
   "avatar.back": "← Retour",
   "avatar.title": "Crée ton personnage",
   "avatar.titleEdit": "Modifie ton personnage",
+  "avatar.titleRename": "Renomme ton personnage",
+  "avatar.editWindowIntro": "Après l'enregistrement, tu peux encore tout modifier pendant 10\u00a0minutes. Ensuite, l'apparence et la personnalité sont définitives.",
+  "avatar.editWindowEnded": "Les 10\u00a0minutes sont écoulées. Ce que tu vois est enregistré, et l'apparence et la personnalité sont désormais définitives.",
+  "avatar.lockedNote": "Ce personnage est définitif. Son apparence et sa personnalité pouvaient être modifiées pendant 10\u00a0minutes après sa création. Tu peux toujours changer son nom.",
   "avatar.preview": "Aperçu des réactions",
   "avatar.randomize": "Au hasard",
   "avatar.name": "Nom",
   "avatar.personality": "Personnalité",
-  "avatar.personalityFixed": "Tu ne pourras plus la modifier ensuite.",
+  "avatar.personalityWindow": "Tu peux la modifier pendant les 10\u00a0premières minutes après l'enregistrement.",
   "avatar.defaultName": "Ton personnage",
   "avatar.group.base": "Physique",
   "avatar.group.costumes": "Déguisements",

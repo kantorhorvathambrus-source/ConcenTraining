@@ -105,6 +105,8 @@ I18N_TEXTS.en = {
 
   // Character cards. editLabel / deleteLabel: what a screen reader says for the buttons.
   "character.editLabel": "Edit {name}",
+  "character.rename": "Rename",
+  "character.renameLabel": "Rename {name}",
   "character.deleteLabel": "Delete {name}",
   "character.deleteTitle": "Delete {name}?",
   "character.deleteText": "Your past sessions with this character stay in your history.",
@@ -125,6 +127,7 @@ I18N_TEXTS.en = {
   "custom.saveFailed": "Couldn't save your character. Your browser isn't letting this site save data.",
   "custom.deletedElsewhere": "This character was deleted in another tab, so it can't be saved.",
   "custom.ghostName": "Custom character",
+  "custom.timeLeft": "Time left to make changes: {time}",
 
   // ---------- storage notes ----------
   "storage.setupNote":
@@ -439,14 +442,19 @@ I18N_TEXTS.en = {
   // ---------- character editor (avatar.html) ----------
   "avatar.pageTitle": "Your Character · ConcenTraining",
   "avatar.pageTitleEdit": "Edit Your Character · ConcenTraining",
+  "avatar.pageTitleRename": "Rename Your Character · ConcenTraining",
   "avatar.back": "← Back",
   "avatar.title": "Create your character",
   "avatar.titleEdit": "Edit your character",
+  "avatar.titleRename": "Rename your character",
+  "avatar.editWindowIntro": "After you save, you can still change everything for 10 minutes. After that, the look and personality are final.",
+  "avatar.editWindowEnded": "The 10 minutes are up. What you see is saved, and the look and personality are now final.",
+  "avatar.lockedNote": "This character is final. Its look and personality could be changed for 10 minutes after it was created. You can still change its name.",
   "avatar.preview": "Preview reactions",
   "avatar.randomize": "Randomize",
   "avatar.name": "Name",
   "avatar.personality": "Personality",
-  "avatar.personalityFixed": "You can't change this later.",
+  "avatar.personalityWindow": "You can change it in the first 10 minutes after saving.",
   "avatar.defaultName": "Your character",
   "avatar.group.base": "Base",
   "avatar.group.costumes": "Costumes",

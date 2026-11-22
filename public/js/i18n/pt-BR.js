@@ -97,6 +97,8 @@ I18N_TEXTS["pt-BR"] = {
   "duration.rounded": "Arredondado para {minutes} min.",
 
   "character.editLabel": "Editar {name}",
+  "character.rename": "Renomear",
+  "character.renameLabel": "Renomear {name}",
   "character.deleteLabel": "Excluir {name}",
   "character.deleteTitle": "Excluir {name}?",
   "character.deleteText": "Suas sessões anteriores com este personagem continuam no seu histórico.",
@@ -116,6 +118,7 @@ I18N_TEXTS["pt-BR"] = {
   "custom.saveFailed": "Não foi possível salvar seu personagem. Seu navegador não está deixando este site armazenar dados.",
   "custom.deletedElsewhere": "Este personagem foi excluído em outra aba, então não dá para salvá-lo.",
   "custom.ghostName": "Personagem personalizado",
+  "custom.timeLeft": "Tempo para fazer mudanças: {time}",
 
   // ---------- storage notes ----------
   "storage.setupNote":
@@ -435,14 +438,19 @@ I18N_TEXTS["pt-BR"] = {
   // ---------- character editor (avatar.html) ----------
   "avatar.pageTitle": "Seu personagem · ConcenTraining",
   "avatar.pageTitleEdit": "Editar personagem · ConcenTraining",
+  "avatar.pageTitleRename": "Renomear personagem · ConcenTraining",
   "avatar.back": "← Voltar",
   "avatar.title": "Crie seu personagem",
   "avatar.titleEdit": "Edite seu personagem",
+  "avatar.titleRename": "Renomeie seu personagem",
+  "avatar.editWindowIntro": "Depois de salvar, você ainda pode mudar tudo por 10 minutos. Depois disso, a aparência e a personalidade ficam definitivas.",
+  "avatar.editWindowEnded": "Os 10 minutos acabaram. O que você está vendo foi salvo, e a aparência e a personalidade agora são definitivas.",
+  "avatar.lockedNote": "Este personagem é definitivo. A aparência e a personalidade podiam ser mudadas por 10 minutos depois da criação. Você ainda pode mudar o nome.",
   "avatar.preview": "Ver reações",
   "avatar.randomize": "Aleatório",
   "avatar.name": "Nome",
   "avatar.personality": "Personalidade",
-  "avatar.personalityFixed": "Não dá para mudar isso depois.",
+  "avatar.personalityWindow": "Dá para mudar nos primeiros 10 minutos depois de salvar.",
   "avatar.defaultName": "Seu personagem",
   "avatar.group.base": "Básico",
   "avatar.group.costumes": "Fantasias",
