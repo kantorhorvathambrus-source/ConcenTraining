@@ -16,11 +16,12 @@
 
 const PLAN_KEY = "ct_plan_v1";
 
-// The switch for the whole feature. false: no "Single block | Plan" toggle in step 3, the app works
-// exactly as before plans existed, and a plan saved in the prefs (or a leftover ct_plan_v1) is
-// ignored. true: plans work as described in the README. This is what the production site
-// (https://concentraining.com) follows.
-const PLANS_ENABLED = false;
+// The switch for the whole feature. It is true: plans are on in production
+// (https://concentraining.com) and on the GitHub Pages backup, and work as described in the README.
+// Setting it back to false turns them off there: no "Single block | Plan" toggle in step 3, the app
+// works exactly as before plans existed, a plan saved in the prefs is ignored but kept, and a
+// leftover ct_plan_v1 is ignored and cleared. The test sites below keep plans on either way.
+const PLANS_ENABLED = true;
 
 // Netlify's test sites and a local copy always have plans on, whatever the switch says, so they
 // can be tried on a phone: Deploy Previews (deploy-preview-80--concentraining.netlify.app), the
