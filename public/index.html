@@ -12,21 +12,51 @@
   <script src="js/i18n/languages.js"></script>
   <script src="js/i18n/en.js"></script>
   <script src="js/i18n.js"></script>
-  <title>ConcenTraining</title>
-  <meta name="description" content="A focus timer with characters that react when you get distracted.">
+  <!-- The title search results show. Not translated; app.js shows the running timer in front of
+       "ConcenTraining" during a session and puts this title back afterwards (PAGE_TITLE). -->
+  <title>ConcenTraining – Focus timer with characters</title>
+  <meta name="description" content="A focus timer with characters that react when you get distracted. Plan your session, create your own character, use it in 9 languages.">
   <!-- The official address of this page (also on the GitHub Pages copy), and its link preview
        (Open Graph and Twitter card tags). See "Domain, redirect and security headers" in the README. -->
   <link rel="canonical" href="https://concentraining.com/">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="ConcenTraining">
   <meta property="og:title" content="ConcenTraining">
-  <meta property="og:description" content="A focus timer with characters that react when you get distracted.">
+  <meta property="og:description" content="A focus timer with characters that react when you get distracted. Plan your session, create your own character, use it in 9 languages.">
   <meta property="og:url" content="https://concentraining.com/">
   <meta property="og:image" content="https://concentraining.com/icons/icon-512.png">
   <meta property="og:image:width" content="512">
   <meta property="og:image:height" content="512">
   <meta property="og:image:alt" content="The ConcenTraining app icon">
   <meta name="twitter:card" content="summary">
+  <!-- Structured data for search engines (see "Search engines (SEO)" in the README): a data block,
+       not a script that runs, so the Content-Security-Policy doesn't block it. Only facts that are
+       true today: no price, offers or ratings. The description is the same as the meta description
+       above; update both (and about.html) when a feature changes. -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "https://concentraining.com/#website",
+        "name": "ConcenTraining",
+        "url": "https://concentraining.com/"
+      },
+      {
+        "@type": "WebApplication",
+        "@id": "https://concentraining.com/#app",
+        "name": "ConcenTraining",
+        "url": "https://concentraining.com/",
+        "description": "A focus timer with characters that react when you get distracted. Plan your session, create your own character, use it in 9 languages.",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Any",
+        "browserRequirements": "Requires JavaScript",
+        "inLanguage": ["en", "hu", "de", "es", "pt-BR", "fr", "it", "id", "pl"]
+      }
+    ]
+  }
+  </script>
   <link rel="stylesheet" href="css/style.css">
   <!-- The two font files every page needs, fetched right away (not only once the stylesheet has
        been read), so the text shows in a system font for a shorter moment. -->
@@ -197,8 +227,11 @@
 
       <button id="startButton" type="button" class="btn primary big" data-i18n="setup.start">Start session</button>
 
-      <!-- Inside the setup screen, so it never shows on the session or summary screens. -->
-      <p class="page-footer"><a href="privacy.html" class="footer-link" data-i18n="common.privacy">Privacy</a></p>
+      <!-- Inside the setup screen, so it never shows on the session or summary screens. The About page
+           (about.html) and the privacy page are English only; the link labels are translated. -->
+      <p class="page-footer">
+        <a href="privacy.html" class="footer-link" data-i18n="common.privacy">Privacy</a><span class="page-footer-sep" aria-hidden="true">·</span><a href="about.html" class="footer-link" data-i18n="common.about">About</a>
+      </p>
     </section>
 
     <!-- ========== SESSION ========== -->

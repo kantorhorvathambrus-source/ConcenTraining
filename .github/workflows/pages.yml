@@ -2,8 +2,11 @@
 # publishes public/ to GitHub Pages at
 # https://kantorhorvathambrus-source.github.io/ConcenTraining/ on every push to main.
 # Can also be started by hand: Actions tab → "Deploy to GitHub Pages" → Run workflow.
-# No build step: public/ is uploaded exactly as it is. The Netlify Functions (/api/*) don't run
-# on Pages, so popularity stats don't work there (see "GitHub Pages backup test site" in the README).
+# No build step: a copy of public/ is uploaded, with one change: every page in the copy gets
+# <meta name="robots" content="noindex">, so search engines never list this duplicate of
+# https://concentraining.com (the files in the repository are not changed). The Netlify Functions
+# (/api/*) don't run on Pages, so popularity stats don't work there (see "GitHub Pages backup test
+# site" and "Search engines (SEO)" in the README).
 name: Deploy to GitHub Pages
 
 on:
@@ -31,8 +34,25 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: actions/configure-pages@v5
+      # The copy that gets uploaded: public/ in _site/, and a noindex tag right after <head> in every
+      # .html file that doesn't have a robots tag yet (avatar.html and stats.html already do).
+      # Stops the deploy if any page ends up without one.
+      - name: Prepare the copy (noindex on every page)
+        run: |
+          rm -rf _site
+          cp -R public _site
+          find _site -name '*.html' -print0 | while IFS= read -r -d '' file; do
+            if ! grep -q '<meta name="robots"' "$file"; then
+              sed -i '0,/<head>/s##<head>\n  <meta name="robots" content="noindex">#' "$file"
+            fi
+          done
+          missing=$(find _site -name '*.html' -exec grep -L '<meta name="robots" content="noindex">' {} +)
+          if [ -n "$missing" ]; then
+            echo "These pages have no noindex tag: $missing"
+            exit 1
+          fi
       - uses: actions/upload-pages-artifact@v4
         with:
-          path: public
+          path: _site
       - id: deployment
         uses: actions/deploy-pages@v4

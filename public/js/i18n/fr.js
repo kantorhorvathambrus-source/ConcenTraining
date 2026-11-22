@@ -26,6 +26,7 @@ I18N_TEXTS.fr = {
   "common.save": "Enregistrer",
   "common.yes": "Oui",
   "common.privacy": "Confidentialité",
+  "common.about": "À propos",
   "common.listSeparator": ", ",
 
   "mode.simple": "Simple",

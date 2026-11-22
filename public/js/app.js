@@ -3,7 +3,12 @@
 const MIN = 60 * 1000;
 const SESSION_KEY = "ct_session_v1";
 const PREFS_KEY = "ct_prefs_v1";
+// During a session the tab shows the clock in front of BASE_TITLE ("12:34 · ConcenTraining").
+// Once it's over, the page's own <title> from index.html comes back (PAGE_TITLE: the title search
+// results show, "ConcenTraining – Focus timer with characters"). app.js runs at the end of <body>,
+// before anything changes the title, so this is always the HTML's title.
 const BASE_TITLE = "ConcenTraining";
+const PAGE_TITLE = document.title || BASE_TITLE;
 
 const GOOD_EVERY_MS = 5 * MIN; // show the "doing well" pose after this much undistracted time
 // How long the "doing well" pose plays. It isn't started when less than this is left of the
@@ -1930,7 +1935,7 @@ function afterPlanBlock(status, endPlan) {
   recordPart(ended, status);
   session = null;
   document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
-  document.title = BASE_TITLE;
+  document.title = PAGE_TITLE;
   if (endPlan || plan.index >= plan.blocks.length - 1) {
     finishPlan();
     return;
@@ -2148,7 +2153,7 @@ function finishPlan() {
   remove(SESSION_KEY);
   releaseControl();
   document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
-  document.title = BASE_TITLE;
+  document.title = PAGE_TITLE;
   const counted = done.parts.filter((part) => COUNTED_PARTS.includes(part.status));
   if (!counted.length && !done.parts.some((part) => part.status === "short")) {
     renderCharacterList();
@@ -2353,7 +2358,7 @@ function loseControl() {
   session = null;
   plan = null; // a plan (also in its break) is taken over as a whole
   document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
-  document.title = BASE_TITLE;
+  document.title = PAGE_TITLE;
   showElsewhere();
 }
 
@@ -2789,7 +2794,7 @@ function finishSession(endedAt, keep = true, endPlan = false) {
   remove(SESSION_KEY);
   releaseControl();
   document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
-  document.title = BASE_TITLE;
+  document.title = PAGE_TITLE;
   if (!keep) {
     session = null;
     renderCharacterList();
@@ -2828,7 +2833,7 @@ async function askSaveLateSession(endedAt) {
   // so closing the page now asks again next time.
   session.endedAt = endedAt;
   document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
-  document.title = BASE_TITLE;
+  document.title = PAGE_TITLE;
   showScreen("setupScreen");
 
   const character = sessionCharacter(session);

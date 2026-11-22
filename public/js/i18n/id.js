@@ -22,6 +22,7 @@ I18N_TEXTS.id = {
   "common.save": "Simpan",
   "common.yes": "Ya",
   "common.privacy": "Privasi",
+  "common.about": "Tentang",
   "common.listSeparator": ", ",
 
   "mode.simple": "Sederhana",

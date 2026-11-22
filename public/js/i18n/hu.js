@@ -19,6 +19,7 @@ I18N_TEXTS.hu = {
   "common.save": "Mentés",
   "common.yes": "Igen",
   "common.privacy": "Adatvédelem",
+  "common.about": "Az appról",
   "common.listSeparator": ", ",
 
   "mode.simple": "Egyszerű",

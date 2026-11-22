@@ -25,6 +25,7 @@ I18N_TEXTS.de = {
   "common.save": "Speichern",
   "common.yes": "Ja",
   "common.privacy": "Datenschutz",
+  "common.about": "Über die App",
   "common.listSeparator": ", ",
 
   "mode.simple": "Einfach",
