@@ -92,6 +92,8 @@ I18N_TEXTS.hu = {
   "duration.rounded": "Kerekítve: {minutes} perc.",
 
   "character.editLabel": "Szerkesztés: {name}",
+  "character.rename": "Átnevezés",
+  "character.renameLabel": "Átnevezés: {name}",
   "character.deleteLabel": "Törlés: {name}",
   "character.deleteTitle": "Törlöd: {name}?",
   "character.deleteText": "A korábbi munkameneteid ezzel a karakterrel megmaradnak az előzményeidben.",
@@ -111,6 +113,7 @@ I18N_TEXTS.hu = {
   "custom.saveFailed": "Nem sikerült menteni a karakteredet. A böngésződ nem engedi, hogy ez az oldal adatokat tároljon.",
   "custom.deletedElsewhere": "Ezt a karaktert egy másik lapon törölted, ezért nem menthető.",
   "custom.ghostName": "Saját karakter",
+  "custom.timeLeft": "Módosításra hátra: {time}",
 
   // ---------- storage notes ----------
   "storage.setupNote":
@@ -414,14 +417,19 @@ I18N_TEXTS.hu = {
   // ---------- character editor (avatar.html) ----------
   "avatar.pageTitle": "Saját karakter · ConcenTraining",
   "avatar.pageTitleEdit": "Karakter szerkesztése · ConcenTraining",
+  "avatar.pageTitleRename": "Karakter átnevezése · ConcenTraining",
   "avatar.back": "← Vissza",
   "avatar.title": "Hozd létre a karakteredet",
   "avatar.titleEdit": "Karakter szerkesztése",
+  "avatar.titleRename": "Karakter átnevezése",
+  "avatar.editWindowIntro": "Mentés után még 10 percig bármit módosíthatsz. Utána a kinézet és a személyiség végleges.",
+  "avatar.editWindowEnded": "Letelt a 10 perc. A mostani állapot el van mentve, a kinézet és a személyiség mostantól végleges.",
+  "avatar.lockedNote": "Ez a karakter végleges. A kinézete és a személyisége a létrehozás után 10 percig volt módosítható. A nevét továbbra is átírhatod.",
   "avatar.preview": "Reakciók",
   "avatar.randomize": "Véletlen",
   "avatar.name": "Név",
   "avatar.personality": "Személyiség",
-  "avatar.personalityFixed": "Ezt később nem változtathatod meg.",
+  "avatar.personalityWindow": "A mentés utáni 10 percben még módosíthatod.",
   "avatar.defaultName": "Saját karakter",
   "avatar.group.base": "Alap",
   "avatar.group.costumes": "Jelmezek",

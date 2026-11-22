@@ -3,7 +3,9 @@
 //
 // ct_custom_characters_v1 = { v: 1, characters: [ { id, name, personality, createdAt, look } ] }
 //   id: "custom-" + random letters and digits, never reused. personality: the style a session with
-//   the character runs in ("kind", "firm", "strict" or "ragebait"), picked once when it's created.
+//   the character runs in ("kind", "firm", "strict" or "ragebait"). createdAt: Date.now() at the
+//   first Save, never changed by an edit. The look and personality can be changed for
+//   CUSTOM_EDIT_WINDOW_MS after that (customEditMsLeft), the name always.
 //   look: see LOOK_FIELDS and GENDER_OPTIONS in avatar-parts.js (the lists differ per gender).
 // Reading never throws: a broken entry is skipped (not the whole list), unknown look values get
 // the default (cleanLook).
@@ -11,6 +13,15 @@
 const CUSTOM_KEY = "ct_custom_characters_v1";
 const CUSTOM_LIMIT = 10;
 const CUSTOM_NAME_MAX = 20;
+
+// For this long after its first Save, a character can be changed completely (look, personality,
+// name). After that its look and personality are final; only the name can still be changed.
+// Wall-clock time: it runs while the app is closed. Nothing extra is stored: it's worked out from
+// createdAt (customEditMsLeft).
+const CUSTOM_EDIT_WINDOW_MS = 10 * 60 * 1000;
+// A device clock up to this far behind createdAt (a small automatic correction right after
+// saving) counts as no time gone yet, so it doesn't lock a new character.
+const CUSTOM_CLOCK_TOLERANCE_MS = 60 * 1000;
 // Every custom character is counted under this one id by POST /api/picks: the user's own ids and
 // names never leave the device.
 const CUSTOM_PICK_ID = "custom";
@@ -62,7 +73,49 @@ const CUSTOM_TEXTS = {
   get nameTaken() { return customText("custom.nameTaken"); },
   get saveFailed() { return customText("custom.saveFailed"); },
   get deletedElsewhere() { return customText("custom.deletedElsewhere"); },
+  timeLeft: (time) => customText("custom.timeLeft", { time }),
 };
+
+// How many ms are left to change the character's look and personality; 0: it's final. Locked
+// with no createdAt (0 or missing: ghosts, broken entries), and when the clock is more than
+// CUSTOM_CLOCK_TOLERANCE_MS behind createdAt (set back). Everything that shows or checks the
+// 10 minutes uses this.
+function customEditMsLeft(character, now = Date.now()) {
+  const createdAt = character ? character.createdAt : 0;
+  if (!Number.isFinite(createdAt) || createdAt <= 0) return 0;
+  if (now < createdAt - CUSTOM_CLOCK_TOLERANCE_MS) return 0;
+  const elapsed = Math.max(0, now - createdAt);
+  return Math.max(0, CUSTOM_EDIT_WINDOW_MS - elapsed);
+}
+
+// The time left as m:ss ("9:05"), in every language. Seconds are rounded up, so it shows 0:01
+// until the moment it locks.
+function formatEditTime(ms) {
+  const seconds = Math.ceil(Math.max(0, ms) / 1000);
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+// The time left in whole minutes, rounded up ("9 min" from 9:00 down to 8:01), for screen readers:
+// it only changes once a minute.
+function editMinutesLeft(ms) {
+  return Math.ceil(Math.max(0, ms) / 60000);
+}
+
+// The ragebait warning shows on Start until it's accepted for that character (ragebaitAccepted in
+// ct_prefs_v1, a list of character ids, kept by app.js). A custom character whose personality
+// changes is taken off the list, so a character changed to ragebait asks again on its next Start.
+// Only that field is written; everything else in the prefs stays as it is.
+function forgetRagebaitAcceptance(id) {
+  try {
+    const saved = JSON.parse(localStorage.getItem("ct_prefs_v1"));
+    if (!saved || typeof saved !== "object" || Array.isArray(saved)) return; // nothing saved: nothing accepted
+    const accepted = Array.isArray(saved.ragebaitAccepted) ? saved.ragebaitAccepted : [];
+    saved.ragebaitAccepted = accepted.filter((acceptedId) => acceptedId !== id);
+    localStorage.setItem("ct_prefs_v1", JSON.stringify(saved));
+  } catch {
+    // not critical: at worst the warning doesn't show again for this character
+  }
+}
 
 function isCustomId(id) {
   return typeof id === "string" && /^custom-[a-z0-9]{4,40}$/.test(id);

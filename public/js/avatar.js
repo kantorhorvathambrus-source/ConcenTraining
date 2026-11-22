@@ -1,8 +1,10 @@
 "use strict";
 
 // The character editor (avatar.html). avatar.html creates a character; avatar.html?id=custom-…
-// edits one (look and name; the personality is fixed once saved). Everything stays in memory
-// until Save: Cancel, Back or leaving the page discards it.
+// edits one. For CUSTOM_EDIT_WINDOW_MS (10 minutes) after its first Save everything can be changed
+// (look, personality, name); after that it's final and the page only renames it (see "the 10
+// minutes" below). Everything stays in memory until Save, or until the moment the 10 minutes run
+// out: Cancel, Back or leaving the page discards it.
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -68,10 +70,17 @@ function thumbPlain(gender) {
 }
 const PREVIEW_POSE_MS = 1200; // Preview reactions: how long each pose shows
 
-// editing: the saved character being edited (null: creating). triedSave: the name is checked live
-// after the first Save that failed on it. built: the groups whose sections exist (by id).
+// mode: "create" (a new character), "edit" (a saved one with time left: everything can change) or
+// "locked" (its 10 minutes are up: only the name). editing: the saved character being edited, as
+// it was last saved from here (null: creating). triedSave: the name is checked live after the first
+// Save that failed on it. built: the groups whose sections exist (by id).
 const editor = {
+  mode: "create",
   editing: null,
+  windowTimer: 0, // the next countdown tick (tickWindow)
+  lastMinutes: null, // the whole minutes the screen reader text shows
+  announceTimer: 0, // clears the 5 / 1 min announcement
+
   look: defaultLook(),
   personality: "kind",
   triedSave: false,
@@ -505,6 +514,7 @@ function buildPersonalityOptions() {
     visual.textContent = GROUPS[group].label;
     label.append(visual);
     input.addEventListener("change", () => {
+      if (windowClosed()) return;
       editor.personality = personality;
       redraw();
     });
@@ -520,6 +530,7 @@ function buildPersonalityOptions() {
 // that would hide it (uncoverFor: e.g. an outfit takes off the costume outfit), silently, so the
 // pick shows. A pick that changes nothing (the change event after the click) does nothing.
 function onLookChange(field, id) {
+  if (windowClosed()) return;
   if (field === "gender") {
     if (id === editor.look.gender) return;
     editor.look = { ...defaultLook(id), ...costumeOf(editor.look, id) };
@@ -540,6 +551,7 @@ function onLookChange(field, id) {
 // A costume preset: its items (None for the other costume fields), and its skin or hair colour if
 // it has one.
 function onPreset(preset) {
+  if (windowClosed()) return;
   editor.look = applyCostumePreset(editor.look, preset);
   syncChecked();
   redraw();
@@ -559,6 +571,7 @@ function onTheme(id) {
 
 // Randomize keeps the gender; costume items come rarely and never clash (randomCostume).
 function onRandomize() {
+  if (windowClosed()) return;
   editor.look = randomCostume(randomLook(editor.look.gender));
   syncChecked();
   redraw(true);
@@ -612,14 +625,64 @@ function showSaveError(message) {
   error.hidden = !message;
 }
 
-// Reads the saved list again right here, so a character saved, edited or deleted in another tab
-// meanwhile is taken into account (the limit and the names too).
+// Writes the character being edited, into the saved list read again right here (so a character
+// saved, edited or deleted in another tab meanwhile is taken into account). withLook: its look and
+// personality too, only while its 10 minutes last; without it only the name changes, so a look
+// saved in another tab stays. The name: the one typed if it's valid, otherwise the saved one (only
+// when the time runs out: Save checks the name first). createdAt never changes, so an edit doesn't
+// restart the 10 minutes. A changed personality asks the ragebait warning again on the next Start
+// (forgetRagebaitAcceptance). Returns "" or the error to show.
+function writeEdit(withLook) {
+  if (!storageWorks()) return CUSTOM_TEXTS.saveFailed;
+  const list = loadCustomCharacters().slice();
+  const id = editor.editing.id;
+  const index = list.findIndex((c) => c.id === id);
+  if (index < 0) return CUSTOM_TEXTS.deletedElsewhere;
+  const stored = list[index];
+  const typed = $("#nameInput").value;
+  const name = nameError(typed, list, id) ? stored.name : typed.trim();
+  list[index] = withLook
+    ? { ...stored, name, personality: editor.personality, look: { ...editor.look } }
+    : { ...stored, name };
+  if (!saveCustomCharacters(list)) return CUSTOM_TEXTS.saveFailed;
+  if (withLook && editor.personality !== stored.personality) forgetRagebaitAcceptance(id);
+  editor.editing = customCharacterById(id) || editor.editing;
+  return "";
+}
+
+// The look or personality on screen differs from what was saved.
+function lookChanged() {
+  const saved = editor.editing;
+  return editor.personality !== saved.personality || LOOK_FIELDS.some((field) => editor.look[field] !== saved.look[field]);
+}
+
+// The 10 minutes are checked once more right before writing. A look or personality change is only
+// written with time left; if the time just ran out, Save does what the end of the 10 minutes does
+// (expire: what's on screen is saved, the page stays, locked, with the message). A name-only Save
+// always goes through. A new character gets picked on the setup screen (./?picked=<id>).
 function onSave(event) {
   event.preventDefault();
   showSaveError("");
   editor.triedSave = true;
+  if (editor.mode === "edit" && customEditMsLeft(editor.editing) <= 0) {
+    if (lookChanged()) {
+      expire();
+      return;
+    }
+    lockEditor();
+  }
   if (!checkName()) {
     $("#nameInput").focus();
+    return;
+  }
+  if (editor.editing) {
+    const error = writeEdit(editor.mode === "edit");
+    if (error) {
+      showSaveError(error);
+      return;
+    }
+    // replace: the editor isn't left in the back history.
+    location.replace("./");
     return;
   }
   if (!storageWorks()) {
@@ -627,36 +690,132 @@ function onSave(event) {
     return;
   }
   const list = loadCustomCharacters().slice();
-  const name = $("#nameInput").value.trim();
-  let id;
-  if (editor.editing) {
-    id = editor.editing.id;
-    const index = list.findIndex((c) => c.id === id);
-    if (index < 0) {
-      showSaveError(CUSTOM_TEXTS.deletedElsewhere);
-      return;
-    }
-    list[index] = { ...list[index], name, look: { ...editor.look } };
-  } else {
-    if (list.length >= CUSTOM_LIMIT) {
-      showSaveError(CUSTOM_TEXTS.limit);
-      return;
-    }
-    const taken = new Set([...list.map((c) => c.id), ...loadHistory().map((entry) => entry.characterId)]);
-    id = newCustomId(taken);
-    list.push({ id, name, personality: editor.personality, createdAt: Date.now(), look: { ...editor.look } });
+  if (list.length >= CUSTOM_LIMIT) {
+    showSaveError(CUSTOM_TEXTS.limit);
+    return;
   }
+  const taken = new Set([...list.map((c) => c.id), ...loadHistory().map((entry) => entry.characterId)]);
+  const id = newCustomId(taken);
+  const name = $("#nameInput").value.trim();
+  list.push({ id, name, personality: editor.personality, createdAt: Date.now(), look: { ...editor.look } });
   if (!saveCustomCharacters(list)) {
     showSaveError(CUSTOM_TEXTS.saveFailed);
     return;
   }
-  // replace: the editor isn't left in the back history. A new character gets picked on the setup
-  // screen (with the ragebait warning first, like any ragebait character).
-  location.replace(editor.editing ? "./" : `./?picked=${encodeURIComponent(id)}`);
+  location.replace(`./?picked=${encodeURIComponent(id)}`);
 }
 
 function onCancel() {
   location.replace("./");
+}
+
+// ---------- the 10 minutes ----------
+
+// The screen reader text is read out when it reaches these whole minutes (also if a sleeping tab
+// skipped past one). The rest of the time it's there to read, but not announced.
+const ANNOUNCE_AT_MINUTES = [5, 1];
+const ANNOUNCE_CLEAR_MS = 10000;
+
+// Edit mode: the countdown, once a second, timed to the deadline's whole seconds so it locks on
+// time. A tab in the background may run it late; it runs again as soon as the page is shown.
+function tickWindow() {
+  clearTimeout(editor.windowTimer);
+  if (editor.mode !== "edit") return;
+  const left = customEditMsLeft(editor.editing);
+  if (left <= 0) {
+    expire();
+    return;
+  }
+  showCountdown(left);
+  editor.windowTimer = setTimeout(tickWindow, left % 1000 || 1000);
+}
+
+function showCountdown(left) {
+  $("#editCountdownTime").textContent = CUSTOM_TEXTS.timeLeft(formatEditTime(left));
+  const minutes = editMinutesLeft(left);
+  if (minutes === editor.lastMinutes) return;
+  const text = CUSTOM_TEXTS.timeLeft(t("time.min", { minutes }));
+  $("#editCountdownMinutes").textContent = text;
+  const before = editor.lastMinutes;
+  editor.lastMinutes = minutes;
+  // Not when the page opens: only when the time reaches 5 or 1 min while it's open.
+  if (before !== null && ANNOUNCE_AT_MINUTES.some((mark) => minutes <= mark && mark < before)) announce(text);
+}
+
+// Read out once (a polite live region), then emptied, so it isn't found again as old text.
+function announce(text) {
+  const region = $("#editAnnounce");
+  clearTimeout(editor.announceTimer);
+  region.textContent = text;
+  editor.announceTimer = setTimeout(() => (region.textContent = ""), ANNOUNCE_CLEAR_MS);
+}
+
+// Every change (look option, costume, Randomize, gender, personality) asks this first. true: the
+// change is dropped, because the character is final, or its 10 minutes just ran out (then expire
+// has saved what was on screen before this tap). So nothing done after the 10 minutes is stored,
+// even in a tab that was asleep when they ran out.
+function windowClosed() {
+  if (editor.mode === "locked") return true;
+  if (editor.mode !== "edit" || customEditMsLeft(editor.editing) > 0) return false;
+  expire();
+  return true;
+}
+
+// The moment the 10 minutes run out with the editor open (or as soon as the page runs again):
+// what's on screen is saved (look and personality; the name too if it's valid), the page switches
+// to renaming, and "The 10 minutes are up…" shows above it. If it can't be saved, the save error
+// shows instead, and the preview goes back to the saved look (that's what stays).
+function expire() {
+  if (editor.mode !== "edit") return;
+  const error = writeEdit(true);
+  if (error && error !== CUSTOM_TEXTS.deletedElsewhere) {
+    const saved = customCharacterById(editor.editing.id) || editor.editing;
+    editor.editing = saved;
+    editor.look = { ...saved.look };
+    editor.personality = saved.personality;
+    stopPreview();
+    showPose("initial");
+  }
+  lockEditor();
+  if (error) showSaveError(error);
+  else $("#editEnded").textContent = t("avatar.editWindowEnded");
+}
+
+// Edit mode -> locked, in place. Focus in a part that goes (an option, Randomize) moves to the
+// heading, so it isn't lost.
+function lockEditor() {
+  const focused = document.activeElement;
+  const hidden = [$("#lookSections"), $("#personalityPicker"), $("#randomizeButton")];
+  const focusLost = !focused || focused === document.body || hidden.some((el) => el.contains(focused));
+  editor.mode = "locked";
+  clearTimeout(editor.windowTimer);
+  showLockedPage();
+  if (focusLost) $("#editorTitle").focus();
+}
+
+// A final character: the preview and Preview reactions stay; Randomize, the look options and the
+// personality picker go; the personality shows as a badge; the note says why; Name, Save, Cancel.
+function showLockedPage() {
+  setTitles("avatar.titleRename", "avatar.pageTitleRename");
+  $("#editNote").textContent = t("avatar.lockedNote");
+  $("#editNote").hidden = false;
+  $("#editCountdown").hidden = true;
+  $("#randomizeButton").hidden = true;
+  $("#lookSections").hidden = true;
+  $("#personalityPicker").hidden = true;
+  $("#personalityFixed").hidden = false;
+  const group = PERSONALITY_GROUPS[editor.personality];
+  const badge = $("#personalityBadge");
+  badge.className = `badge badge-${group}`;
+  badge.textContent = GROUPS[group].label;
+}
+
+// The heading and the page title. Their data-i18n goes, so the page's own translation pass keeps these.
+function setTitles(headingKey, pageKey) {
+  $("#editorTitle").removeAttribute("data-i18n");
+  $("#editorTitle").textContent = t(headingKey);
+  document.querySelector("title").removeAttribute("data-i18n");
+  document.title = t(pageKey);
 }
 
 // ---------- start-up ----------
@@ -679,18 +838,22 @@ function init() {
     editor.editing = character;
     editor.look = { ...character.look };
     editor.personality = character.personality;
-    // Their data-i18n goes, so the page's own translation pass keeps these.
-    $("#editorTitle").removeAttribute("data-i18n");
-    $("#editorTitle").textContent = t("avatar.titleEdit");
-    document.querySelector("title").removeAttribute("data-i18n");
-    document.title = t("avatar.pageTitleEdit");
     $("#nameInput").value = character.name;
-    $("#personalityPicker").hidden = true;
-    $("#personalityFixed").hidden = false;
-    const badge = $("#personalityBadge");
-    badge.classList.add(`badge-${character.group}`);
-    badge.textContent = GROUPS[character.group].label;
+    if (customEditMsLeft(character) > 0) {
+      // Everything can still change, the personality too; the countdown says for how long.
+      editor.mode = "edit";
+      setTitles("avatar.titleEdit", "avatar.pageTitleEdit");
+      buildPersonalityOptions();
+      $("#personalityNote").hidden = true;
+      $("#editCountdown").hidden = false;
+    } else {
+      editor.mode = "locked";
+      showLockedPage();
+    }
   } else {
+    // The rule, before the first Save. No time limit while creating.
+    $("#editNote").textContent = t("avatar.editWindowIntro");
+    $("#editNote").hidden = false;
     buildPersonalityOptions();
   }
 
@@ -699,7 +862,8 @@ function init() {
     $("#storageNote").hidden = false;
   }
 
-  buildLookSections();
+  // A final character's look options are never shown, so they aren't built.
+  if (editor.mode !== "locked") buildLookSections();
   redraw();
   loadAvatarPngs(() => {
     for (const thumb of editor.thumbs) thumb.drawn = "";
@@ -712,6 +876,13 @@ function init() {
   window.addEventListener("scroll", drawWaitingOnScreen, { passive: true });
   $("#editorForm").addEventListener("submit", onSave);
   $("#cancelButton").addEventListener("click", onCancel);
+  // The countdown catches up (and locks, if the time ran out) as soon as the page runs again.
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) tickWindow();
+  });
+  window.addEventListener("pageshow", tickWindow);
+  window.addEventListener("focus", tickWindow);
+  tickWindow();
 }
 
 init();

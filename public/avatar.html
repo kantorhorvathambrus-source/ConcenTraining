@@ -32,10 +32,25 @@
 </head>
 <body>
   <!-- The character editor: avatar.html creates a character, avatar.html?id=custom-… edits one
-       (avatar.js). Nothing is saved until Save; Cancel, Back or leaving the page discards it. -->
+       (avatar.js), or only renames it once its 10 minutes are up. Nothing is saved until Save
+       (or the moment the 10 minutes run out); Cancel, Back or leaving the page discards it. -->
   <main class="app avatar-page">
     <p class="avatar-back"><a href="./" id="backLink" class="back-link" data-i18n="avatar.back">← Back</a></p>
-    <h1 id="editorTitle" data-i18n="avatar.title">Create your character</h1>
+    <h1 id="editorTitle" tabindex="-1" data-i18n="avatar.title">Create your character</h1>
+
+    <!-- The 10-minute rule (see "Custom characters" in the README; avatar.js sets the texts).
+         editEnded: "The 10 minutes are up…", when the time runs out while the editor is open. It's
+         always in the page (empty until then), so a screen reader announces it. -->
+    <p id="editEnded" class="edit-ended" role="status"></p>
+    <!-- Create: the rule before the first Save. Locked: why only the name can change. -->
+    <p id="editNote" class="edit-note" hidden></p>
+    <!-- Edit with time left: the countdown (m:ss, every second, hidden from screen readers) and the
+         same in whole minutes for screen readers. editAnnounce reads it out at 5 and 1 min left only. -->
+    <p id="editCountdown" class="edit-countdown" hidden>
+      <span id="editCountdownTime" aria-hidden="true"></span>
+      <span id="editCountdownMinutes" class="visually-hidden"></span>
+    </p>
+    <p id="editAnnounce" class="visually-hidden" aria-live="polite"></p>
 
     <!-- Shown while the browser doesn't let the site save anything (avatar.js). The editor still
          works; Save then says it couldn't save. Its text is set when it appears. -->
@@ -58,14 +73,14 @@
         <p id="nameError" class="error" hidden></p>
       </section>
 
-      <!-- Create mode: pick it once. -->
+      <!-- Create, and edit while there's time left. The note only when creating. -->
       <fieldset id="personalityPicker" class="editor-section">
         <legend><h2 data-i18n="avatar.personality">Personality</h2></legend>
         <div id="personalityOptions" class="personality-options"></div>
-        <p class="muted small" data-i18n="avatar.personalityFixed">You can't change this later.</p>
+        <p id="personalityNote" class="muted small" data-i18n="avatar.personalityWindow">You can change it in the first 10 minutes after saving.</p>
       </fieldset>
 
-      <!-- Edit mode: read-only. -->
+      <!-- A final character (the 10 minutes are up): read-only. -->
       <section id="personalityFixed" class="editor-section" hidden>
         <h2 data-i18n="avatar.personality">Personality</h2>
         <p><span id="personalityBadge" class="badge"></span></p>

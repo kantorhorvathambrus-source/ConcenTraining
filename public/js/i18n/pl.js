@@ -97,6 +97,8 @@ I18N_TEXTS.pl = {
   "duration.rounded": "Zaokrąglono do {minutes} min.",
 
   "character.editLabel": "Edytuj: {name}",
+  "character.rename": "Zmień imię",
+  "character.renameLabel": "Zmień imię: {name}",
   "character.deleteLabel": "Usuń: {name}",
   "character.deleteTitle": "Usunąć: {name}?",
   "character.deleteText": "Twoje wcześniejsze sesje z tą postacią zostaną w historii.",
@@ -117,6 +119,7 @@ I18N_TEXTS.pl = {
   "custom.saveFailed": "Nie udało się zapisać postaci. Twoja przeglądarka nie pozwala tej witrynie przechowywać danych.",
   "custom.deletedElsewhere": "Ta postać została usunięta w innej karcie, więc nie można jej zapisać.",
   "custom.ghostName": "Własna postać",
+  "custom.timeLeft": "Czas na zmiany: {time}",
 
   // ---------- storage notes ----------
   "storage.setupNote":
@@ -476,14 +479,19 @@ I18N_TEXTS.pl = {
   // ---------- character editor (avatar.html) ----------
   "avatar.pageTitle": "Twoja postać · ConcenTraining",
   "avatar.pageTitleEdit": "Edytuj postać · ConcenTraining",
+  "avatar.pageTitleRename": "Zmień imię postaci · ConcenTraining",
   "avatar.back": "← Wstecz",
   "avatar.title": "Stwórz swoją postać",
   "avatar.titleEdit": "Edytuj swoją postać",
+  "avatar.titleRename": "Zmień imię postaci",
+  "avatar.editWindowIntro": "Po zapisaniu możesz jeszcze przez 10 minut zmienić wszystko. Potem wygląd i osobowość będą ostateczne.",
+  "avatar.editWindowEnded": "10 minut minęło. To, co widzisz, jest zapisane, a wygląd i osobowość są teraz ostateczne.",
+  "avatar.lockedNote": "Ta postać jest już ostateczna. Jej wygląd i osobowość można było zmieniać przez 10 minut od utworzenia. Imię możesz nadal zmienić.",
   "avatar.preview": "Podgląd reakcji",
   "avatar.randomize": "Losuj",
   "avatar.name": "Imię",
   "avatar.personality": "Osobowość",
-  "avatar.personalityFixed": "Później nie da się tego zmienić.",
+  "avatar.personalityWindow": "Możesz ją zmienić w ciągu pierwszych 10 minut po zapisaniu.",
   "avatar.defaultName": "Twoja postać",
   "avatar.group.base": "Podstawa",
   "avatar.group.costumes": "Kostiumy",

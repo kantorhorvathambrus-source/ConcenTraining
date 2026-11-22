@@ -98,6 +98,8 @@ I18N_TEXTS.de = {
   "duration.rounded": "Auf {minutes}\u00a0Min. gerundet.",
 
   "character.editLabel": "{name} bearbeiten",
+  "character.rename": "Umbenennen",
+  "character.renameLabel": "{name} umbenennen",
   "character.deleteLabel": "{name} löschen",
   "character.deleteTitle": "{name} löschen?",
   "character.deleteText": "Deine bisherigen Runden mit dieser Figur bleiben in deinem Verlauf.",
@@ -117,6 +119,7 @@ I18N_TEXTS.de = {
   "custom.saveFailed": "Deine Figur konnte nicht gespeichert werden. Dein Browser erlaubt dieser Website nicht, Daten zu speichern.",
   "custom.deletedElsewhere": "Diese Figur wurde in einem anderen Tab gelöscht und kann deshalb nicht gespeichert werden.",
   "custom.ghostName": "Eigene Figur",
+  "custom.timeLeft": "Noch änderbar: {time}",
 
   // ---------- storage notes ----------
   "storage.setupNote":
@@ -420,14 +423,19 @@ I18N_TEXTS.de = {
   // ---------- character editor (avatar.html) ----------
   "avatar.pageTitle": "Deine Figur · ConcenTraining",
   "avatar.pageTitleEdit": "Figur bearbeiten · ConcenTraining",
+  "avatar.pageTitleRename": "Figur umbenennen · ConcenTraining",
   "avatar.back": "← Zurück",
   "avatar.title": "Gestalte deine Figur",
   "avatar.titleEdit": "Figur bearbeiten",
+  "avatar.titleRename": "Figur umbenennen",
+  "avatar.editWindowIntro": "Nach dem Speichern kannst du 10\u00a0Minuten lang noch alles ändern. Danach stehen Aussehen und Persönlichkeit fest.",
+  "avatar.editWindowEnded": "Die 10\u00a0Minuten sind um. Der jetzige Stand ist gespeichert, und Aussehen und Persönlichkeit stehen jetzt fest.",
+  "avatar.lockedNote": "Diese Figur steht fest. Aussehen und Persönlichkeit konnten in den ersten 10\u00a0Minuten nach dem Erstellen geändert werden. Den Namen kannst du weiterhin ändern.",
   "avatar.preview": "Reaktionen ansehen",
   "avatar.randomize": "Zufällig",
   "avatar.name": "Name",
   "avatar.personality": "Persönlichkeit",
-  "avatar.personalityFixed": "Das kannst du später nicht mehr ändern.",
+  "avatar.personalityWindow": "Das kannst du in den ersten 10\u00a0Minuten nach dem Speichern noch ändern.",
   "avatar.defaultName": "Deine Figur",
   "avatar.group.base": "Basis",
   "avatar.group.costumes": "Kostüme",

@@ -698,6 +698,19 @@ a:focus-visible {
   overflow-wrap: anywhere;
 }
 
+/* "Time left to make changes: 9:41" under a card that can still be edited (renderCustomList). The
+   card is narrow: with large text a long word is hyphenated (in the page's language) rather than
+   pushing the card wider; only a word that still doesn't fit breaks anywhere. */
+.custom-countdown {
+  margin: 0;
+  padding: 0 8px 8px;
+  text-align: center;
+  font-size: var(--fs-14);
+  color: var(--color-text-muted);
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
 .custom-actions {
   display: flex;
   flex-wrap: wrap;
@@ -2357,6 +2370,38 @@ a {
 
 .avatar-page h1 {
   font-size: var(--fs-26);
+}
+
+/* The 10-minute rule under the title (avatar.js): the note before the first Save or on a final
+   character, the countdown while it can still be changed, and the message when the time ran out.
+   Long words are hyphenated (or, if they still don't fit, broken) rather than push the page wider
+   than a narrow screen. */
+.edit-note,
+.edit-countdown,
+.edit-ended {
+  margin: 0 0 16px;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+.edit-note {
+  color: var(--color-text-muted);
+}
+
+.edit-countdown,
+.edit-ended {
+  font-weight: 600;
+}
+
+/* The digits keep their width, so the line doesn't wobble every second. */
+.edit-countdown,
+.custom-countdown {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Always in the page (a live region), but takes no space until it has its text. */
+.edit-ended:empty {
+  margin: 0;
 }
 
 /* The preview stays at the top while the options scroll under it. Its height follows the screen,

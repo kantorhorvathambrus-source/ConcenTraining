@@ -42,8 +42,9 @@ there, see [Domain, redirect and security headers](#domain-redirect-and-security
   further down at once (character card, mode, chip, Custom field). The minutes are corrected the way
   Start corrects them: while "300" is typed in the Custom field the card says 240 min, an empty
   field says 25 min. **Start** runs the same code as **Start session** (`onStartClick(true)` in
-  `public/js/app.js`): same checks, same one-tab-at-a-time rules, a ragebait character saved earlier
-  doesn't warn again, and a quick double tap starts one session. If the tap corrected the Custom
+  `public/js/app.js`): same checks, same one-tab-at-a-time rules, the same ragebait warning (only
+  until it's accepted for that character, see **Ragebait warning** below), and a quick double tap
+  starts one session. If the tap corrected the Custom
   field ("Max. 240 min." etc.), nothing starts and the page scrolls to step 3 so the message is
   visible (an instant jump with reduced motion); the next tap starts. It's checked again whenever
   the setup screen is shown (after a session, Discard, End without saving, a reload), when the page
@@ -58,10 +59,9 @@ there, see [Domain, redirect and security headers](#domain-redirect-and-security
   (`CUSTOM_CHARACTERS_ENABLED`, now on in production, and always on on Netlify's test sites), the
   last card of step 1 is **Create your own**, and characters you made appear under the grid in
   **Your characters** (see
-  [Custom characters](#custom-characters)). Ragebait characters show a warning before
-  they can be selected. Selecting a card only updates which card is pressed (`aria-pressed`), so
-  keyboard and screen reader focus stays on it, also after the ragebait warning (**Bring it on** or
-  **Pick someone else**). Tapping Start session without a character shows "Pick a character first."
+  [Custom characters](#custom-characters)). Tapping a card just selects it, ragebait characters
+  too (their warning shows on Start, see below). Selecting a card only updates which card is
+  pressed (`aria-pressed`), so keyboard and screen reader focus stays on it. Tapping Start session without a character shows "Pick a character first."
   under the step 1 heading and scrolls back to the top of step 1 (an instant jump instead of a smooth
   scroll with reduced motion); there is no default character, so picks are only counted on Start.
   Duration presets: 5, 10, 15, 25, 35, 45, 60 and 90 min (`DURATION_PRESETS`
@@ -86,6 +86,20 @@ there, see [Domain, redirect and security headers](#domain-redirect-and-security
   See "Sound and screen" below. A third one, **Remind me if I leave the app**, is off by default and
   only shown where it can work (on iPhone and iPad only in the Home Screen app, never in a Safari
   tab); see [Leave reminder](#leave-reminder).
+- **Ragebait warning:** a ragebait character (built-in or custom) shows "Heads up!" with its
+  warning on **Start session** or Quick start's **Start**, not when its card is tapped, so creating
+  a ragebait character or tapping its card never asks. It shows after every check that can stop the
+  start (no character, a corrected Custom field), so nobody accepts and then gets an error.
+  **Bring it on** remembers the acceptance for that character (`ragebaitAccepted` in `ct_prefs_v1`,
+  a list of character ids; ids of deleted characters stay and do nothing) and starts as usual; its
+  tap also allows the end chime. **Pick someone else** (or Esc) starts nothing, scrolls to step 1
+  and focuses its heading; the selection stays. Once accepted, later Starts with that character
+  don't ask. **Start over** and a plan's next block never ask: they continue a start. A custom
+  character whose personality is changed in the editor (see [Custom characters](#custom-characters))
+  is taken off the list, so a character changed to ragebait asks on its next Start. Prefs saved
+  before the warning moved here (no `ragebaitAccepted` yet) count the character chosen then as
+  accepted if it's ragebait, because the old warning showed when it was picked
+  (`migrateRagebaitAccepted`, once at start-up).
 - **Tap targets:** everything you can tap is at least 44 × 44 px (buttons, chips, the Custom field,
   **Start** on the Quick start card,
   the header's **How it works** and **Your history →**, **Test sound**, the × on the Motivate me card,
@@ -874,8 +888,10 @@ praise (that's `good`) and not a reaction to the distraction:
 ## Custom characters
 
 Users can design their own characters: pick the look from parts, give it a name, and pick its
-personality once. It's the one exception to "the personality comes from the character's group":
-the user picks it when creating the character, and from then on it belongs to that character.
+personality. It's the one exception to "the personality comes from the character's group": the
+user picks it when creating the character, and from then on it belongs to that character. The look
+and personality can be changed for 10 minutes after the first Save; after that only the name (see
+[The 10-minute rule](#the-10-minute-rule)).
 
 ### The switch (`CUSTOM_CHARACTERS_ENABLED`)
 
@@ -927,9 +943,12 @@ saved data, no backend, no service worker version (the file's name stays the sam
 - **Your characters:** a second grid under the main one, only shown once at least one exists.
   Each card shows the character's calm pose, its name (always set as plain text, never as HTML),
   its personality badge, and **Edit** / **Delete** (44 px tall; read out as "Edit Mia" / "Delete
-  Mia"). Tapping the card itself selects it exactly like a built-in character: the selection is
-  saved in `ct_prefs_v1` (`characterId`), Quick start and **Start session** use it, and a ragebait
-  character shows the ragebait warning first. A card is a frame holding the select button and the
+  Mia"). While the character is in its 10 minutes, "Time left to make changes: 9:41" shows under
+  the card; once it's final, **Rename** (read out as "Rename Mia") replaces **Edit**, with the
+  same link (see [The 10-minute rule](#the-10-minute-rule)). Tapping the card itself selects it
+  exactly like a built-in character: the selection is saved in `ct_prefs_v1` (`characterId`),
+  Quick start and **Start session** use it, and a ragebait character shows the ragebait warning on
+  Start. A card is a frame holding the select button and the
   Edit/Delete row, because a button can't contain other buttons.
 - **Delete** asks "Delete Mia? Your past sessions with this character stay in your history."
   (**Cancel** / **Delete**). If it was the chosen character, nothing is chosen any more (like a
@@ -939,8 +958,9 @@ saved data, no backend, no service worker version (the file's name stays the sam
 
 ### The editor (`avatar.html`)
 
-`avatar.html` creates a character; `avatar.html?id=custom-…` edits one. It's a separate page (like
-`history.html`) with a **← Back** link, so leaving it in any way discards what wasn't saved.
+`avatar.html` creates a character; `avatar.html?id=custom-…` edits one (or, once its 10 minutes
+are up, only renames it: see [The 10-minute rule](#the-10-minute-rule)). It's a separate page
+(like `history.html`) with a **← Back** link, so leaving it in any way discards what wasn't saved.
 
 - **Preview:** at the top, staying on screen while the options scroll (`position: sticky`, at most
   about a quarter of the screen height). **Preview reactions** shows the 9 poses of the chosen
@@ -962,8 +982,9 @@ saved data, no backend, no service worker version (the file's name stays the sam
   Errors: "Give your character a name." / "Names can be up to 20 characters." / "You already have
   a character with this name." Checked on **Save**, then live while typing.
 - **Personality:** Relaxed, Firm, Strict or Ragebait (the built-in groups and their
-  expressions), Relaxed at the start, with "You can't change this later." When editing it's shown
-  as a read-only badge.
+  expressions), Relaxed at the start, with "You can change it in the first 10 minutes after
+  saving." (only when creating). When editing within the 10 minutes it can be changed like the
+  look; on a final character it's a read-only badge.
 - **Gender** (Female / Male): the two genders are fully separate. Each has its own faces,
   hairstyles, outfits, eyewear, earrings and necklaces (ids start with `w-` or `m-`), and only men
   have facial hair (the section isn't shown for women). Only skin tone, hair colour and the funny
@@ -997,8 +1018,8 @@ saved data, no backend, no service worker version (the file's name stays the sam
   Skin tone ends with a **Fantasy** group: green, blue, purple, grey, red and gold.
 - **Save** reads the saved list again first, so the 10 limit and the name rule also hold if another
   tab saved meanwhile. A new character is then picked on the setup screen (`./?picked=<id>`, which
-  runs the normal card tap: a ragebait character shows the warning first). **Cancel** goes back
-  without saving. If the browser doesn't let the site store data, the editor shows the same note
+  runs the normal card tap: it's just selected, a ragebait one asks on Start). An edit goes back to
+  the setup screen (`./`). **Cancel** goes back without saving. If the browser doesn't let the site store data, the editor shows the same note
   as the setup screen and still works; **Save** then says "Couldn't save your character. Your
   browser isn't letting this site save data." Editing a character that another tab deleted
   meanwhile says "This character was deleted in another tab, so it can't be saved."
@@ -1060,6 +1081,60 @@ saved data, no backend, no service worker version (the file's name stays the sam
   39–63 ms. Redrawing all thumbnails as images took 370–1160 ms. Almost all of the time is the
   browser parsing, styling and painting the thumbnails on screen (several ms each on a slow
   phone); building their drawings takes about 0.2 ms each.
+
+### The 10-minute rule
+
+Custom characters will be paid, so one character can't be turned into endless looks. A character
+can be changed completely (look, personality, name) for 10 minutes after its first Save. After
+that its look and personality are final; only its name can still be changed. The rule is shown
+before saving, the time left is shown while it runs, and a final character says why.
+
+- **One constant, one helper** (`public/js/custom-characters.js`): `CUSTOM_EDIT_WINDOW_MS`
+  (10 × 60 × 1000) and `customEditMsLeft(character, now)`, the ms left (0: final). Everything that
+  shows or checks the 10 minutes uses it. It's worked out from `createdAt` (`Date.now()` at the
+  first Save, never changed by an edit, so an edit doesn't restart the 10 minutes): no new storage
+  key and no new stored field. Wall-clock time, so it runs while the app is closed.
+- **Final** when `now − createdAt` ≥ 10 minutes, when `createdAt` is 0 or missing (ghosts, broken
+  entries), and when the device clock is more than 60 s behind `createdAt` (set back;
+  `CUSTOM_CLOCK_TOLERANCE_MS`). Up to 60 s behind counts as no time gone yet, so a small automatic
+  clock correction right after saving doesn't lock a new character. Characters saved before this
+  rule existed are final at once (their `createdAt` is old).
+- **Creating:** no time limit. Under the title: "After you save, you can still change everything
+  for 10 minutes. After that, the look and personality are final."
+- **Editing with time left** (`avatar.html?id=…`): everything can be changed, the personality too
+  (the picker, not the badge). Under the title: "Time left to make changes: 9:41", updated every
+  second (m:ss, timed to the deadline's whole seconds). That line is hidden from screen readers;
+  next to it a visually hidden copy says the time in whole minutes ("… 9 min"), changes once a
+  minute and isn't announced, except that a polite live region reads it out once at 5 min and at
+  1 min left (then empties again).
+- **When the time runs out with the editor open** (or as soon as the page runs again, if the tab
+  was asleep): what's on screen is saved (look and personality, and the name if it's valid,
+  otherwise the stored name), the page switches to the final state and "The 10 minutes are up. What
+  you see is saved, and the look and personality are now final." shows above it (`role="status"`).
+  Every change (an option, a costume, Randomize, gender, personality) checks the time first, so a
+  change made after the 10 minutes is never stored, even in a tab that was asleep: the tap that
+  finds the time is up only locks the page. If the browser refuses to store it, the usual save
+  error shows instead and the preview goes back to the saved look; if the character was deleted in
+  another tab, that message shows.
+- **A final character** (`avatar.html?id=…` with no time left): the heading and page title are
+  "Rename your character"; the preview and **Preview reactions** stay; **Randomize**, every look
+  group and the personality picker are gone (the look options aren't even built); the personality
+  shows as the badge; "This character is final. Its look and personality could be changed for 10
+  minutes after it was created. You can still change its name." Only Name, **Save** and **Cancel**
+  remain, and Save writes only the name (a look saved in another tab stays).
+- **Save checks again** right before writing: a look or personality change is only written with
+  time left; if the time just ran out, Save does what the end of the 10 minutes does (above) and
+  stays on the page. A name-only Save always goes through. Every other check stays (name rules,
+  limit, deleted in another tab, storage).
+- **Your characters:** a character with time left shows the same countdown under its card and keeps
+  **Edit**; a final one shows **Rename** instead. One timer updates only the countdown texts, runs
+  only while some character has time left, and catches up as soon as the page is shown again; when
+  one runs out the list is built again (focus stays on the same button). So with the editor open in
+  one tab, the list in another switches to **Rename** by itself.
+- **Personality changes** within the 10 minutes take the character off the accepted ragebait list
+  (`forgetRagebaitAcceptance`), so a character changed to ragebait shows the warning on its next
+  Start. A running session keeps the character it started with, and history entries keep the style
+  they stored.
 
 ### Costumes
 
@@ -1204,8 +1279,10 @@ becomes `true`, and then:
 
 - the Create card shows a lock and a **Paid** badge instead of "Free during launch", and tapping it
   opens an unlock sheet instead of the editor (until unlocked);
-- **characters made during the free launch stay usable**: they keep working (select, edit, delete,
-  sessions) without paying;
+- **characters made during the free launch stay usable**: they keep working (select, rename,
+  delete, sessions) without paying;
+- [the 10-minute rule](#the-10-minute-rule) already applies to every custom character, so a paid
+  character is one look, not endless ones;
 - `/stats.html` already lists custom characters as "always paid", outside the top ~10% ranking.
 
 No payment code exists yet.
@@ -1448,8 +1525,8 @@ page again after nothing happened draws nothing, and an Import only draws once (
 |---|---|
 | `ct_session_v1` | The session that's running right now (removed when it ends). `characterName`: only with a custom character (its name when the session started). `restartPending: true` while the continue/restart question is unanswered; older saved sessions don't have it, which means `false`. `leftAt` (timestamp in ms): only while the page is hidden, for the time away card; missing means the page wasn't left. Never copied into the history. `pausedAt` (timestamp in ms, or `null`): when the current break started (see **Take a break**). `pauses` (`[{ at, ms }]`): the breaks that are over. Sessions saved before breaks existed have neither, which means never paused. `utcOffsetMin`: the device's offset from UTC in minutes when the session started (copied into the history, see [Which day a session counts on](#which-day-a-session-counts-on)); a session started before it existed doesn't have it |
 | `ct_history_v1` | Finished sessions, newest first, max. 1000 |
-| `ct_custom_characters_v1` | Characters made in the editor: `{ v: 1, characters: [ { id, name, personality, createdAt, look: { gender, skin, hairColor, hairStyle, face, outfit, eyewear, earrings, necklace, facialHair, headwear, mask, earsHorns, costumeBeard, costumeOutfit, back, held, pet } } ] }`. The 8 costume fields are optional: characters saved before costumes don't have them, which means None. `id` is `custom-` plus 10 random letters/digits, never reused (a new id also avoids every id in the history). `personality` is the style its sessions run in. Reading never fails: a broken entry is skipped (not the whole list), an unknown look value gets the default. See [Custom characters](#custom-characters) |
-| `ct_prefs_v1` | Last chosen character, mode and duration, plus `endSound` and `keepScreenOn` (the two setup checkboxes, `true`/`false`). Prefs saved before these existed get `true` for both. `leaveReminder`: the **Remind me if I leave the app** checkbox (see [Leave reminder](#leave-reminder)); prefs saved before it existed get `false`. `homeScreenTipDismissed`: `true` once **Got it** was tapped on the iPhone Home Screen tip. `persistRequested`: `true` once persistent storage was asked for (or skipped in Firefox), see [iPhone storage and the Home Screen app](#iphone-storage-and-the-home-screen-app). Prefs saved before these two existed get `false` for both. `howItWorksDismissed`: `true` once **Got it** was tapped on the How it works card; prefs saved before it existed get `false`, so the card shows once. `language`: only once a language was picked in the language sheet (`"en"`, `"hu"`); without it the app follows the browser's language (see [Languages](#languages)). `theme`: `"light"` or `"dark"`, only once the light/dark switch was tapped; without it the app follows the phone's setting (see [Light and dark](#light-and-dark)). A `style` value saved by older versions is ignored and dropped. `usePlan` (`true` while **Plan** is picked in step 3; missing means `false`) and `plan` (`{ rows: [{ minutes, count, breakMinutes, breakPicked }] }`, the plan built there; `breakPicked`: that row's break was picked by hand): see [Plans](#plans); prefs saved before them have neither, which means Single block and, once Plan is picked, the first-time plan. Saved field by field (see [Several tabs](#several-tabs-one-tab-at-a-time)) |
+| `ct_custom_characters_v1` | Characters made in the editor: `{ v: 1, characters: [ { id, name, personality, createdAt, look: { gender, skin, hairColor, hairStyle, face, outfit, eyewear, earrings, necklace, facialHair, headwear, mask, earsHorns, costumeBeard, costumeOutfit, back, held, pet } } ] }`. The 8 costume fields are optional: characters saved before costumes don't have them, which means None. `id` is `custom-` plus 10 random letters/digits, never reused (a new id also avoids every id in the history). `personality` is the style its sessions run in. `createdAt`: `Date.now()` at the first Save, never changed by an edit; the look and personality can be changed for 10 minutes after it (see [The 10-minute rule](#the-10-minute-rule)), and 0 or a missing value means final. Reading never fails: a broken entry is skipped (not the whole list), an unknown look value gets the default. See [Custom characters](#custom-characters) |
+| `ct_prefs_v1` | Last chosen character, mode and duration, plus `endSound` and `keepScreenOn` (the two setup checkboxes, `true`/`false`). Prefs saved before these existed get `true` for both. `leaveReminder`: the **Remind me if I leave the app** checkbox (see [Leave reminder](#leave-reminder)); prefs saved before it existed get `false`. `homeScreenTipDismissed`: `true` once **Got it** was tapped on the iPhone Home Screen tip. `persistRequested`: `true` once persistent storage was asked for (or skipped in Firefox), see [iPhone storage and the Home Screen app](#iphone-storage-and-the-home-screen-app). Prefs saved before these two existed get `false` for both. `howItWorksDismissed`: `true` once **Got it** was tapped on the How it works card; prefs saved before it existed get `false`, so the card shows once. `language`: only once a language was picked in the language sheet (`"en"`, `"hu"`); without it the app follows the browser's language (see [Languages](#languages)). `theme`: `"light"` or `"dark"`, only once the light/dark switch was tapped; without it the app follows the phone's setting (see [Light and dark](#light-and-dark)). A `style` value saved by older versions is ignored and dropped. `ragebaitAccepted`: the ids of the characters whose ragebait warning was accepted on Start (see **Ragebait warning** in [How it works](#how-it-works)); prefs saved before it existed count the ragebait character chosen then as accepted. `usePlan` (`true` while **Plan** is picked in step 3; missing means `false`) and `plan` (`{ rows: [{ minutes, count, breakMinutes, breakPicked }] }`, the plan built there; `breakPicked`: that row's break was picked by hand): see [Plans](#plans); prefs saved before them have neither, which means Single block and, once Plan is picked, the first-time plan. Saved field by field (see [Several tabs](#several-tabs-one-tab-at-a-time)) |
 | `ct_plan_v1` | The running plan (see [Plans](#plans)), removed when its summary shows: `{ v: 1, startedAt, characterId, characterName?, style, mode, blocks: [{ minutes, breakMinutes }], index, phase, blockStartedAt, breakStartedAt, parts }`. `index`: the block that runs (`phase: "block"`, whose session in `ct_session_v1` has `startedAt` = `blockStartedAt`) or the next one (`phase: "break"`, the break after block `index − 1`, started at `breakStartedAt`). `parts`: what each finished block measured, for the plan's summary (`{ block, startedAt, plannedMs, elapsedMs, distractedMs, focusPercent, distractions: [{ level, category }], pauses, status, startedOver? }`, `status` `"saved"`, `"exists"`, `"failed"`, `"short"`, `"unsaved"` or `"discarded"`). Never copied into the history. Ignored and cleared while plans are off |
 
 Each history entry: `startedAt`, `endedAt` (timestamps in ms), `utcOffsetMin` (the device's offset

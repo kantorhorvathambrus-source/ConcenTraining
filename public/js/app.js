@@ -137,11 +137,14 @@ function countCharacterPick(character) {
 // howItWorksDismissed: "Got it" was tapped on the How it works card.
 // usePlan / plan: "Plan" picked in step 3 and the plan built there (see js/plans.js). Ignored while
 // plans are off (PLANS_ON).
+// ragebaitAccepted: the ids of the characters whose ragebait warning was accepted on Start
+// (see confirmRagebait).
 // Prefs saved before any of these existed get these defaults.
 const prefs = Object.assign(
   {
     characterId: null, mode: "simple", minutes: 25, endSound: true, keepScreenOn: true, leaveReminder: false,
     homeScreenTipDismissed: false, persistRequested: false, howItWorksDismissed: false, usePlan: false,
+    ragebaitAccepted: [],
   },
   load(PREFS_KEY, {}),
 );
@@ -931,8 +934,10 @@ function updateCreateCard(card = $("#createCard")) {
 }
 
 // "Your characters": the same cards as the main grid (picture, name, personality badge), each
-// with Edit and Delete under it. Every name is set as plain text, never as HTML. If focus was in
-// the list, it goes back to the same button of the same character after the rebuild.
+// with Edit and Delete under it. A character still in its 10 minutes (customEditMsLeft) shows the
+// time left under its card; a final one has Rename instead of Edit (the same editor link, which
+// then only renames). Every name is set as plain text, never as HTML. If focus was in the list, it
+// goes back to the same button of the same character after the rebuild.
 // Never shown while custom characters are off (CUSTOM_CHARACTERS_ON).
 function renderCustomList() {
   const list = $("#customList");
@@ -946,9 +951,12 @@ function renderCustomList() {
     ? { id: focused.closest("[data-id]").dataset.id, role: focused.dataset.role }
     : null;
   list.innerHTML = "";
+  customCountdowns.length = 0;
   const characters = loadCustomCharacters();
+  const now = Date.now();
   $("#customSection").hidden = characters.length === 0;
   for (const character of characters) {
+    const editable = customEditMsLeft(character, now) > 0;
     const item = document.createElement("div");
     item.className = "custom-item";
     item.dataset.id = character.id;
@@ -977,9 +985,9 @@ function renderCustomList() {
     const edit = document.createElement("a");
     edit.className = "btn compact";
     edit.href = `avatar.html?id=${encodeURIComponent(character.id)}`;
-    edit.textContent = t("common.edit");
+    edit.textContent = editable ? t("common.edit") : t("character.rename");
     edit.dataset.role = "edit";
-    edit.setAttribute("aria-label", t("character.editLabel", { name: character.name }));
+    edit.setAttribute("aria-label", t(editable ? "character.editLabel" : "character.renameLabel", { name: character.name }));
     const remove = document.createElement("button");
     remove.type = "button";
     remove.className = "btn compact";
@@ -989,16 +997,59 @@ function renderCustomList() {
     remove.addEventListener("click", () => confirmDeleteCustom(character));
     actions.append(edit, remove);
 
-    item.append(card, actions);
+    item.append(card);
+    if (editable) item.append(customCountdown(character));
+    item.append(actions);
     list.append(item);
   }
   updateCreateCard();
+  tickCustomCountdowns();
   if (refocus) {
     const item = list.querySelector(`.custom-item[data-id="${CSS.escape(refocus.id)}"]`);
     const target = item && item.querySelector(`[data-role="${refocus.role}"]`);
     if (target) target.focus({ preventScroll: true });
     else focusAfterRemoval(refocus.id, characters);
   }
+}
+
+// The time left under a card: "Time left to make changes: 9:41" every second (hidden from screen
+// readers), and the same in whole minutes for them ("… 10 min"), which changes once a minute and
+// is never announced by itself.
+const customCountdowns = []; // { character, time, minutes } of the cards on screen
+let customCountdownTimer = 0;
+
+function customCountdown(character) {
+  const line = document.createElement("p");
+  line.className = "custom-countdown";
+  const time = document.createElement("span");
+  time.setAttribute("aria-hidden", "true");
+  const minutes = document.createElement("span");
+  minutes.className = "visually-hidden";
+  line.append(time, minutes);
+  customCountdowns.push({ character, time, minutes });
+  return line;
+}
+
+// One timer for all the cards, only while one of them has time left, timed to the next whole
+// second. When a character's time runs out (also in a tab that was asleep: it runs again as soon
+// as the page is shown), the list is built again: that card gets Rename.
+function tickCustomCountdowns() {
+  clearTimeout(customCountdownTimer);
+  if (customCountdowns.length === 0) return;
+  const now = Date.now();
+  let next = 1000;
+  for (const countdown of customCountdowns) {
+    const left = customEditMsLeft(countdown.character, now);
+    if (left <= 0) {
+      renderCustomList();
+      return;
+    }
+    countdown.time.textContent = CUSTOM_TEXTS.timeLeft(formatEditTime(left));
+    const text = CUSTOM_TEXTS.timeLeft(t("time.min", { minutes: editMinutesLeft(left) }));
+    if (countdown.minutes.textContent !== text) countdown.minutes.textContent = text;
+    next = Math.min(next, left % 1000 || 1000);
+  }
+  customCountdownTimer = setTimeout(tickCustomCountdowns, next);
 }
 
 // Focus goes to the next character's card (or the one before), or to "Create your own" if none is left.
@@ -1034,7 +1085,7 @@ function onCustomStorage(event) {
 }
 
 // Back from the editor after creating a character (./?picked=custom-…): it's picked like a tap on
-// its card (a ragebait one shows the warning first) and scrolled into view. The address is then
+// its card (no warning: a ragebait one asks on Start) and scrolled into view. The address is then
 // cleaned up, so a reload doesn't pick it again.
 function pickNewCharacter() {
   const params = new URLSearchParams(location.search);
@@ -1063,12 +1114,8 @@ function updateCharacterCards() {
   });
 }
 
-async function onCharacterTap(character) {
-  if (character.group === "ragebait" && prefs.characterId !== character.id) {
-    $("#ragebaitText").textContent = t("character.ragebaitText", { name: character.name, warning: GROUPS.ragebait.warning });
-    if ((await ask($("#ragebaitDialog"))) !== "ok") return;
-  }
-
+// A tap on a card just selects it, ragebait ones too: their warning shows on Start (confirmRagebait).
+function onCharacterTap(character) {
   savePrefs({ characterId: character.id });
   $("#characterError").hidden = true;
   updateCharacterCards();
@@ -1140,12 +1187,13 @@ async function onStartClick(fromQuickStart) {
     savePrefs({ minutes });
   }
   if (prefs.endSound) unlockAudio(); // this tap is what allows the chime later
-  // A session (or plan) saved by another tab is never replaced (see "one tab at a time"): it carries
-  // on here if its tab was closed, or the notice shows if that tab still runs it. Without Web Locks
-  // the tabs can't tell, so Start works as it always has.
-  if (locks && (savedRunningSession() || savedActivePlan())) {
-    continueSavedSession(false);
-    return;
+  if (resumeSavedElsewhere()) return;
+  // After every check that can stop the start, so nobody accepts and then gets an error. While the
+  // warning is open nothing else can be tapped (a modal dialog), and another tab may start a
+  // session meanwhile: that's checked again after it.
+  if (needsRagebaitWarning(character)) {
+    if (!(await confirmRagebait(character))) return;
+    if (resumeSavedElsewhere()) return;
   }
   if (!(await takeControl(false))) {
     showElsewhere();
@@ -1157,6 +1205,65 @@ async function onStartClick(fromQuickStart) {
   countCharacterPick(character);
   if (usePlan) startPlan(character, prefs.mode, expandPlan(setupPlan.rows()));
   else startSession(character, prefs.mode, prefs.minutes);
+}
+
+// A session (or plan) saved by another tab is never replaced (see "one tab at a time"): it carries
+// on here if its tab was closed, or the notice shows if that tab still runs it. true: that's
+// happening, Start goes no further. Without Web Locks the tabs can't tell, so Start works as it
+// always has.
+function resumeSavedElsewhere() {
+  if (!(locks && (savedRunningSession() || savedActivePlan()))) return false;
+  continueSavedSession(false);
+  return true;
+}
+
+// The ragebait warning shows on Start (and Quick start) until it's accepted for that character:
+// ragebaitAccepted in ct_prefs_v1, a list of character ids (built-in and custom). Read from the
+// saved prefs, so an acceptance from another tab counts, and a custom character whose personality
+// was changed in the editor (forgetRagebaitAcceptance) asks again. Ids of deleted characters stay
+// in the list and do nothing. Start over and a plan's next block never ask: they continue a start.
+function acceptedRagebait() {
+  const saved = load(PREFS_KEY, {});
+  const list = saved && Array.isArray(saved.ragebaitAccepted) ? saved.ragebaitAccepted : prefs.ragebaitAccepted;
+  return Array.isArray(list) ? list.filter((id) => typeof id === "string") : [];
+}
+
+function needsRagebaitWarning(character) {
+  return personalityOf(character) === "ragebait" && !acceptedRagebait().includes(character.id);
+}
+
+// The warning. "Bring it on": remembered for this character, and the start goes on (its tap also
+// allows the chime, see bindRagebaitDialog). "Pick someone else" (or Esc): nothing starts, the page
+// goes to step 1 with its heading focused, and the selection stays. Resolves true to start.
+async function confirmRagebait(character) {
+  const dialog = $("#ragebaitDialog");
+  if (dialog.open) return false;
+  $("#ragebaitText").textContent = t("character.ragebaitText", { name: character.name, warning: GROUPS.ragebait.warning });
+  if ((await ask(dialog)) !== "ok") {
+    scrollToStep($("#characterStep"));
+    $("#characterStepTitle").focus({ preventScroll: true });
+    return false;
+  }
+  savePrefs({ ragebaitAccepted: [...new Set([...acceptedRagebait(), character.id])] });
+  return true;
+}
+
+// Browsers only allow sound after a tap, and the warning's "Bring it on" is the tap that starts
+// the session: the chime is allowed right inside it (the close event comes a moment later).
+function bindRagebaitDialog() {
+  $("#ragebaitDialog").querySelector('button[value="ok"]').addEventListener("click", () => {
+    if (prefs.endSound) unlockAudio();
+  });
+}
+
+// Prefs saved before the warning moved to Start: a ragebait character chosen then was already
+// accepted (the old warning showed when it was picked), so it doesn't ask again. Runs once, at
+// start-up, only while ragebaitAccepted isn't saved yet.
+function migrateRagebaitAccepted() {
+  const saved = load(PREFS_KEY, null);
+  if (!saved || Array.isArray(saved.ragebaitAccepted)) return;
+  const character = characterById(saved.characterId);
+  savePrefs({ ragebaitAccepted: character && personalityOf(character) === "ragebait" ? [character.id] : [] });
 }
 
 // ---------- session ----------
@@ -3027,12 +3134,17 @@ function init() {
   window.addEventListener("storage", onStorage);
   window.addEventListener("storage", onHistoryStorage);
   window.addEventListener("storage", onCustomStorage);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) tickCustomCountdowns(); // a sleeping tab's countdowns catch up at once
+  });
+  bindRagebaitDialog();
   window.addEventListener("pageshow", onPageShow);
   window.addEventListener("pagehide", () => (leaveReminder.unloading = true)); // see "leave reminder"
   document.addEventListener("ct:languagechange", onLanguageChange);
   initLanguagePicker();
 
   checkStorage();
+  migrateRagebaitAccepted();
   // Real images for custom characters' layers (AVATAR_PNG_FILES), once they're loaded.
   loadAvatarPngs(() => {
     renderCustomList();

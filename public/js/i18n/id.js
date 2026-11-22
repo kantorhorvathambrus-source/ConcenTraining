@@ -95,6 +95,8 @@ I18N_TEXTS.id = {
   "duration.rounded": "Dibulatkan ke {minutes} menit.",
 
   "character.editLabel": "Ubah {name}",
+  "character.rename": "Ganti nama",
+  "character.renameLabel": "Ganti nama {name}",
   "character.deleteLabel": "Hapus {name}",
   "character.deleteTitle": "Hapus {name}?",
   "character.deleteText": "Sesi-sesimu sebelumnya dengan karakter ini tetap ada di riwayatmu.",
@@ -114,6 +116,7 @@ I18N_TEXTS.id = {
   "custom.saveFailed": "Karaktermu tidak bisa disimpan. Browser-mu tidak mengizinkan situs ini menyimpan data.",
   "custom.deletedElsewhere": "Karakter ini sudah dihapus di tab lain, jadi tidak bisa disimpan.",
   "custom.ghostName": "Karakter buatanmu",
+  "custom.timeLeft": "Masih bisa diubah: {time}",
 
   // ---------- storage notes ----------
   "storage.setupNote":
@@ -406,14 +409,19 @@ I18N_TEXTS.id = {
   // ---------- character editor (avatar.html) ----------
   "avatar.pageTitle": "Karaktermu · ConcenTraining",
   "avatar.pageTitleEdit": "Ubah Karaktermu · ConcenTraining",
+  "avatar.pageTitleRename": "Ganti Nama Karaktermu · ConcenTraining",
   "avatar.back": "← Kembali",
   "avatar.title": "Buat karaktermu",
   "avatar.titleEdit": "Ubah karaktermu",
+  "avatar.titleRename": "Ganti nama karaktermu",
+  "avatar.editWindowIntro": "Setelah disimpan, kamu masih bisa mengubah semuanya selama 10 menit. Setelah itu, tampilan dan kepribadiannya permanen.",
+  "avatar.editWindowEnded": "Waktu 10 menit sudah habis. Yang kamu lihat sudah disimpan, dan tampilan serta kepribadiannya sekarang permanen.",
+  "avatar.lockedNote": "Karakter ini sudah permanen. Tampilan dan kepribadiannya hanya bisa diubah selama 10 menit setelah dibuat. Namanya masih bisa kamu ganti.",
   "avatar.preview": "Lihat reaksinya",
   "avatar.randomize": "Acak",
   "avatar.name": "Nama",
   "avatar.personality": "Kepribadian",
-  "avatar.personalityFixed": "Ini tidak bisa diubah nanti.",
+  "avatar.personalityWindow": "Kamu masih bisa mengubahnya dalam 10 menit pertama setelah menyimpan.",
   "avatar.defaultName": "Karaktermu",
   "avatar.group.base": "Dasar",
   "avatar.group.costumes": "Kostum",

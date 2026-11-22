@@ -98,6 +98,8 @@ I18N_TEXTS.es = {
   "duration.rounded": "Redondeado a {minutes} min.",
 
   "character.editLabel": "Editar: {name}",
+  "character.rename": "Renombrar",
+  "character.renameLabel": "Renombrar: {name}",
   "character.deleteLabel": "Eliminar: {name}",
   "character.deleteTitle": "¿Eliminar el personaje {name}?",
   "character.deleteText": "Tus sesiones anteriores con este personaje se quedan en tu historial.",
@@ -117,6 +119,7 @@ I18N_TEXTS.es = {
   "custom.saveFailed": "No se pudo guardar tu personaje. Tu navegador no permite que este sitio guarde datos.",
   "custom.deletedElsewhere": "Este personaje se eliminó en otra pestaña, así que no se puede guardar.",
   "custom.ghostName": "Personaje personalizado",
+  "custom.timeLeft": "Tiempo para hacer cambios: {time}",
 
   // ---------- storage notes ----------
   "storage.setupNote":
@@ -444,14 +447,19 @@ I18N_TEXTS.es = {
   // ---------- character editor (avatar.html) ----------
   "avatar.pageTitle": "Tu personaje · ConcenTraining",
   "avatar.pageTitleEdit": "Editar tu personaje · ConcenTraining",
+  "avatar.pageTitleRename": "Renombrar tu personaje · ConcenTraining",
   "avatar.back": "← Atrás",
   "avatar.title": "Crea tu personaje",
   "avatar.titleEdit": "Edita tu personaje",
+  "avatar.titleRename": "Renombra tu personaje",
+  "avatar.editWindowIntro": "Después de guardar, todavía puedes cambiar todo durante 10 minutos. Luego, el aspecto y la personalidad serán definitivos.",
+  "avatar.editWindowEnded": "Se acabaron los 10 minutos. Lo que ves está guardado, y el aspecto y la personalidad ya son definitivos.",
+  "avatar.lockedNote": "Este personaje es definitivo. Su aspecto y su personalidad se podían cambiar durante 10 minutos después de crearlo. Todavía puedes cambiar su nombre.",
   "avatar.preview": "Ver reacciones",
   "avatar.randomize": "Al azar",
   "avatar.name": "Nombre",
   "avatar.personality": "Personalidad",
-  "avatar.personalityFixed": "No podrás cambiarla más adelante.",
+  "avatar.personalityWindow": "Puedes cambiarla en los primeros 10 minutos después de guardar.",
   "avatar.defaultName": "Tu personaje",
   "avatar.group.base": "Básico",
   "avatar.group.costumes": "Disfraces",
