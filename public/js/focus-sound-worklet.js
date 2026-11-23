@@ -1,9 +1,9 @@
-// The Ambient focus sounds (Rain, Thunder, Birds, Wind, Fire, Waves, Stream, Crickets, Fan, Vacuum,
-// Train, Airplane), generated live, sample by sample, and the limiter that keeps the whole mix from clipping. This is an AudioWorklet module: it
+// The Ambient focus sounds (Rain, Birds, Wind, Waves, Crickets, Fan, Vacuum), generated live, sample
+// by sample, and the limiter that keeps the whole mix from clipping. This is an AudioWorklet module: it
 // runs on the browser's audio thread, not on the page, and is loaded by focus-sound.js
 // (audioWorklet.addModule). See "Focus sound" in the README.
 //
-// Why live and not a loop: every drop, crackle, bird phrase and wave is rolled from random numbers as
+// Why live and not a loop: every drop, chirp, bird phrase and wave is rolled from random numbers as
 // it plays, so nothing ever repeats, however long the session. It needs no memory for samples, and
 // it runs exactly as long as the page's audio does (with the screen locked too, where the browser
 // keeps audio playing): no timers, which browsers pause in the background.
@@ -177,12 +177,12 @@ function panGains(pan) {
 }
 
 // The time until the next random event at `perSecond` events per second on average (a Poisson
-// process: as irregular as real drops or crackles, never a rhythm), in samples.
+// process: as irregular as real raindrops, never a rhythm), in samples.
 function nextGap(perSecond) {
   return Math.max(1, Math.round((-Math.log(1 - Math.random()) / Math.max(perSecond, 1e-6)) * sampleRate));
 }
 
-// Short resonant bursts: drops, crackles, pops, leaf rustle. Each burst is a little noise with its
+// Short resonant bursts: raindrops, leaf rustle, foam. Each burst is a little noise with its
 // own attack and decay, rung through its own band-pass filter (random centre and Q: a high Q rings
 // like a hard surface, a low Q is a soft tap), placed somewhere between left and right, with its own
 // share of reverb. A fixed pool, so nothing is created while playing; when it's full, a new burst
@@ -251,82 +251,6 @@ class Bursts {
         i++;
       }
     }
-  }
-}
-
-// Struck resonances: wood snaps, wheel and rail ringing, thumps. Each one starts at full amplitude on
-// its first sample (an instant onset, the "snap" a struck object has) and rings at its own frequency,
-// dying away exponentially (decay = time to fall to 1/e). Two multiplications per sample: the
-// recurrence y[n] = 2r·cos(w)·y[n−1] − r²·y[n−2] is a damped cosine. A fixed pool, like Bursts.
-class Rings {
-  constructor(size) {
-    this.size = size;
-    this.count = 0;
-    this.y1 = new Float64Array(size);
-    this.y2 = new Float64Array(size);
-    this.c1 = new Float64Array(size);
-    this.c2 = new Float64Array(size);
-    this.gl = new Float64Array(size);
-    this.gr = new Float64Array(size);
-    this.wet = new Float64Array(size);
-    this.left = new Int32Array(size);
-  }
-
-  add(amp, hz, decayS, pan, wet) {
-    if (this.count >= this.size) return;
-    const i = this.count++;
-    const w = (TWO_PI * Math.min(hz, sampleRate * 0.45)) / sampleRate;
-    const r = Math.exp(-1 / (decayS * sampleRate));
-    this.c1[i] = 2 * r * Math.cos(w);
-    this.c2[i] = r * r;
-    // y[n] = amp·rⁿ·cos(wn): full amplitude on the first sample. y2 is y[−1], so the recurrence
-    // carries on from there.
-    this.y1[i] = amp;
-    this.y2[i] = (amp * Math.cos(w)) / r;
-    const [gl, gr] = panGains(pan);
-    this.gl[i] = gl;
-    this.gr[i] = gr;
-    this.wet[i] = wet;
-    this.left[i] = Math.ceil(6.9 * decayS * sampleRate); // until 60 dB down
-  }
-
-  // Adds every active ring's next sample to out (dry L, dry R, wet L, wet R).
-  mix(out) {
-    let i = 0;
-    while (i < this.count) {
-      const y = this.y1[i];
-      const w = this.wet[i];
-      out[0] += y * this.gl[i] * (1 - w);
-      out[1] += y * this.gr[i] * (1 - w);
-      out[2] += y * this.gl[i] * w;
-      out[3] += y * this.gr[i] * w;
-      const next = this.c1[i] * y - this.c2[i] * this.y2[i];
-      this.y2[i] = y;
-      this.y1[i] = next;
-      if (--this.left[i] <= 0) {
-        const last = --this.count;
-        this.y1[i] = this.y1[last]; this.y2[i] = this.y2[last]; this.c1[i] = this.c1[last]; this.c2[i] = this.c2[last];
-        this.gl[i] = this.gl[last]; this.gr[i] = this.gr[last]; this.wet[i] = this.wet[last]; this.left[i] = this.left[last];
-      } else {
-        i++;
-      }
-    }
-  }
-}
-
-// The "harmonic shadow" of a deep sound: phone speakers play almost nothing under about 200 Hz, so a
-// deep thump or rumble would vanish there. Half-wave rectifying it (max(x, 0)) makes harmonics of
-// it, and band-passing those to the range a speaker can play (lo–hi) gives a part that follows the
-// deep sound exactly; mixed in, the ear hears the missing low end (the "missing fundamental", the
-// trick psychoacoustic bass enhancement uses). On headphones the real low band is there as well.
-class Shadow {
-  constructor(lo, hi) {
-    this.hp = new Biquad("highpass", lo, 0.7);
-    this.lp = new Biquad("lowpass", hi, 0.7);
-  }
-
-  next(x) {
-    return this.lp.next(this.hp.next(x > 0 ? x : 0));
   }
 }
 
@@ -557,125 +481,6 @@ class Wind {
   }
 }
 
-// ---------- Fire ----------
-
-// Fire, after Andy Farnell's three-part model (Designing Sound), plus the sharp snap synthetic fires
-// usually lack:
-// - Lapping, the flame itself: white noise through a narrow band-pass at about 30 Hz, driven hard
-//   into a clip and high-passed. The clipping turns the slow random low noise into a fluttering,
-//   burbling flame with harmonics up into the hundreds of Hz (which a phone speaker can play). No
-//   added amplitude modulation: that's what made the earlier version chuff like a steam engine.
-// - Hissing: soft, continuous noise from about 1 to 7.5 kHz whose level follows a slow random
-//   signal raised to the 4th power: mostly quiet, with rare louder moments (gas escaping). Never in
-//   runs.
-// - Crackling: sparse random events with heavy-tailed loudness (most small, a few big). Each has an
-//   instant onset (the snap), a short broadband click, then 1–3 resonances around Farnell's crackle
-//   frequencies (about 600, 1000, 1200 and 2600 Hz, ±30%) ringing 1–25 ms (mostly short).
-//   Occasionally a quick cluster, like wood catching.
-// - Pops, rare: a sharp click and a short low thump (150–400 Hz) with its harmonic shadow.
-// Each ear has its own generators, and every event its own place. Variants for the listening lab:
-//   a: a fireplace: fuller lapping, 1–4 crackles a second, a few pops a minute, a small room.
-//   b: a campfire: softer, more open lapping, denser crackles (many tiny), little reverb.
-const FIRE_VARIANTS = {
-  a: { lap: 0.5, drive: 180, lapQ: 1, hiss: 0.3, crackle: 2.5, crackleAmp: 1.8, clusters: 0.12, tiny: 0.25, pop: 0.06, wet: 0.3, gain: 1 },
-  b: { lap: 0.36, drive: 120, lapQ: 1, hiss: 0.3, crackle: 8, crackleAmp: 1.5, clusters: 0.2, tiny: 0.65, pop: 0.04, wet: 0.1, gain: 1.05 },
-};
-const CRACKLE_HZ = [600, 1000, 1200, 2600];
-
-class Fire {
-  constructor(variant) {
-    this.v = FIRE_VARIANTS[variant] || FIRE_VARIANTS.a;
-    this.lapBand = [new Biquad("bandpass", 30, this.v.lapQ), new Biquad("bandpass", 30, this.v.lapQ)];
-    this.lapHp = [new Biquad("highpass", 25, 0.7), new Biquad("highpass", 25, 0.7)];
-    this.gasLp = [new OnePole(1), new OnePole(1)];
-    this.hissHp = [new Biquad("highpass", 1000, 0.7), new Biquad("highpass", 1000, 0.7)];
-    this.hissLp = [new OnePole(7500), new OnePole(7500)];
-    this.clicks = new Bursts(32);
-    this.rings = new Rings(96);
-    this.thumps = new Rings(8);
-    this.shadow = [new Shadow(150, 600), new Shadow(150, 600)];
-    this.crackleGap = nextGap(this.v.crackle);
-    this.clusterGap = nextGap(this.v.clusters);
-    this.clusterLeft = 0;
-    this.clusterNext = 0;
-    this.popGap = nextGap(this.v.pop);
-    this.events = [0, 0, 0, 0];
-    this.low = [0, 0, 0, 0];
-    this.shadowLeft = 0; // the pop shadow only runs while a pop rings (and a moment after)
-  }
-
-  crackle(scale) {
-    const v = this.v;
-    const amp = (Math.random() < v.tiny ? 0.12 : 1) * (0.04 + 0.96 * Math.random() ** 3) * scale * v.crackleAmp;
-    const pan = rand(-0.85, 0.85);
-    this.clicks.add(amp * 0.5, rand(3000, 7000), 0.7, 0.00002, rand(0.0001, 0.0003), pan, v.wet);
-    const n = 1 + Math.floor(Math.random() * 3);
-    for (let k = 0; k < n; k++) {
-      const hz = CRACKLE_HZ[Math.floor(Math.random() * 4)] * rand(0.7, 1.3);
-      const decay = 0.001 * Math.pow(25, Math.random() ** 2.5); // 1–25 ms, mostly short
-      this.rings.add(amp * rand(0.4, 1), hz, decay, pan, v.wet);
-    }
-  }
-
-  pop() {
-    const v = this.v;
-    const amp = 0.5 + 0.5 * Math.random();
-    const pan = rand(-0.6, 0.6);
-    this.clicks.add(amp * 0.8, rand(3000, 6000), 0.8, 0.00002, 0.0003, pan, v.wet);
-    this.thumps.add(amp, rand(150, 400), rand(0.015, 0.04), pan, v.wet);
-    this.shadowLeft = Math.round(0.4 * sampleRate);
-  }
-
-  next(out) {
-    const v = this.v;
-    if (--this.crackleGap <= 0) {
-      this.crackle(1);
-      this.crackleGap = nextGap(v.crackle);
-    }
-    if (--this.clusterGap <= 0) {
-      this.clusterLeft = 3 + Math.floor(Math.random() * 8); // a quick run of 3–10
-      this.clusterNext = 1;
-      this.clusterGap = nextGap(v.clusters);
-    }
-    if (this.clusterLeft > 0 && --this.clusterNext <= 0) {
-      this.crackle(0.7);
-      this.clusterLeft--;
-      this.clusterNext = nextGap(rand(25, 60));
-    }
-    if (--this.popGap <= 0) {
-      this.pop();
-      this.popGap = nextGap(v.pop);
-    }
-    const e = this.events;
-    e[0] = 0; e[1] = 0; e[2] = 0; e[3] = 0;
-    this.clicks.mix(e);
-    this.rings.mix(e);
-    const lo = this.low;
-    lo[0] = 0; lo[1] = 0; lo[2] = 0; lo[3] = 0;
-    this.thumps.mix(lo);
-    let shadowing = false;
-    if (this.shadowLeft > 0) {
-      shadowing = true;
-      if (--this.shadowLeft === 0) {
-        // Quiet again: start the next pop's shadow from rest.
-        for (const sh of this.shadow) for (const f of [sh.hp, sh.lp]) { f.x1 = 0; f.x2 = 0; f.y1 = 0; f.y2 = 0; }
-      }
-    }
-    for (let c = 0; c < 2; c++) {
-      const raw = this.lapBand[c].next(white()) * v.drive;
-      const lap = this.lapHp[c].next(raw > 0.9 ? 0.9 : raw < -0.9 ? -0.9 : raw) * 0.5 * v.lap;
-      const g = this.gasLp[c].next(white()) * 200;
-      const gas = Math.min(2.5, 0.25 + 0.35 * g * g * g * g);
-      const hiss = this.hissLp[c].next(this.hissHp[c].next(white())) * v.hiss * 0.25 * gas;
-      const thump = shadowing ? lo[c] + this.shadow[c].next(lo[c]) * 1.5 : 0;
-      const bed = lap + hiss;
-      // Crackles and pops share one soft limit, so even the biggest stays well under full scale.
-      out[c] = (bed * (1 - v.wet) + softClip(e[c] + thump, 0.6)) * v.gain;
-      out[c + 2] = (bed * v.wet + softClip(e[c + 2] + lo[c + 2], 0.6)) * v.gain;
-    }
-  }
-}
-
 // ---------- Waves ----------
 
 // Two kinds of wave, played together by WavesMix below:
@@ -879,86 +684,6 @@ class WavesMix {
   }
 }
 
-// ---------- Stream ----------
-
-// Stream: a brook. Many small bubbles (the sound of an air bubble in water: a short sine whose pitch
-// rises a little as it dies away, about 300–2000 Hz; a small bubble rings higher and shorter) over a
-// gentle broadband babble that ripples fast (tens to hundreds of ms). Lively but steady: no slow swell.
-class Stream {
-  constructor() {
-    this.pink = [new Pink(), new Pink()];
-    this.babbleHp = [new Biquad("highpass", 300, 0.7), new Biquad("highpass", 300, 0.7)];
-    this.babbleLp = [new Biquad("lowpass", 3000, 0.7), new Biquad("lowpass", 3000, 0.7)];
-    this.ripple = [new Drift(0.7, 1, 0.03, 0.15), new Drift(0.7, 1, 0.03, 0.15)];
-    this.busy = new Drift(0.85, 1.15, 0.4, 1.5);
-    const n = 48;
-    this.size = n;
-    this.count = 0;
-    this.phase = new Float64Array(n);
-    this.inc = new Float64Array(n);
-    this.chirp = new Float64Array(n);
-    this.env = new Float64Array(n);
-    this.decay = new Float64Array(n);
-    this.amp = new Float64Array(n);
-    this.gl = new Float64Array(n);
-    this.gr = new Float64Array(n);
-    this.wet = new Float64Array(n);
-    this.gap = nextGap(220);
-  }
-
-  bubble() {
-    if (this.count >= this.size) return;
-    const i = this.count++;
-    const hz = 300 * Math.pow(2000 / 300, Math.random() ** 1.3);
-    const tau = rand(8, 22) / hz; // rings for 8–22 cycles
-    const rise = rand(0.1, 0.4); // the pitch rises 10–40% over its life
-    this.phase[i] = 0;
-    this.inc[i] = (TWO_PI * hz) / sampleRate;
-    this.chirp[i] = Math.pow(1 + rise, 1 / (3 * tau * sampleRate));
-    this.env[i] = 1;
-    this.decay[i] = Math.exp(-1 / (tau * sampleRate));
-    this.amp[i] = 0.03 + 0.14 * Math.random() ** 3;
-    const [gl, gr] = panGains(rand(-0.9, 0.9));
-    this.gl[i] = gl;
-    this.gr[i] = gr;
-    this.wet[i] = rand(0.15, 0.4);
-  }
-
-  next(out) {
-    if (--this.gap <= 0) {
-      this.bubble();
-      this.gap = nextGap(220 * this.busy.next());
-    }
-    out[0] = 0; out[1] = 0; out[2] = 0; out[3] = 0;
-    let i = 0;
-    while (i < this.count) {
-      this.phase[i] += this.inc[i];
-      this.inc[i] *= this.chirp[i];
-      const s = fastSin(this.phase[i]) * this.env[i] * this.amp[i];
-      this.env[i] *= this.decay[i];
-      const w = this.wet[i];
-      out[0] += s * this.gl[i] * (1 - w);
-      out[1] += s * this.gr[i] * (1 - w);
-      out[2] += s * this.gl[i] * w;
-      out[3] += s * this.gr[i] * w;
-      if (this.env[i] < 0.01) {
-        // Finished (40 dB down, lost in the babble): the last bubble takes its place.
-        const last = --this.count;
-        this.phase[i] = this.phase[last]; this.inc[i] = this.inc[last]; this.chirp[i] = this.chirp[last];
-        this.env[i] = this.env[last]; this.decay[i] = this.decay[last]; this.amp[i] = this.amp[last];
-        this.gl[i] = this.gl[last]; this.gr[i] = this.gr[last]; this.wet[i] = this.wet[last];
-      } else {
-        i++;
-      }
-    }
-    for (let c = 0; c < 2; c++) {
-      const b = this.babbleLp[c].next(this.babbleHp[c].next(this.pink[c].next(white()))) * 0.39 * this.ripple[c].next();
-      out[c] += b * 0.8;
-      out[c + 2] += b * 0.2;
-    }
-  }
-}
-
 // ---------- Crickets ----------
 
 // Crickets: 3–5 crickets at different distances and sides, no other sound. Each has its own pitch
@@ -1035,346 +760,6 @@ class Crickets {
   }
 }
 
-// ---------- Thunder ----------
-
-// Thunder: distant only, after the Fineberg, Walters and Reiss model (built on Andy Farnell's thunder;
-// the synthetic thunder rated most realistic in their listening test). One event at random every
-// 20–90 s (the first within 3–10 s), each 8–14 s plus its echoes, made of:
-// - The rumbler, the main body: white noise through a low-pass whose cutoff glides from about
-//   800–1000 Hz down towards 50 Hz, half-wave rectified (which also gives it harmonics a phone speaker
-//   can play), its level jumping in irregular steps (sample and hold: a new random level at a random
-//   rate, fast at first and slower later). That stepping is the rolling: the opposite of a smooth
-//   swell. Overall a rise of 0.3–1 s, then an irregular decay made of 3–8 overlapping sub-rolls.
-// - The growl: very low noise, driven into a clip and low-passed, under the whole event, with its
-//   harmonic shadow at 120–400 Hz so it's heard on a phone too.
-// - The afterimage: a soft, ringing band at about 333 Hz from clipped noise times noise.
-// - In variant b only, at the start of about half the events: 1–3 soft, distant claps (noise in a
-//   narrow band gliding down, softened by the distance). Never sharp.
-// - Environment: an echo (0.4–0.9 s, fading in 1–3 repeats, duller each time), its own place per
-//   event, and more of the shared reverb than other sounds.
-// The whole is soft-capped, so it never startles. Variants for the listening lab:
-//   a: rolling rumble and growl only, no clap.
-//   b: soft distant claps at the start of about half the events, a little closer (brighter, drier).
-const THUNDER_VARIANTS = {
-  a: { claps: 0, from: [800, 1000], wet: 0.45, gain: 1 },
-  b: { claps: 0.5, from: [950, 1200], wet: 0.35, gain: 0.68 },
-};
-
-class Thunder {
-  constructor(variant) {
-    this.v = THUNDER_VARIANTS[variant] || THUNDER_VARIANTS.a;
-    this.rumbleLp = [new Biquad("lowpass", 900, 0.7), new Biquad("lowpass", 900, 0.7)];
-    this.rumbleHp = [new Biquad("highpass", 30, 0.7), new Biquad("highpass", 30, 0.7)];
-    this.growlLp = [new Biquad("lowpass", 60, 0.7), new Biquad("lowpass", 60, 0.7)];
-    this.growlHp = [new Biquad("highpass", 30, 0.7), new Biquad("highpass", 30, 0.7)];
-    this.growlLp2 = [new OnePole(80), new OnePole(80)];
-    this.growlShadow = [new Shadow(120, 400), new Shadow(120, 400)];
-    this.afterLp = [new OnePole(100), new OnePole(100)];
-    this.afterBand = [new Biquad("bandpass", 333, 4), new Biquad("bandpass", 333, 4)];
-    this.clapBand = [new Biquad("bandpass", 800, 7), new Biquad("bandpass", 800, 7)];
-    this.clapLp = [new Biquad("lowpass", 1500, 0.7), new Biquad("lowpass", 1500, 0.7)];
-    this.echo = [new Float32Array(sampleRate), new Float32Array(sampleRate)];
-    this.echoLp = [new OnePole(1200), new OnePole(1200)];
-    this.echoPos = 0;
-    this.event = null;
-    this.wait = Math.round(rand(3, 10) * sampleRate);
-    this.count = 0;
-    this.env = 0;
-    this.slow = 0;
-    this.hold = [0, 0];
-    this.holdLeft = [0, 0];
-    this.clapEnv = 0;
-  }
-
-  newEvent() {
-    const v = this.v;
-    const length = rand(8, 14);
-    const rolls = [{ at: 0, amp: 1, decay: rand(1.2, 2.5) }];
-    for (let k = 2 + Math.floor(Math.random() * 6); k > 0; k--) {
-      rolls.push({ at: rand(0.3, length * 0.6), amp: 0.25 + 0.75 * Math.random() ** 1.5, decay: rand(0.8, 2.5) });
-    }
-    const claps = [];
-    if (Math.random() < v.claps) {
-      let at = rand(0, 0.15);
-      for (let k = 1 + Math.floor(Math.random() * 3); k > 0; k--) {
-        claps.push({ at, len: rand(0.02, 0.3), from: Math.random() * 1200 + 100, amp: rand(0.4, 1) });
-        at += rand(0.05, 0.25);
-      }
-    }
-    const [gl, gr] = panGains(rand(-0.6, 0.6));
-    this.event = {
-      t: 0, length, rise: rand(0.3, 1), from: rand(v.from[0], v.from[1]), rolls, claps, gl, gr,
-      level: rand(0.7, 1), delay: Math.round(rand(0.4, 0.9) * sampleRate),
-    };
-  }
-
-  // The event's envelope at time t: the rise, then the sub-rolls (each a quick rise and a decay).
-  envelope(e) {
-    const t = e.t;
-    const r = Math.min(1, t / e.rise);
-    let sum = 0;
-    for (const roll of e.rolls) {
-      const d = t - roll.at;
-      if (d > 0) sum += roll.amp * (1 - Math.exp(-d / 0.15)) * Math.exp(-d / roll.decay);
-    }
-    return r * r * (3 - 2 * r) * sum * e.level;
-  }
-
-  next(out) {
-    const v = this.v;
-    out[0] = 0; out[1] = 0; out[2] = 0; out[3] = 0;
-    const e = this.event;
-    let dl = 0;
-    let dr = 0;
-    if (!e) {
-      if (--this.wait <= 0) this.newEvent();
-    } else {
-      const t = e.t;
-      e.t += 1 / sampleRate;
-      if ((this.count++ & 31) === 0) {
-        this.env = Math.min(1.5, this.envelope(e));
-        this.slow = Math.exp(-t / (e.length * 0.45)) * Math.min(1, t / e.rise) * e.level;
-        const cutoff = e.from * Math.pow(50 / e.from, Math.min(1, t / e.length));
-        for (let c = 0; c < 2; c++) this.rumbleLp[c].set(cutoff, 0.7);
-        // The claps: their band glides down to half, a soft 15 ms start, then dying away.
-        this.clapEnv = 0;
-        for (const clap of e.claps) {
-          const q = (t - clap.at) / clap.len;
-          if (q > 0 && q < 1) {
-            this.clapEnv += clap.amp * Math.min(1, (t - clap.at) / 0.015) * (1 - q) * (1 - q);
-            for (let c = 0; c < 2; c++) this.clapBand[c].set(clap.from * (1 - 0.5 * q), 7);
-          }
-        }
-      }
-      const done = t > e.length;
-      for (let c = 0; c < 2; c++) {
-        if (--this.holdLeft[c] <= 0) {
-          // Fast steps at first (about 50 ms), slower later (up to about half a second); most steps
-          // are small, a few are big.
-          this.hold[c] = 0.05 + 0.95 * Math.random() ** 2;
-          this.holdLeft[c] = Math.round((0.05 + 0.35 * Math.min(1, t / e.length)) * rand(0.5, 1.5) * sampleRate);
-        }
-        let x = 0;
-        if (!done) {
-          const lp = this.rumbleLp[c].next(white());
-          const rumble = this.rumbleHp[c].next(lp > 0 ? lp : 0) * 9 * this.env * this.hold[c];
-          let g = this.growlHp[c].next(this.growlLp[c].next(white())) * 40;
-          g = g > 1 ? 1 : g < -1 ? -1 : g;
-          const growl = this.growlLp2[c].next(g) * this.slow;
-          const shadow = this.growlShadow[c].next(growl) * 1.6;
-          let a = this.afterLp[c].next(white()) * 80 * white();
-          a = a > 1 ? 1 : a < -1 ? -1 : a;
-          const after = this.afterBand[c].next(a) * 0.4 * this.slow;
-          const clap = this.clapEnv ? this.clapLp[c].next(this.clapBand[c].next(white())) * 3 * this.clapEnv : 0;
-          x = rumble + growl * 0.5 + shadow + after + clap;
-        }
-        // The echo: what went in 0.4–0.9 s ago comes back quieter and duller, and again (feedback).
-        const buf = this.echo[c];
-        const read = (this.echoPos - e.delay + sampleRate) % sampleRate;
-        const back = buf[read];
-        buf[this.echoPos] = this.echoLp[c].next(x + back * 0.15);
-        const y = (x + back * 0.4) * (c === 0 ? e.gl : e.gr);
-        if (c === 0) dl = y;
-        else dr = y;
-      }
-      this.echoPos = (this.echoPos + 1) % sampleRate;
-      if (t > e.length + 3) {
-        this.event = null;
-        this.echo[0].fill(0);
-        this.echo[1].fill(0);
-        this.wait = Math.round(rand(20, 90) * sampleRate);
-      }
-    }
-    // A soft cap: even the strongest roll stays well under full scale.
-    const l = softClip(dl, 1 / 1.2);
-    const r = softClip(dr, 1 / 1.2);
-    out[0] = l * (1 - v.wet) * v.gain;
-    out[1] = r * (1 - v.wet) * v.gain;
-    out[2] = l * v.wet * v.gain;
-    out[3] = r * v.wet * v.gain;
-  }
-}
-
-// ---------- Train ----------
-
-// Train: inside a carriage on jointed track.
-// - The rhythm comes from the geometry: at each rail joint the bogie under you gives two hits,
-//   "da-dum" (its two axles, 2.5 m apart: about 0.1–0.13 s at 70–90 km/h), and the carriage's other
-//   bogie a quieter pair half a cycle later. One cycle per rail (25 m): 1.0–1.3 s at that speed. The
-//   speed drifts slowly (±10% over minutes) and every interval follows it, so the whole tempo changes
-//   together. Each hit has a little timing jitter (±2%) and its own loudness.
-// - Each hit: an instant onset, a low thump (50–150 Hz) with its harmonic shadow, a metallic part
-//   (2–4 short inharmonic resonances at 600–3000 Hz: wheel and rail ringing) and a few tiny rattling
-//   ticks right after.
-// - Rolling noise: steady and broadband (most energy at 80–1000 Hz), with a very slight flutter at the
-//   wheels' rotation rate (about 7–9 Hz, ±1 dB), plus a deep carriage rumble (30–100 Hz) with its
-//   harmonic shadow. No slow swells.
-// Variants for the listening lab:
-//   a: classic jointed track: a clear da-dum.
-//   b: softer clacks, more rolling roar and rattle, the same rhythm.
-const TRAIN_VARIANTS = {
-  a: { clack: 1, metal: 1, roll: 0.35, rattle: 0.5, gain: 1 },
-  b: { clack: 0.7, metal: 0.8, roll: 0.42, rattle: 1, gain: 1.11 },
-};
-const TRAIN_WHEEL_M = 2.83; // a wheel's circumference (0.9 m across)
-
-class Train {
-  constructor(variant) {
-    this.v = TRAIN_VARIANTS[variant] || TRAIN_VARIANTS.a;
-    this.base = rand(75, 85) / 3.6; // m/s
-    this.speed = new Drift(0.9, 1.1, 60, 180);
-    this.pink = [new Pink(), new Pink()];
-    this.brown = [new Brown(), new Brown()];
-    this.rollHp = [new OnePole(80), new OnePole(80)]; // a gentle high-pass: x minus its low-passed self
-    this.rollLp = [new Biquad("lowpass", 1000, 0.6), new Biquad("lowpass", 1000, 0.6)];
-    this.rumbleLp = [new Biquad("lowpass", 100, 0.7), new Biquad("lowpass", 100, 0.7)];
-    this.shadow = [new Shadow(150, 500), new Shadow(150, 500)]; // of the rumble and the thumps together
-    this.thumps = new Rings(16);
-    this.metal = new Rings(48);
-    this.rattle = new Bursts(24);
-    this.flutter = [rand(0, TWO_PI), rand(0, TWO_PI)];
-    this.hits = []; // the next hits of this cycle: [samples from now, level]
-    this.cycleLeft = Math.round(rand(0.2, 0.8) * sampleRate);
-    this.rattleLeft = 0;
-    this.rattleGap = 0;
-    this.low = [0, 0, 0, 0];
-    this.mid = [0, 0, 0, 0];
-    this.mps = this.base;
-  }
-
-  // A new rail joint: the near bogie's pair now, the far bogie's quieter pair half a cycle later.
-  newCycle() {
-    const sr = sampleRate;
-    const cycle = 25 / this.mps;
-    const axles = 2.5 / this.mps;
-    const jitter = () => rand(0.98, 1.02);
-    this.hits = [
-      [0, 1], [axles * jitter(), 0.85],
-      [(cycle / 2) * jitter(), 0.55], [(cycle / 2 + axles) * jitter(), 0.5],
-    ].map(([s, level]) => [Math.round(s * sr), level]);
-    this.cycleLeft = Math.round(cycle * jitter() * sr);
-  }
-
-  hit(level) {
-    const v = this.v;
-    const amp = level * rand(0.75, 1) * v.clack;
-    const pan = rand(-0.25, 0.25);
-    const wet = level < 0.7 ? 0.2 : 0.1; // the far bogie is a little more distant
-    this.thumps.add(amp * 0.8, rand(50, 150), rand(0.03, 0.07), pan, wet);
-    for (let k = 2 + Math.floor(Math.random() * 3); k > 0; k--) {
-      this.metal.add(amp * v.metal * rand(0.25, 0.7), rand(600, 3000), 0.005 * Math.pow(8, Math.random()), pan, wet);
-    }
-    this.rattleLeft = Math.round((2 + Math.random() * 4) * v.rattle);
-    this.rattleGap = Math.round(rand(0.008, 0.025) * sampleRate);
-  }
-
-  next(out) {
-    const v = this.v;
-    this.mps = this.base * this.speed.next();
-    if (--this.cycleLeft <= 0) this.newCycle();
-    for (const h of this.hits) {
-      if (h[0]-- === 0) this.hit(h[1]);
-    }
-    if (this.rattleLeft > 0 && --this.rattleGap <= 0) {
-      this.rattle.add(rand(0.01, 0.04) * v.rattle, rand(1500, 5000), rand(1, 3), 0.00003, rand(0.0003, 0.001), rand(-0.6, 0.6), 0.15);
-      this.rattleLeft--;
-      this.rattleGap = Math.round(rand(0.008, 0.03) * sampleRate);
-    }
-    const lo = this.low;
-    lo[0] = 0; lo[1] = 0; lo[2] = 0; lo[3] = 0;
-    this.thumps.mix(lo);
-    const m = this.mid;
-    m[0] = 0; m[1] = 0; m[2] = 0; m[3] = 0;
-    this.metal.mix(m);
-    this.rattle.mix(m);
-    const wheelHz = this.mps / TRAIN_WHEEL_M;
-    for (let c = 0; c < 2; c++) {
-      this.flutter[c] += (TWO_PI * wheelHz) / sampleRate;
-      if (this.flutter[c] > TWO_PI) this.flutter[c] -= TWO_PI;
-      const flutter = 1 + 0.12 * fastSin(this.flutter[c]);
-      const p = this.pink[c].next(white());
-      const roll = this.rollLp[c].next(p - this.rollHp[c].next(p)) * 1.6 * v.roll * flutter;
-      const rumble = this.rumbleLp[c].next(this.brown[c].next(white())) * 1.2;
-      // One shadow for the deep rumble and the thumps: the rumble's share at 1.2, the thumps' at 1.5.
-      const shadow = this.shadow[c].next(rumble + lo[c] * 1.25) * 1.2;
-      // The hits share one soft limit, so even the loudest stays well under full scale.
-      out[c] = ((roll + rumble) * 0.92 + softClip(lo[c] + shadow + m[c], 1.6)) * v.gain;
-      out[c + 2] = ((roll + rumble) * 0.08 + softClip(lo[c + 2] + m[c + 2], 1.6)) * v.gain;
-    }
-  }
-}
-
-// ---------- Airplane ----------
-
-// Airplane: a passenger jet's cabin in cruise.
-// - Airflow (the turbulent air along the fuselage): steady broadband noise with a smooth spectrum,
-//   absolutely steady.
-// - Engine: a low exhaust rumble (40–150 Hz) with its harmonic shadow, and a stable drone of 6
-//   partials (a fundamental at about 85–115 Hz and harmonics up to about 600 Hz), two engines a
-//   fraction of a hertz apart so they beat very slowly. Clearly there, never whiny.
-// - Air vent: a faint, steady high hiss at 3–8 kHz.
-// Variants for the listening lab:
-//   a: a middle or rear seat: the airflow's maximum around 300–1000 Hz, more engine.
-//   b: a front seat: brighter airflow (its peak around 1–3 kHz), less engine.
-const AIRPLANE_VARIANTS = {
-  a: { flowHz: 550, flowQ: 0.5, bright: 0.12, engine: 1, drone: 1, gain: 1 },
-  b: { flowHz: 1800, flowQ: 0.5, bright: 0.3, engine: 0.5, drone: 0.8, gain: 0.72 },
-};
-const DRONE_PARTIALS = [0.08, 0.28, 0.55, 0.6, 0.65, 0.55];
-
-class Airplane {
-  constructor(variant) {
-    this.v = AIRPLANE_VARIANTS[variant] || AIRPLANE_VARIANTS.a;
-    this.pink = [new Pink(), new Pink()];
-    this.brown = [new Brown(), new Brown()];
-    this.flow = [new Biquad("bandpass", this.v.flowHz, this.v.flowQ), new Biquad("bandpass", this.v.flowHz, this.v.flowQ)];
-    this.top = [new OnePole(6000), new OnePole(6000)];
-    this.exhaustLp = [new Biquad("lowpass", 150, 0.7), new Biquad("lowpass", 150, 0.7)];
-    this.shadow = [new Shadow(150, 600), new Shadow(150, 600)];
-    this.vent = [new Biquad("bandpass", 5000, 0.7), new Biquad("bandpass", 5000, 0.7)];
-    const f0 = rand(85, 115);
-    this.hz = [f0, f0 + rand(0.15, 0.4)]; // two engines, beating very slowly
-    this.phase = [rand(0, TWO_PI), rand(0, TWO_PI)];
-  }
-
-  // One engine's drone: its partials from one sine and cosine (sin((k+1)x) = 2cos(x)sin(kx) − sin((k−1)x)).
-  drone(x) {
-    const c2 = 2 * fastCos(x);
-    let prev = 0;
-    let cur = fastSin(x);
-    let sum = 0;
-    for (let k = 0; k < DRONE_PARTIALS.length; k++) {
-      sum += cur * DRONE_PARTIALS[k];
-      const next = c2 * cur - prev;
-      prev = cur;
-      cur = next;
-    }
-    return sum;
-  }
-
-  next(out) {
-    const v = this.v;
-    for (let k = 0; k < 2; k++) {
-      this.phase[k] += (TWO_PI * this.hz[k]) / sampleRate;
-      if (this.phase[k] > TWO_PI) this.phase[k] -= TWO_PI;
-    }
-    const e1 = this.drone(this.phase[0]);
-    const e2 = this.drone(this.phase[1]);
-    for (let c = 0; c < 2; c++) {
-      const p = this.pink[c].next(white());
-      const flow = this.flow[c].next(p) * 1.8 + this.top[c].next(p) * v.bright;
-      const ex = this.exhaustLp[c].next(this.brown[c].next(white())) * 0.9 * v.engine;
-      const exhaust = ex + this.shadow[c].next(ex) * 1.2;
-      // Each side hears its own engine a little more.
-      const drone = (c === 0 ? e1 * 0.6 + e2 * 0.4 : e1 * 0.4 + e2 * 0.6) * 0.075 * v.drone;
-      const vent = this.vent[c].next(white()) * 0.03;
-      const y = flow + exhaust + drone + vent;
-      out[c] = y * 0.95 * v.gain;
-      out[c + 2] = y * 0.05 * v.gain;
-    }
-  }
-}
-
 // ---------- Fan, Vacuum ----------
 
 // Fan: airy noise (pink and a little brown, low-passed, as from a fan or an air conditioner) with a
@@ -1440,23 +825,18 @@ class Vacuum {
   }
 }
 
-// The sounds, by the id focus-sound.js uses. A function gets the lab's variant ("a", "b", …).
+// The sounds, by the id focus-sound.js uses.
 const SOUNDS = {
   rain: () => new Rain(),
-  thunder: (variant) => new Thunder(variant),
   birds: () => new Birds(),
   wind: () => new Wind(),
-  fire: (variant) => new Fire(variant),
   waves: () => new WavesMix(),
-  stream: () => new Stream(),
   crickets: () => new Crickets(),
   fan: () => new Fan(),
   vacuum: () => new Vacuum(),
-  train: (variant) => new Train(variant),
-  airplane: (variant) => new Airplane(variant),
 };
 
-// One node plays one sound (processorOptions.type, and .variant in the lab). Two stereo outputs:
+// One node plays one sound (processorOptions.type). Two stereo outputs:
 // 0 is dry, 1 goes to the reverb. A "stopAt" message (an audio clock time, sent with the fade-out)
 // ends it once the fade is over: it then tells the page ("ended") and stops running, so nothing keeps
 // working in silence.
@@ -1465,7 +845,7 @@ class FocusAmbientProcessor extends AudioWorkletProcessor {
     super();
     const opts = options.processorOptions || {};
     const make = SOUNDS[opts.type] || SOUNDS.fan;
-    this.sound = make(opts.variant);
+    this.sound = make();
     this.stopAt = Infinity;
     this.frame = [0, 0, 0, 0];
     this.port.onmessage = (event) => {

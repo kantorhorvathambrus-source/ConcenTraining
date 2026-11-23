@@ -87,8 +87,8 @@ there, see [Domain, redirect and security headers](#domain-redirect-and-security
   only shown where it can work (on iPhone and iPad only in the Home Screen app, never in a Safari
   tab); see [Leave reminder](#leave-reminder).
   Below them, **Focus sound**: **Noise** (one choice: Off · Brown · Pink · White · Green) and
-  **Ambient** (a mixer of toggle tiles: Rain · Thunder · Birds · Wind · Fire · Waves · Stream · Crickets ·
-  Fan · Vacuum · Train · Airplane, any number on).
+  **Ambient** (a mixer of toggle tiles: Rain · Birds · Wind · Waves · Crickets · Fan · Vacuum, any number
+  on).
   While at least one is on: a volume row per layer, **Volume** (the master) and **Preview**. See
   [Focus sound](#focus-sound).
 - **Ragebait warning:** a ragebait character (built-in or custom) shows "Heads up!" with its
@@ -525,8 +525,7 @@ chime: no audio file, nothing downloaded, no libraries, no Netlify bandwidth. Th
 **Setup screen**
 
 - **Noise** (one choice): Off · Brown · Pink · White · Green.
-- **Ambient** (a mixer): Rain · Thunder · Birds · Wind · Fire · Waves · Stream · Crickets · Fan · Vacuum ·
-  Train · Airplane, as toggle tiles: a tap turns
+- **Ambient** (a mixer): Rain · Birds · Wind · Waves · Crickets · Fan · Vacuum, as toggle tiles: a tap turns
   a sound on or off, and any number can be on at once, also together with a noise. Under them: "You
   can mix these: turn on several and set each one's volume." Under both groups: "Steady background
   sound that covers distracting noises. Tap Preview to listen."
@@ -577,83 +576,46 @@ chime: no audio file, nothing downloaded, no libraries, no Netlify bandwidth. Th
   middle frequencies around 500 Hz, like a forest). Steady, so about 8 s of the picked one is
   generated in stereo and looped, with its end crossfaded into its start. Only the picked noise's
   buffer is kept (about 3 MB).
-- **Ambient (generated live in the worklet):** events such as drops, crackles and birdsong would
+- **Ambient (generated live in the worklet):** events such as drops, chirps and birdsong would
   audibly repeat in any loop short enough to keep in memory, so they're rolled from random numbers
   while they play, sample by sample, on the browser's audio thread. Nothing ever repeats, nothing is
-  kept in memory, and no timers are involved (which browsers pause in the background). Phone
-  speakers play almost nothing under about 200 Hz, so every deep part (a thump, a rumble) comes with
-  a **harmonic shadow**: the same signal half-wave rectified and band-passed to about 150–600 Hz,
-  following it exactly, from which the ear infers the missing low end (the "missing fundamental"
-  trick of psychoacoustic bass enhancement). No sound has a slow swell of broadband noise (that
-  reads as the sea): a steady bed changes by less than ±1.5 dB.
+  kept in memory, and no timers are involved (which browsers pause in the background).
   - **Rain:** drops over a steady hiss shaped like rain (about 1–8 kHz, which never swells); no
     wind-like bed and no tones. Each drop is a tiny noise burst rung through its own band-pass filter
     (random centre and Q: a hard surface rings, a soft one taps), with its own attack, decay and
     place, at three distances: far (quiet, duller, wetter), mid, and a few near ones (louder,
     brighter, drier). Its strength drifts only ±10% over about a minute: no gusts.
-  - **Thunder:** distant only, after the Fineberg, Walters and Reiss model (built on Andy Farnell's
-    thunder). An event at random every 20–90 s (the first within 3–10 s), 8–14 s plus its echoes: the
-    **rumbler** (white noise through a low-pass gliding from about 800–1000 Hz down towards 50 Hz,
-    half-wave rectified, its level stepping irregularly by sample and hold, fast at first and slower
-    later: that's the rolling), a **growl** (very low noise driven into a clip, with its harmonic
-    shadow at 120–400 Hz), a soft ringing **afterimage** at about 333 Hz, an **echo** (0.4–0.9 s,
-    duller with every repeat), its own place per event and extra reverb. Soft-capped, so it never
-    startles. Silence in between: it's meant to be mixed with Rain.
   - **Birds:** 3 birds at different sides and distances (one far away), nothing else. Each has its own
     song (a phrase of a few syllables: fast pitch sweeps between about 2 and 7 kHz, whistles with a
     little vibrato, trills), sung with small changes in pitch and timing, with pauses of 3–12 s. Far
     birds are quieter, duller and wetter; a soft cap keeps every syllable in the background.
   - **Wind:** pink noise through a slowly moving band-pass with a low Q (so it never whistles), gusts
     of 5–15 s, and a faint rustle of leaves at the gusts' peaks.
-  - **Fire:** after Andy Farnell's three-part model (Designing Sound) plus the snap: **lapping**
-    (white noise through a band-pass at about 30 Hz with a low Q, driven into a hard clip and
-    high-passed: a fluttering, burbling flame with harmonics up into the hundreds of Hz), soft
-    **hissing** (1–7.5 kHz, mostly quiet with rare louder moments of escaping gas), sparse
-    **crackles** (heavy-tailed loudness; an instant onset, a short click, then 1–3 resonances around
-    600, 1000, 1200 and 2600 Hz ringing 1–25 ms; now and then a quick cluster) and rare **pops** (a
-    click and a low thump with its harmonic shadow). No added amplitude modulation and no runs of
-    sizzle: that's what made an earlier version chuff and spit like a steam engine.
   - **Waves:** two kinds of wave played together, each with its own independent timing: a smooth
     swell, and waves with a shape (a short build, a fast break with bright foam, a fading wash, a soft
     steady surf in between). Mostly both play; when only one plays, it's mostly the break and wash,
     rarely only the swell; never neither.
-  - **Stream:** a brook: many small bubbles (a short sine whose pitch rises a little as it dies away,
-    about 300–2000 Hz) over a gentle, quieter broadband babble that ripples fast. Lively but steady.
   - **Crickets:** 3–5 crickets at different distances and sides, each with its own pitch (about
     4–5 kHz), chirp (2–5 short pulses) and pace, slightly irregular; far ones quieter and duller.
   - **Fan** (airy noise with a soft 100 Hz hum), **Vacuum** (air noise and a 140 Hz motor tone with
     harmonics and a slight wobble).
-  - **Train:** inside a carriage on jointed track. The rhythm comes from the geometry: at each rail
-    joint the bogie under you gives "da-dum" (two axles 2.5 m apart), the far bogie a quieter pair half
-    a cycle later, one cycle per 25 m rail (1.0–1.3 s at 70–90 km/h); the speed drifts ±10% over minutes
-    and every interval follows it. Each hit: an instant onset, a low thump (50–150 Hz) with its harmonic
-    shadow, 2–4 short metallic resonances (600–3000 Hz) and a few rattling ticks. Under it, steady
-    rolling noise (80–1000 Hz) with a slight flutter at the wheels' rotation rate and a deep carriage
-    rumble with its harmonic shadow.
-  - **Airplane:** a passenger jet's cabin in cruise: steady airflow noise with a smooth spectrum,
-    an engine (a low exhaust rumble with its harmonic shadow, and a drone of 6 partials from about
-    85–115 Hz up to about 600 Hz, two engines a fraction of a hertz apart so they beat very slowly,
-    each partial about 10 dB under the noise around it, so it's there but never whiny) and a faint
-    air-vent hiss at 3–8 kHz. No chimes, no announcements.
+- **Planned as recordings:** Fire, Thunder, Train, Airplane and Stream. Three rounds of generated
+  versions (with listening tests on a phone) didn't sound real enough, so they'll come back as short
+  recorded loops in a separate change. Saved settings for them from the test versions are simply
+  dropped (`cleanFocusMix` ignores unknown sounds).
 - **Loudness:** every layer at the same % sounds about equally loud (`FOCUS_LEVELS`, measured with
-  A-weighting, which follows how ears hear, over 1–10 minutes of each, reverb included). Rain, Wind,
-  Fire, Stream, Fan, Vacuum, Train and Airplane are matched on their average like the noises; Waves on
-  their crests (2 dB above the noises); Birds on their phrases (2 dB under the noises) and Crickets
-  4 dB under, so they stay in the background; Thunder so that its loudest moment is as loud as a steady
-  noise, never louder.
+  A-weighting, which follows how ears hear, over 1–3 minutes of each, reverb included). Rain, Wind, Fan
+  and Vacuum are matched on their average like the noises; Waves on their crests (2 dB above the
+  noises); Birds on their phrases (2 dB under the noises) and Crickets 4 dB under, so they stay in the
+  background.
 - **How they were checked:** rendered offline through the real player (OfflineAudioContext in
-  headless Chromium) and measured on the normal render and on a **phone-speaker simulation** (a
-  4th-order high-pass at 250 Hz plus a gentle presence boost around 3–9 kHz): spectrum per octave and
-  narrow tonal peaks (Rain and Stream have none above the measuring noise), peaks, kurtosis (how
-  impulsive a sound is), modulation spectra (Fire: no peak in 10–80 Hz, so no chuff; Thunder: most of
-  its rolling in 1–8 Hz; Airplane: flat, no sea), Train's da-dum against the rolling bed on the phone,
-  Airplane's drone partials, A-weighted loudness, and the autocorrelation of the loudness over 10
-  minutes (no repeating pattern). With every layer and the master at 100% the sum would reach about
-  +0.5 dBFS, and the limiter holds it at −3 dBFS; at the default settings the mix peaks around
-  −16 dBFS, so the limiter never acts. All 12 Ambient sounds plus a noise take about 15% of the audio
-  thread's time budget in the worklet, about 17% with the reverb, on the test machine. To keep that
-  low the worklet uses a sine table instead of `Math.sin`, a cheap rational soft limit instead of
-  `Math.tanh`, works out slow envelopes every 16 samples and runs a pop's shadow only while it rings.
+  headless Chromium) and measured: spectrum per octave and narrow tonal peaks (Rain has none above the
+  measuring noise), peaks, A-weighted loudness, event rates, and the autocorrelation of the loudness
+  over 10 minutes (no repeating pattern). With every layer and the master at 100% the limiter holds
+  the peaks at −3 dBFS; at the default settings it never acts. All 7 Ambient sounds plus a noise take
+  about 7% of the audio thread's time budget in the worklet, about 8% with the reverb, on the test
+  machine. To keep that low the worklet uses a sine table instead of `Math.sin`, a cheap rational soft
+  limit instead of `Math.tanh`, and works out slow envelopes every 16 samples.
 
 **When it plays** (`updateFocusSound` in `app.js`)
 
@@ -689,8 +651,7 @@ choice of an early test version, only ever on Deploy Previews) is deleted.
 
 1. In `focus-sound-worklet.js`: a class with `next(out)` that writes dry left, dry right, wet left and
    wet right into `out[0..3]` (the helpers there: `Pink`, `Brown`, `Biquad`, `OnePole`, `Drift`,
-   `fastSin`, `softClip`, `Bursts` for drops and clicks, `Rings` for struck resonances, `Shadow` for
-   the harmonic shadow of anything deep), and an entry in `SOUNDS`.
+   `fastSin`, `softClip`, `Bursts` for drops and clicks), and an entry in `SOUNDS`.
 2. In `focus-sound.js`: the id in `FOCUS_AMBIENTS` (its place there is its place on screen) and a
    level in `FOCUS_LEVELS` (render a minute of it offline and match its A-weighted loudness to the
    noises).
@@ -2680,8 +2641,7 @@ and the timer keeps counting from the start time as always.
 | `public/js/plans.js` | Plans: the switch `PLANS_ENABLED` (and `PLANS_ON`, also true on Netlify's test sites and localhost), the block and break presets and limits, the default break, cleaning saved plans (`cleanPlanRows`, `cleanStoredPlan`), the plan builder in step 3 and the segmented timeline (see [Plans](#plans)) |
 | `public/js/duration-sheet.js` | The duration sheet: the bottom sheet a plan row's length and break buttons open (presets, Custom with −/+ and Set; see [The duration sheet](#the-duration-sheet)) |
 | `public/js/focus-sound.js` | The focus sound: the list of sounds, generating the noise loops, every sound's level and the volume curve, the generated reverb, and the mixer/player that fades layers and the whole mix in and out (see [Focus sound](#focus-sound)) |
-| `public/js/focus-sound-worklet.js` | The 12 Ambient focus sounds, generated live on the browser's audio thread, and the limiter on the mix (an AudioWorklet module, loaded by `focus-sound.js`) |
-| `public/lab/sound/` | TEMPORARY listening lab for PR #81 (variants of Fire and Waves, and the five newest sounds; noindex, not linked, not precached). Deleted before merge |
+| `public/js/focus-sound-worklet.js` | The 7 Ambient focus sounds, generated live on the browser's audio thread, and the limiter on the mix (an AudioWorklet module, loaded by `focus-sound.js`) |
 | `public/js/app.js` | Running a plan (blocks, planned breaks, the plan's summary), timer, reaction engine, distraction category picker, Undo, Stop and breaks (Take a break / Resume), disabled Advanced lengths, time away card, leave reminder notification, motivation rotation, the picker and card in the distraction buttons' place on landscape phones, end chime, when the focus sound plays (its setup row, Preview and the mute button), screen wake lock and the "screen may turn off" note, summary, How it works card, iPhone Home Screen tip, persistent storage request, one tab at a time (Web Locks) |
 | `public/js/history-store.js` | Saving/loading history, focus % and summary result (with their thresholds; `resultOf` also judges a plan's totals), break totals and the "Paused …" line, distraction categories, export/import checks, iPhone/iPad and iPhone Safari checks, the "can this browser save?" test (`storageWorks`) (used by both pages) |
 | `public/js/history.js` | Streaks, weekly time and focus charts, time of day, distraction categories, session list and backup buttons on `history.html` |

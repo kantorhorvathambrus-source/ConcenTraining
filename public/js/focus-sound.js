@@ -7,10 +7,9 @@
 // - Noise (brown, pink, white, green): steady, so a few seconds are generated once into an
 //   AudioBuffer (a block of samples kept in memory) and looped. The end of the buffer is crossfaded
 //   into its start, so the loop point has no click.
-// - Ambient (rain, thunder, birds, wind, fire, waves, stream, crickets, fan, vacuum, train, airplane):
-//   generated live, sample by sample, by an AudioWorklet (js/focus-sound-worklet.js, which runs on the
-//   browser's audio thread). Every drop, crackle and bird phrase is new, so nothing ever repeats, and
-//   nothing is kept in memory.
+// - Ambient (rain, birds, wind, waves, crickets, fan, vacuum): generated live, sample by sample, by an
+//   AudioWorklet (js/focus-sound-worklet.js, which runs on the browser's audio thread). Every drop,
+//   chirp and bird phrase is new, so nothing ever repeats, and nothing is kept in memory.
 //
 // The chain: every layer has its own gain (its volume); Ambient layers also send their "wet" part to
 // one shared reverb (a ConvolverNode with a short room generated in code), so nothing sounds bone-dry.
@@ -20,10 +19,8 @@
 
 const FOCUS_NOISES = ["brown", "pink", "white", "green"];
 // In the order of the setup screen's tiles and volume rows. Adding a sound: see the README.
-const FOCUS_AMBIENTS = [
-  "rain", "thunder", "birds", "wind", "fire", "waves", "stream", "crickets", "fan", "vacuum", "train", "airplane",
-];
-// The worklet next to this file, wherever the page is (the app, or the listening lab in lab/sound/).
+const FOCUS_AMBIENTS = ["rain", "birds", "wind", "waves", "crickets", "fan", "vacuum"];
+// The worklet next to this file, wherever the page that loads this file is.
 const FOCUS_WORKLET_URL = new URL("focus-sound-worklet.js", document.currentScript.src).href;
 const FOCUS_VOLUME_DEFAULT = 55; // the master (Volume slider), %
 const FOCUS_LAYER_DEFAULT = 70; // a layer turned on for the first time, %
@@ -42,12 +39,10 @@ const REVERB_RETURN = 0.6; // how much of the reverb comes back into the mix
 // chime (CHIME_VOLUME in app.js). See the README.
 const FOCUS_LEVELS = {
   brown: 0.072, pink: 0.055, white: 0.048, green: 0.047,
-  // Matched on the average, like the noises: rain, fire, stream, fan, vacuum, train, airplane. Waves:
-  // on their crests (2 dB above the noises), so the troughs are quieter. Birds: on their phrases (2 dB
-  // under the noises) and Crickets 4 dB under, so they stay in the background. Thunder: its loudest
-  // moment is as loud as a steady noise, never louder.
-  rain: 1.69, thunder: 0.49, birds: 0.42, wind: 0.174, fire: 0.549, waves: 0.383, stream: 0.391,
-  crickets: 0.8, fan: 0.181, vacuum: 0.258, train: 0.297, airplane: 0.0994,
+  // Matched on the average, like the noises: rain, wind, fan, vacuum. Waves: on their crests (2 dB
+  // above the noises), so the troughs are quieter. Birds: on their phrases (2 dB under the noises) and
+  // Crickets 4 dB under, so they stay in the background.
+  rain: 1.69, birds: 0.42, wind: 0.174, waves: 0.383, crickets: 0.8, fan: 0.181, vacuum: 0.258,
 };
 
 // Does this browser have Web Audio at all? Without it the Focus sound setting isn't shown.
@@ -228,8 +223,7 @@ function createFocusSoundPlayer(getContext) {
   const modules = new WeakMap(); // ctx → promise: true once the worklet is loaded, false if it can't be
   const rooms = new WeakMap(); // ctx → the reverb's impulse (AudioBuffer)
   // noise: "off" or a noise; ambients: { id: volume } of the Ambient layers that are on.
-  // variants: only the listening lab uses it ({ rain: "b" }).
-  let mix = { noise: "off", noiseVolume: FOCUS_LAYER_DEFAULT, ambients: {}, variants: {} };
+  let mix = { noise: "off", noiseVolume: FOCUS_LAYER_DEFAULT, ambients: {} };
   let master = FOCUS_VOLUME_DEFAULT;
   let want = false; // start() was called, and stop() not since
   let pending = null; // a start waiting for the worklet module
@@ -313,7 +307,7 @@ function createFocusSoundPlayer(getContext) {
   // A new layer, its gain ramping from 0 to its volume over fadeSeconds.
   const startLayer = (c, id, volume, fadeSeconds) => {
     const { ctx } = c;
-    const layer = { id, volume, variant: mix.variants[id] || "", stopping: false, gains: [] };
+    const layer = { id, volume, stopping: false, gains: [] };
     try {
       const gain = ctx.createGain();
       gain.gain.value = 0;
@@ -334,7 +328,7 @@ function createFocusSoundPlayer(getContext) {
         ensureReverb(c);
         const node = new AudioWorkletNode(ctx, "focus-ambient", {
           numberOfInputs: 0, numberOfOutputs: 2, outputChannelCount: [2, 2],
-          processorOptions: { type: id, variant: layer.variant },
+          processorOptions: { type: id },
         });
         const wetGain = ctx.createGain();
         wetGain.gain.value = 0;
@@ -386,7 +380,7 @@ function createFocusSoundPlayer(getContext) {
     if (mix.noise !== "off") wanted.set(mix.noise, mix.noiseVolume);
     for (const id of FOCUS_AMBIENTS) if (id in mix.ambients) wanted.set(id, mix.ambients[id]);
     for (const [id, layer] of c.layers) {
-      if (!wanted.has(id) || layer.variant !== (mix.variants[id] || "")) {
+      if (!wanted.has(id)) {
         fadeOutLayer(c, layer, fadeSeconds);
         c.layers.delete(id);
       }
@@ -424,14 +418,13 @@ function createFocusSoundPlayer(getContext) {
   };
 
   return {
-    // What the mix is: { noise: "off" | a noise, noiseVolume, ambients: { id: volume }, variants }.
+    // What the mix is: { noise: "off" | a noise, noiseVolume, ambients: { id: volume } }.
     // Applied at once if it's playing.
     setMix(next) {
       mix = {
         noise: cleanFocusNoise(next.noise),
         noiseVolume: cleanFocusVolume(next.noiseVolume, FOCUS_LAYER_DEFAULT),
         ambients: {},
-        variants: { ...(next.variants || {}) },
       };
       for (const id of FOCUS_AMBIENTS) {
         if (next.ambients && id in next.ambients) mix.ambients[id] = cleanFocusVolume(next.ambients[id], FOCUS_LAYER_DEFAULT);
