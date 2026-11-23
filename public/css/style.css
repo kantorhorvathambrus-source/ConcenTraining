@@ -835,6 +835,46 @@ a:focus-visible {
   text-wrap: balance; /* if it wraps, two even lines instead of "min" alone */
 }
 
+/* The info line with the focus sound's mute button at its end. While the button is there, an empty
+   cell of the same width on the left keeps the text centred. The cells are 32px, so the line keeps
+   as much room as it can; the button's 44px tap target reaches 6px past its cell on each side and
+   12px above the line, so the line takes no more height than before. */
+.session-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+}
+
+.has-sound-toggle .session-top {
+  grid-template-columns: 32px minmax(0, 1fr) 32px;
+}
+
+.has-sound-toggle .session-info {
+  grid-column: 2;
+}
+
+.sound-toggle {
+  grid-column: 3;
+  justify-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin: -12px -6px -4px;
+  padding: 0;
+  border-radius: var(--radius-pill);
+}
+
+.sound-toggle .sound-icon-off,
+.sound-toggle.is-off .sound-icon-on {
+  display: none;
+}
+
+.sound-toggle.is-off .sound-icon-off {
+  display: block;
+}
+
 /* In the page flow (not on top), so it never covers the character, timer or buttons. */
 .screen-note {
   text-align: center;
@@ -1870,6 +1910,104 @@ dialog .check-row {
 .setting-hint {
   margin: 0 0 6px 30px;
   font-size: var(--fs-14);
+}
+
+/* Focus sound (index.html, "focus sound" in app.js): its label, the Noise chips, the Ambient tiles,
+   the hints, then a volume row per layer, Volume (the master) and Preview. */
+.focus-sound-setting {
+  margin-top: 12px;
+}
+
+/* A long single word ("Hintergrundrauschen") may break rather than run off a narrow screen. */
+.setting-label,
+.chip-group-label {
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+.setting-label {
+  margin: 0 0 8px;
+}
+
+/* "Noise" and "Ambient" above their chips. */
+.chip-group-label {
+  margin: 0 0 6px;
+  font-size: var(--fs-14);
+}
+
+#focusAmbientGroup {
+  margin-top: 12px;
+}
+
+/* Both groups are the same grid, as wide as each other, so their columns line up and every chip and
+   tile is exactly the same width: as many columns as fit at 7em each (em grows with the text size,
+   so large text gives fewer columns), sharing the row equally. 7em fits the longest single word of
+   any language ("Aspirapolvere", 6.3em), so no word is ever split. Every chip is the same height:
+   enough for two lines, so a two-word name wraps inside it instead of making it bigger. */
+.sound-chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(7em, 100%), 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.sound-chips .chip {
+  min-width: 0;
+  min-height: max(44px, calc(2.5em + 14px));
+  padding: 6px 4px;
+  white-space: normal;
+  line-height: 1.25;
+  text-align: center;
+  hyphens: auto;
+  overflow-wrap: break-word;
+}
+
+/* Under the chips, not under a checkbox: no indent. */
+.setting-hint.sound-hint {
+  margin-left: 0;
+}
+
+.focus-sound-controls {
+  margin-top: 4px;
+}
+
+.volume-label {
+  display: inline-flex;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.volume-label output {
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The slider takes the room Preview leaves; with large text Preview goes under it. */
+.volume-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
+
+/* 44px tall, so the whole row is the tap target, not only the thin track. */
+.volume-slider {
+  flex: 1 1 160px;
+  min-width: 0;
+  height: 44px;
+  margin: 0;
+  accent-color: var(--color-accent);
+}
+
+/* A layer's row: its name and value, the slider under it at full width. */
+.layer-row .volume-slider {
+  display: block;
+  width: 100%;
+}
+
+/* The master Volume, a little apart from the layer rows above it. */
+.focus-layers:not(:empty) + .master-label {
+  margin-top: 10px;
 }
 
 /* ---------- stats page ---------- */
@@ -3070,6 +3208,11 @@ a {
 
   .session-info {
     margin-bottom: 4px;
+  }
+
+  /* No empty cell on the left here: the column is narrow, and the info line would wrap. */
+  .has-sound-toggle .session-top {
+    grid-template-columns: 0 minmax(0, 1fr) 32px;
   }
 
   .screen-note {
