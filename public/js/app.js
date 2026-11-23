@@ -144,19 +144,27 @@ function countCharacterPick(character) {
 // plans are off (PLANS_ON).
 // ragebaitAccepted: the ids of the characters whose ragebait warning was accepted on Start
 // (see confirmRagebait).
-// focusSound / focusVolume: the Focus sound setting ("off", "brown", "pink" or "white") and its
-// volume in % (see "focus sound"). A value that isn't one of these reads as Off / 40% here.
+// focusNoise / focusNoiseVolume / focusMix / focusVolume: the Focus sound setting (see "focus sound"
+// and cleanFocusMix in js/focus-sound.js): the noise that's on ("off" or a noise) and its volume, the
+// Ambient mixer ({ rain: { on, volume } }, a sound is in it once it has been on) and the master volume,
+// in %. Unknown sounds and bad values are dropped here.
 // Prefs saved before any of these existed get these defaults.
 const prefs = Object.assign(
   {
     characterId: null, mode: "simple", minutes: 25, endSound: true, keepScreenOn: true, leaveReminder: false,
     homeScreenTipDismissed: false, persistRequested: false, howItWorksDismissed: false, usePlan: false,
-    ragebaitAccepted: [], focusSound: "off", focusVolume: FOCUS_VOLUME_DEFAULT,
+    ragebaitAccepted: [], focusNoise: "off", focusNoiseVolume: FOCUS_LAYER_DEFAULT, focusMix: {},
+    focusVolume: FOCUS_VOLUME_DEFAULT,
   },
   load(PREFS_KEY, {}),
 );
 delete prefs.style; // saved before personalities came from the character; dropped on the next save
-prefs.focusSound = cleanFocusSound(prefs.focusSound);
+// focusSound: the single choice of an early test version of Focus sound (only ever on Deploy
+// Previews); dropped on the next save.
+delete prefs.focusSound;
+prefs.focusNoise = cleanFocusNoise(prefs.focusNoise);
+prefs.focusNoiseVolume = cleanFocusVolume(prefs.focusNoiseVolume, FOCUS_LAYER_DEFAULT);
+prefs.focusMix = cleanFocusMix(prefs.focusMix);
 prefs.focusVolume = cleanFocusVolume(prefs.focusVolume);
 // style: the character's personality when the session ran ("kind", "firm", "strict" or "ragebait")
 // restartPending: "Completely" / "10+ min" was tapped and the continue/restart question
@@ -444,38 +452,51 @@ function announceEnd() {
 
 // ---------- focus sound ----------
 
-// A steady sound during focus time (a noise or an ambient sound), generated in js/focus-sound.js
-// and js/focus-sound-worklet.js (no audio file). It plays only
-// while a block is running on the session screen: never during a break (Take a break or a planned
-// break), on the summary, after giving up, or once another tab has taken the session over. It fades
-// in when focus starts or resumes and out when it stops. Nothing plays on page load: a tap must
-// allow it first (allowed), and only these taps do: Start (and Quick start, and the ragebait
-// warning's Bring it on), Resume, Start now / "Start: 60 min", Continue here and the mute button.
-// After a reload during focus the sound waits for the mute button ("Turn sound on"), Resume or
+// A mix of background sounds during focus time (at most one noise and any number of Ambient sounds,
+// each with its own volume), generated in js/focus-sound.js and js/focus-sound-worklet.js (no audio
+// file). It plays only while a block is running on the session screen: never during a break (Take a
+// break or a planned break), on the summary, after giving up, or once another tab has taken the
+// session over. It fades in when focus starts or resumes and out when it stops. Nothing plays on page
+// load: a tap must allow it first (allowed), and only these taps do: Start (and Quick start, and the
+// ragebait warning's Bring it on), Resume, Start now / "Start: 60 min", Continue here and the mute
+// button. After a reload during focus the mix waits for the mute button ("Turn sound on"), Resume or
 // Start now; other taps on the session screen don't start it.
-// muted: the mute button was tapped. Only for this session or plan (memory only): the saved choice
-// stays, and the next Start begins unmuted.
-// previewing: Preview on the setup screen is playing (previewTimer stops it after PREVIEW_MS).
+// muted: the mute button was tapped (the whole mix). Only for this session or plan (memory only): the
+// saved choice stays, and the next Start begins unmuted.
+// previewing: Preview on the setup screen is playing the mix, until Stop, Start, leaving the setup
+// screen, or turning everything off. No time limit.
 const FOCUS_FADE_IN_S = 2;
 const FOCUS_FADE_OUT_S = 1;
-const PREVIEW_MS = 3000;
 const PREVIEW_FADE_S = 0.3;
 const focusSound = {
-  player: null, supported: focusSoundSupported(), allowed: false, muted: false, previewing: false, previewTimer: 0,
+  player: null, supported: focusSoundSupported(), ambientSupported: focusAmbientSupported(),
+  allowed: false, muted: false, previewing: false,
 };
 
-// A sound is picked, and this browser can play it (a saved Ambient choice on a browser without
-// AudioWorklet acts as Off there).
+// The noise that's on ("off" without Web Audio).
+function activeNoise() {
+  return focusSound.supported ? prefs.focusNoise : "off";
+}
+
+// The Ambient sounds that are on, in tile order. Without AudioWorklet none play (they stay saved).
+function activeAmbients() {
+  if (!focusSound.ambientSupported) return [];
+  return FOCUS_AMBIENTS.filter((id) => prefs.focusMix[id] && prefs.focusMix[id].on);
+}
+
+// At least one layer is on.
 function focusSoundOn() {
-  return focusSound.supported && focusSoundTypeSupported(prefs.focusSound);
+  return activeNoise() !== "off" || activeAmbients().length > 0;
 }
 
-// Every chip, in both groups (Noise and Ambient): one choice in total.
-function focusSoundChips() {
-  return document.querySelectorAll("#focusSoundSetting .sound-chips .chip");
+// The mix for the player (setMix in js/focus-sound.js).
+function currentFocusMix() {
+  const ambients = {};
+  for (const id of activeAmbients()) ambients[id] = prefs.focusMix[id].volume;
+  return { noise: activeNoise(), noiseVolume: prefs.focusNoiseVolume, ambients };
 }
 
-// A focus block is running on screen, so the sound belongs here (if it's on, allowed and unmuted).
+// A focus block is running on screen, so the mix belongs here (if it's on, allowed and unmuted).
 function focusTimeShown() {
   return Boolean(!$("#sessionScreen").hidden && session && !session.endedAt && !session.pausedAt);
 }
@@ -484,29 +505,28 @@ function focusSoundWanted() {
   return focusSoundOn() && focusSound.allowed && !focusSound.muted && focusTimeShown();
 }
 
-// Called inside one of the taps listed above: from now on the sound may play on this page.
+// Called inside one of the taps listed above: from now on the mix may play on this page.
 function allowFocusSound() {
   if (!focusSoundOn()) return;
   focusSound.allowed = true;
   unlockAudio();
 }
 
-// Starts or stops the sound to match the state. Called on every screen change and wherever focus
+// Starts or stops the mix to match the state. Called on every screen change and wherever focus
 // starts, pauses or ends without one (Take a break, Resume, a block's end, Start now), so nothing
 // is missed. Calling it again changes nothing: a fade that's under way goes on.
 function updateFocusSound() {
   updateFocusSoundButton();
-  if (!focusSound.player || focusSound.previewing) return;
-  if (focusSoundWanted()) {
-    focusSound.player.play(prefs.focusSound, FOCUS_FADE_IN_S);
-  } else {
-    focusSound.player.stop(FOCUS_FADE_OUT_S);
-  }
+  if (!focusSound.player) return;
+  focusSound.player.setMix(currentFocusMix());
+  if (focusSound.previewing) return;
+  if (focusSoundWanted()) focusSound.player.start(FOCUS_FADE_IN_S);
+  else focusSound.player.stop(FOCUS_FADE_OUT_S);
 }
 
-// The session screen's button: there for the whole session (breaks too, so nothing moves) while a
-// sound is picked. Its label says what a tap does: "Mute sound" while the sound is on, "Turn sound
-// on" while muted or not allowed yet (after a reload).
+// The session screen's button: there for the whole session (breaks too, so nothing moves) while at
+// least one layer is on. Its label says what a tap does: "Mute sound" while the mix is on, "Turn
+// sound on" while muted or not allowed yet (after a reload).
 function updateFocusSoundButton() {
   const button = $("#focusSoundButton");
   const shown = focusSoundOn();
@@ -529,41 +549,150 @@ function onFocusSoundButtonClick() {
 
 // ---------- focus sound: the setup screen ----------
 
-// The chips (Noise and Ambient), and Volume with Preview under them while a sound is picked.
-function syncFocusSoundSetting() {
-  const picked = focusSoundOn() ? prefs.focusSound : "off"; // a saved choice this browser can't play shows as Off
-  focusSoundChips().forEach((chip) => {
-    chip.setAttribute("aria-pressed", String(chip.dataset.sound === picked));
-  });
-  $("#focusSoundControls").hidden = !focusSoundOn();
-  const slider = $("#focusVolume");
-  slider.value = prefs.focusVolume;
-  showFocusVolume(prefs.focusVolume);
-  $("#focusPreviewButton").textContent = t(focusSound.previewing ? "setup.previewStop" : "setup.preview");
+// "Rain", "Brown": a sound's name in the current language (setup.focusSoundRain, …).
+function focusSoundName(id) {
+  return t(`setup.focusSound${id[0].toUpperCase()}${id.slice(1)}`);
 }
 
 // "40%" in the current language's way of writing it ("40 %" in German and French).
-function showFocusVolume(percent) {
-  let text = `${percent}%`;
+function formatPercent(percent) {
   try {
-    text = new Intl.NumberFormat(I18N.current(), { style: "percent" }).format(percent / 100);
+    return new Intl.NumberFormat(I18N.current(), { style: "percent" }).format(percent / 100);
   } catch {
-    // the plain "40%"
+    return `${percent}%`;
   }
-  $("#focusVolumeValue").textContent = text;
-  $("#focusVolume").setAttribute("aria-valuetext", text);
 }
 
-function onFocusSoundChipClick(chip) {
-  savePrefs({ focusSound: chip.dataset.sound });
-  if (focusSound.previewing) {
-    if (!focusSoundOn()) stopPreview();
-    else focusSound.player.play(prefs.focusSound, PREVIEW_FADE_S); // crossfades to the new sound
+// The Ambient tiles, built from FOCUS_AMBIENTS (so a new sound needs no HTML). Toggles: any number
+// can be on.
+function buildAmbientTiles() {
+  const box = $("#focusAmbientTiles");
+  box.innerHTML = "";
+  for (const id of FOCUS_AMBIENTS) {
+    const tile = document.createElement("button");
+    tile.type = "button";
+    tile.className = "chip";
+    tile.dataset.sound = id;
+    tile.addEventListener("click", () => onAmbientTileClick(id));
+    box.append(tile);
   }
+}
+
+// The chips and tiles, a volume row for every layer that's on, then Volume (the master) and
+// Preview, all only while at least one layer is on.
+function syncFocusSoundSetting() {
+  const noise = activeNoise();
+  document.querySelectorAll("#focusNoiseChips .chip").forEach((chip) => {
+    chip.setAttribute("aria-pressed", String(chip.dataset.sound === noise));
+  });
+  const ambients = activeAmbients();
+  document.querySelectorAll("#focusAmbientTiles .chip").forEach((tile) => {
+    tile.textContent = focusSoundName(tile.dataset.sound);
+    tile.setAttribute("aria-pressed", String(ambients.includes(tile.dataset.sound)));
+  });
+  renderLayerRows();
+  $("#focusSoundControls").hidden = !focusSoundOn();
+  const slider = $("#focusVolume");
+  slider.value = prefs.focusVolume;
+  showSliderValue(slider, $("#focusVolumeValue"), prefs.focusVolume);
+  $("#focusPreviewButton").textContent = t(focusSound.previewing ? "setup.previewStop" : "setup.preview");
+}
+
+function showSliderValue(slider, output, percent) {
+  const text = formatPercent(percent);
+  output.textContent = text;
+  slider.setAttribute("aria-valuetext", text);
+}
+
+// One row per layer that's on: the noise first (key "noise", so changing the noise keeps its row and
+// its volume), then the Ambient sounds in tile order. Rows are kept while they stay, so a slider being
+// dragged is never replaced.
+function renderLayerRows() {
+  const box = $("#focusLayers");
+  const layers = [];
+  if (activeNoise() !== "off") layers.push({ key: "noise", id: activeNoise(), volume: prefs.focusNoiseVolume });
+  for (const id of activeAmbients()) layers.push({ key: id, id, volume: prefs.focusMix[id].volume });
+  const old = new Map([...box.children].map((row) => [row.dataset.key, row]));
+  layers.forEach((layer, index) => {
+    const row = old.get(layer.key) || createLayerRow(layer.key);
+    old.delete(layer.key);
+    const name = focusSoundName(layer.id);
+    const slider = row.querySelector("input");
+    row.querySelector(".layer-name").textContent = name;
+    slider.setAttribute("aria-label", t("setup.layerVolume", { sound: name }));
+    if (Number(slider.value) !== layer.volume) slider.value = layer.volume;
+    showSliderValue(slider, row.querySelector("output"), layer.volume);
+    if (box.children[index] !== row) box.insertBefore(row, box.children[index] || null);
+  });
+  old.forEach((row) => row.remove());
+}
+
+function createLayerRow(key) {
+  const row = document.createElement("div");
+  row.className = "layer-row";
+  row.dataset.key = key;
+  const id = `focusLayer-${key}`;
+  const label = document.createElement("label");
+  label.className = "volume-label";
+  label.htmlFor = id;
+  const name = document.createElement("span");
+  name.className = "layer-name";
+  const output = document.createElement("output");
+  output.htmlFor = id;
+  label.append(name, output);
+  const slider = document.createElement("input");
+  slider.type = "range";
+  slider.id = id;
+  slider.className = "volume-slider";
+  slider.min = FOCUS_VOLUME_MIN;
+  slider.max = FOCUS_VOLUME_MAX;
+  slider.step = FOCUS_VOLUME_STEP;
+  // While dragging: the number and the sound follow at once. Saved on release.
+  slider.addEventListener("input", () => setLayerVolume(key, cleanFocusVolume(slider.value, FOCUS_LAYER_DEFAULT), false));
+  slider.addEventListener("change", () => setLayerVolume(key, cleanFocusVolume(slider.value, FOCUS_LAYER_DEFAULT), true));
+  row.append(label, slider);
+  return row;
+}
+
+// One layer's volume. Only that layer changes: the others keep theirs.
+function setLayerVolume(key, percent, saveNow) {
+  if (key === "noise") {
+    if (saveNow) savePrefs({ focusNoiseVolume: percent });
+    else prefs.focusNoiseVolume = percent;
+  } else {
+    const focusMix = { ...prefs.focusMix, [key]: { on: true, volume: percent } };
+    if (saveNow) savePrefs({ focusMix });
+    else prefs.focusMix = focusMix;
+  }
+  const row = $("#focusLayers").querySelector(`.layer-row[data-key="${key}"]`);
+  if (row) showSliderValue(row.querySelector("input"), row.querySelector("output"), percent);
+  if (focusSound.player) focusSound.player.setMix(currentFocusMix());
+}
+
+// After the noise or a tile changed: heard at once while Preview plays; with everything off,
+// Preview stops.
+function afterFocusMixChange() {
+  if (focusSound.previewing && !focusSoundOn()) stopPreview();
+  focusSound.player.setMix(currentFocusMix());
   syncFocusSoundSetting();
 }
 
-// Preview: the picked sound for PREVIEW_MS, at the slider's volume. A tap while it plays stops it.
+function onNoiseChipClick(chip) {
+  savePrefs({ focusNoise: cleanFocusNoise(chip.dataset.sound) });
+  afterFocusMixChange();
+}
+
+// On or off. Turned off, a sound keeps its volume for next time; one that has never been on starts at
+// FOCUS_LAYER_DEFAULT.
+function onAmbientTileClick(id) {
+  const entry = prefs.focusMix[id];
+  const focusMix = { ...prefs.focusMix, [id]: { on: !(entry && entry.on), volume: entry ? entry.volume : FOCUS_LAYER_DEFAULT } };
+  savePrefs({ focusMix });
+  afterFocusMixChange();
+}
+
+// Preview: plays the whole mix until Stop (this button again), Start, leaving the setup screen or
+// turning everything off. Also in the background.
 function onPreviewClick() {
   if (focusSound.previewing) {
     stopPreview();
@@ -571,15 +700,13 @@ function onPreviewClick() {
   }
   if (!focusSoundOn() || !unlockAudio()) return;
   focusSound.previewing = true;
-  focusSound.player.play(prefs.focusSound, PREVIEW_FADE_S);
-  clearTimeout(focusSound.previewTimer);
-  focusSound.previewTimer = setTimeout(stopPreview, PREVIEW_MS);
+  focusSound.player.setMix(currentFocusMix());
+  focusSound.player.start(PREVIEW_FADE_S);
   syncFocusSoundSetting();
 }
 
-// Ends a preview (if one is playing): Stop, its time is up, Off, Start, or the setup screen goes.
+// Ends a preview (if one is playing): Stop, everything turned off, Start, or the setup screen goes.
 function stopPreview() {
-  clearTimeout(focusSound.previewTimer);
   if (!focusSound.previewing) return;
   focusSound.previewing = false;
   if (focusSound.player) focusSound.player.stop(PREVIEW_FADE_S);
@@ -589,19 +716,21 @@ function stopPreview() {
 function initFocusSound() {
   if (!focusSound.supported) return; // the setting stays hidden, and the mute button too
   focusSound.player = createFocusSoundPlayer(() => audioContext);
-  focusSound.player.setVolume(prefs.focusVolume); // from then on the slider keeps it up to date
+  focusSound.player.setMaster(prefs.focusVolume); // from then on the slider keeps it up to date
+  focusSound.player.setMix(currentFocusMix());
   $("#focusSoundSetting").hidden = false;
-  $("#focusAmbientGroup").hidden = !focusSoundTypeSupported(FOCUS_AMBIENTS[0]);
-  focusSoundChips().forEach((chip) => {
-    chip.addEventListener("click", () => onFocusSoundChipClick(chip));
+  $("#focusAmbientGroup").hidden = !focusSound.ambientSupported;
+  buildAmbientTiles();
+  document.querySelectorAll("#focusNoiseChips .chip").forEach((chip) => {
+    chip.addEventListener("click", () => onNoiseChipClick(chip));
   });
   const slider = $("#focusVolume");
-  // While dragging: the number and a preview that's playing follow at once. Saved on release.
+  // The master. While dragging: the number and the sound follow at once. Saved on release.
   slider.addEventListener("input", () => {
     const percent = cleanFocusVolume(slider.value);
     prefs.focusVolume = percent;
-    showFocusVolume(percent);
-    focusSound.player.setVolume(percent);
+    showSliderValue(slider, $("#focusVolumeValue"), percent);
+    focusSound.player.setMaster(percent);
   });
   slider.addEventListener("change", () => savePrefs({ focusVolume: cleanFocusVolume(slider.value) }));
   $("#focusPreviewButton").addEventListener("click", onPreviewClick);
@@ -969,6 +1098,7 @@ function savePrefs(changes) {
   Object.assign(prefs, changes);
   const next = Object.assign({}, prefs, load(PREFS_KEY, {}), changes);
   delete next.style; // see prefs above
+  delete next.focusSound; // see prefs above
   save(PREFS_KEY, next);
 }
 
@@ -3269,7 +3399,7 @@ function onLanguageChange() {
   if (!characterError.hidden) characterError.textContent = t("setup.pickFirst");
   const hint = $("#leaveReminderHint");
   if (!hint.hidden) hint.textContent = t("setup.leaveReminderBlocked");
-  if (focusSound.supported) syncFocusSoundSetting(); // "Preview" / "Stop", and "40 %" in some languages
+  if (focusSound.supported) syncFocusSoundSetting(); // tiles, rows, "Preview" / "Stop", "40 %"; the sound plays on
   updateFocusSoundButton();
 }
 

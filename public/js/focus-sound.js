@@ -1,36 +1,49 @@
-// Focus sound: a steady background sound that plays during focus time (see "Focus sound" in the
+// Focus sound: a mix of background sounds that plays during focus time (see "Focus sound" in the
 // README). Everything is generated in the browser with the Web Audio API (the browser's built-in
 // sound engine): no audio file, nothing downloaded. When and whether it plays is decided in app.js
-// (updateFocusSound); this file only makes the sound and fades it in and out.
+// (updateFocusSound); this file only makes the sound, mixes it and fades it in and out.
 //
-// Two kinds:
+// The mix: at most one noise and any number of Ambient sounds, each a layer with its own volume.
 // - Noise (brown, pink, white, green): steady, so a few seconds are generated once into an
 //   AudioBuffer (a block of samples kept in memory) and looped. The end of the buffer is crossfaded
 //   into its start, so the loop point has no click.
-// - Ambient (waves, rain, fire, fan, vacuum): generated live, sample by sample, by an AudioWorklet
-//   (js/focus-sound-worklet.js, which runs on the browser's audio thread). Every wave, drop and
-//   crackle is new, so nothing ever repeats, and nothing is kept in memory.
-// Both play through a GainNode (a volume knob), and every start, stop and change is a short gain
-// ramp, never a jump.
+// - Ambient (rain, birds, wind, fire, waves, fan, vacuum): generated live, sample by sample, by an
+//   AudioWorklet (js/focus-sound-worklet.js, which runs on the browser's audio thread). Every drop,
+//   crackle and bird phrase is new, so nothing ever repeats, and nothing is kept in memory.
+//
+// The chain: every layer has its own gain (its volume); Ambient layers also send their "wet" part to
+// one shared reverb (a ConvolverNode with a short room generated in code), so nothing sounds bone-dry.
+// Everything meets in the master gain (the Volume slider), then a limiter (in the worklet) that keeps
+// the sum from clipping, then the fade gain (fading the whole mix in and out), then the speakers.
+// Every start, stop and change is a short gain ramp, never a jump.
 
 const FOCUS_NOISES = ["brown", "pink", "white", "green"];
-const FOCUS_AMBIENTS = ["waves", "rain", "fire", "fan", "vacuum"];
-const FOCUS_SOUNDS = [...FOCUS_NOISES, ...FOCUS_AMBIENTS]; // and "off": no sound
-const FOCUS_WORKLET_URL = "js/focus-sound-worklet.js"; // relative: works under a subpath too
-const FOCUS_VOLUME_DEFAULT = 40; // %
+// In the order of the setup screen's tiles and volume rows. Adding a sound: see the README.
+const FOCUS_AMBIENTS = ["rain", "birds", "wind", "fire", "waves", "fan", "vacuum"];
+// The worklet next to this file, wherever the page is (the app, or the listening lab in lab/sound/).
+const FOCUS_WORKLET_URL = new URL("focus-sound-worklet.js", document.currentScript.src).href;
+const FOCUS_VOLUME_DEFAULT = 55; // the master (Volume slider), %
+const FOCUS_LAYER_DEFAULT = 70; // a layer turned on for the first time, %
 const FOCUS_VOLUME_MIN = 5;
 const FOCUS_VOLUME_MAX = 100;
 const FOCUS_VOLUME_STEP = 5;
+const FOCUS_LAYER_FADE_S = 0.3; // a layer turned on or off, or a noise changed, while the mix plays
 const NOISE_SECONDS = 8; // the length of a noise's loop. Long enough that no pattern can be heard.
 const NOISE_CROSSFADE_SECONDS = 0.5; // the end blends into the start over this long
-// The level of each sound at 100%: for a noise on a buffer at an RMS (average level) of 1, for an
-// ambient sound on the worklet's raw output. Chosen so they all sound about equally loud (measured
-// with A-weighting, which follows how ears hear, over a minute of each), and so that 100% is a
-// comfortable background, well under the end chime (CHIME_VOLUME in app.js). See the README.
-const NOISE_LEVELS = {
+const REVERB_SECONDS = 1; // the generated room's length
+const REVERB_RETURN = 0.6; // how much of the reverb comes back into the mix
+// The level of each layer at 100% (with the master at 100%): for a noise on a buffer at an RMS
+// (average level) of 1, for an ambient sound on the worklet's raw output, reverb included. Chosen so
+// every layer sounds about equally loud at the same % (measured with A-weighting, which follows how
+// ears hear, over a minute of each), and so that 100% is a comfortable background, well under the end
+// chime (CHIME_VOLUME in app.js). See the README.
+const FOCUS_LEVELS = {
   brown: 0.072, pink: 0.055, white: 0.048, green: 0.047,
-  // Waves: matched on the crests (a little above the noises), so the troughs are quieter.
-  waves: 0.32, rain: 0.21, fire: 0.47, fan: 0.17, vacuum: 0.24,
+  // Matched on the average, like the noises: rain, wind, fan, vacuum. Fire: 5 dB lower on average,
+  // because ears judge crackles by their peaks (the usual correction for impulsive sounds). Waves: on
+  // their crests (2 dB above the noises), so the troughs are quieter. Birds: on their phrases (2 dB
+  // under the noises), so they stay in the background.
+  rain: 1.69, birds: 0.41, wind: 0.195, fire: 2.23, waves: 0.34, fan: 0.181, vacuum: 0.258,
 };
 
 // Does this browser have Web Audio at all? Without it the Focus sound setting isn't shown.
@@ -38,32 +51,49 @@ function focusSoundSupported() {
   return Boolean(window.AudioContext || window.webkitAudioContext);
 }
 
-// Can this browser play this sound? The ambient ones need AudioWorklet (Chrome 66+, Safari 14.1+,
-// Firefox 76+), and only work on HTTPS (or localhost). Without it their chips aren't shown.
-function focusSoundTypeSupported(type) {
-  if (!focusSoundSupported() || !FOCUS_SOUNDS.includes(type)) return false;
-  if (!FOCUS_AMBIENTS.includes(type)) return true;
-  return typeof window.AudioWorkletNode === "function" && window.isSecureContext !== false;
+// Can this browser play the Ambient sounds? They need AudioWorklet (Chrome 66+, Safari 14.1+,
+// Firefox 76+), which only works on HTTPS (or localhost). Without it the Ambient group isn't shown.
+function focusAmbientSupported() {
+  return focusSoundSupported() && typeof window.AudioWorkletNode === "function" && window.isSecureContext !== false;
 }
 
-// A saved choice from ct_prefs_v1: anything unknown (or prefs saved before it existed) is "off".
-function cleanFocusSound(value) {
-  return FOCUS_SOUNDS.includes(value) ? value : "off";
+// A saved noise from ct_prefs_v1: anything unknown is "off".
+function cleanFocusNoise(value) {
+  return FOCUS_NOISES.includes(value) ? value : "off";
 }
 
-// A saved volume (%): a whole step between the limits, FOCUS_VOLUME_DEFAULT if it isn't a number.
-function cleanFocusVolume(value) {
+// A saved volume (%): a whole step between the limits, `fallback` if it isn't a number.
+function cleanFocusVolume(value, fallback = FOCUS_VOLUME_DEFAULT) {
   const n = Number(value);
-  if (value === null || value === "" || !Number.isFinite(n)) return FOCUS_VOLUME_DEFAULT;
+  if (value === null || value === undefined || value === "" || !Number.isFinite(n)) return fallback;
   const stepped = Math.round(n / FOCUS_VOLUME_STEP) * FOCUS_VOLUME_STEP;
   return Math.min(FOCUS_VOLUME_MAX, Math.max(FOCUS_VOLUME_MIN, stepped));
 }
 
-// The gain for a volume in %. Squared, because ears hear loudness that way: 40% then sounds about
-// halfway, not nearly as loud as 100%.
-function focusGain(type, volume) {
+// The saved mixer (focusMix in ct_prefs_v1): { rain: { on: true, volume: 40 }, … }. A sound is in it
+// once it has been turned on; turned off, it keeps its volume for next time. Unknown sounds and bad
+// values are dropped.
+function cleanFocusMix(value) {
+  const mix = {};
+  if (!value || typeof value !== "object") return mix;
+  for (const id of FOCUS_AMBIENTS) {
+    const entry = value[id];
+    if (!entry || typeof entry !== "object") continue;
+    mix[id] = { on: entry.on === true, volume: cleanFocusVolume(entry.volume, FOCUS_LAYER_DEFAULT) };
+  }
+  return mix;
+}
+
+// A layer's gain at a volume in %. Squared, because ears hear loudness that way: 40% then sounds about
+// halfway, not nearly as loud as 100%. The master is squared the same way (focusMasterGain).
+function focusLayerGain(id, volume) {
+  const v = cleanFocusVolume(volume, FOCUS_LAYER_DEFAULT) / 100;
+  return (FOCUS_LEVELS[id] || 0) * v * v;
+}
+
+function focusMasterGain(volume) {
   const v = cleanFocusVolume(volume) / 100;
-  return (NOISE_LEVELS[type] || 0) * v * v;
+  return v * v;
 }
 
 // A two-pole filter (the RBJ "audio EQ cookbook" biquad), "lowpass" or "highpass", as a function
@@ -154,21 +184,79 @@ function generateNoise(type, sampleRate, channels) {
   return data;
 }
 
-// The player. getContext returns the page's AudioContext (made and unlocked by a tap in app.js),
-// or null when there's none yet. One voice at a time: play() fades it in (or back in, or crossfades
-// to another sound), stop() fades it out and then stops it, so nothing runs while it's silent.
-// Every call can come at any moment, also in the middle of another fade: the new ramp starts from
-// wherever the old one had got to.
+// The reverb's room, generated once per AudioContext: a few early reflections (5–60 ms, like nearby
+// walls, trees or the ground), then a dense tail that dies away in about 0.7 s, its highs dying
+// faster than its lows, as in a real space. Each ear gets its own random room, so it sounds wide.
+function makeRoomImpulse(ctx) {
+  const sr = ctx.sampleRate;
+  const length = Math.round(sr * REVERB_SECONDS);
+  const buffer = ctx.createBuffer(2, length, sr);
+  for (let c = 0; c < 2; c++) {
+    const data = buffer.getChannelData(c);
+    for (let k = 0; k < 8; k++) {
+      const t = 0.005 + Math.random() * 0.055;
+      data[Math.round(t * sr)] += (Math.random() < 0.5 ? -1 : 1) * 0.6 * (1 - t / 0.08);
+    }
+    let lp = 0;
+    for (let i = Math.round(0.01 * sr); i < length; i++) {
+      const t = i / sr;
+      const a = 0.85 - 0.7 * (t / REVERB_SECONDS); // the low-pass closes as the tail dies
+      lp += a * (Math.random() * 2 - 1 - lp);
+      const fadeIn = Math.min(1, (t - 0.01) / 0.02);
+      data[i] += lp * Math.exp(-t / 0.1) * 0.5 * fadeIn;
+    }
+  }
+  return buffer;
+}
+
+// The player. getContext returns the page's AudioContext (made and unlocked by a tap in app.js), or
+// null when there's none yet. setMix() says what the mix is; start() fades it in and stop() fades it
+// out. While it plays, setMix() and setMaster() change it at once: a layer turned on fades in, one
+// turned off fades out, the others play on undisturbed. Stopped, every node is stopped and
+// disconnected, so nothing runs while it's silent.
+// If the worklet module can't be loaded (an old browser, or a failed download), the noise still plays
+// (straight to the master, without the limiter: one noise alone can't clip) and Ambient layers stay
+// silent, without errors.
 function createFocusSoundPlayer(getContext) {
-  // The noise buffer of the sound picked now, "type|sampleRate" → AudioBuffer. Only one is kept:
-  // building another drops the old one (a voice that's still fading out keeps its own until it
-  // stops), so there are never more than two in memory, and only during a crossfade.
+  // The noise buffer of the noise picked now, "type|sampleRate" → AudioBuffer. Only one is kept:
+  // building another drops the old one (a layer that's still fading out keeps its own until it stops).
   const buffers = new Map();
-  // The worklet module, loaded once per AudioContext (the first time an ambient sound plays):
-  // ctx → a promise that resolves once it's loaded. A failed load is forgotten, so it's tried again.
-  const worklets = new WeakMap();
-  let voice = null; // { ctx, type, source, gain, stopping }
-  let volume = FOCUS_VOLUME_DEFAULT;
+  const modules = new WeakMap(); // ctx → promise: true once the worklet is loaded, false if it can't be
+  const rooms = new WeakMap(); // ctx → the reverb's impulse (AudioBuffer)
+  // noise: "off" or a noise; ambients: { id: volume } of the Ambient layers that are on.
+  // variants: only the listening lab uses it ({ rain: "b" }).
+  let mix = { noise: "off", noiseVolume: FOCUS_LAYER_DEFAULT, ambients: {}, variants: {} };
+  let master = FOCUS_VOLUME_DEFAULT;
+  let want = false; // start() was called, and stop() not since
+  let pending = null; // a start waiting for the worklet module
+  let chain = null; // the mix that's playing (or fading out)
+
+  const loadModule = (ctx) => {
+    if (!focusAmbientSupported() || !ctx.audioWorklet) return Promise.resolve(false);
+    if (!modules.has(ctx)) {
+      const loading = ctx.audioWorklet.addModule(FOCUS_WORKLET_URL).then(
+        () => true,
+        () => {
+          modules.delete(ctx); // tried again next time
+          return false;
+        },
+      );
+      modules.set(ctx, loading);
+    }
+    return modules.get(ctx);
+  };
+
+  // From the param's value right now to target, in a straight line over seconds. The ramp needs a
+  // starting point at "now": without one it would start from the end of the last ramp, so a fade
+  // that begins long after the previous one ended would jump halfway down at once.
+  const rampTo = (param, ctx, target, seconds) => {
+    const now = ctx.currentTime;
+    const current = param.value; // read before cancelling: it's where a ramp under way has got to
+    if (typeof param.cancelAndHoldAtTime === "function") param.cancelAndHoldAtTime(now);
+    else param.cancelScheduledValues(now);
+    param.setValueAtTime(current, now);
+    param.linearRampToValueAtTime(target, now + Math.max(0.01, seconds));
+  };
 
   const bufferFor = (ctx, type) => {
     const key = `${type}|${ctx.sampleRate}`;
@@ -182,129 +270,207 @@ function createFocusSoundPlayer(getContext) {
     return buffers.get(key);
   };
 
-  const loadWorklet = (ctx) => {
-    if (!worklets.has(ctx)) {
-      const loading = ctx.audioWorklet.addModule(FOCUS_WORKLET_URL).then(
-        () => true,
-        () => {
-          worklets.delete(ctx);
-          return false;
-        },
-      );
-      worklets.set(ctx, loading);
-    }
-    return worklets.get(ctx);
+  // The shared reverb, made when the first Ambient layer joins: Ambient layers' wet outputs →
+  // wetBus → convolver → master.
+  const ensureReverb = (c) => {
+    if (c.wetBus) return;
+    if (!rooms.has(c.ctx)) rooms.set(c.ctx, makeRoomImpulse(c.ctx));
+    c.convolver = c.ctx.createConvolver();
+    c.convolver.buffer = rooms.get(c.ctx);
+    c.wetBus = c.ctx.createGain();
+    c.wetBus.gain.value = REVERB_RETURN;
+    c.wetBus.connect(c.convolver);
+    c.convolver.connect(c.master);
   };
 
-  // From the gain's value right now to target, in a straight line over seconds. The ramp needs a
-  // starting point at "now": without one it would start from the end of the last ramp, so a fade
-  // that begins long after the previous one ended would jump halfway down at once.
-  const rampTo = (gain, ctx, target, seconds) => {
-    const now = ctx.currentTime;
-    const param = gain.gain;
-    const current = param.value; // read before cancelling: it's where a ramp under way has got to
-    if (typeof param.cancelAndHoldAtTime === "function") param.cancelAndHoldAtTime(now);
-    else param.cancelScheduledValues(now);
-    param.setValueAtTime(current, now);
-    param.linearRampToValueAtTime(target, now + Math.max(0.01, seconds));
-  };
-
-  // A buffer source is stopped once the fade is over; a worklet node is told when to stop and
-  // reports back ("ended"). An ambient voice whose module hasn't loaded yet has no source at all.
-  const fadeOut = (v, seconds) => {
-    v.stopping = true;
-    rampTo(v.gain, v.ctx, 0, seconds);
-    const end = v.ctx.currentTime + seconds + 0.05;
-    if (!v.source) {
-      v.gain.disconnect();
-    } else if (v.source.port) {
-      v.source.port.onmessage = () => {
-        v.source.disconnect();
-        v.gain.disconnect();
-      };
-      v.source.port.postMessage({ stopAt: end });
-    } else {
+  const buildChain = (ctx, withWorklet) => {
+    const c = { ctx, withWorklet, layers: new Map(), stopping: false, limiter: null, wetBus: null, convolver: null };
+    c.fade = ctx.createGain();
+    c.fade.gain.value = 0;
+    c.fade.connect(ctx.destination);
+    c.master = ctx.createGain();
+    c.master.gain.value = focusMasterGain(master);
+    if (withWorklet) {
       try {
-        v.source.stop(end);
+        c.limiter = new AudioWorkletNode(ctx, "focus-limiter", {
+          numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2], channelCount: 2, channelCountMode: "explicit",
+        });
+        c.master.connect(c.limiter);
+        c.limiter.connect(c.fade);
+      } catch {
+        c.limiter = null;
+        c.withWorklet = false;
+      }
+    }
+    if (!c.limiter) c.master.connect(c.fade);
+    return c;
+  };
+
+  // A new layer, its gain ramping from 0 to its volume over fadeSeconds.
+  const startLayer = (c, id, volume, fadeSeconds) => {
+    const { ctx } = c;
+    const layer = { id, volume, variant: mix.variants[id] || "", stopping: false, gains: [] };
+    try {
+      const gain = ctx.createGain();
+      gain.gain.value = 0;
+      gain.connect(c.master);
+      layer.gains.push(gain);
+      if (FOCUS_NOISES.includes(id)) {
+        const source = ctx.createBufferSource();
+        source.buffer = bufferFor(ctx, id);
+        source.loop = true;
+        source.connect(gain);
+        source.start(0, Math.random() * NOISE_SECONDS); // a random place in the loop: every start sounds fresh
+        layer.source = source;
+      } else {
+        if (!c.withWorklet) {
+          gain.disconnect();
+          return null; // no worklet: this layer stays silent
+        }
+        ensureReverb(c);
+        const node = new AudioWorkletNode(ctx, "focus-ambient", {
+          numberOfInputs: 0, numberOfOutputs: 2, outputChannelCount: [2, 2],
+          processorOptions: { type: id, variant: layer.variant },
+        });
+        const wetGain = ctx.createGain();
+        wetGain.gain.value = 0;
+        wetGain.connect(c.wetBus);
+        node.connect(gain, 0);
+        node.connect(wetGain, 1);
+        layer.gains.push(wetGain);
+        layer.node = node;
+      }
+    } catch {
+      layer.gains.forEach((g) => g.disconnect());
+      return null; // no sound for this layer: the app works the same
+    }
+    const target = focusLayerGain(id, volume);
+    layer.gains.forEach((g) => rampTo(g.gain, ctx, target, fadeSeconds));
+    return layer;
+  };
+
+  // Stops a layer at the audio clock time `end` (its gain already fading, or the whole mix fading),
+  // then disconnects it.
+  const endLayer = (c, layer, end) => {
+    layer.stopping = true;
+    const disconnect = () => layer.gains.forEach((g) => g.disconnect());
+    if (layer.source) {
+      try {
+        layer.source.stop(end);
       } catch {
         // already stopped
       }
-      v.source.onended = () => v.gain.disconnect();
+      layer.source.onended = disconnect;
+    } else if (layer.node) {
+      layer.node.port.onmessage = () => {
+        layer.node.disconnect();
+        disconnect();
+      };
+      layer.node.port.postMessage({ stopAt: end });
     }
   };
 
-  // The ambient sound's node, once the module is loaded. If the voice was stopped or replaced while
-  // it loaded, nothing is made. The fade starts now, not when play() was called, so a first load
-  // that takes a moment still fades in from silence.
-  const attachAmbient = (v, fadeSeconds) => {
-    if (voice !== v || v.stopping) return;
-    try {
-      v.source = new AudioWorkletNode(v.ctx, "focus-ambient", {
-        numberOfInputs: 0,
-        numberOfOutputs: 1,
-        outputChannelCount: [2],
-        processorOptions: { type: v.type },
-      });
-      v.source.connect(v.gain);
-      rampTo(v.gain, v.ctx, focusGain(v.type, volume), fadeSeconds);
-    } catch {
-      v.gain.disconnect();
-      if (voice === v) voice = null; // no sound: the app works the same
+  const fadeOutLayer = (c, layer, fadeSeconds) => {
+    layer.gains.forEach((g) => rampTo(g.gain, c.ctx, 0, fadeSeconds));
+    endLayer(c, layer, c.ctx.currentTime + fadeSeconds + 0.05);
+  };
+
+  // Makes the chain's layers match the mix: new ones fade in, removed ones fade out, a changed volume
+  // follows within a moment. A noise changed to another noise crossfades.
+  const applyMix = (c, fadeSeconds) => {
+    const wanted = new Map();
+    if (mix.noise !== "off") wanted.set(mix.noise, mix.noiseVolume);
+    for (const id of FOCUS_AMBIENTS) if (id in mix.ambients) wanted.set(id, mix.ambients[id]);
+    for (const [id, layer] of c.layers) {
+      if (!wanted.has(id) || layer.variant !== (mix.variants[id] || "")) {
+        fadeOutLayer(c, layer, fadeSeconds);
+        c.layers.delete(id);
+      }
     }
+    for (const [id, volume] of wanted) {
+      const layer = c.layers.get(id);
+      if (!layer) {
+        const added = startLayer(c, id, volume, fadeSeconds);
+        if (added) c.layers.set(id, added);
+      } else if (layer.volume !== volume) {
+        layer.volume = volume;
+        layer.gains.forEach((g) => rampTo(g.gain, c.ctx, focusLayerGain(id, volume), 0.08));
+      }
+    }
+  };
+
+  // The whole mix fades out, then every node stops and is disconnected. A silent one-sample clock
+  // tells when the fade is over.
+  const stopChain = (c, fadeSeconds) => {
+    c.stopping = true;
+    const { ctx } = c;
+    rampTo(c.fade.gain, ctx, 0, fadeSeconds);
+    const end = ctx.currentTime + fadeSeconds + 0.05;
+    for (const layer of c.layers.values()) endLayer(c, layer, end);
+    if (c.limiter) c.limiter.port.postMessage({ stopAt: end + 0.02 });
+    const clock = ctx.createBufferSource();
+    clock.buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+    clock.connect(c.fade);
+    clock.onended = () => {
+      clock.disconnect();
+      // The limiter's own "ended" comes a moment later; disconnecting it now is fine either way.
+      [c.wetBus, c.convolver, c.master, c.limiter, c.fade].forEach((node) => node && node.disconnect());
+    };
+    clock.start(end + 0.03);
   };
 
   return {
-    // Fades the sound in to the current volume over fadeSeconds. Already playing this type: only
-    // the level follows. Another type: the old one fades out (over at most 0.6 s) while the new
-    // one fades in. One that is fading out finishes its fade on its own: a source can't be started
-    // again once its stop is scheduled, so a new one fades in over it, without a gap.
-    play(type, fadeSeconds) {
+    // What the mix is: { noise: "off" | a noise, noiseVolume, ambients: { id: volume }, variants }.
+    // Applied at once if it's playing.
+    setMix(next) {
+      mix = {
+        noise: cleanFocusNoise(next.noise),
+        noiseVolume: cleanFocusVolume(next.noiseVolume, FOCUS_LAYER_DEFAULT),
+        ambients: {},
+        variants: { ...(next.variants || {}) },
+      };
+      for (const id of FOCUS_AMBIENTS) {
+        if (next.ambients && id in next.ambients) mix.ambients[id] = cleanFocusVolume(next.ambients[id], FOCUS_LAYER_DEFAULT);
+      }
+      if (chain && !chain.stopping) applyMix(chain, FOCUS_LAYER_FADE_S);
+    },
+    // The master volume (%), followed within a moment if it's playing.
+    setMaster(percent) {
+      master = cleanFocusVolume(percent);
+      if (chain && !chain.stopping) rampTo(chain.master.gain, chain.ctx, focusMasterGain(master), 0.08);
+    },
+    // Fades the whole mix in over fadeSeconds (or back in, if it was fading out). Already playing:
+    // nothing changes. The first start waits a moment for the worklet module to load.
+    start(fadeSeconds) {
       const ctx = getContext();
-      if (!ctx || !focusSoundTypeSupported(type)) return;
-      if (voice && !voice.stopping) {
-        if (voice.ctx === ctx && voice.type === type) {
-          if (voice.source) rampTo(voice.gain, ctx, focusGain(type, volume), fadeSeconds);
-          return;
-        }
-        fadeOut(voice, Math.min(fadeSeconds, 0.6));
+      if (!ctx) return;
+      want = true;
+      if (chain && !chain.stopping && chain.ctx === ctx) {
+        rampTo(chain.fade.gain, ctx, 1, fadeSeconds);
+        return;
       }
-      try {
-        const gain = ctx.createGain();
-        gain.gain.value = 0;
-        gain.connect(ctx.destination);
-        const v = { ctx, type, source: null, gain, stopping: false };
-        voice = v;
-        if (FOCUS_AMBIENTS.includes(type)) {
-          loadWorklet(ctx).then((ok) => (ok ? attachAmbient(v, fadeSeconds) : fadeOut(v, 0)));
-          return;
-        }
-        const source = ctx.createBufferSource();
-        source.buffer = bufferFor(ctx, type);
-        source.loop = true;
-        source.connect(gain);
-        // A random place in the loop, so every start sounds fresh.
-        source.start(0, Math.random() * NOISE_SECONDS);
-        v.source = source;
-        rampTo(gain, ctx, focusGain(type, volume), fadeSeconds);
-      } catch {
-        voice = null; // no sound: the app works the same
-      }
+      if (pending) return;
+      const token = {};
+      pending = token;
+      loadModule(ctx).then((ok) => {
+        if (pending !== token) return; // stopped (or started again) meanwhile
+        pending = null;
+        if (!want) return;
+        // A mix that's still fading out finishes on its own; the new one fades in over it.
+        chain = buildChain(ctx, ok);
+        applyMix(chain, 0);
+        rampTo(chain.fade.gain, ctx, 1, fadeSeconds);
+      });
     },
-    // Fades out over fadeSeconds, then the source stops. Nothing playing: nothing happens.
+    // Fades the whole mix out over fadeSeconds, then stops everything. Not playing: nothing happens.
     stop(fadeSeconds) {
-      if (!voice || voice.stopping) return;
-      fadeOut(voice, fadeSeconds);
-    },
-    // A new volume (%), followed within a moment if it's playing. The next play() uses it too.
-    setVolume(percent) {
-      volume = cleanFocusVolume(percent);
-      if (voice && voice.source && !voice.stopping) {
-        rampTo(voice.gain, voice.ctx, focusGain(voice.type, volume), 0.08);
-      }
+      want = false;
+      pending = null;
+      if (chain && !chain.stopping) stopChain(chain, fadeSeconds);
     },
     // Playing (or fading in, or about to), not fading out or stopped.
     playing() {
-      return Boolean(voice && !voice.stopping);
+      return want && Boolean(pending || (chain && !chain.stopping));
     },
   };
 }

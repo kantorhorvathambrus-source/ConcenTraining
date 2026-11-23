@@ -1912,11 +1912,17 @@ dialog .check-row {
   font-size: var(--fs-14);
 }
 
-/* Focus sound (index.html, "focus sound" in app.js): its label, the chips, the hint, then Volume
-   with Preview. The chips share the row and wrap onto more lines when they don't fit (a long name,
-   a 320px screen or large text), so nothing ever scrolls sideways. */
+/* Focus sound (index.html, "focus sound" in app.js): its label, the Noise chips, the Ambient tiles,
+   the hints, then a volume row per layer, Volume (the master) and Preview. */
 .focus-sound-setting {
   margin-top: 12px;
+}
+
+/* A long single word ("Hintergrundrauschen") may break rather than run off a narrow screen. */
+.setting-label,
+.chip-group-label {
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 
 .setting-label {
@@ -1933,16 +1939,27 @@ dialog .check-row {
   margin-top: 12px;
 }
 
+/* Both groups are the same grid, as wide as each other, so their columns line up and every chip and
+   tile is exactly the same width: as many columns as fit at 7em each (em grows with the text size,
+   so large text gives fewer columns), sharing the row equally. 7em fits the longest single word of
+   any language ("Aspirapolvere", 6.3em), so no word is ever split. Every chip is the same height:
+   enough for two lines, so a two-word name wraps inside it instead of making it bigger. */
 .sound-chips {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(7em, 100%), 1fr));
   gap: 8px;
   margin-bottom: 8px;
 }
 
 .sound-chips .chip {
-  flex: 1 1 auto;
-  padding: 6px 14px;
+  min-width: 0;
+  min-height: max(44px, calc(2.5em + 14px));
+  padding: 6px 4px;
+  white-space: normal;
+  line-height: 1.25;
+  text-align: center;
+  hyphens: auto;
+  overflow-wrap: break-word;
 }
 
 /* Under the chips, not under a checkbox: no indent. */
@@ -1980,6 +1997,17 @@ dialog .check-row {
   height: 44px;
   margin: 0;
   accent-color: var(--color-accent);
+}
+
+/* A layer's row: its name and value, the slider under it at full width. */
+.layer-row .volume-slider {
+  display: block;
+  width: 100%;
+}
+
+/* The master Volume, a little apart from the layer rows above it. */
+.focus-layers:not(:empty) + .master-label {
+  margin-top: 10px;
 }
 
 /* ---------- stats page ---------- */

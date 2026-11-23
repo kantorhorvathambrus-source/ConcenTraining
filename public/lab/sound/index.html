@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- TEMPORARY listening lab for PR #81 (Focus sound). Not linked from the app, not in sw.js's
+       PRECACHE, never indexed. Deleted in the PR's last commit, once the variants are picked. -->
+  <meta name="robots" content="noindex, nofollow">
+  <script src="../../js/theme.js"></script>
+  <title>Sound lab · ConcenTraining</title>
+  <link rel="stylesheet" href="../../css/style.css">
+  <link rel="stylesheet" href="lab.css">
+</head>
+<body>
+  <main class="app privacy-page">
+    <header class="app-header">
+      <h1>Sound lab</h1>
+      <p class="muted">Temporary page for picking the Focus sound variants. Each plays at the app's
+        default volume (layer 70%, Volume 55%), through the same reverb and limiter as the app.</p>
+      <p>Listen to each one once on the phone speaker and once with headphones: phone speakers lose
+        most sound below about 300 Hz, so Fire's rumble and the low part of Wind and Waves may vanish
+        on the speaker.</p>
+    </header>
+    <p id="labUnsupported" class="error" hidden>This browser can't play these sounds (no AudioWorklet).</p>
+    <label class="lab-volume" for="labVolume">Volume <output id="labVolumeValue" for="labVolume">55%</output></label>
+    <input id="labVolume" class="volume-slider lab-slider" type="range" min="5" max="100" step="5" value="55">
+    <div id="labList"></div>
+  </main>
+  <script src="../../js/focus-sound.js"></script>
+  <script src="lab.js"></script>
+</body>
+</html>

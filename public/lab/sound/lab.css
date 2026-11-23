@@ -1,0 +1,27 @@
+/* TEMPORARY: the listening lab (index.html here). Deleted with it. */
+.lab-group {
+  margin-top: 20px;
+}
+
+.lab-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 10px 0;
+}
+
+.lab-item .btn {
+  flex-shrink: 0;
+  min-width: 8.5em;
+  min-height: 44px;
+}
+
+.lab-item p {
+  margin: 0;
+  font-size: var(--fs-14);
+}
+
+.lab-slider {
+  display: block;
+  width: 100%;
+}
