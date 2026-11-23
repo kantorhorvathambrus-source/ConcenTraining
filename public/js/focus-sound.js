@@ -46,8 +46,8 @@ const FOCUS_LEVELS = {
   // on their crests (2 dB above the noises), so the troughs are quieter. Birds: on their phrases (2 dB
   // under the noises) and Crickets 4 dB under, so they stay in the background. Thunder: its loudest
   // moment is as loud as a steady noise, never louder.
-  rain: 1.69, thunder: 0.38, birds: 0.42, wind: 0.174, fire: 0.436, waves: 0.383, stream: 0.315,
-  crickets: 0.8, fan: 0.181, vacuum: 0.258, train: 0.378, airplane: 0.208,
+  rain: 1.69, thunder: 0.49, birds: 0.42, wind: 0.174, fire: 0.549, waves: 0.383, stream: 0.391,
+  crickets: 0.8, fan: 0.181, vacuum: 0.258, train: 0.297, airplane: 0.0994,
 };
 
 // Does this browser have Web Audio at all? Without it the Focus sound setting isn't shown.

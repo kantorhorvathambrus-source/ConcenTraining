@@ -1,18 +1,18 @@
-// TEMPORARY listening lab for PR #81 (Focus sound): plays the variants of Fire and Waves and the
-// new sounds, through the app's own player (js/focus-sound.js) and worklet. Deleted in the PR's
+// TEMPORARY listening lab for PR #81 (Focus sound): plays the variants of Fire, Thunder, Train and
+// Airplane, and the new Stream, through the app's own player (js/focus-sound.js) and worklet. Deleted in the PR's
 // last commit, once the variants are picked.
 "use strict";
 
 const LAB_SOUNDS = [
-  { group: "Fire", id: "fire", variant: "c", name: "Fire C", note: "A fireplace indoors: closer, more flame body, fewer snaps, a little room, a faint low roar." },
-  { group: "Fire", id: "fire", variant: "d", name: "Fire D", note: "A campfire outdoors: more snaps and sap sizzle, less body, open space (little reverb)." },
-  { group: "Waves", id: "waves", variant: "c", name: "Waves C", note: "Swell and break together, each with its own timing; when only one plays, it's mostly the smooth swell." },
-  { group: "Waves", id: "waves", variant: "d", name: "Waves D", note: "The same, but when only one plays, it's mostly the break and wash." },
-  { group: "New sounds", id: "stream", variant: "", name: "Stream", note: "A brook: many small bubbles over a gentle babble." },
-  { group: "New sounds", id: "crickets", variant: "", name: "Crickets", note: "3–5 crickets at different distances, each with its own chirp and pace." },
-  { group: "New sounds", id: "thunder", variant: "", name: "Thunder", note: "Distant rolls: the first within 3–10 s, then one every 20–90 s, silence in between." },
-  { group: "New sounds", id: "train", variant: "", name: "Train", note: "Inside a carriage: low rumble, clack-clack over the rail joints, a gentle sway." },
-  { group: "New sounds", id: "airplane", variant: "", name: "Airplane", note: "Cabin noise: deep and steady, a faint engine hum." },
+  { group: "Fire", id: "fire", variant: "a", name: "Fire A", note: "Fireplace: fuller flame, 1–4 crackles a second, a few pops a minute, a small room." },
+  { group: "Fire", id: "fire", variant: "b", name: "Fire B", note: "Campfire: softer, more open flame, denser crackles (many tiny), little reverb." },
+  { group: "Thunder", id: "thunder", variant: "a", name: "Thunder A", note: "Rolling rumble and growl only, no clap. First roll within 3–10 s; listen about 2 minutes." },
+  { group: "Thunder", id: "thunder", variant: "b", name: "Thunder B", note: "Like A, a little closer, with soft distant claps at the start of about half the rolls." },
+  { group: "Train", id: "train", variant: "a", name: "Train A", note: "Classic jointed track: a clear da-dum, the rolling noise lower." },
+  { group: "Train", id: "train", variant: "b", name: "Train B", note: "Softer clacks, more rolling roar and rattle, the same rhythm." },
+  { group: "Airplane", id: "airplane", variant: "a", name: "Airplane A", note: "Middle or rear seat: airflow around 300–1000 Hz, more engine drone." },
+  { group: "Airplane", id: "airplane", variant: "b", name: "Airplane B", note: "Front seat: brighter airflow (around 1–3 kHz), less engine." },
+  { group: "Stream", id: "stream", variant: "", name: "Stream", note: "The bubbles as before, the steady rush under them about 3 dB lower." },
 ];
 
 let audio = null;
