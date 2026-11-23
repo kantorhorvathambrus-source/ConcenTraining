@@ -7,9 +7,10 @@
 // - Noise (brown, pink, white, green): steady, so a few seconds are generated once into an
 //   AudioBuffer (a block of samples kept in memory) and looped. The end of the buffer is crossfaded
 //   into its start, so the loop point has no click.
-// - Ambient (rain, birds, wind, fire, waves, fan, vacuum): generated live, sample by sample, by an
-//   AudioWorklet (js/focus-sound-worklet.js, which runs on the browser's audio thread). Every drop,
-//   crackle and bird phrase is new, so nothing ever repeats, and nothing is kept in memory.
+// - Ambient (rain, thunder, birds, wind, fire, waves, stream, crickets, fan, vacuum, train, airplane):
+//   generated live, sample by sample, by an AudioWorklet (js/focus-sound-worklet.js, which runs on the
+//   browser's audio thread). Every drop, crackle and bird phrase is new, so nothing ever repeats, and
+//   nothing is kept in memory.
 //
 // The chain: every layer has its own gain (its volume); Ambient layers also send their "wet" part to
 // one shared reverb (a ConvolverNode with a short room generated in code), so nothing sounds bone-dry.
@@ -19,7 +20,9 @@
 
 const FOCUS_NOISES = ["brown", "pink", "white", "green"];
 // In the order of the setup screen's tiles and volume rows. Adding a sound: see the README.
-const FOCUS_AMBIENTS = ["rain", "birds", "wind", "fire", "waves", "fan", "vacuum"];
+const FOCUS_AMBIENTS = [
+  "rain", "thunder", "birds", "wind", "fire", "waves", "stream", "crickets", "fan", "vacuum", "train", "airplane",
+];
 // The worklet next to this file, wherever the page is (the app, or the listening lab in lab/sound/).
 const FOCUS_WORKLET_URL = new URL("focus-sound-worklet.js", document.currentScript.src).href;
 const FOCUS_VOLUME_DEFAULT = 55; // the master (Volume slider), %
@@ -30,7 +33,7 @@ const FOCUS_VOLUME_STEP = 5;
 const FOCUS_LAYER_FADE_S = 0.3; // a layer turned on or off, or a noise changed, while the mix plays
 const NOISE_SECONDS = 8; // the length of a noise's loop. Long enough that no pattern can be heard.
 const NOISE_CROSSFADE_SECONDS = 0.5; // the end blends into the start over this long
-const REVERB_SECONDS = 1; // the generated room's length
+const REVERB_SECONDS = 0.5; // the generated room's length (its tail is about 55 dB down by then)
 const REVERB_RETURN = 0.6; // how much of the reverb comes back into the mix
 // The level of each layer at 100% (with the master at 100%): for a noise on a buffer at an RMS
 // (average level) of 1, for an ambient sound on the worklet's raw output, reverb included. Chosen so
@@ -39,11 +42,12 @@ const REVERB_RETURN = 0.6; // how much of the reverb comes back into the mix
 // chime (CHIME_VOLUME in app.js). See the README.
 const FOCUS_LEVELS = {
   brown: 0.072, pink: 0.055, white: 0.048, green: 0.047,
-  // Matched on the average, like the noises: rain, wind, fan, vacuum. Fire: 5 dB lower on average,
-  // because ears judge crackles by their peaks (the usual correction for impulsive sounds). Waves: on
-  // their crests (2 dB above the noises), so the troughs are quieter. Birds: on their phrases (2 dB
-  // under the noises), so they stay in the background.
-  rain: 1.69, birds: 0.41, wind: 0.195, fire: 2.23, waves: 0.34, fan: 0.181, vacuum: 0.258,
+  // Matched on the average, like the noises: rain, fire, stream, fan, vacuum, train, airplane. Waves:
+  // on their crests (2 dB above the noises), so the troughs are quieter. Birds: on their phrases (2 dB
+  // under the noises) and Crickets 4 dB under, so they stay in the background. Thunder: its loudest
+  // moment is as loud as a steady noise, never louder.
+  rain: 1.69, thunder: 0.38, birds: 0.42, wind: 0.174, fire: 0.436, waves: 0.383, stream: 0.315,
+  crickets: 0.8, fan: 0.181, vacuum: 0.258, train: 0.378, airplane: 0.208,
 };
 
 // Does this browser have Web Audio at all? Without it the Focus sound setting isn't shown.
@@ -185,7 +189,7 @@ function generateNoise(type, sampleRate, channels) {
 }
 
 // The reverb's room, generated once per AudioContext: a few early reflections (5–60 ms, like nearby
-// walls, trees or the ground), then a dense tail that dies away in about 0.7 s, its highs dying
+// walls, trees or the ground), then a dense tail that dies away in about 0.5 s, its highs dying
 // faster than its lows, as in a real space. Each ear gets its own random room, so it sounds wide.
 function makeRoomImpulse(ctx) {
   const sr = ctx.sampleRate;
@@ -203,7 +207,7 @@ function makeRoomImpulse(ctx) {
       const a = 0.85 - 0.7 * (t / REVERB_SECONDS); // the low-pass closes as the tail dies
       lp += a * (Math.random() * 2 - 1 - lp);
       const fadeIn = Math.min(1, (t - 0.01) / 0.02);
-      data[i] += lp * Math.exp(-t / 0.1) * 0.5 * fadeIn;
+      data[i] += lp * Math.exp(-t / 0.08) * 0.5 * fadeIn;
     }
   }
   return buffer;

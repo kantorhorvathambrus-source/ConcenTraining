@@ -1,5 +1,5 @@
-// The Ambient focus sounds (Rain, Birds, Wind, Fire, Waves, Fan, Vacuum), generated live, sample by
-// sample, and the limiter that keeps the whole mix from clipping. This is an AudioWorklet module: it
+// The Ambient focus sounds (Rain, Thunder, Birds, Wind, Fire, Waves, Stream, Crickets, Fan, Vacuum,
+// Train, Airplane), generated live, sample by sample, and the limiter that keeps the whole mix from clipping. This is an AudioWorklet module: it
 // runs on the browser's audio thread, not on the page, and is loaded by focus-sound.js
 // (audioWorklet.addModule). See "Focus sound" in the README.
 //
@@ -25,6 +25,23 @@ function white() {
 
 function rand(lo, hi) {
   return lo + Math.random() * (hi - lo);
+}
+
+// A sine table (4096 points, read with linear interpolation): far cheaper than Math.sin on every
+// sample, and accurate to about 1e-7, so it sounds exactly the same. x in radians, any sign.
+const SINE_SIZE = 4096;
+const SINE = new Float64Array(SINE_SIZE + 1);
+for (let i = 0; i <= SINE_SIZE; i++) SINE[i] = Math.sin((TWO_PI * i) / SINE_SIZE);
+
+function fastSin(x) {
+  const t = x * (SINE_SIZE / TWO_PI);
+  const i = Math.floor(t);
+  const j = i & (SINE_SIZE - 1);
+  return SINE[j] + (SINE[j + 1] - SINE[j]) * (t - i);
+}
+
+function fastCos(x) {
+  return fastSin(x + Math.PI / 2);
 }
 
 // Paul Kellet's pink filter (as in focus-sound.js). next(white) returns pink noise, RMS about 0.3.
@@ -138,7 +155,7 @@ class Drift {
     }
     this.left--;
     const p = 1 - this.left / this.length;
-    this.value = this.from + (this.to - this.from) * (0.5 - 0.5 * Math.cos(Math.PI * p));
+    this.value = this.from + (this.to - this.from) * (0.5 - 0.5 * fastCos(Math.PI * p));
     return this.value;
   }
 }
@@ -205,7 +222,7 @@ class Bursts {
       } else {
         b.env *= b.decay;
       }
-      const x = b.env > 0.001 ? white() * b.env : 0;
+      const x = b.env > 0.003 ? white() * b.env : 0;
       const y = b.b0 * (x - b.x2) - b.a1 * b.y1 - b.a2 * b.y2;
       b.x2 = b.x1; b.x1 = x;
       b.y2 = b.y1; b.y1 = y;
@@ -215,7 +232,7 @@ class Bursts {
       out[1] += s * b.gr * dry;
       out[2] += s * b.gl * b.wet;
       out[3] += s * b.gr * b.wet;
-      if (b.env <= 0.001 && --b.tail <= 0) {
+      if (b.env <= 0.003 && --b.tail <= 0) {
         // Finished: the last active burst takes its place.
         this.count--;
         this.pool[i] = this.pool[this.count];
@@ -229,54 +246,43 @@ class Bursts {
 
 // ---------- Rain ----------
 
-// Rain: only drops, no wind-like bed and no tones. Three layers at different distances:
-//   far:  very many, quiet, duller (a lower, softer band) and wetter. Together they make the hiss.
+// Rain: drops over a steady hiss shaped like rain (about 1–8 kHz, which never swells), no wind-like
+// bed and no tones. The drops come at three distances:
+//   far:  many, quiet, duller (a lower, softer band) and wetter.
 //   mid:  fewer, a little louder and brighter.
 //   near: few, louder, brighter, drier: single drops on leaves, the ground or a roof.
 // Every drop has its own colour (band-pass centre and Q), attack, decay and place. The rain's
 // strength drifts only slowly and slightly (±10% over about a minute): no gusts.
-// Variants for the listening lab (public/lab/sound/):
-//   a: drops only; the far layer makes the hiss.
-//   b: fewer drops on top of a steady hiss shaped like rain (1–8 kHz), which never swells.
-//   c: like a, but on leaves and a roof: more near drops that ring longer, and more reverb.
-const RAIN_VARIANTS = {
-  a: { far: 900, mid: 160, near: 10, nearQ: [2, 7], nearDecay: [0.004, 0.012], wet: 1, hiss: 0, gain: 1 },
-  b: { far: 250, mid: 110, near: 9, nearQ: [2, 7], nearDecay: [0.004, 0.012], wet: 1, hiss: 0.06, gain: 1 },
-  c: { far: 650, mid: 160, near: 32, nearQ: [5, 12], nearDecay: [0.008, 0.025], wet: 1.4, hiss: 0, gain: 0.83 },
-};
+const RAIN = { far: 250, mid: 110, near: 9, hiss: 0.06 };
 
 class Rain {
-  constructor(variant) {
-    this.v = RAIN_VARIANTS[variant] || RAIN_VARIANTS.a;
-    this.far = new Bursts(96);
+  constructor() {
+    this.far = new Bursts(48);
     this.near = new Bursts(48);
     this.farLp = [new OnePole(5000), new OnePole(5000)];
     this.strength = new Drift(0.9, 1.1, 30, 70);
-    this.gaps = { far: nextGap(this.v.far), mid: nextGap(this.v.mid), near: nextGap(this.v.near) };
+    this.gaps = { far: nextGap(RAIN.far), mid: nextGap(RAIN.mid), near: nextGap(RAIN.near) };
     this.farOut = [0, 0, 0, 0];
-    if (this.v.hiss) {
-      this.hissHp = [new Biquad("highpass", 1000, 0.7), new Biquad("highpass", 1000, 0.7)];
-      this.hissLp = [new Biquad("lowpass", 8000, 0.7), new Biquad("lowpass", 8000, 0.7)];
-    }
+    this.hissHp = [new Biquad("highpass", 1000, 0.7), new Biquad("highpass", 1000, 0.7)];
+    this.hissLp = [new Biquad("lowpass", 8000, 0.7), new Biquad("lowpass", 8000, 0.7)];
   }
 
   next(out) {
     const s = this.strength.next();
-    const v = this.v;
     if (--this.gaps.far <= 0) {
       this.far.add(0.05 + 0.05 * Math.random() ** 2, rand(600, 3500), rand(0.7, 2.2),
-        rand(0.0003, 0.002), rand(0.003, 0.008), rand(-1, 1), Math.min(1, 0.55 * v.wet));
-      this.gaps.far = nextGap(v.far * s);
+        rand(0.0003, 0.002), rand(0.003, 0.008), rand(-1, 1), 0.55);
+      this.gaps.far = nextGap(RAIN.far * s);
     }
     if (--this.gaps.mid <= 0) {
       this.near.add(0.06 + 0.12 * Math.random() ** 3, rand(900, 5000), rand(1, 5),
-        rand(0.0002, 0.0012), rand(0.002, 0.008), rand(-0.9, 0.9), Math.min(1, 0.32 * v.wet));
-      this.gaps.mid = nextGap(v.mid * s);
+        rand(0.0002, 0.0012), rand(0.002, 0.008), rand(-0.9, 0.9), 0.32);
+      this.gaps.mid = nextGap(RAIN.mid * s);
     }
     if (--this.gaps.near <= 0) {
-      this.near.add(0.07 + 0.22 * Math.random() ** 4, rand(1200, 7000), rand(v.nearQ[0], v.nearQ[1]),
-        rand(0.0001, 0.0006), rand(v.nearDecay[0], v.nearDecay[1]), rand(-0.8, 0.8), Math.min(1, 0.18 * v.wet));
-      this.gaps.near = nextGap(v.near * s);
+      this.near.add(0.07 + 0.22 * Math.random() ** 4, rand(1200, 7000), rand(2, 7),
+        rand(0.0001, 0.0006), rand(0.004, 0.012), rand(-0.8, 0.8), 0.18);
+      this.gaps.near = nextGap(RAIN.near * s);
     }
     const f = this.farOut;
     f[0] = 0; f[1] = 0; f[2] = 0; f[3] = 0;
@@ -286,31 +292,21 @@ class Rain {
     out[2] = f[2];
     out[3] = f[3];
     this.near.mix(out);
-    if (v.hiss) {
-      for (let c = 0; c < 2; c++) {
-        const h = this.hissLp[c].next(this.hissHp[c].next(white())) * v.hiss;
-        out[c] += h * 0.7;
-        out[c + 2] += h * 0.3;
-      }
+    for (let c = 0; c < 2; c++) {
+      const h = this.hissLp[c].next(this.hissHp[c].next(white())) * RAIN.hiss;
+      out[c] += h * 0.7;
+      out[c + 2] += h * 0.3;
     }
-    const g = v.gain;
-    out[0] *= g; out[1] *= g; out[2] *= g; out[3] *= g;
   }
 }
 
 // ---------- Birds ----------
 
-// Birds: 2 or 3 birds at different sides and distances, no other sound. Each has its own song: a
-// phrase of a few syllables (fast pitch sweeps between about 2 and 7 kHz, whistles with a little
-// vibrato and, in variant b, trills). A bird sings its phrase with small changes in pitch and timing
-// each time and pauses several seconds between phrases. A far bird is quieter, duller and wetter.
-// Variants for the listening lab:
-//   a: 2 birds, simple whistles and sweeps.
-//   b: 3 birds (one far away), with trills and more varied syllables.
-const BIRD_VARIANTS = {
-  a: { birds: [{ dist: 0.2, pan: -0.55 }, { dist: 0.5, pan: 0.6 }], trills: false, gain: 1 },
-  b: { birds: [{ dist: 0.2, pan: 0.5 }, { dist: 0.45, pan: -0.6 }, { dist: 0.9, pan: 0.1 }], trills: true, gain: 1.19 },
-};
+// Birds: 3 birds at different sides and distances (one far away), no other sound. Each has its own
+// song: a phrase of a few syllables (fast pitch sweeps between about 2 and 7 kHz, whistles with a
+// little vibrato, trills). A bird sings its phrase with small changes in pitch and timing each time
+// and pauses several seconds between phrases. A far bird is quieter, duller and wetter.
+const BIRD_PLACES = [{ dist: 0.2, pan: 0.5 }, { dist: 0.45, pan: -0.6 }, { dist: 0.9, pan: 0.1 }];
 
 class Bird {
   constructor(place, trills) {
@@ -370,19 +366,23 @@ class Bird {
       if (--this.wait > 0) return;
       if (!this.queue.length) this.newPhrase();
       const s = this.queue.shift();
-      this.syllable = { ...s, pos: 0, length: Math.max(1, Math.round(s.dur * sampleRate)) };
+      const length = Math.max(1, Math.round(s.dur * sampleRate));
+      // The sweep from f0 to f1: one multiplication per sample.
+      this.syllable = { ...s, pos: 0, length, hz: s.f0, mul: Math.pow(s.f1 / s.f0, 1 / length) };
     }
     const s = this.syllable;
     const p = s.pos / s.length;
     const t = s.pos / sampleRate;
-    let hz = s.f0 * Math.pow(s.f1 / s.f0, p);
-    if (s.kind === "trill") hz *= 1 + s.depth * Math.sin(TWO_PI * s.rate * t);
-    else if (s.kind === "whistle") hz *= 1 + 0.015 * Math.sin(TWO_PI * s.vib * t);
+    let hz = s.hz;
+    s.hz *= s.mul;
+    if (s.kind === "trill") hz *= 1 + s.depth * fastSin(TWO_PI * s.rate * t);
+    else if (s.kind === "whistle") hz *= 1 + 0.015 * fastSin(TWO_PI * s.vib * t);
     this.phase = (this.phase + (TWO_PI * hz) / sampleRate) % TWO_PI;
     // Soft start and end; a trill pulses with its notes.
-    let env = Math.pow(Math.sin(Math.PI * p), 1.5);
-    if (s.kind === "trill") env *= 0.55 + 0.45 * Math.sin(TWO_PI * s.rate * t + 1);
-    const x = (Math.sin(this.phase) + 0.08 * Math.sin(2 * this.phase)) * env * s.amp * this.gain;
+    const arc = fastSin(Math.PI * p);
+    let env = arc * Math.sqrt(arc);
+    if (s.kind === "trill") env *= 0.55 + 0.45 * fastSin(TWO_PI * s.rate * t + 1);
+    const x = (fastSin(this.phase) + 0.08 * fastSin(2 * this.phase)) * env * s.amp * this.gain;
     const y = this.lp.next(x);
     const dry = 1 - this.wet;
     out[0] += y * this.gl * dry;
@@ -398,16 +398,15 @@ class Bird {
 }
 
 class Birds {
-  constructor(variant) {
-    this.v = BIRD_VARIANTS[variant] || BIRD_VARIANTS.a;
-    this.birds = this.v.birds.map((place) => new Bird(place, this.v.trills));
+  constructor() {
+    this.birds = BIRD_PLACES.map((place) => new Bird(place, true));
   }
 
   next(out) {
     out[0] = 0; out[1] = 0; out[2] = 0; out[3] = 0;
     for (const bird of this.birds) bird.next(out);
     // A soft cap, so no syllable ever gets piercing.
-    for (let i = 0; i < 4; i++) out[i] = Math.tanh(out[i] * 2.5) * 0.4 * this.v.gain;
+    for (let i = 0; i < 4; i++) out[i] = Math.tanh(out[i] * 2.5) * 0.4;
   }
 }
 
@@ -444,7 +443,7 @@ class Wind {
     const [from, to, q] = p < this.crest
       ? [this.start, this.peak, p / this.crest]
       : [this.peak, this.end, (p - this.crest) / (1 - this.crest)];
-    this.level = from + (to - from) * (0.5 - 0.5 * Math.cos(Math.PI * q));
+    this.level = from + (to - from) * (0.5 - 0.5 * fastCos(Math.PI * q));
     return this.level;
   }
 
@@ -474,74 +473,121 @@ class Wind {
 
 // ---------- Fire ----------
 
-// Fire: crackles and pops, each through a resonant band-pass with its own random colour, over a low,
-// soft flame rumble (only below about 200 Hz, gently varying). No hiss and no whoosh. Crackles are
-// short (1–6 ms) and come in irregular clusters: a few now and then, and every few seconds a quick run
-// of them, like wood catching. Pops are rarer, lower and longer, with a sharp start. The rare loudest
-// one is rounded off (a soft limit), so it never gets close to full scale.
+// Fire: a flame body, wood snaps, sap sizzle and pops. No slow swell anywhere (that reads as wind).
+// - The flame body: noise in about 200–1500 Hz (where a phone speaker can play it), its level and
+//   brightness flickering fast and irregularly (new values every 12–60 ms, like flames licking), with
+//   a quicker flare now and then (0.1–0.5 s).
+// - Snaps: a sharp click with a short resonant body (500–2200 Hz, ringing for a few ms), in irregular
+//   clusters: a few now and then, and every few seconds a quick run, like wood catching.
+// - Sap sizzle: now and then a run (0.3–1.5 s) of tiny, bright, quiet clicks.
+// - Pops: rarer, a click with a soft thump (180–450 Hz).
+// The rare loudest snap or pop is rounded off (a soft limit), so it never gets close to full scale.
 // Variants for the listening lab:
-//   a: crackles, pops and a low rumble.
-//   b: denser, smaller ticking crackles, bigger and rarer pops, a lower and quieter rumble.
+//   c: a fireplace indoors: closer, more body, fewer snaps, a little more room (reverb), a faint low roar.
+//   d: a campfire outdoors: more snaps and sizzle, less body, more open (little reverb).
 const FIRE_VARIANTS = {
-  a: { crackle: 25, burstCrackle: 110, crackleAmp: 0.5, crackleDecay: [0.0005, 0.0025], pop: 0.3, popAmp: 0.9, rumble: 0.25, rumbleHz: 200, gain: 1 },
-  b: { crackle: 45, burstCrackle: 70, crackleAmp: 0.3, crackleDecay: [0.0003, 0.0012], pop: 0.15, popAmp: 1.3, rumble: 0.15, rumbleHz: 150, gain: 1.72 },
+  c: { body: 0.58, bodyHi: 1300, snap: 5, burstSnap: 40, snapAmp: 2.5, sizzle: 0.07, pop: 0.22, popAmp: 3, roar: 0.15, wet: 0.3, gain: 1 },
+  d: { body: 0.32, bodyHi: 1500, snap: 12, burstSnap: 75, snapAmp: 3.5, sizzle: 0.16, pop: 0.3, popAmp: 2.5, roar: 0, wet: 0.08, gain: 1.06 },
 };
 
 class Fire {
   constructor(variant) {
-    this.v = FIRE_VARIANTS[variant] || FIRE_VARIANTS.a;
-    this.brown = [new Brown(), new Brown()];
-    this.rumbleLp = [new Biquad("lowpass", this.v.rumbleHz, 0.7), new Biquad("lowpass", this.v.rumbleHz, 0.7)];
-    this.rumbleHp = [new Biquad("highpass", 45, 0.7), new Biquad("highpass", 45, 0.7)];
-    this.flicker = [new Drift(0.7, 1, 1.5, 4), new Drift(0.7, 1, 1.5, 4)];
-    this.crackles = new Bursts(48);
-    this.pops = new Bursts(8);
-    this.burstLeft = 0; // samples left of a run of crackles
-    this.crackleGap = nextGap(this.v.crackle);
-    this.burstGap = nextGap(0.35);
-    this.popGap = nextGap(this.v.pop);
+    this.v = FIRE_VARIANTS[variant] || FIRE_VARIANTS.c;
+    const v = this.v;
+    this.pink = [new Pink(), new Pink()];
+    this.bodyHp = [new Biquad("highpass", 200, 0.7), new Biquad("highpass", 200, 0.7)];
+    this.bodyLp = [new Biquad("lowpass", v.bodyHi, 0.7), new Biquad("lowpass", v.bodyHi, 0.7)];
+    this.lick = [new Drift(0.2, 1, 0.012, 0.06), new Drift(0.2, 1, 0.012, 0.06)];
+    this.flare = [new Drift(0.55, 1, 0.1, 0.5), new Drift(0.55, 1, 0.1, 0.5)];
+    if (v.roar) {
+      this.brown = [new Brown(), new Brown()];
+      this.roarLp = [new Biquad("lowpass", 260, 0.7), new Biquad("lowpass", 260, 0.7)];
+      this.roarHp = [new Biquad("highpass", 60, 0.7), new Biquad("highpass", 60, 0.7)];
+    }
+    this.snaps = new Bursts(64);
+    this.pops = new Bursts(12);
+    this.sizzles = new Bursts(24);
+    this.burstLeft = 0; // samples left of a run of snaps
+    this.sizzleLeft = 0; // samples left of a run of sizzle
+    this.snapGap = nextGap(v.snap);
+    this.burstGap = nextGap(0.3);
+    this.sizzleRunGap = nextGap(v.sizzle);
+    this.sizzleGap = 1;
+    this.popGap = nextGap(v.pop);
     this.events = [0, 0, 0, 0];
+    this.count = 0;
+  }
+
+  snap(scale) {
+    const v = this.v;
+    const amp = v.snapAmp * (0.15 + 0.85 * Math.random() ** 4) * scale;
+    const pan = rand(-0.8, 0.8);
+    this.snaps.add(amp * 0.5, rand(2500, 6000), rand(0.8, 2), 0.00005, rand(0.0002, 0.0006), pan, v.wet);
+    this.snaps.add(amp, rand(500, 2200), rand(4, 10), 0.0001, rand(0.001, 0.004), pan, v.wet);
+  }
+
+  pop() {
+    const v = this.v;
+    const amp = v.popAmp * (0.4 + 0.6 * Math.random() ** 3);
+    const pan = rand(-0.6, 0.6);
+    this.pops.add(amp * 0.4, rand(1500, 4000), 1.5, 0.00005, 0.0004, pan, v.wet);
+    this.pops.add(amp, rand(180, 450), rand(2, 4), 0.0008, rand(0.012, 0.03), pan, Math.min(1, v.wet + 0.1));
   }
 
   next(out) {
     const v = this.v;
     if (--this.burstGap <= 0) {
       this.burstLeft = Math.round(rand(0.15, 1) * sampleRate);
-      this.burstGap = nextGap(0.35);
+      this.burstGap = nextGap(0.3);
     }
     const inBurst = this.burstLeft > 0;
     if (inBurst) this.burstLeft--;
-    if (--this.crackleGap <= 0) {
-      this.crackles.add(v.crackleAmp * (0.15 + 0.85 * Math.random() ** 5) * (inBurst ? 0.8 : 1),
-        rand(1200, 6000), rand(2, 8), rand(0.00005, 0.0003), rand(v.crackleDecay[0], v.crackleDecay[1]), rand(-0.8, 0.8), 0.15);
-      this.crackleGap = nextGap(inBurst ? v.burstCrackle : v.crackle);
+    if (--this.snapGap <= 0) {
+      this.snap(inBurst ? 0.8 : 1);
+      this.snapGap = nextGap(inBurst ? v.burstSnap : v.snap);
+    }
+    if (--this.sizzleRunGap <= 0) {
+      this.sizzleLeft = Math.round(rand(0.3, 1.5) * sampleRate);
+      this.sizzleRunGap = nextGap(v.sizzle);
+    }
+    if (this.sizzleLeft > 0) {
+      this.sizzleLeft--;
+      if (--this.sizzleGap <= 0) {
+        this.sizzles.add(rand(0.04, 0.1), rand(3000, 8000), rand(1, 3), 0.00003, rand(0.0001, 0.0004), rand(-0.7, 0.7), v.wet);
+        this.sizzleGap = nextGap(rand(120, 220));
+      }
     }
     if (--this.popGap <= 0) {
-      this.pops.add(v.popAmp * (0.4 + 0.6 * Math.random() ** 3),
-        rand(300, 1200), rand(3, 6), 0.00005, rand(0.003, 0.01), rand(-0.6, 0.6), 0.2);
+      this.pop();
       this.popGap = nextGap(v.pop);
     }
     const e = this.events;
     e[0] = 0; e[1] = 0; e[2] = 0; e[3] = 0;
-    this.crackles.mix(e);
+    this.snaps.mix(e);
     this.pops.mix(e);
+    this.sizzles.mix(e);
+    const retune = (this.count++ & 31) === 0;
     for (let c = 0; c < 2; c++) {
-      const rumble = this.rumbleHp[c].next(this.rumbleLp[c].next(this.brown[c].next(white()))) * v.rumble * this.flicker[c].next();
-      out[c] = (rumble * 0.9 + Math.tanh(e[c] / 0.15) * 0.15) * v.gain;
-      out[c + 2] = (rumble * 0.1 + Math.tanh(e[c + 2] / 0.15) * 0.15) * v.gain;
+      const lick = this.lick[c].next();
+      const flare = this.flare[c].next();
+      if (retune) this.bodyLp[c].set(v.bodyHi * (0.55 + 0.45 * lick), 0.7);
+      let body = this.bodyLp[c].next(this.bodyHp[c].next(this.pink[c].next(white()))) * 2.4 * v.body * lick * flare;
+      if (v.roar) body += this.roarHp[c].next(this.roarLp[c].next(this.brown[c].next(white()))) * v.roar * flare;
+      out[c] = (body * (1 - v.wet) + Math.tanh(e[c] / 0.8) * 0.8) * v.gain;
+      out[c + 2] = (body * v.wet + Math.tanh(e[c + 2] / 0.8) * 0.8) * v.gain;
     }
   }
 }
 
 // ---------- Waves ----------
 
-// Variants for the listening lab:
-//   a: (the first version) brown and pink noise whose level and brightness follow a smooth swell.
-//   b: each wave has a shape: a short build, a fast break (a broadband rush with bright foam), then a
-//      longer wash in which the foam fizzes and fades and gets duller. Between waves only a soft,
-//      steady distant surf: no slow, symmetric swell.
+// Two kinds of wave, played together by WavesMix below:
+//   the swell: brown and pink noise whose level and brightness follow a smooth swell.
+//   the break: each wave has a shape: a short build, a fast break (a broadband rush with bright
+//      foam), then a longer wash in which the foam fizzes and fades and gets duller. Between waves
+//      only a soft, steady distant surf.
 
-// a: brown and pink noise whose level follows one wave after another. Each wave has its own length
+// The swell: brown and pink noise whose level follows one wave after another. Each wave has its own length
 // (6–12 s), height, crest point and end level. It gets brighter at the crest (a low-pass opening up)
 // with a little foam hiss, and drifts slowly between left and right.
 class WavesSwell {
@@ -565,25 +611,34 @@ class WavesSwell {
     this.pos = 0;
   }
 
-  envelope() {
+  // Worked out every 16 samples (step): it changes over seconds, so that's smooth enough.
+  envelope(step) {
     if (this.pos >= this.length) this.newWave();
-    const p = this.pos++ / this.length;
+    const p = this.pos / this.length;
+    this.pos += step;
     if (p < this.crest) {
       const q = p / this.crest;
-      return this.start + (this.peak - this.start) * (0.5 - 0.5 * Math.cos(Math.PI * q));
+      return this.start + (this.peak - this.start) * (0.5 - 0.5 * fastCos(Math.PI * q));
     }
     const q = (p - this.crest) / (1 - this.crest);
     return this.end + (this.peak - this.end) * Math.pow(1 - q, 2.2);
   }
 
   next(out) {
-    const env = this.envelope();
-    this.level = env;
-    if ((this.count++ & 63) === 0) {
+    const n = this.count++;
+    if ((n & 15) === 0) {
+      this.env = this.envelope(16);
+      this.level = this.env;
+    }
+    const env = this.env;
+    const pan = this.pan.next();
+    if ((n & 63) === 0) {
       const hz = 450 + 1800 * env * env;
       for (const pair of this.lp) for (const f of pair) f.set(hz);
+      [this.gl, this.gr] = panGains(pan);
     }
-    const [gl, gr] = panGains(this.pan.next());
+    const gl = this.gl;
+    const gr = this.gr;
     for (let c = 0; c < 2; c++) {
       let x = this.brown[c].next(white()) * 0.8 + this.pink[c].next(white()) * 0.5;
       x = this.lp[c][1].next(this.lp[c][0].next(x));
@@ -595,8 +650,8 @@ class WavesSwell {
   }
 }
 
-// b: build → break → wash → rest, every phase with its own random length; each wave at its own place
-// between left and right.
+// The break: build → break → wash → rest, every phase with its own random length; each wave at its
+// own place between left and right.
 class WavesBreak {
   constructor(gain = 1) {
     this.gain = gain;
@@ -623,8 +678,10 @@ class WavesBreak {
   }
 
   // body: the rushing water; foam: how much fizz; bright: 0 (dull) … 1 (bright).
-  shape() {
-    const p = this.pos++;
+  // Worked out every 16 samples (step), like the swell's envelope.
+  shape(step) {
+    const p = this.pos;
+    this.pos += step;
     const h = this.height;
     let body;
     let foam;
@@ -654,8 +711,10 @@ class WavesBreak {
   }
 
   next(out) {
-    const [body, foam, bright] = this.shape();
-    if ((this.count++ & 63) === 0) {
+    const n = this.count++;
+    if ((n & 15) === 0) this.shaped = this.shape(16);
+    const [body, foam, bright] = this.shaped;
+    if ((n & 63) === 0) {
       for (let c = 0; c < 2; c++) this.body[c].set(350 + 3000 * bright * bright, 0.6);
     }
     out[0] = 0; out[1] = 0; out[2] = 0; out[3] = 0;
@@ -679,6 +738,359 @@ class WavesBreak {
   }
 }
 
+// Waves: the two kinds of wave above, played at the same time, each with its own independent timing,
+// so they overlap differently every time. Most of the time both play; sometimes only one; never
+// neither. A layer comes and goes over about 4 seconds (equal-power, so the sound never dips).
+// Variants for the listening lab:
+//   c: when only one plays, it's mostly the smooth swell, rarely only the break and wash.
+//   d: the other way round: mostly only the break and wash, rarely only the swell.
+const WAVES_MIX = {
+  c: { both: 0.65, onlySwell: 0.28, gain: 1 },
+  d: { both: 0.65, onlySwell: 0.07, gain: 1 },
+};
+
+class WavesMix {
+  constructor(variant) {
+    this.p = WAVES_MIX[variant] || WAVES_MIX.c;
+    this.swell = new WavesSwell();
+    this.breaker = new WavesBreak(0.93);
+    this.fs = [0, 0, 0, 0];
+    this.fb = [0, 0, 0, 0];
+    this.presence = [1, 1]; // swell, break: 0 … 1
+    this.target = [1, 1];
+    this.left = Math.round(rand(20, 50) * sampleRate); // it starts with both
+    this.step = 1 / (4 * sampleRate);
+  }
+
+  nextState() {
+    const r = Math.random();
+    if (r < this.p.both) {
+      this.target = [1, 1];
+      this.left = Math.round(rand(25, 70) * sampleRate);
+    } else {
+      this.target = r < this.p.both + this.p.onlySwell ? [1, 0] : [0, 1];
+      this.left = Math.round(rand(15, 40) * sampleRate);
+    }
+  }
+
+  next(out) {
+    if (--this.left <= 0) this.nextState();
+    for (let k = 0; k < 2; k++) {
+      const d = this.target[k] - this.presence[k];
+      if (d) this.presence[k] += Math.abs(d) < this.step ? d : Math.sign(d) * this.step;
+    }
+    this.swell.next(this.fs);
+    this.breaker.next(this.fb);
+    const gs = Math.sqrt(this.presence[0]) * 0.8 * this.p.gain;
+    const gb = Math.sqrt(this.presence[1]) * 0.8 * this.p.gain;
+    for (let i = 0; i < 4; i++) out[i] = this.fs[i] * gs + this.fb[i] * gb;
+  }
+}
+
+// ---------- Stream ----------
+
+// Stream: a brook. Many small bubbles (the sound of an air bubble in water: a short sine whose pitch
+// rises a little as it dies away, about 300–2000 Hz; a small bubble rings higher and shorter) over a
+// gentle broadband babble that ripples fast (tens to hundreds of ms). Lively but steady: no slow swell.
+class Stream {
+  constructor() {
+    this.pink = [new Pink(), new Pink()];
+    this.babbleHp = [new Biquad("highpass", 300, 0.7), new Biquad("highpass", 300, 0.7)];
+    this.babbleLp = [new Biquad("lowpass", 3000, 0.7), new Biquad("lowpass", 3000, 0.7)];
+    this.ripple = [new Drift(0.7, 1, 0.03, 0.15), new Drift(0.7, 1, 0.03, 0.15)];
+    this.busy = new Drift(0.85, 1.15, 0.4, 1.5);
+    const n = 48;
+    this.size = n;
+    this.count = 0;
+    this.phase = new Float64Array(n);
+    this.inc = new Float64Array(n);
+    this.chirp = new Float64Array(n);
+    this.env = new Float64Array(n);
+    this.decay = new Float64Array(n);
+    this.amp = new Float64Array(n);
+    this.gl = new Float64Array(n);
+    this.gr = new Float64Array(n);
+    this.wet = new Float64Array(n);
+    this.gap = nextGap(220);
+  }
+
+  bubble() {
+    if (this.count >= this.size) return;
+    const i = this.count++;
+    const hz = 300 * Math.pow(2000 / 300, Math.random() ** 1.3);
+    const tau = rand(8, 22) / hz; // rings for 8–22 cycles
+    const rise = rand(0.1, 0.4); // the pitch rises 10–40% over its life
+    this.phase[i] = 0;
+    this.inc[i] = (TWO_PI * hz) / sampleRate;
+    this.chirp[i] = Math.pow(1 + rise, 1 / (3 * tau * sampleRate));
+    this.env[i] = 1;
+    this.decay[i] = Math.exp(-1 / (tau * sampleRate));
+    this.amp[i] = 0.03 + 0.14 * Math.random() ** 3;
+    const [gl, gr] = panGains(rand(-0.9, 0.9));
+    this.gl[i] = gl;
+    this.gr[i] = gr;
+    this.wet[i] = rand(0.15, 0.4);
+  }
+
+  next(out) {
+    if (--this.gap <= 0) {
+      this.bubble();
+      this.gap = nextGap(220 * this.busy.next());
+    }
+    out[0] = 0; out[1] = 0; out[2] = 0; out[3] = 0;
+    let i = 0;
+    while (i < this.count) {
+      this.phase[i] += this.inc[i];
+      this.inc[i] *= this.chirp[i];
+      const s = fastSin(this.phase[i]) * this.env[i] * this.amp[i];
+      this.env[i] *= this.decay[i];
+      const w = this.wet[i];
+      out[0] += s * this.gl[i] * (1 - w);
+      out[1] += s * this.gr[i] * (1 - w);
+      out[2] += s * this.gl[i] * w;
+      out[3] += s * this.gr[i] * w;
+      if (this.env[i] < 0.01) {
+        // Finished (40 dB down, lost in the babble): the last bubble takes its place.
+        const last = --this.count;
+        this.phase[i] = this.phase[last]; this.inc[i] = this.inc[last]; this.chirp[i] = this.chirp[last];
+        this.env[i] = this.env[last]; this.decay[i] = this.decay[last]; this.amp[i] = this.amp[last];
+        this.gl[i] = this.gl[last]; this.gr[i] = this.gr[last]; this.wet[i] = this.wet[last];
+      } else {
+        i++;
+      }
+    }
+    for (let c = 0; c < 2; c++) {
+      const b = this.babbleLp[c].next(this.babbleHp[c].next(this.pink[c].next(white()))) * 0.55 * this.ripple[c].next();
+      out[c] += b * 0.8;
+      out[c + 2] += b * 0.2;
+    }
+  }
+}
+
+// ---------- Crickets ----------
+
+// Crickets: 3–5 crickets at different distances and sides, no other sound. Each has its own pitch
+// (about 4–5 kHz), its own chirp (a train of 2–5 short pulses) and its own pace, slightly irregular,
+// so they never chirp in step. Far ones are quieter, duller and wetter. A soft cap keeps them in the
+// background, like Birds.
+class Cricket {
+  constructor(dist, pan) {
+    [this.gl, this.gr] = panGains(pan);
+    this.gain = 0.22 * (1 - 0.7 * dist);
+    this.wet = 0.15 + 0.5 * dist;
+    this.lp = new OnePole(9500 - 5000 * dist);
+    this.hz = rand(4000, 5000);
+    this.pulses = 2 + Math.floor(Math.random() * 4);
+    this.pulseLen = Math.round(rand(0.008, 0.016) * sampleRate);
+    this.pulseGap = Math.round(rand(0.008, 0.014) * sampleRate);
+    this.period = rand(0.35, 1.1);
+    this.am = rand(180, 320); // the buzz of the wings
+    // A cricket that chirps more of the time is a little quieter, so 3 or 5 crickets with any paces
+    // add up to about the same loudness.
+    const duty = (this.pulses * this.pulseLen) / (this.period * sampleRate);
+    this.gain *= Math.min(1.6, Math.max(0.6, Math.sqrt(0.08 / duty)));
+    this.phase = 0;
+    this.amPhase = 0;
+    this.wait = Math.round(rand(0, this.period) * sampleRate);
+    this.left = 0; // pulses left in this chirp
+    this.pos = -1; // position in the pulse, -1 between pulses
+  }
+
+  next(out) {
+    if (this.pos < 0) {
+      if (--this.wait > 0) return;
+      if (this.left <= 0) {
+        // A new chirp, now and then with a pulse more or less.
+        this.left = Math.max(1, this.pulses + (Math.random() < 0.15 ? (Math.random() < 0.5 ? -1 : 1) : 0));
+        this.chirpHz = this.hz * rand(0.99, 1.01);
+      }
+      this.pos = 0;
+    }
+    const p = this.pos / this.pulseLen;
+    const arc = fastSin(Math.PI * p);
+    const env = arc * arc;
+    this.phase = (this.phase + (TWO_PI * this.chirpHz) / sampleRate) % TWO_PI;
+    this.amPhase = (this.amPhase + (TWO_PI * this.am) / sampleRate) % TWO_PI;
+    const x = fastSin(this.phase) * env * (0.75 + 0.25 * fastSin(this.amPhase)) * this.gain;
+    const y = this.lp.next(x);
+    out[0] += y * this.gl * (1 - this.wet);
+    out[1] += y * this.gr * (1 - this.wet);
+    out[2] += y * this.gl * this.wet;
+    out[3] += y * this.gr * this.wet;
+    if (++this.pos >= this.pulseLen) {
+      this.pos = -1;
+      this.left--;
+      const chirpLen = this.pulses * (this.pulseLen + this.pulseGap);
+      this.wait = this.left > 0
+        ? this.pulseGap
+        : Math.max(this.pulseGap, Math.round(this.period * rand(0.92, 1.08) * sampleRate) - chirpLen);
+    }
+  }
+}
+
+class Crickets {
+  constructor() {
+    const places = [[0.2, -0.5], [0.45, 0.6], [0.7, -0.15], [0.85, 0.35], [0.95, -0.75]];
+    const n = 3 + Math.floor(Math.random() * 3);
+    this.crickets = places.slice(0, n).map(([dist, pan]) => new Cricket(dist, pan));
+    this.scale = Math.sqrt(4 / n); // as loud with 3 crickets as with 5
+  }
+
+  next(out) {
+    out[0] = 0; out[1] = 0; out[2] = 0; out[3] = 0;
+    for (const cricket of this.crickets) cricket.next(out);
+    for (let i = 0; i < 4; i++) out[i] = Math.tanh(out[i] * this.scale * 2.5) * 0.4;
+  }
+}
+
+// ---------- Thunder ----------
+
+// Thunder: distant only. A rumble at random every 20–90 s (the first one within a few seconds), each
+// 6–14 s long: a slow onset (never a sharp crack), then several overlapping rolls that die away. Deep
+// noise plus enough 300–800 Hz that a phone speaker can play it. A soft cap keeps every rumble from
+// startling. Silence in between: it's meant to be mixed with Rain.
+class Thunder {
+  constructor() {
+    this.brown = [new Brown(), new Brown()];
+    this.pink = [new Pink(), new Pink()];
+    this.lp = [new Biquad("lowpass", 700, 0.6), new Biquad("lowpass", 700, 0.6)];
+    this.mid = [new Biquad("bandpass", 500, 0.7), new Biquad("bandpass", 500, 0.7)];
+    this.hp = [new Biquad("highpass", 40, 0.7), new Biquad("highpass", 40, 0.7)];
+    this.rumble = null;
+    this.wait = Math.round(rand(3, 10) * sampleRate);
+    this.env = 0;
+    this.count = 0;
+  }
+
+  newRumble() {
+    const length = rand(6, 14);
+    const rolls = [];
+    for (let k = 3 + Math.floor(Math.random() * 5); k > 0; k--) {
+      rolls.push({ at: rand(0, length * 0.7), len: rand(1, 3), amp: rand(0.4, 1) });
+    }
+    const [gl, gr] = panGains(rand(-0.5, 0.5));
+    this.rumble = { t: 0, length, onset: rand(0.8, 2), rolls, level: rand(0.6, 1), gl, gr };
+  }
+
+  envelope(r) {
+    const t = r.t;
+    const onset = Math.min(1, t / r.onset);
+    const rise = onset * onset * (3 - 2 * onset);
+    const tail = Math.exp(-Math.max(0, t - r.onset) / (r.length * 0.35));
+    let rolls = 0.35;
+    for (const roll of r.rolls) {
+      const q = (t - roll.at) / roll.len;
+      if (q > 0 && q < 1) rolls += roll.amp * Math.sin(Math.PI * q) ** 2;
+    }
+    return rise * tail * rolls * r.level;
+  }
+
+  next(out) {
+    out[0] = 0; out[1] = 0; out[2] = 0; out[3] = 0;
+    if (!this.rumble) {
+      if (--this.wait <= 0) this.newRumble();
+      return;
+    }
+    const r = this.rumble;
+    if ((this.count++ & 15) === 0) this.env = this.envelope(r);
+    r.t += 1 / sampleRate;
+    for (let c = 0; c < 2; c++) {
+      const x = this.lp[c].next(this.brown[c].next(white())) + this.mid[c].next(this.pink[c].next(white())) * 0.8;
+      const y = Math.tanh(this.hp[c].next(x) * this.env * 1.5) / 1.5;
+      const g = c === 0 ? r.gl : r.gr;
+      out[c] = y * g * 0.75;
+      out[c + 2] = y * g * 0.25;
+    }
+    if (r.t >= r.length + 3) {
+      this.rumble = null;
+      this.wait = Math.round(rand(20, 90) * sampleRate);
+    }
+  }
+}
+
+// ---------- Train ----------
+
+// Train: inside a carriage. A steady low rumble with the carriage's own resonance, the clack-clack of
+// the wheels over rail joints (a pair every 1–2 s, its tempo changing slowly with the speed), and a
+// gentle sway. No horn, no announcements.
+class Train {
+  constructor() {
+    this.brown = [new Brown(), new Brown()];
+    this.pink = [new Pink(), new Pink()];
+    this.rumbleLp = [new Biquad("lowpass", 280, 0.7), new Biquad("lowpass", 280, 0.7)];
+    this.body = [new Biquad("bandpass", 450, 0.6), new Biquad("bandpass", 450, 0.6)];
+    this.sway = new Drift(-1, 1, 2.5, 5);
+    this.speed = new Drift(0.8, 1.2, 20, 60);
+    this.clacks = new Bursts(16);
+    this.clackGap = Math.round(rand(0.3, 1) * sampleRate);
+    this.second = false; // the next clack is the pair's second
+    this.count = 0;
+    this.gl = 1;
+    this.gr = 1;
+  }
+
+  clack(soft) {
+    const amp = rand(0.7, 1) * (soft ? 0.8 : 1);
+    const pan = rand(-0.3, 0.3);
+    this.clacks.add(amp * 0.5, rand(120, 260), rand(2, 4), 0.0005, rand(0.02, 0.035), pan, 0.15);
+    this.clacks.add(amp * 0.12, rand(900, 1800), 2, 0.0002, 0.003, pan, 0.15);
+  }
+
+  next(out) {
+    const speed = this.speed.next();
+    if (--this.clackGap <= 0) {
+      this.clack(this.second);
+      const pairGap = 0.15 / speed;
+      this.clackGap = Math.round((this.second ? 1.4 / speed - pairGap : pairGap) * rand(0.97, 1.03) * sampleRate);
+      this.second = !this.second;
+    }
+    const sway = this.sway.next();
+    if ((this.count++ & 63) === 0) [this.gl, this.gr] = panGains(sway * 0.15);
+    const gl = this.gl;
+    const gr = this.gr;
+    const level = 1 + 0.06 * sway;
+    out[0] = 0; out[1] = 0; out[2] = 0; out[3] = 0;
+    for (let c = 0; c < 2; c++) {
+      const x = (this.rumbleLp[c].next(this.brown[c].next(white())) * 1.2
+        + this.body[c].next(this.pink[c].next(white())) * 0.6) * level * (c === 0 ? gl : gr);
+      out[c] = x * 0.92;
+      out[c + 2] = x * 0.08;
+    }
+    this.clacks.mix(out);
+  }
+}
+
+// ---------- Airplane ----------
+
+// Airplane: cabin noise. Steady and deep, a broad hump around 100–500 Hz with a little air hiss
+// above, and a faint engine hum (two engines a fraction of a hertz apart, so it beats very slowly).
+// No chimes, no announcements.
+class Airplane {
+  constructor() {
+    this.brown = [new Brown(), new Brown()];
+    this.pink = [new Pink(), new Pink()];
+    this.hump = [new Biquad("bandpass", 250, 0.45), new Biquad("bandpass", 250, 0.45)];
+    this.air = [new Biquad("lowpass", 1800, 0.6), new Biquad("lowpass", 1800, 0.6)];
+    this.drift = new Drift(0.95, 1, 4, 12);
+    this.p1 = 0;
+    this.p2 = 0;
+  }
+
+  next(out) {
+    const d = this.drift.next();
+    this.p1 = (this.p1 + (TWO_PI * 92) / sampleRate) % TWO_PI;
+    this.p2 = (this.p2 + (TWO_PI * 92.6) / sampleRate) % TWO_PI;
+    const hum = (fastSin(this.p1) + fastSin(this.p2)) * 0.012 + fastSin(2 * this.p1) * 0.004;
+    for (let c = 0; c < 2; c++) {
+      const pink = this.pink[c].next(white());
+      const x = this.hump[c].next(this.brown[c].next(white()) * 0.8 + pink * 0.6) * 1.6 + this.air[c].next(pink) * 0.25;
+      const y = x * d + hum;
+      out[c] = y * 0.95;
+      out[c + 2] = y * 0.05;
+    }
+  }
+}
+
 // ---------- Fan, Vacuum ----------
 
 // Fan: airy noise (pink and a little brown, low-passed, as from a fan or an air conditioner) with a
@@ -696,7 +1108,7 @@ class Fan {
   next(out) {
     const d = this.drift.next();
     this.phase = (this.phase + this.inc) % TWO_PI;
-    const hum = (Math.sin(this.phase) * 0.05 + Math.sin(2 * this.phase) * 0.02) * d;
+    const hum = (fastSin(this.phase) * 0.05 + fastSin(2 * this.phase) * 0.02) * d;
     for (let c = 0; c < 2; c++) {
       const air = this.lp[c].next(this.pink[c].next(white()) + this.brown[c].next(white()) * 0.35);
       const y = air * 1.3 * d + hum;
@@ -724,8 +1136,17 @@ class Vacuum {
     this.phase = (this.phase + (TWO_PI * 140 * speed) / sampleRate) % TWO_PI;
     this.whinePhase = (this.whinePhase + (TWO_PI * 1180 * speed) / sampleRate) % TWO_PI;
     let motor = 0;
-    for (let k = 0; k < this.harmonics.length; k++) motor += Math.sin((k + 1) * this.phase) * this.harmonics[k];
-    motor += Math.sin(this.whinePhase) * 0.012;
+    // The harmonics from one sine and cosine: sin((k+1)x) = 2 cos(x) sin(kx) − sin((k−1)x).
+    const c2 = 2 * fastCos(this.phase);
+    let prev = 0;
+    let cur = fastSin(this.phase);
+    for (let k = 0; k < this.harmonics.length; k++) {
+      motor += cur * this.harmonics[k];
+      const next = c2 * cur - prev;
+      prev = cur;
+      cur = next;
+    }
+    motor += fastSin(this.whinePhase) * 0.012;
     for (let c = 0; c < 2; c++) {
       const p = this.pink[c].next(white());
       const y = this.air[c].next(white()) * 0.55 + this.body[c].next(p) * 0.9 + motor;
@@ -737,13 +1158,18 @@ class Vacuum {
 
 // The sounds, by the id focus-sound.js uses. A function gets the lab's variant ("a", "b", …).
 const SOUNDS = {
-  rain: (variant) => new Rain(variant),
-  birds: (variant) => new Birds(variant),
+  rain: () => new Rain(),
+  thunder: () => new Thunder(),
+  birds: () => new Birds(),
   wind: () => new Wind(),
   fire: (variant) => new Fire(variant),
-  waves: (variant) => (variant === "b" ? new WavesBreak(0.93) : new WavesSwell()),
+  waves: (variant) => new WavesMix(variant),
+  stream: () => new Stream(),
+  crickets: () => new Crickets(),
   fan: () => new Fan(),
   vacuum: () => new Vacuum(),
+  train: () => new Train(),
+  airplane: () => new Airplane(),
 };
 
 // One node plays one sound (processorOptions.type, and .variant in the lab). Two stereo outputs:

@@ -87,7 +87,8 @@ there, see [Domain, redirect and security headers](#domain-redirect-and-security
   only shown where it can work (on iPhone and iPad only in the Home Screen app, never in a Safari
   tab); see [Leave reminder](#leave-reminder).
   Below them, **Focus sound**: **Noise** (one choice: Off · Brown · Pink · White · Green) and
-  **Ambient** (a mixer of toggle tiles: Rain · Birds · Wind · Fire · Waves · Fan · Vacuum, any number on).
+  **Ambient** (a mixer of toggle tiles: Rain · Thunder · Birds · Wind · Fire · Waves · Stream · Crickets ·
+  Fan · Vacuum · Train · Airplane, any number on).
   While at least one is on: a volume row per layer, **Volume** (the master) and **Preview**. See
   [Focus sound](#focus-sound).
 - **Ragebait warning:** a ragebait character (built-in or custom) shows "Heads up!" with its
@@ -524,7 +525,8 @@ chime: no audio file, nothing downloaded, no libraries, no Netlify bandwidth. Th
 **Setup screen**
 
 - **Noise** (one choice): Off · Brown · Pink · White · Green.
-- **Ambient** (a mixer): Rain · Birds · Wind · Fire · Waves · Fan · Vacuum, as toggle tiles: a tap turns
+- **Ambient** (a mixer): Rain · Thunder · Birds · Wind · Fire · Waves · Stream · Crickets · Fan · Vacuum ·
+  Train · Airplane, as toggle tiles: a tap turns
   a sound on or off, and any number can be on at once, also together with a noise. Under them: "You
   can mix these: turn on several and set each one's volume." Under both groups: "Steady background
   sound that covers distracting noises. Tap Preview to listen."
@@ -547,7 +549,7 @@ chime: no audio file, nothing downloaded, no libraries, no Netlify bandwidth. Th
 **The mixer** (`createFocusSoundPlayer` in `focus-sound.js`)
 
 - Every layer has its own gain. Ambient layers have a second, "wet" output that goes to one shared
-  reverb: a ConvolverNode with a short room (about 0.7 s, early reflections then a tail whose highs die
+  reverb: a ConvolverNode with a short room (about 0.5 s, early reflections then a tail whose highs die
   faster) generated in code once (`makeRoomImpulse`). A single drop or bird can be more or less
   distant this way: far ones are quieter, duller and wetter. Noises have no reverb; Fan and Vacuum
   only a touch.
@@ -579,33 +581,54 @@ chime: no audio file, nothing downloaded, no libraries, no Netlify bandwidth. Th
   audibly repeat in any loop short enough to keep in memory, so they're rolled from random numbers
   while they play, sample by sample, on the browser's audio thread. Nothing ever repeats, nothing is
   kept in memory, and no timers are involved (which browsers pause in the background).
-  - **Rain:** only drops, no wind-like bed and no tones. Each drop is a tiny noise burst rung through
-    its own band-pass filter (random centre and Q: a hard surface rings, a soft one taps), with its
-    own attack, decay and place. Three distances: very many far drops (quiet, duller, wetter: together
-    they make the hiss), mid drops and a few near ones (louder, brighter, drier). Its strength drifts
-    only ±10% over about a minute: no gusts.
-  - **Birds:** 2–3 birds at different sides and distances, nothing else. Each has its own song (a
-    phrase of a few syllables: fast pitch sweeps between about 2 and 7 kHz, whistles with a little
-    vibrato, trills), sung with small changes in pitch and timing, with pauses of 3–12 s. Far birds
-    are quieter, duller and wetter; a soft cap keeps every syllable in the background.
+  - **Rain:** drops over a steady hiss shaped like rain (about 1–8 kHz, which never swells); no
+    wind-like bed and no tones. Each drop is a tiny noise burst rung through its own band-pass filter
+    (random centre and Q: a hard surface rings, a soft one taps), with its own attack, decay and
+    place, at three distances: far (quiet, duller, wetter), mid, and a few near ones (louder,
+    brighter, drier). Its strength drifts only ±10% over about a minute: no gusts.
+  - **Thunder:** distant only, at random every 20–90 s (the first within a few seconds), 6–14 s each:
+    a slow onset (never a sharp crack), then several overlapping rolls that die away. Deep noise plus
+    enough 300–800 Hz that a phone speaker can play it, with a soft cap so it never startles. Silence
+    in between: it's meant to be mixed with Rain.
+  - **Birds:** 3 birds at different sides and distances (one far away), nothing else. Each has its own
+    song (a phrase of a few syllables: fast pitch sweeps between about 2 and 7 kHz, whistles with a
+    little vibrato, trills), sung with small changes in pitch and timing, with pauses of 3–12 s. Far
+    birds are quieter, duller and wetter; a soft cap keeps every syllable in the background.
   - **Wind:** pink noise through a slowly moving band-pass with a low Q (so it never whistles), gusts
     of 5–15 s, and a faint rustle of leaves at the gusts' peaks.
-  - **Fire:** crackles in irregular clusters and rarer, lower pops, each through a resonant filter with
-    its own colour, over a soft flame rumble below about 200 Hz. No hiss, no whoosh.
-  - **Waves**, **Fan** (airy noise with a soft 100 Hz hum), **Vacuum** (air noise and a 140 Hz motor
-    tone with harmonics and a slight wobble).
+  - **Fire:** a flame body (noise in about 200–1500 Hz whose level and brightness flicker fast and
+    irregularly, every 12–60 ms, like flames licking; never a slow swell), wood snaps (a click with a
+    short resonant body) in irregular clusters, now and then a run of tiny sap-sizzle clicks, and
+    rarer pops with a soft thump. No hiss or whoosh.
+  - **Waves:** two kinds of wave played together, each with its own independent timing: a smooth
+    swell, and waves with a shape (a short build, a fast break with bright foam, a fading wash, a soft
+    steady surf in between). Mostly both play; sometimes only one; never neither.
+  - **Stream:** a brook: many small bubbles (a short sine whose pitch rises a little as it dies away,
+    about 300–2000 Hz) over a gentle broadband babble that ripples fast. Lively but steady.
+  - **Crickets:** 3–5 crickets at different distances and sides, each with its own pitch (about
+    4–5 kHz), chirp (2–5 short pulses) and pace, slightly irregular; far ones quieter and duller.
+  - **Fan** (airy noise with a soft 100 Hz hum), **Vacuum** (air noise and a 140 Hz motor tone with
+    harmonics and a slight wobble).
+  - **Train:** inside a carriage: a steady low rumble with the carriage's resonance, the clack-clack of
+    the wheels over rail joints (a pair every 1–2 s, the tempo changing slowly with the speed) and a
+    gentle sway. No horn, no announcements.
+  - **Airplane:** cabin noise: steady and deep (a broad hump around 100–500 Hz, a little air hiss) and
+    a faint engine hum. No chimes, no announcements.
 - **Loudness:** every layer at the same % sounds about equally loud (`FOCUS_LEVELS`, measured with
-  A-weighting, which follows how ears hear, over 1–3 minutes of each, reverb included). Rain, Wind, Fan
-  and Vacuum are matched on their average like the noises; Fire 5 dB lower on average (ears judge
-  crackles by their peaks: the usual correction for impulsive sounds); Waves on their crests (2 dB
-  above the noises); Birds on their phrases (2 dB under the noises).
+  A-weighting, which follows how ears hear, over 1–10 minutes of each, reverb included). Rain, Wind,
+  Fire, Stream, Fan, Vacuum, Train and Airplane are matched on their average like the noises; Waves on
+  their crests (2 dB above the noises); Birds on their phrases (2 dB under the noises) and Crickets
+  4 dB under, so they stay in the background; Thunder so that its loudest moment is as loud as a steady
+  noise, never louder.
 - **How they were checked:** rendered offline through the real player (OfflineAudioContext in
-  headless Chromium) and measured: spectrum per octave and narrow tonal peaks (Rain has none above the
-  measuring noise), peaks and crest factor, A-weighted loudness, event rates, and the autocorrelation
-  of the loudness over 10 minutes (no repeating pattern). With every layer and the master at 100% the
-  limiter holds the peaks at −3 dBFS; at the default settings the mix peaks around −17 dBFS, so the
-  limiter never acts. All 7 Ambient sounds plus a noise take about 12% of the audio thread's time
-  budget on the test machine.
+  headless Chromium) and measured: spectrum per octave and narrow tonal peaks (Rain and Stream have
+  none above the measuring noise), peaks and crest factor, A-weighted loudness, event rates, and the
+  autocorrelation of the loudness over 10 minutes (no repeating pattern). With every layer and the
+  master at 100% the sum would reach +0.5 dBFS, and the limiter holds it at −3 dBFS; at the default
+  settings the mix peaks around −16 dBFS, so the limiter never acts. All 12 Ambient sounds plus a noise
+  take about 13% of the audio thread's time budget in the worklet, about 17% with the reverb, on the
+  test machine. The worklet uses a sine table instead of `Math.sin` and works out slow envelopes every
+  16 samples, to keep that low.
 
 **When it plays** (`updateFocusSound` in `app.js`)
 
@@ -637,15 +660,15 @@ a sound is in it once it has been on, and keeps its volume when turned off) and 
 master). Unknown sounds and bad values are dropped when the app starts. `focusSound` (the single
 choice of an early test version, only ever on Deploy Previews) is deleted.
 
-**Adding an Ambient sound** (for example Stream):
+**Adding an Ambient sound** (for example Café):
 
 1. In `focus-sound-worklet.js`: a class with `next(out)` that writes dry left, dry right, wet left and
-   wet right into `out[0..3]` (the helpers there: `Pink`, `Brown`, `Biquad`, `Drift`, `Bursts` for
+   wet right into `out[0..3]` (the helpers there: `Pink`, `Brown`, `Biquad`, `Drift`, `fastSin`, `Bursts` for
    drops and clicks), and an entry in `SOUNDS`.
 2. In `focus-sound.js`: the id in `FOCUS_AMBIENTS` (its place there is its place on screen) and a
    level in `FOCUS_LEVELS` (render a minute of it offline and match its A-weighted loudness to the
    noises).
-3. The name: `setup.focusSound<Id>` (for example `setup.focusSoundStream`) in all 9 language files,
+3. The name: `setup.focusSound<Id>` (for example `setup.focusSoundCafe`) in all 9 language files,
    then `node tools/export-texts.mjs`.
 4. Nothing else: the tile and its volume row are built from the list, and `PRECACHE` doesn't change.
    Update this section and `about.html`.
@@ -2631,8 +2654,8 @@ and the timer keeps counting from the start time as always.
 | `public/js/plans.js` | Plans: the switch `PLANS_ENABLED` (and `PLANS_ON`, also true on Netlify's test sites and localhost), the block and break presets and limits, the default break, cleaning saved plans (`cleanPlanRows`, `cleanStoredPlan`), the plan builder in step 3 and the segmented timeline (see [Plans](#plans)) |
 | `public/js/duration-sheet.js` | The duration sheet: the bottom sheet a plan row's length and break buttons open (presets, Custom with −/+ and Set; see [The duration sheet](#the-duration-sheet)) |
 | `public/js/focus-sound.js` | The focus sound: the list of sounds, generating the noise loops, every sound's level and the volume curve, the generated reverb, and the mixer/player that fades layers and the whole mix in and out (see [Focus sound](#focus-sound)) |
-| `public/js/focus-sound-worklet.js` | The Ambient focus sounds (Rain, Birds, Wind, Fire, Waves, Fan, Vacuum), generated live on the browser's audio thread, and the limiter on the mix (an AudioWorklet module, loaded by `focus-sound.js`) |
-| `public/lab/sound/` | TEMPORARY listening lab for PR #81 (variants of Rain, Birds, Fire and Waves, and Wind; noindex, not linked, not precached). Deleted before merge |
+| `public/js/focus-sound-worklet.js` | The 12 Ambient focus sounds, generated live on the browser's audio thread, and the limiter on the mix (an AudioWorklet module, loaded by `focus-sound.js`) |
+| `public/lab/sound/` | TEMPORARY listening lab for PR #81 (variants of Fire and Waves, and the five newest sounds; noindex, not linked, not precached). Deleted before merge |
 | `public/js/app.js` | Running a plan (blocks, planned breaks, the plan's summary), timer, reaction engine, distraction category picker, Undo, Stop and breaks (Take a break / Resume), disabled Advanced lengths, time away card, leave reminder notification, motivation rotation, the picker and card in the distraction buttons' place on landscape phones, end chime, when the focus sound plays (its setup row, Preview and the mute button), screen wake lock and the "screen may turn off" note, summary, How it works card, iPhone Home Screen tip, persistent storage request, one tab at a time (Web Locks) |
 | `public/js/history-store.js` | Saving/loading history, focus % and summary result (with their thresholds; `resultOf` also judges a plan's totals), break totals and the "Paused …" line, distraction categories, export/import checks, iPhone/iPad and iPhone Safari checks, the "can this browser save?" test (`storageWorks`) (used by both pages) |
 | `public/js/history.js` | Streaks, weekly time and focus charts, time of day, distraction categories, session list and backup buttons on `history.html` |

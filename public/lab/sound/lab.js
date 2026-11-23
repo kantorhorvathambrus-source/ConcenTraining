@@ -1,19 +1,18 @@
-// TEMPORARY listening lab for PR #81 (Focus sound): plays the variants of Rain, Birds, Fire and
-// Waves, and Wind, through the app's own player (js/focus-sound.js) and worklet. Deleted in the PR's
+// TEMPORARY listening lab for PR #81 (Focus sound): plays the variants of Fire and Waves and the
+// new sounds, through the app's own player (js/focus-sound.js) and worklet. Deleted in the PR's
 // last commit, once the variants are picked.
 "use strict";
 
 const LAB_SOUNDS = [
-  { group: "Rain", id: "rain", variant: "a", name: "Rain A", note: "Drops only, at three distances; the many far drops make the hiss." },
-  { group: "Rain", id: "rain", variant: "b", name: "Rain B", note: "Fewer drops over a steady hiss shaped like rain (1–8 kHz) that never swells." },
-  { group: "Rain", id: "rain", variant: "c", name: "Rain C", note: "Like A, on leaves and a roof: more near drops that ring longer, and more reverb." },
-  { group: "Birds", id: "birds", variant: "a", name: "Birds A", note: "Two birds, simple whistles and sweeps." },
-  { group: "Birds", id: "birds", variant: "b", name: "Birds B", note: "Three birds, one far away, with trills and more varied syllables." },
-  { group: "Fire", id: "fire", variant: "a", name: "Fire A", note: "Crackles in clusters, rarer low pops, a soft low rumble." },
-  { group: "Fire", id: "fire", variant: "b", name: "Fire B", note: "Denser, smaller ticking crackles, bigger and rarer pops, a quieter and lower rumble." },
-  { group: "Waves", id: "waves", variant: "a", name: "Waves A", note: "The first version: a smooth swell that brightens at each crest." },
-  { group: "Waves", id: "waves", variant: "b", name: "Waves B", note: "Each wave has a shape: a short build, a fast break with bright foam, then a fading wash." },
-  { group: "Wind", id: "wind", variant: "", name: "Wind", note: "Gusts through a slowly moving band, with a faint leaf rustle at the peaks." },
+  { group: "Fire", id: "fire", variant: "c", name: "Fire C", note: "A fireplace indoors: closer, more flame body, fewer snaps, a little room, a faint low roar." },
+  { group: "Fire", id: "fire", variant: "d", name: "Fire D", note: "A campfire outdoors: more snaps and sap sizzle, less body, open space (little reverb)." },
+  { group: "Waves", id: "waves", variant: "c", name: "Waves C", note: "Swell and break together, each with its own timing; when only one plays, it's mostly the smooth swell." },
+  { group: "Waves", id: "waves", variant: "d", name: "Waves D", note: "The same, but when only one plays, it's mostly the break and wash." },
+  { group: "New sounds", id: "stream", variant: "", name: "Stream", note: "A brook: many small bubbles over a gentle babble." },
+  { group: "New sounds", id: "crickets", variant: "", name: "Crickets", note: "3–5 crickets at different distances, each with its own chirp and pace." },
+  { group: "New sounds", id: "thunder", variant: "", name: "Thunder", note: "Distant rolls: the first within 3–10 s, then one every 20–90 s, silence in between." },
+  { group: "New sounds", id: "train", variant: "", name: "Train", note: "Inside a carriage: low rumble, clack-clack over the rail joints, a gentle sway." },
+  { group: "New sounds", id: "airplane", variant: "", name: "Airplane", note: "Cabin noise: deep and steady, a faint engine hum." },
 ];
 
 let audio = null;
