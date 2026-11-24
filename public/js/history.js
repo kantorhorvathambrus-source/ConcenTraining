@@ -1,7 +1,7 @@
 "use strict";
 
 // History page: streaks, time per week, weekly focus trend, best time of day,
-// distraction categories, recent sessions.
+// distraction categories, recent sessions, and the time capsule (data and rules in js/capsules.js).
 // Each session counts on the day it started, by the device's clock then (sessionDay, sessionHour and
 // sessionClock in history-store.js), and every date and time shown comes from the same place.
 // "Today" and "this week" are the device's current local date.
@@ -543,10 +543,18 @@ function renderSessionList(history) {
 
 // Draws (or redraws, after an import or a delete) everything that depends on the history.
 function render() {
-  drawnFrom = historySource();
   renderPending = false;
   scheduleMidnightRedraw();
   const history = loadHistory();
+  // Before the empty-history return: the time capsule shows with no sessions too. It can save
+  // readyAt, so what the page was drawn from is taken after it. A capsule problem never stops the
+  // rest of the page from being drawn.
+  try {
+    renderCapsules(history);
+  } catch (error) {
+    console.error(error);
+  }
+  drawnFrom = historySource();
   const empty = history.length === 0;
   renderStorageNote();
   // "No finished sessions yet … Start one →" would be a promise this browser can't keep.
@@ -595,7 +603,8 @@ function historySource() {
     // storage blocked: loadHistory sees an empty history, so does this
   }
   // The custom characters too: a rename or delete in another tab changes the names shown.
-  return `${dayKey(new Date())}|${canSave}|${saved}|${readCustomRaw()}`;
+  // And the time capsules: one sealed, opened or deleted in another tab shows up.
+  return `${dayKey(new Date())}|${canSave}|${saved}|${readCustomRaw()}|${CAPSULES_ON ? readCapsulesRaw() : ""}`;
 }
 
 // "Today" changes at midnight, and with it the current streak and "this week". A page that stays
@@ -620,8 +629,8 @@ function scheduleMidnightRedraw() {
 // page being shown again (Android can freeze a background tab, so it may miss the storage event).
 // Edit mode stays as it is, and so do the "Session deleted." and Backup lines.
 function refreshInBackground() {
-  if (document.getElementById("deleteDialog").open) {
-    renderPending = true; // drawn when the dialog closes (confirmDelete)
+  if (document.getElementById("deleteDialog").open || document.getElementById("capsuleDeleteDialog").open) {
+    renderPending = true; // drawn when the dialog closes (confirmDelete, confirmCapsuleDelete)
     return;
   }
   if (historySource() === drawnFrom) return;
@@ -637,9 +646,15 @@ function redrawKeepingFocus(focused) {
   const element = focused && focused !== document.body && focused.closest ? focused : null;
   const deleteButton = element ? element.closest(".session-delete") : null;
   const position = deleteButton ? deleteButtons().indexOf(deleteButton) : -1;
+  // A time capsule card, its message or one of its buttons: drawn again too (refocusCapsule).
+  const capsuleElement = element ? element.closest("[data-capsule-id]") : null;
   render();
   const empty = emptyPlace();
-  if (deleteButton) {
+  if (capsuleElement) {
+    refocusCapsule(capsuleElement);
+  } else if (element && element.id === "capsuleWrite" && element.disabled) {
+    document.getElementById("capsuleTitle").focus(); // another tab sealed the third message
+  } else if (deleteButton) {
     focusInList(Number(deleteButton.dataset.startedAt), position);
   } else if (element && !empty.hidden && (element.closest("[hidden]") || element.disabled)) {
     empty.focus();
@@ -732,6 +747,400 @@ async function confirmDelete(button) {
   focusInList(startedAt, position);
 }
 
+// ---------- time capsule (data and rules: js/capsules.js) ----------
+
+// How long the envelope takes to open (the CSS transition in the "envelope art" block of style.css).
+const CAPSULE_OPEN_MS = 400;
+// Opened on this page since it loaded: they stay at the top where they were opened, with the
+// message showing, until the next visit (then they're under "Opened messages").
+const openedThisVisit = new Set();
+// The form: how the message opens ("date" or "time") and the picked time chip (ms, or null).
+let capsuleOpensBy = "date";
+let capsulePickedMs = null;
+let capsuleCountTimer = 0;
+const capsuleStatusTimers = {};
+
+const byId = (id) => document.getElementById(id);
+
+// The history page's date format (weekday, day, month), with the year when it isn't this year:
+// a message can open up to 2 years ahead.
+function formatCapsuleDate(date) {
+  const options = { weekday: I18N.language().weekday || "short", day: "numeric", month: "short" };
+  if (date.getFullYear() !== new Date().getFullYear()) options.year = "numeric";
+  return I18N.formatDate(date, options);
+}
+
+// Like formatTotalTime ("45 min", "1 h", "2 h 15 min"), but rounded UP to whole minutes, so a
+// sealed message never says "0 min more".
+function formatTimeLeft(ms) {
+  const total = Math.max(1, Math.ceil(ms / 60000));
+  const hours = Math.floor(total / 60);
+  const minutes = total % 60;
+  if (hours === 0) return t("time.min", { minutes });
+  return minutes ? t("time.hMin", { hours, minutes }) : t("time.h", { hours });
+}
+
+function capsuleChipLabel(ms) {
+  return ms < 60 * 60 * 1000 ? t("capsule.chipMin", { minutes: ms / 60000 }) : t("capsule.chipHours", { hours: ms / 3600000 });
+}
+
+function writtenOpenedLine(capsule) {
+  return t("capsule.writtenOpened", {
+    written: formatCapsuleDate(new Date(capsule.createdAt)),
+    opened: formatCapsuleDate(new Date(capsule.openedAt)),
+  });
+}
+
+function capsuleButton(capsule, action, label, ariaLabel, className) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = className;
+  button.textContent = label;
+  button.setAttribute("aria-label", ariaLabel);
+  button.dataset.capsuleId = capsule.id;
+  button.dataset.action = action;
+  return button;
+}
+
+// One card. kind: "sealed" (waiting), "ready" (Open), "openedHere" (opened on this visit, at the
+// top) or "opened" (the Opened messages list). The message text is only ever added to an opened
+// card, with textContent: a sealed message is never on the page, not even hidden.
+function capsuleCard(capsule, kind, history) {
+  const item = document.createElement("li");
+  item.className = `capsule-card capsule-card-${kind}`;
+  item.dataset.capsuleId = capsule.id;
+  item.tabIndex = -1; // gets the focus after Seal
+  const opened = kind === "openedHere" || kind === "opened";
+  const art = document.createElement("div");
+  art.className = "capsule-art-wrap";
+  art.innerHTML = envelopeArt(opened ? "open" : kind); // fixed drawing, no text in it
+  const body = document.createElement("div");
+  body.className = "capsule-body";
+  item.append(art, body);
+  const line = (className, text) => {
+    const p = document.createElement("p");
+    p.className = className;
+    p.textContent = text;
+    body.append(p);
+    return p;
+  };
+  const sealedOn = formatCapsuleDate(new Date(capsule.createdAt));
+
+  if (kind === "sealed") {
+    line("capsule-card-title", t("capsule.sealedOn", { date: sealedOn }));
+    const left = capsuleMsLeft(capsule, history);
+    line(
+      "muted small",
+      left === null
+        ? t("capsule.opensOn", { date: formatCapsuleDate(dateFromKey(capsule.opensOn)) })
+        : t("capsule.opensAfter", { time: formatTimeLeft(left) })
+    );
+    body.append(capsuleButton(capsule, "delete", t("common.delete"), t("capsule.deleteSealedLabel", { date: sealedOn }), "btn compact capsule-delete"));
+    item.dataset.state = "sealed";
+  } else if (kind === "ready") {
+    line("capsule-card-title", t("capsule.fromPast"));
+    line("muted small", t("capsule.sealedOn", { date: sealedOn }));
+    body.append(capsuleButton(capsule, "open", t("capsule.open"), t("capsule.openLabel", { date: sealedOn }), "btn primary capsule-open"));
+  } else {
+    if (kind === "openedHere") line("capsule-card-title", t("capsule.fromPast"));
+    line("muted small", writtenOpenedLine(capsule));
+    const message = line("capsule-message", capsule.text);
+    message.tabIndex = -1; // gets the focus after Open
+    if (kind === "opened") {
+      body.append(capsuleButton(capsule, "delete", t("common.delete"), t("capsule.deleteOpenedLabel", { date: sealedOn }), "btn compact capsule-delete"));
+      item.dataset.state = "opened";
+    }
+  }
+  return item;
+}
+
+function fillList(id, cards) {
+  const list = byId(id);
+  list.textContent = "";
+  list.append(...cards);
+}
+
+// The ready strip at the top and the Time capsule section. Saves readyAt on every capsule that's
+// ready for the first time (refreshCapsules; a failed write is silent). The form isn't touched,
+// only its limits and the Seal button.
+function renderCapsules(history) {
+  const section = byId("capsules");
+  const strip = byId("capsuleReady");
+  section.hidden = !CAPSULES_ON;
+  if (!CAPSULES_ON) {
+    strip.hidden = true;
+    return; // saved capsules are ignored but kept
+  }
+  const now = new Date();
+  const list = refreshCapsules(history, now);
+  const ready = list.filter((c) => (isSealed(c) && isCapsuleReady(c, history, now)) || openedThisVisit.has(c.id));
+  const waiting = list.filter((c) => isSealed(c) && !isCapsuleReady(c, history, now));
+  const opened = list
+    .filter((c) => !isSealed(c) && !openedThisVisit.has(c.id))
+    .sort((a, b) => b.openedAt - a.openedAt);
+
+  fillList("capsuleReadyList", ready.map((c) => capsuleCard(c, isSealed(c) ? "ready" : "openedHere", history)));
+  strip.hidden = ready.length === 0;
+  fillList("capsuleSealedList", waiting.map((c) => capsuleCard(c, "sealed", history)));
+  fillList("capsuleOpenedList", opened.map((c) => capsuleCard(c, "opened", history)));
+  byId("capsuleOpenedPart").hidden = opened.length === 0;
+
+  const full = sealedCount(list) >= CAPSULE_SEALED_LIMIT;
+  const write = byId("capsuleWrite");
+  write.disabled = full;
+  write.hidden = !byId("capsuleForm").hidden;
+  const limit = byId("capsuleLimit");
+  limit.textContent = t("capsule.limit", { count: CAPSULE_SEALED_LIMIT });
+  limit.hidden = !full;
+
+  // Tomorrow to 2 years ahead, from today's date (redrawn at midnight).
+  const { min, max } = capsuleDateRange(now);
+  const date = byId("capsuleDate");
+  date.min = min;
+  date.max = max;
+  updateCapsuleForm();
+}
+
+// What the form says the message opens on, or null.
+function capsuleOpening() {
+  if (capsuleOpensBy === "date") {
+    const value = byId("capsuleDate").value;
+    return value ? { opensOn: value } : null;
+  }
+  return capsulePickedMs ? { opensAfterMs: capsulePickedMs } : null;
+}
+
+function capsuleCountText() {
+  return t("capsule.count", { count: byId("capsuleText").value.length, max: CAPSULE_TEXT_MAX });
+}
+
+// The counter, the "Opens" choice and whether Seal can be tapped (text and opening both valid).
+function updateCapsuleForm() {
+  byId("capsuleCount").textContent = capsuleCountText();
+  const byDate = capsuleOpensBy === "date";
+  byId("capsuleByDate").setAttribute("aria-pressed", String(byDate));
+  byId("capsuleByTime").setAttribute("aria-pressed", String(!byDate));
+  byId("capsuleDatePart").hidden = !byDate;
+  byId("capsuleTimePart").hidden = byDate;
+  for (const chip of byId("capsuleTimePart").querySelectorAll(".chip")) {
+    chip.setAttribute("aria-pressed", String(Number(chip.dataset.ms) === capsulePickedMs));
+  }
+  const text = cleanCapsuleText(byId("capsuleText").value);
+  byId("capsuleSeal").disabled = !(isCapsuleText(text) && isValidOpening(capsuleOpening()));
+}
+
+// The time chips: built once (so a redraw never takes the focus away from one), relabelled when
+// the language changes. "+1 min" only on the test sites (capsuleTimeChoices).
+function buildCapsuleChips() {
+  const part = byId("capsuleTimePart");
+  part.textContent = "";
+  for (const ms of capsuleTimeChoices()) {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "chip";
+    chip.dataset.ms = ms;
+    chip.textContent = capsuleChipLabel(ms);
+    chip.setAttribute("aria-pressed", "false");
+    part.append(chip);
+  }
+}
+
+function relabelCapsuleChips() {
+  for (const chip of byId("capsuleTimePart").querySelectorAll(".chip")) chip.textContent = capsuleChipLabel(Number(chip.dataset.ms));
+}
+
+function clearCapsuleError() {
+  const error = byId("capsuleError");
+  error.textContent = "";
+  error.hidden = true;
+}
+
+function showCapsuleError(message) {
+  const error = byId("capsuleError");
+  error.textContent = message;
+  error.hidden = false;
+}
+
+function resetCapsuleForm() {
+  byId("capsuleText").value = "";
+  byId("capsuleDate").value = "";
+  capsuleOpensBy = "date";
+  capsulePickedMs = null;
+  clearTimeout(capsuleCountTimer);
+  byId("capsuleCountSpoken").textContent = "";
+  clearCapsuleError();
+  updateCapsuleForm();
+}
+
+function openCapsuleForm() {
+  resetCapsuleForm();
+  byId("capsuleForm").hidden = false;
+  byId("capsuleWrite").hidden = true;
+  byId("capsuleText").focus();
+}
+
+function closeCapsuleForm() {
+  byId("capsuleForm").hidden = true;
+  resetCapsuleForm();
+  byId("capsuleWrite").hidden = false;
+}
+
+// Cancel: the form goes, and the focus goes back to Write (or the title, if Write is disabled
+// because another tab sealed the third message meanwhile).
+function cancelCapsuleForm() {
+  closeCapsuleForm();
+  const write = byId("capsuleWrite");
+  (write.disabled ? byId("capsuleTitle") : write).focus();
+}
+
+// Seal it. A failed save, or the limit reached in another tab, keeps the form and its text as they
+// are and says why. Otherwise the new sealed card gets the focus.
+function submitCapsule(event) {
+  event.preventDefault();
+  const { status, capsule } = sealCapsule(byId("capsuleText").value, capsuleOpening());
+  if (status === "invalid") {
+    updateCapsuleForm();
+    return;
+  }
+  if (status === "failed" || status === "limit") {
+    showCapsuleError(status === "failed" ? t("capsule.saveError") : t("capsule.limit", { count: CAPSULE_SEALED_LIMIT }));
+    if (status === "limit") render(); // shows the third message from the other tab
+    return;
+  }
+  closeCapsuleForm();
+  render();
+  const card = document.querySelector(`#capsules [data-capsule-id="${capsule.id}"]`);
+  (card || byId("capsuleTitle")).focus();
+}
+
+// The counter is read out once typing pauses, not on every key.
+function onCapsuleInput() {
+  updateCapsuleForm();
+  clearTimeout(capsuleCountTimer);
+  capsuleCountTimer = setTimeout(() => {
+    byId("capsuleCountSpoken").textContent = capsuleCountText();
+  }, 1000);
+}
+
+function pickCapsuleChip(event) {
+  const chip = event.target.closest(".chip");
+  if (!chip) return;
+  capsulePickedMs = Number(chip.dataset.ms);
+  updateCapsuleForm();
+}
+
+function setCapsuleOpensBy(by) {
+  capsuleOpensBy = by;
+  updateCapsuleForm();
+}
+
+// A status line like "Session deleted.": cleared first and set a moment later, so a screen reader
+// reads it again even when it's the same text.
+function showCapsuleStatus(id, message, isError) {
+  const status = byId(id);
+  clearTimeout(capsuleStatusTimers[id]);
+  status.textContent = "";
+  status.classList.toggle("error", isError);
+  capsuleStatusTimers[id] = setTimeout(() => {
+    status.textContent = message;
+  }, 100);
+}
+
+// Open: openedAt is saved first (the first tab's stays), then the flap folds open (about 400 ms,
+// none with reduced motion) and the message shows in place and gets the focus. If the browser
+// refuses the change, the message stays sealed and a line says so.
+function openReadyCapsule(button) {
+  const card = button.closest(".capsule-card");
+  if (!card || card.classList.contains("opening")) return;
+  const id = button.dataset.capsuleId;
+  const { status } = openCapsule(id);
+  if (status === "failed") {
+    showCapsuleStatus("capsuleReadyStatus", t("capsule.openFailed"), true);
+    return;
+  }
+  if (status === "missing") {
+    redrawKeepingFocus(button); // deleted in another tab
+    return;
+  }
+  openedThisVisit.add(id);
+  const show = () => {
+    render();
+    const message = document.querySelector(`#capsuleReadyList [data-capsule-id="${id}"] .capsule-message`);
+    (message || byId("capsuleTitle")).focus();
+  };
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    show();
+    return;
+  }
+  card.classList.add("opening");
+  button.setAttribute("aria-disabled", "true");
+  setTimeout(show, CAPSULE_OPEN_MS);
+}
+
+// The same card's same button again after a redraw, or the card itself, or (if it's gone) the
+// section title.
+function refocusCapsule(element) {
+  const id = element.closest("[data-capsule-id]").dataset.capsuleId;
+  const action = element.dataset.action;
+  const target =
+    (action && document.querySelector(`[data-capsule-id="${id}"][data-action="${action}"]`)) ||
+    (element.classList.contains("capsule-message") && document.querySelector(`[data-capsule-id="${id}"] .capsule-message`)) ||
+    document.querySelector(`li[data-capsule-id="${id}"]`);
+  (target || byId("capsuleTitle")).focus();
+}
+
+// Delete (sealed: "It will be deleted without being opened…"; opened: "This can't be undone.").
+// Like the session dialog: Cancel first, Esc / Back = Cancel, the saved list is read again right
+// before the change, and a redraw that came in while it was open happens once it closes.
+async function confirmCapsuleDelete(button) {
+  const sealed = button.closest("[data-state]").dataset.state === "sealed";
+  byId("capsuleDeleteText").textContent = t(sealed ? "capsule.deleteSealedText" : "capsule.deleteOpenedText");
+  const answer = await ask(byId("capsuleDeleteDialog"));
+  const id = button.dataset.capsuleId;
+  const result = answer === "delete" ? deleteCapsule(id) : "";
+  if (result === "failed") showCapsuleStatus("capsuleStatus", t("capsule.deleteFailed"), true);
+  if (result !== "deleted" && result !== "missing") {
+    const changed = renderPending && historySource() !== drawnFrom;
+    renderPending = false;
+    if (changed) redrawKeepingFocus(button);
+    else button.focus();
+    return;
+  }
+  // The next Delete button in the same list (the one above if it was the last), else Write.
+  const listId = button.closest("ul").id;
+  const position = [...byId(listId).querySelectorAll(".capsule-delete")].indexOf(button);
+  render();
+  showCapsuleStatus("capsuleStatus", t("capsule.deleted"), false);
+  const buttons = [...byId(listId).querySelectorAll(".capsule-delete")];
+  const write = byId("capsuleWrite");
+  if (buttons.length) buttons[Math.min(Math.max(position, 0), buttons.length - 1)].focus();
+  else (write.hidden || write.disabled ? byId("capsuleTitle") : write).focus();
+}
+
+function initCapsules() {
+  if (!CAPSULES_ON) return;
+  buildCapsuleChips();
+  byId("capsuleWrite").addEventListener("click", openCapsuleForm);
+  byId("capsuleCancel").addEventListener("click", cancelCapsuleForm);
+  byId("capsuleForm").addEventListener("submit", submitCapsule);
+  byId("capsuleText").addEventListener("input", onCapsuleInput);
+  byId("capsuleDate").addEventListener("input", updateCapsuleForm);
+  byId("capsuleDate").addEventListener("change", updateCapsuleForm);
+  byId("capsuleByDate").addEventListener("click", () => setCapsuleOpensBy("date"));
+  byId("capsuleByTime").addEventListener("click", () => setCapsuleOpensBy("time"));
+  byId("capsuleTimePart").addEventListener("click", pickCapsuleChip);
+  byId("capsuleReadyList").addEventListener("click", (event) => {
+    const button = event.target.closest('[data-action="open"]');
+    if (button) openReadyCapsule(button);
+  });
+  for (const id of ["capsuleSealedList", "capsuleOpenedList"]) {
+    byId(id).addEventListener("click", (event) => {
+      const button = event.target.closest('[data-action="delete"]');
+      if (button) confirmCapsuleDelete(button);
+    });
+  }
+}
+
 // ---------- export / import ----------
 
 function showBackupStatus(message, isError) {
@@ -821,7 +1230,8 @@ function recheckAndRefresh() {
 // "Session deleted." and backup lines keep the language they were written in until the next
 // message: they report something that already happened.
 function onLanguageChange() {
-  render();
+  if (CAPSULES_ON) relabelCapsuleChips();
+  render(); // also the capsule counter (updateCapsuleForm)
 }
 
 function init() {
@@ -844,7 +1254,10 @@ function init() {
   });
   window.addEventListener("storage", (event) => {
     // null: all storage was cleared. CUSTOM_KEY: a custom character renamed or deleted elsewhere.
-    if (event.key === HISTORY_KEY || event.key === CUSTOM_KEY || event.key === null) refreshInBackground();
+    // CAPSULES_KEY: a time capsule sealed, opened or deleted elsewhere.
+    if (event.key === HISTORY_KEY || event.key === CUSTOM_KEY || event.key === CAPSULES_KEY || event.key === null) {
+      refreshInBackground();
+    }
   });
   window.addEventListener("pageshow", (event) => {
     if (event.persisted) recheckAndRefresh();
@@ -852,6 +1265,7 @@ function init() {
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) recheckAndRefresh();
   });
+  initCapsules();
   canSave = storageWorks();
   render();
 }

@@ -15,7 +15,7 @@
 
 // Bump CACHE_VERSION whenever PRECACHE changes (a startup file added, removed or renamed).
 // On activate every older "concentraining-" cache is deleted.
-const CACHE_VERSION = 14;
+const CACHE_VERSION = 15;
 const CACHE_PREFIX = "concentraining-";
 const CACHE_NAME = `${CACHE_PREFIX}v${CACHE_VERSION}`;
 
@@ -63,6 +63,7 @@ const PRECACHE = [
   "js/history-store.js",
   "js/plans.js",
   "js/duration-sheet.js",
+  "js/capsules.js",
   "js/app.js",
   "js/history.js",
   "js/sw-register.js",

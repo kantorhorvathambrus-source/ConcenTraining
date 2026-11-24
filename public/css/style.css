@@ -2294,6 +2294,214 @@ a {
   margin: 0 0 12px;
 }
 
+/* ---------- time capsule (history page; js/capsules.js, "Time capsule" in the README) ---------- */
+
+/* Ready messages at the top of the page, under the storage notes. */
+.capsule-ready {
+  margin-bottom: 24px;
+}
+
+.capsule-list {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.capsule-list:empty {
+  margin: 0;
+}
+
+/* One message: the envelope on the left, its lines (and button) on the right. */
+.capsule-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--color-surface);
+  border-radius: var(--radius-tile);
+  box-shadow: var(--shadow-card);
+}
+
+/* Ready to open: the accent ring of something picked, so it stands out at the top. */
+.capsule-card-ready {
+  box-shadow: var(--shadow-selected);
+}
+
+/* A card or message only gets the focus from the script (after Seal or Open): a ring for keyboard
+   users, none after a tap. */
+.capsule-card:focus,
+.capsule-message:focus {
+  outline: none;
+}
+
+.capsule-card:focus-visible,
+.capsule-message:focus-visible,
+.capsule-textarea:focus-visible,
+#capsuleTitle:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+#capsuleTitle:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.capsule-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.capsule-body p {
+  margin: 0 0 4px;
+}
+
+.capsule-card-title {
+  font-weight: 600;
+}
+
+.capsule-body .btn {
+  margin-top: 8px;
+}
+
+/* The user's own text: line breaks kept, a very long word wraps instead of scrolling sideways. */
+.capsule-message {
+  margin-top: 8px !important;
+  padding: 10px 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--color-surface-sunken);
+  border-radius: var(--radius-field);
+}
+
+.capsule-limit {
+  margin: 8px 0 0 !important;
+}
+
+/* The inline form under Write a message. */
+.capsule-form {
+  margin-top: 4px;
+  padding: 16px;
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+.capsule-label {
+  display: block;
+  margin: 0 0 6px;
+  padding: 0;
+  font-weight: 600;
+}
+
+.capsule-textarea {
+  display: block;
+  min-height: 120px;
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.capsule-count {
+  margin: 4px 0 12px;
+  text-align: right;
+}
+
+.capsule-opens {
+  min-width: 0;
+  margin: 0 0 12px;
+  padding: 0;
+  border: 0;
+}
+
+.capsule-segmented {
+  margin-bottom: 10px;
+}
+
+/* Long labels ("After more session time", "További munkamenet-idő után") wrap inside their half. */
+.capsule-segmented .segmented-option {
+  line-height: 1.25;
+}
+
+.capsule-chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  gap: 8px;
+}
+
+.capsule-chips .chip {
+  padding: 6px 10px;
+}
+
+.capsule-error {
+  margin: 0 0 12px;
+}
+
+.capsule-opened h3 {
+  margin: 20px 0 10px;
+  font-size: var(--fs-16);
+}
+
+/* Like "Session deleted.", but inside the section. */
+.capsule-status:not(:empty) {
+  margin: 0 0 12px;
+}
+
+/* ===== ENVELOPE ART (placeholder, to be replaced by real artwork; see envelopeArt in
+   js/capsules.js). Everything the envelope looks like is in this block. ===== */
+.capsule-art-wrap {
+  flex: none;
+  width: 56px;
+  padding-top: 12px; /* room for the flap once it's folded up */
+}
+
+.capsule-art {
+  display: block;
+  width: 56px;
+  height: 42px;
+  overflow: visible;
+}
+
+.capsule-art-body {
+  fill: var(--color-accent-soft);
+  stroke: var(--color-accent-text);
+  stroke-width: 2;
+}
+
+.capsule-art-fold {
+  fill: none;
+  stroke: var(--color-accent-text);
+  stroke-width: 1.5;
+  opacity: 0.55;
+}
+
+.capsule-art-flap {
+  fill: var(--color-surface);
+  stroke: var(--color-accent-text);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  transform-box: fill-box;
+  transform-origin: 50% 0;
+  transition: transform 400ms var(--ease);
+}
+
+.capsule-art-seal {
+  fill: var(--color-accent);
+  transition: opacity 150ms var(--ease);
+}
+
+/* Open (Open tapped: the .opening card folds it up in 400 ms; an opened message shows it up). */
+.capsule-card.opening .capsule-art-flap,
+.capsule-art-open .capsule-art-flap {
+  transform: scaleY(-1);
+}
+
+.capsule-card.opening .capsule-art-seal,
+.capsule-art-open .capsule-art-seal {
+  opacity: 0;
+}
+/* ===== END ENVELOPE ART ===== */
+
 /* ---------- privacy page ---------- */
 
 /* Lets the email address (or any long word) break at 320px instead of scrolling sideways. */
@@ -3801,7 +4009,9 @@ dialog.duration-sheet[open]::backdrop {
   .char-card,
   .choice,
   .preset,
-  .dark-switch-knob {
+  .dark-switch-knob,
+  .capsule-art-flap,
+  .capsule-art-seal {
     transition: none;
   }
 

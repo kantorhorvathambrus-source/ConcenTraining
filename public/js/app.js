@@ -2584,6 +2584,26 @@ function renderPlanSummary(p) {
     count: top.length,
     list: top.map((category) => t("summary.categoryCount", { label: category.label, count: category.count })).join(t("common.listSeparator")),
   });
+
+  // The time capsule line. Never allowed to break the summary (a capsule bug, or capsules.js
+  // missing from a mixed-version cache).
+  try {
+    renderCapsuleNote();
+  } catch (error) {
+    console.error(error);
+    $("#summaryCapsule").hidden = true;
+  }
+}
+
+// "A time capsule is ready to open in your history." when a capsule is ready, unopened and not yet
+// announced. announceReadyCapsules (js/capsules.js) marks those announced (a failed write is
+// silent), so it shows once per capsule. On a single session's summary and on a plan's, both
+// times inside try/catch.
+function renderCapsuleNote() {
+  const note = $("#summaryCapsule");
+  const show = announceReadyCapsules();
+  note.textContent = show ? t("capsule.summaryReady") : "";
+  note.hidden = !show;
 }
 
 // ---------- one tab at a time (Web Locks API) ----------
@@ -3339,6 +3359,15 @@ function renderSummary(saveFailed) {
     count: top.length,
     list: top.map((category) => t("summary.categoryCount", { label: category.label, count: category.count })).join(t("common.listSeparator")),
   });
+
+  // The time capsule line. Never allowed to break the summary (a capsule bug, or capsules.js
+  // missing from a mixed-version cache).
+  try {
+    renderCapsuleNote();
+  } catch (error) {
+    console.error(error);
+    $("#summaryCapsule").hidden = true;
+  }
 }
 
 // ---------- formatting ----------

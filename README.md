@@ -1633,6 +1633,8 @@ to history" checkbox was unticked (see above). The page shows:
 - **Last 30 sessions** with date, character, mode, length, distractions and focus %. Sessions saved
   by **Start over** have a small "restarted" label. The title says "Last 30 sessions (of N)" once
   there are more than 30, otherwise "N sessions". See [Deleting a session](#deleting-a-session).
+- **Time capsule:** a message to your future self, sealed until a day or more session time (see
+  [Time capsule](#time-capsule)). Ready messages show at the very top of the page.
 - **Backup:** "Your sessions are saved automatically on this device. Export a copy before you
   switch phones or clear your browser data.", then Export and Import buttons (see below).
 
@@ -1702,8 +1704,9 @@ empty state, as on a first visit (Export is disabled then).
 ### Changes from other tabs
 
 The page doesn't keep showing old numbers: it's drawn again from the saved history when
-- another tab saves, deletes or imports sessions, or all site data is cleared there (the `storage`
-  event for `ct_history_v1`, or with no key);
+- another tab saves, deletes or imports sessions, seals, opens or deletes a time capsule, or all
+  site data is cleared there (the `storage` event for `ct_history_v1` or `ct_capsules_v1`, or with
+  no key);
 - it comes back from the browser's back/forward cache (`pageshow` with `persisted`), e.g. Android
   Back after a session was saved on the app page;
 - it's shown again (`visibilitychange`), because Android can freeze a background tab so it misses
@@ -1735,6 +1738,7 @@ page again after nothing happened draws nothing, and an Import only draws once (
 | `ct_custom_characters_v1` | Characters made in the editor: `{ v: 1, characters: [ { id, name, personality, createdAt, look: { gender, skin, hairColor, hairStyle, face, outfit, eyewear, earrings, necklace, facialHair, headwear, mask, earsHorns, costumeBeard, costumeOutfit, back, held, pet } } ] }`. The 8 costume fields are optional: characters saved before costumes don't have them, which means None. `id` is `custom-` plus 10 random letters/digits, never reused (a new id also avoids every id in the history). `personality` is the style its sessions run in. `createdAt`: `Date.now()` at the first Save, never changed by an edit; the look and personality can be changed for 10 minutes after it (see [The 10-minute rule](#the-10-minute-rule)), and 0 or a missing value means final. Reading never fails: a broken entry is skipped (not the whole list), an unknown look value gets the default. See [Custom characters](#custom-characters) |
 | `ct_prefs_v1` | Last chosen character, mode and duration, plus `endSound` and `keepScreenOn` (the two setup checkboxes, `true`/`false`). Prefs saved before these existed get `true` for both. `leaveReminder`: the **Remind me if I leave the app** checkbox (see [Leave reminder](#leave-reminder)); prefs saved before it existed get `false`. `homeScreenTipDismissed`: `true` once **Got it** was tapped on the iPhone Home Screen tip. `persistRequested`: `true` once persistent storage was asked for (or skipped in Firefox), see [iPhone storage and the Home Screen app](#iphone-storage-and-the-home-screen-app). Prefs saved before these two existed get `false` for both. `howItWorksDismissed`: `true` once **Got it** was tapped on the How it works card; prefs saved before it existed get `false`, so the card shows once. `language`: only once a language was picked in the language sheet (`"en"`, `"hu"`); without it the app follows the browser's language (see [Languages](#languages)). `theme`: `"light"` or `"dark"`, only once the light/dark switch was tapped; without it the app follows the phone's setting (see [Light and dark](#light-and-dark)). A `style` value saved by older versions is ignored and dropped. `ragebaitAccepted`: the ids of the characters whose ragebait warning was accepted on Start (see **Ragebait warning** in [How it works](#how-it-works)); prefs saved before it existed count the ragebait character chosen then as accepted. `usePlan` (`true` while **Plan** is picked in step 3; missing means `false`) and `plan` (`{ rows: [{ minutes, count, breakMinutes, breakPicked }] }`, the plan built there; `breakPicked`: that row's break was picked by hand): see [Plans](#plans); prefs saved before them have neither, which means Single block and, once Plan is picked, the first-time plan. `focusNoise` (`"off"`, `"brown"`, `"pink"`, `"white"` or `"green"`), `focusNoiseVolume` (5–100, in %), `focusMix` (`{ rain: { on: true, volume: 40 }, … }`: every Ambient sound that has ever been on, with its volume) and `focusVolume` (the master, 5–100): the **Focus sound** setting (see [Focus sound](#focus-sound)); missing or bad values mean Off, 70% per layer and 55% master, and unknown sounds are dropped. A `focusSound` value saved by an early test version is dropped. Saved field by field (see [Several tabs](#several-tabs-one-tab-at-a-time)) |
 | `ct_plan_v1` | The running plan (see [Plans](#plans)), removed when its summary shows: `{ v: 1, startedAt, characterId, characterName?, style, mode, blocks: [{ minutes, breakMinutes }], index, phase, blockStartedAt, breakStartedAt, parts }`. `index`: the block that runs (`phase: "block"`, whose session in `ct_session_v1` has `startedAt` = `blockStartedAt`) or the next one (`phase: "break"`, the break after block `index − 1`, started at `breakStartedAt`). `parts`: what each finished block measured, for the plan's summary (`{ block, startedAt, plannedMs, elapsedMs, distractedMs, focusPercent, distractions: [{ level, category }], pauses, status, startedOver? }`, `status` `"saved"`, `"exists"`, `"failed"`, `"short"`, `"unsaved"` or `"discarded"`). Never copied into the history. Ignored and cleared while plans are off |
+| `ct_capsules_v1` | Time capsule messages (see [Time capsule](#time-capsule)): `{ v: 1, capsules: [ { id, createdAt, text, opensOn?, opensAfterMs?, readyAt?, announced?, openedAt? } ] }`. `id` is `cap-` plus 10 random letters/digits. `text`: the message, trimmed, 1 to 500 characters. Exactly one of `opensOn` (`"YYYY-MM-DD"`, a local date) or `opensAfterMs` (counted session time in ms). `readyAt`: when it was first seen ready; from then on it stays ready. `announced: true` once the summary line was shown for it. `openedAt`: when **Open** was tapped (the first one is kept). Reading never fails: a broken entry is skipped (not the whole list), unknown fields are dropped. Not in the export file yet. Ignored but kept while `CAPSULES_ON` is false |
 
 Each history entry: `startedAt`, `endedAt` (timestamps in ms), `utcOffsetMin` (the device's offset
 from UTC in minutes when the session started, a whole number from −720 to 840; entries saved before
@@ -1935,6 +1939,102 @@ doesn't do this.
 - If the session fields ever change again, raise `EXPORT_VERSION` in `public/js/history-store.js`,
   add the new number to `IMPORT_VERSIONS`, and teach the import how to read the older files.
 
+## Time capsule
+
+A **Time capsule** section on the history page: you write a short message to your future self and
+seal it. It stays sealed until a day you pick, or until you've spent a chosen amount of further time
+in sessions; then it can be opened on the history page. The data and rules are in
+`public/js/capsules.js`, the drawing in `public/js/history.js`, the summary line in `public/js/app.js`
+(`renderCapsuleNote`).
+
+### The switch (`CAPSULES_ENABLED`)
+
+`CAPSULES_ENABLED` at the top of `public/js/capsules.js` is **`true`**: time capsules are on for
+everyone. Like plans, they're also **always on** on Netlify's test sites (`deploy-preview-…`,
+`main--…`) and on `localhost` / `127.0.0.1` (`CAPSULES_TEST_SITE`); the code checks `CAPSULES_ON`,
+never the switch alone. Set to `false`: no section, no ready messages at the top, no summary line,
+and `ct_capsules_v1` is ignored but kept, so switching it on again brings every message back.
+
+### Writing and sealing
+
+- The section sits above **Backup**, outside the session part of the page, so it also shows with
+  no sessions. Intro text, the sealed messages, **Write a message**, the "Opened messages" list and a
+  muted line "Time capsules aren't in the export file yet."
+- **Write a message** opens an inline form (not a dialog): "Your message" (up to 500 characters,
+  counter "{count}/500"; the trimmed text can't be empty) and **Opens**, a two-way toggle:
+  - **On a date:** a date field from tomorrow to today + 2 years (the device's local date; checked
+    in the code too, not only by the field).
+  - **After more session time:** chips **+5 h**, **+10 h**, **+25 h**, **+50 h**. On the test sites
+    only there's also **+1 min**, so a capsule can be opened after one short session on a phone.
+- **Seal it** stays disabled until the text and the opening are valid. **Cancel** clears the form
+  and puts the focus back on **Write a message**. After **Seal it** the focus goes to the new sealed
+  card.
+- **At most 3 sealed** (not yet opened) messages at a time. With 3, **Write a message** is disabled
+  and a note says "You can have 3 sealed messages at a time." Seal checks again against the saved
+  list, so a third message sealed meanwhile in another tab stops it (the note shows in the form).
+- If the browser refuses to save (storage blocked or full), the form and its text stay exactly as
+  they were and it says "Couldn't save the message: your browser didn't allow it. Your text is still
+  here."
+- The form is written in the HTML and never rebuilt by a redraw, so a change in another tab can't
+  wipe what's being typed.
+
+### Sealed messages
+
+Each sealed card shows the envelope, "Sealed on {date}" and "Opens on {date}" or "Opens after
+{time} more in sessions". The remaining time is formatted like the history page's totals (X h Y
+min) but **rounded up** to whole minutes, so it never says "0 min". Dates use the history page's
+Intl format, with the year when it isn't the current year. **A sealed message's text is never put
+on the page**, not even hidden, so it can't be read early. A sealed message can be deleted (dialog
+"Delete this message?" / "It will be deleted without being opened. This can't be undone.", Cancel
+first, Esc and Back cancel) but not edited.
+
+### Counting session time (one rule)
+
+"After more session time" counts the session time (`sessionFocus(entry).elapsedMs`, so without
+breaks) of every history entry whose `startedAt` is at or after the capsule's `createdAt`, with
+**each day capped at 4 hours** (`COUNTED_MAX_PER_DAY_MS`), by the day a session counts on
+(`sessionDay`). Sessions imported later count only if they started after the capsule was sealed.
+The rule is one helper, `countedSessionMs(history, sinceMs)` in `capsules.js`: a later feature
+counted in session hours (the "journey") must reuse it, not copy it. `capsules.js` has its own
+local date-key helper (`capsuleDateKey`), because `history.js`'s `dayKey` isn't loaded on
+`index.html`.
+
+### Ready, opening and the summary line
+
+- **Ready:** a date capsule when the device's current local date is on or after `opensOn` (so it
+  becomes ready at midnight; the history page's midnight redraw shows it); a time capsule when the
+  counted time reaches `opensAfterMs`. The first time a capsule is seen ready (history page or
+  summary), `readyAt` is saved, and from then on it counts as ready forever, even if sessions are
+  deleted later. A failed write of `readyAt` or `announced` is silent: readiness is still worked out
+  from the condition.
+- **Opening:** ready messages show at the very top of the history page, under the storage notes,
+  oldest first: envelope, "A message from your past self", "Sealed on {date}", **Open**. Open saves
+  `openedAt` first (if another tab already opened it, its `openedAt` is kept), then the envelope's
+  flap folds open (about 400 ms, none with reduced motion) and the message shows in place and gets
+  the focus. If the browser refuses the change, the message stays sealed and a line says so.
+- **Later visits:** opened messages are in "Opened messages" inside the section, newest opened
+  first, each with "Written {date} · Opened {date}", the text and a **Delete** button (dialog "This
+  can't be undone.").
+- **Summary line:** on the summary screen (a single session's and a plan's), when at least one
+  capsule is ready, unopened and not yet announced: "A time capsule is ready to open in your
+  history." Those capsules get `announced: true` (and `readyAt` if missing), so it shows once per
+  capsule. The call is wrapped in `try`/`catch`: a capsule problem can never break the summary.
+  `index.html` loads `js/capsules.js` before `app.js`; on that page it only runs from the summary.
+- **Text safety:** the message is always set with `textContent`. Line breaks are kept
+  (`white-space: pre-wrap`) and very long words wrap (`overflow-wrap: anywhere`).
+- **Tabs:** every change reads the saved list fresh and changes only that capsule, so another tab's
+  change is never lost. A capsule sealed, opened or deleted in another tab shows up on the next
+  redraw (see [Changes from other tabs](#changes-from-other-tabs)).
+- **Clearing site data** deletes the messages, like the history. They aren't in the export file yet
+  (a later change to the export format adds them).
+
+### The envelope art (placeholder)
+
+The envelope is a simple inline SVG made with the design tokens, so it works in light and dark.
+Everything about it is in one marked block: `envelopeArt(state)` in `capsules.js` (`sealed`,
+`ready`, `open`) and the "ENVELOPE ART" block (`.capsule-art*`) in `css/style.css`. To use real
+artwork, replace those two blocks; nothing else depends on the drawing.
+
 ## Privacy page (`privacy.html`)
 
 `privacy.html` explains in plain words what stays on the device, what is sent to the server (only
@@ -1973,8 +2073,8 @@ and a link to the privacy page at the bottom, all relative links).
 - **Indexed:** it has a canonical address (`https://concentraining.com/about`), link preview tags,
   no `noindex`, and it's in `sitemap.xml` (see [Search engines (SEO)](#search-engines-seo)).
   Netlify serves it as `/about` and `/about.html`; the canonical is always `/about`.
-- **Keep it true:** it only lists features that are on in production (the switches in `plans.js`
-  and `custom-characters.js`), never anything behind a switch that's off, prices, "free" or future
+- **Keep it true:** it only lists features that are on in production (the switches in `plans.js`,
+  `custom-characters.js` and `capsules.js`), never anything behind a switch that's off, prices, "free" or future
   plans. Characters never speak, so it never describes them talking. Whenever a user-visible
   feature is added, changed or removed, update the English text of `about.html` (and the meta
   description and JSON-LD in `index.html` if they're affected) in the same pull request (a rule in
@@ -2614,7 +2714,7 @@ and the timer keeps counting from the start time as always.
 | File | What's in it |
 |---|---|
 | `public/index.html` | All screens (setup, session, summary, "open in another tab" notice) and dialogs |
-| `public/history.html` | Your finished sessions, streaks, time per week and focus trends |
+| `public/history.html` | Your finished sessions, streaks, time per week and focus trends, and the time capsule |
 | `public/avatar.html` | The character editor (see [Custom characters](#custom-characters)) |
 | `public/privacy.html` | Privacy page: what stays on the device, what is sent to the server, hosting, your rights (its only script is `js/theme.js`) |
 | `public/about.html` | The public About page: what the app does today, English only (its only script is `js/theme.js`; see [About page](#about-page-abouthtml)) |
@@ -2639,12 +2739,13 @@ and the timer keeps counting from the start time as always.
 | `public/js/custom-characters.js` | Saving and reading `ct_custom_characters_v1`, name rules, the 10 limit, `CUSTOM_PAID`, the feature switch `CUSTOM_CHARACTERS_ENABLED` (and `CUSTOM_CHARACTERS_ON`, which is also true on Netlify's test sites), stand-in for deleted characters (used by all three pages and `stats.html`) |
 | `public/js/avatar.js` | The editor on `avatar.html` |
 | `public/js/plans.js` | Plans: the switch `PLANS_ENABLED` (and `PLANS_ON`, also true on Netlify's test sites and localhost), the block and break presets and limits, the default break, cleaning saved plans (`cleanPlanRows`, `cleanStoredPlan`), the plan builder in step 3 and the segmented timeline (see [Plans](#plans)) |
+| `public/js/capsules.js` | Time capsule data and rules: the switch `CAPSULES_ENABLED` (and `CAPSULES_ON`, also true on Netlify's test sites and localhost), reading and writing `ct_capsules_v1`, the counted session time rule (`countedSessionMs`, `COUNTED_MAX_PER_DAY_MS`), when a capsule is ready, the summary line's check (`announceReadyCapsules`) and the placeholder envelope art (`envelopeArt`). Loaded by `history.html` and `index.html`; uses only `history-store.js` and the i18n files, and touches no DOM when it loads (see [Time capsule](#time-capsule)) |
 | `public/js/duration-sheet.js` | The duration sheet: the bottom sheet a plan row's length and break buttons open (presets, Custom with −/+ and Set; see [The duration sheet](#the-duration-sheet)) |
 | `public/js/focus-sound.js` | The focus sound: the list of sounds, generating the noise loops, every sound's level and the volume curve, the generated reverb, and the mixer/player that fades layers and the whole mix in and out (see [Focus sound](#focus-sound)) |
 | `public/js/focus-sound-worklet.js` | The 7 Ambient focus sounds, generated live on the browser's audio thread, and the limiter on the mix (an AudioWorklet module, loaded by `focus-sound.js`) |
 | `public/js/app.js` | Running a plan (blocks, planned breaks, the plan's summary), timer, reaction engine, distraction category picker, Undo, Stop and breaks (Take a break / Resume), disabled Advanced lengths, time away card, leave reminder notification, motivation rotation, the picker and card in the distraction buttons' place on landscape phones, end chime, when the focus sound plays (its setup row, Preview and the mute button), screen wake lock and the "screen may turn off" note, summary, How it works card, iPhone Home Screen tip, persistent storage request, one tab at a time (Web Locks) |
 | `public/js/history-store.js` | Saving/loading history, focus % and summary result (with their thresholds; `resultOf` also judges a plan's totals), break totals and the "Paused …" line, distraction categories, export/import checks, iPhone/iPad and iPhone Safari checks, the "can this browser save?" test (`storageWorks`) (used by both pages) |
-| `public/js/history.js` | Streaks, weekly time and focus charts, time of day, distraction categories, session list and backup buttons on `history.html` |
+| `public/js/history.js` | Streaks, weekly time and focus charts, time of day, distraction categories, session list and backup buttons on `history.html`, and the time capsule's drawing (ready messages at the top, the section, the form, Open and Delete) |
 | `netlify/functions/picks.mjs` | `POST /api/picks`: counts one session started with a character |
 | `netlify/functions/stats.mjs` | `GET /api/stats`: popularity + which characters are paid |
 | `netlify/lib/characters.mjs` | The characters whose picks are counted (id + name); a new character must be added here |
