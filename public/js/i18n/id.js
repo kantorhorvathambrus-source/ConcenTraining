@@ -428,6 +428,16 @@ I18N_TEXTS.id = {
   "dateSheet.prevMonth": "Bulan sebelumnya",
   "dateSheet.nextMonth": "Bulan berikutnya",
   "dateSheet.close": "Tutup",
+  "capsule.chipCustom": "Atur sendiri",
+  "capsule.chipCustomValue": "+{time}",
+  "timeSheet.title": "Waktu sesi",
+  "timeSheet.hours": "Jam",
+  "timeSheet.minutes": "Menit",
+  "timeSheet.hint": "Pilih antara {min} dan {max}.",
+  "timeSheet.hourLess": "Kurangi 1 jam",
+  "timeSheet.hourMore": "Tambah 1 jam",
+  "timeSheet.minuteLess": "Kurangi 1 menit",
+  "timeSheet.minuteMore": "Tambah 1 menit",
 
   // ---------- export / import ----------
   "import.exported": { other: "{count} sesi diekspor." },

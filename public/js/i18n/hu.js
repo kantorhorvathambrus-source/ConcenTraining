@@ -425,6 +425,16 @@ I18N_TEXTS.hu = {
   "dateSheet.prevMonth": "Előző hónap",
   "dateSheet.nextMonth": "Következő hónap",
   "dateSheet.close": "Bezárás",
+  "capsule.chipCustom": "Egyéni",
+  "capsule.chipCustomValue": "+{time}",
+  "timeSheet.title": "Munkamenet-idő",
+  "timeSheet.hours": "Óra",
+  "timeSheet.minutes": "Perc",
+  "timeSheet.hint": "{min} és {max} között választhatsz.",
+  "timeSheet.hourLess": "1 órával kevesebb",
+  "timeSheet.hourMore": "1 órával több",
+  "timeSheet.minuteLess": "1 perccel kevesebb",
+  "timeSheet.minuteMore": "1 perccel több",
 
   // ---------- export / import ----------
   "import.exported": { one: "{count} munkamenet exportálva.", other: "{count} munkamenet exportálva." },

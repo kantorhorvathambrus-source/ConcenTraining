@@ -452,6 +452,16 @@ I18N_TEXTS.en = {
   "dateSheet.prevMonth": "Previous month",
   "dateSheet.nextMonth": "Next month",
   "dateSheet.close": "Close",
+  "capsule.chipCustom": "Custom",
+  "capsule.chipCustomValue": "+{time}",
+  "timeSheet.title": "Session time",
+  "timeSheet.hours": "Hours",
+  "timeSheet.minutes": "Minutes",
+  "timeSheet.hint": "Choose between {min} and {max}.",
+  "timeSheet.hourLess": "1 hour less",
+  "timeSheet.hourMore": "1 hour more",
+  "timeSheet.minuteLess": "1 minute less",
+  "timeSheet.minuteMore": "1 minute more",
 
   // ---------- export / import ----------
   "import.exported": { one: "Exported {count} session.", other: "Exported {count} sessions." },

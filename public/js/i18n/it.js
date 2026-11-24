@@ -415,6 +415,16 @@ I18N_TEXTS.it = {
   "dateSheet.prevMonth": "Mese precedente",
   "dateSheet.nextMonth": "Mese successivo",
   "dateSheet.close": "Chiudi",
+  "capsule.chipCustom": "Personalizza",
+  "capsule.chipCustomValue": "+{time}",
+  "timeSheet.title": "Tempo in sessione",
+  "timeSheet.hours": "Ore",
+  "timeSheet.minutes": "Minuti",
+  "timeSheet.hint": "Scegli tra {min} e {max}.",
+  "timeSheet.hourLess": "1 ora in meno",
+  "timeSheet.hourMore": "1 ora in più",
+  "timeSheet.minuteLess": "1 minuto in meno",
+  "timeSheet.minuteMore": "1 minuto in più",
 
   // ---------- export / import ----------
   "import.exported": { one: "{count} sessione esportata.", many: "{count} sessioni esportate.", other: "{count} sessioni esportate." },

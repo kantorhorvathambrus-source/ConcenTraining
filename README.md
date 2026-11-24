@@ -1968,8 +1968,15 @@ and `ct_capsules_v1` is ignored but kept, so switching it on again brings every 
     "2026. dec. 24., csütörtök", English "Thu, 24 Dec 2026"). The range is checked again in the code
     (`isValidOpening`), so a picked day that has become too early (the page stayed open over
     midnight) keeps **Seal it** disabled.
-  - **After more session time:** chips **+5 h**, **+10 h**, **+25 h**, **+50 h**. On the test sites
-    only there's also **+1 min**, so a capsule can be opened after one short session on a phone.
+  - **After more session time:** quick-pick chips **+5 h**, **+10 h**, **+25 h**, **+50 h** (on the
+    test sites only also **+1 min**, so a capsule can be opened after one short session on a phone),
+    and **Custom** on a row of its own, which opens the [time sheet](#the-custom-time-sheet) for any
+    amount from 15 min to 999 h. After **Set** the Custom chip shows the amount ("+7 h 30 min",
+    Hungarian "+7 óra 30 perc") and is the selected one, even when it equals an hour chip; tapping
+    it again opens the sheet with that amount. Cancel and Seal clear it ("Custom" again).
+    `isValidOpening` accepts any whole number of minutes from `CAPSULE_CUSTOM_MIN_MS` (15 min) to
+    `CAPSULE_CUSTOM_MAX_MS` (999 h), plus exactly 1 minute on the test sites; `cleanCapsule` accepts
+    any positive whole number of ms, so older or hand-made amounts still read.
 - **Seal it** stays disabled until the text and the opening are valid. **Cancel** clears the form
   and puts the focus back on **Write a message**. After **Seal it** the focus goes to the new sealed
   card.
@@ -2016,6 +2023,13 @@ local date-key helper (`capsuleDateKey`), because `history.js`'s `dayKey` isn't 
   `openedAt` first (if another tab already opened it, its `openedAt` is kept), then the envelope's
   flap folds open (about 400 ms, none with reduced motion) and the message shows in place and gets
   the focus. If the browser refuses the change, the message stays sealed and a line says so.
+- **Opened on this visit:** the message stays in its card at the top until the page is loaded again,
+  with "Written {date} · Opened {date}" and a **Delete** button (the same dialog as in "Opened
+  messages"). After a delete the card disappears, the focus goes to the "Time capsule" title and
+  "Message deleted." is read out.
+- **Never twice:** a message with a card at the top is left out of the sealed and "Opened messages"
+  lists (`renderCapsules` collects the top cards' ids first). As a safety net, the browser console
+  reports an error if any message is ever drawn twice (nothing is shown on the page).
 - **Later visits:** opened messages are in "Opened messages" inside the section, newest opened
   first, each with "Written {date} · Opened {date}", the text and a **Delete** button (dialog "This
   can't be undone.").
@@ -2081,6 +2095,27 @@ bottom-sheet styles (`dialog.duration-sheet.date-sheet`):
   sheet's side padding is narrower there, so seven columns fit on a 320px phone).
 - Each day button's name is its full date ("Thursday, 24 December 2026"); the picked day has
   `aria-pressed="true"`.
+
+### The custom time sheet
+
+`public/js/time-sheet.js`, behind the **Custom** chip. Built like the
+[duration sheet](#the-duration-sheet) and on its styles (`dialog.duration-sheet.time-sheet`);
+`duration-sheet.js` itself isn't changed.
+
+- A modal `<dialog>` at the bottom: "Session time" and **×**, then **Hours** (0–999) and **Minutes**
+  (0–59), each with **−** / a number field / **+** (one per tap, holding repeats with the duration
+  sheet's timing), the range hint "Choose between 15 min and 999 h." and **Set**.
+- A total under 15 min or over 999 h, or a field that isn't a whole number in its own range (also an
+  empty one, or 60 minutes), turns the hint red and keeps **Set** disabled; what was typed is never
+  changed. **−** / **+** stop at each field's limits (`aria-disabled`, so the focus stays), and
+  minutes don't carry over into hours.
+- It opens with the Custom amount set before, else the picked hour chip, else 1 h 0 min.
+- **Set** (or Enter in a field) applies it and closes the sheet. Tapping outside, **×**, Esc and
+  Android Back close it without a change. Focus goes to the hours field on open (without scrolling
+  the sheet) and back to the Custom chip on close. With the on-screen keyboard open the sheet sits
+  above it and keeps the field and **Set** in view.
+- The chip row's columns have a minimum width in `em`, so with large text there are fewer, wider
+  chips instead of labels overflowing them.
 
 ### The envelope art (placeholder)
 
@@ -2795,6 +2830,7 @@ and the timer keeps counting from the start time as always.
 | `public/js/plans.js` | Plans: the switch `PLANS_ENABLED` (and `PLANS_ON`, also true on Netlify's test sites and localhost), the block and break presets and limits, the default break, cleaning saved plans (`cleanPlanRows`, `cleanStoredPlan`), the plan builder in step 3 and the segmented timeline (see [Plans](#plans)) |
 | `public/js/capsules.js` | Time capsule data and rules: the switch `CAPSULES_ENABLED` (and `CAPSULES_ON`, also true on Netlify's test sites and localhost), reading and writing `ct_capsules_v1`, the counted session time rule (`countedSessionMs`, `COUNTED_MAX_PER_DAY_MS`), when a capsule is ready, the summary line's check (`announceReadyCapsules`), the ready badge's count (`readyUnopenedCount`, read-only) and the placeholder envelope art (`envelopeArt`). Loaded by `history.html` and `index.html`; uses only `history-store.js` and the i18n files, and touches no DOM when it loads (see [Time capsule](#time-capsule)) |
 | `public/js/date-sheet.js` | The date sheet: the bottom sheet behind the time capsule's "Pick a day" button (month grid starting on Monday, ‹ › months, dimmed days outside the range, keyboard moves; see [The date sheet](#the-date-sheet)). Loaded by `history.html` |
+| `public/js/time-sheet.js` | The custom time sheet: the bottom sheet behind the time capsule's **Custom** chip (Hours and Minutes with − / + and typing, the 15 min – 999 h range, Set; see [The custom time sheet](#the-custom-time-sheet)). Loaded by `history.html` |
 | `public/js/duration-sheet.js` | The duration sheet: the bottom sheet a plan row's length and break buttons open (presets, Custom with −/+ and Set; see [The duration sheet](#the-duration-sheet)) |
 | `public/js/focus-sound.js` | The focus sound: the list of sounds, generating the noise loops, every sound's level and the volume curve, the generated reverb, and the mixer/player that fades layers and the whole mix in and out (see [Focus sound](#focus-sound)) |
 | `public/js/focus-sound-worklet.js` | The 7 Ambient focus sounds, generated live on the browser's audio thread, and the limiter on the mix (an AudioWorklet module, loaded by `focus-sound.js`) |

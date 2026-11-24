@@ -29,6 +29,9 @@ const CAPSULE_MAX_YEARS = 2;
 const CAPSULE_HOURS = [5, 10, 25, 50];
 // Test sites only: a "+1 min" chip, so a capsule can be opened after one short session.
 const CAPSULE_TEST_MS = 60 * 1000;
+// "Custom" (the time sheet, js/time-sheet.js): any whole number of minutes from 15 min to 999 h.
+const CAPSULE_CUSTOM_MIN_MS = 15 * 60 * 1000;
+const CAPSULE_CUSTOM_MAX_MS = 999 * 60 * 60 * 1000;
 
 // The switch for the whole feature. It is true: time capsules are on in production
 // (https://concentraining.com) and on the GitHub Pages backup. Setting it to false turns them off
@@ -211,14 +214,18 @@ function capsuleTimeChoices() {
 }
 
 // Whether a new capsule's opening condition is allowed: a date from tomorrow to 2 years ahead (keys
-// compare as text), or one of the time choices.
+// compare as text), or a session time of whole minutes from CAPSULE_CUSTOM_MIN_MS to
+// CAPSULE_CUSTOM_MAX_MS (every hour chip is inside it), or exactly 1 minute on the test sites.
 function isValidOpening(opening, now = new Date()) {
   if (!opening) return false;
   if (Object.hasOwn(opening, "opensOn")) {
     const { min, max } = capsuleDateRange(now);
     return isDateKey(opening.opensOn) && opening.opensOn >= min && opening.opensOn <= max;
   }
-  return capsuleTimeChoices().includes(opening.opensAfterMs);
+  const ms = opening.opensAfterMs;
+  if (!Number.isInteger(ms) || ms % 60000 !== 0) return false;
+  if (CAPSULES_TEST_SITE && ms === CAPSULE_TEST_MS) return true;
+  return ms >= CAPSULE_CUSTOM_MIN_MS && ms <= CAPSULE_CUSTOM_MAX_MS;
 }
 
 // Session time still needed before a time capsule opens (0 when it's reached). Date capsules: null.

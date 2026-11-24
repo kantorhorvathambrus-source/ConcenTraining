@@ -2423,14 +2423,23 @@ a {
   line-height: 1.25;
 }
 
+/* The minimum is in em, so larger text gives fewer, wider columns instead of overflowing chips. */
 .capsule-chips {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(4.5em, 1fr));
   gap: 8px;
 }
 
 .capsule-chips .chip {
   padding: 6px 10px;
+}
+
+/* "Custom" / "+7 h 30 min": a row of its own under the quick picks (whatever the number of columns,
+   also with large text), and its label may wrap. */
+.capsule-chips .capsule-chip-custom {
+  grid-column: 1 / -1;
+  white-space: normal;
+  line-height: 1.2;
 }
 
 .capsule-error {
@@ -2574,6 +2583,27 @@ a {
 .date-day:focus-visible {
   outline: 3px solid var(--color-focus);
   outline-offset: -1px;
+}
+
+/* ---------- the time sheet (js/time-sheet.js), on the duration sheet's styles ---------- */
+
+/* Hours and Minutes: the label on the left, − field + on the right; under each other if they
+   don't fit side by side (large text). */
+.time-sheet-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin-bottom: 12px;
+}
+
+.time-sheet-label {
+  margin: 0;
+}
+
+.time-sheet .duration-hint {
+  margin: 0 0 16px;
 }
 
 /* ===== ENVELOPE ART (placeholder, to be replaced by real artwork; see envelopeArt in

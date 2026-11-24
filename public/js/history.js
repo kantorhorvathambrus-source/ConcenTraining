@@ -758,6 +758,9 @@ const openedThisVisit = new Set();
 let capsuleOpensBy = "date";
 let capsulePickedMs = null;
 let capsulePickedDate = ""; // "YYYY-MM-DD" from the date sheet, or ""
+// "Custom" (the time sheet): the amount set there (ms, or null) and whether it's the one picked.
+let capsuleCustomMs = null;
+let capsulePickedCustom = false;
 let capsuleCountTimer = 0;
 const capsuleStatusTimers = {};
 
@@ -847,10 +850,9 @@ function capsuleCard(capsule, kind, history) {
     line("muted small", writtenOpenedLine(capsule));
     const message = line("capsule-message", capsule.text);
     message.tabIndex = -1; // gets the focus after Open
-    if (kind === "opened") {
-      body.append(capsuleButton(capsule, "delete", t("common.delete"), t("capsule.deleteOpenedLabel", { date: sealedOn }), "btn compact capsule-delete"));
-      item.dataset.state = "opened";
-    }
+    // Both opened kinds: the top card (opened on this visit) and the Opened messages list.
+    body.append(capsuleButton(capsule, "delete", t("common.delete"), t("capsule.deleteOpenedLabel", { date: sealedOn }), "btn compact capsule-delete"));
+    item.dataset.state = "opened";
   }
   return item;
 }
@@ -874,10 +876,13 @@ function renderCapsules(history) {
   }
   const now = new Date();
   const list = refreshCapsules(history, now);
-  const ready = list.filter((c) => (isSealed(c) && isCapsuleReady(c, history, now)) || openedThisVisit.has(c.id));
-  const waiting = list.filter((c) => isSealed(c) && !isCapsuleReady(c, history, now));
+  // A message is never on the page twice: whatever has a card at the top is left out of the lists
+  // below it (an opened one stays at the top for the rest of this visit).
+  const ready = list.filter((c) => (isSealed(c) && isCapsuleReady(c, history, now)) || (!isSealed(c) && openedThisVisit.has(c.id)));
+  const atTop = new Set(ready.map((c) => c.id));
+  const waiting = list.filter((c) => !atTop.has(c.id) && isSealed(c));
   const opened = list
-    .filter((c) => !isSealed(c) && !openedThisVisit.has(c.id))
+    .filter((c) => !atTop.has(c.id) && !isSealed(c))
     .sort((a, b) => b.openedAt - a.openedAt);
 
   fillList("capsuleReadyList", ready.map((c) => capsuleCard(c, isSealed(c) ? "ready" : "openedHere", history)));
@@ -885,6 +890,9 @@ function renderCapsules(history) {
   fillList("capsuleSealedList", waiting.map((c) => capsuleCard(c, "sealed", history)));
   fillList("capsuleOpenedList", opened.map((c) => capsuleCard(c, "opened", history)));
   byId("capsuleOpenedPart").hidden = opened.length === 0;
+  // Dev check: each message has one card.
+  const drawn = [...document.querySelectorAll("li[data-capsule-id]")].map((li) => li.dataset.capsuleId);
+  if (new Set(drawn).size !== drawn.length) console.error("[capsules] a message is drawn twice", drawn);
 
   const full = sealedCount(list) >= CAPSULE_SEALED_LIMIT;
   const write = byId("capsuleWrite");
@@ -922,7 +930,10 @@ function updateCapsuleForm() {
     : t("capsule.pickDay");
   byId("capsuleTimePart").hidden = byDate;
   for (const chip of byId("capsuleTimePart").querySelectorAll(".chip")) {
-    chip.setAttribute("aria-pressed", String(Number(chip.dataset.ms) === capsulePickedMs));
+    const custom = chip.dataset.custom === "true";
+    chip.setAttribute("aria-pressed", String(custom ? capsulePickedCustom : !capsulePickedCustom && Number(chip.dataset.ms) === capsulePickedMs));
+    // "Custom", or what was set there ("+7 h 30 min").
+    if (custom) chip.textContent = capsuleCustomMs ? t("capsule.chipCustomValue", { time: formatTimeLeft(capsuleCustomMs) }) : t("capsule.chipCustom");
   }
   const text = cleanCapsuleText(byId("capsuleText").value);
   byId("capsuleSeal").disabled = !(isCapsuleText(text) && isValidOpening(capsuleOpening()));
@@ -942,10 +953,21 @@ function buildCapsuleChips() {
     chip.setAttribute("aria-pressed", "false");
     part.append(chip);
   }
+  // "Custom": opens the time sheet (js/time-sheet.js); its label is set by updateCapsuleForm.
+  const custom = document.createElement("button");
+  custom.type = "button";
+  custom.className = "chip capsule-chip-custom";
+  custom.dataset.custom = "true";
+  custom.setAttribute("aria-haspopup", "dialog");
+  custom.setAttribute("aria-pressed", "false");
+  custom.textContent = t("capsule.chipCustom");
+  part.append(custom);
 }
 
 function relabelCapsuleChips() {
-  for (const chip of byId("capsuleTimePart").querySelectorAll(".chip")) chip.textContent = capsuleChipLabel(Number(chip.dataset.ms));
+  for (const chip of byId("capsuleTimePart").querySelectorAll(".chip:not([data-custom])")) {
+    chip.textContent = capsuleChipLabel(Number(chip.dataset.ms));
+  }
 }
 
 function clearCapsuleError() {
@@ -965,6 +987,8 @@ function resetCapsuleForm() {
   capsulePickedDate = "";
   capsuleOpensBy = "date";
   capsulePickedMs = null;
+  capsuleCustomMs = null;
+  capsulePickedCustom = false;
   clearTimeout(capsuleCountTimer);
   byId("capsuleCountSpoken").textContent = "";
   clearCapsuleError();
@@ -1042,8 +1066,34 @@ function onCapsuleInput() {
 function pickCapsuleChip(event) {
   const chip = event.target.closest(".chip");
   if (!chip) return;
+  if (chip.dataset.custom === "true") {
+    openCapsuleTimeSheet(chip);
+    return;
+  }
   capsulePickedMs = Number(chip.dataset.ms);
+  capsulePickedCustom = false;
   updateCapsuleForm();
+}
+
+// "Custom": any whole number of minutes from 15 min to 999 h (CAPSULE_CUSTOM_MIN_MS / _MAX_MS in
+// capsules.js). Opens with what was set there before, else the picked hour chip, else 1 h. Set
+// selects the Custom chip, even when the amount equals an hour chip; closing without Set changes
+// nothing.
+function openCapsuleTimeSheet(chip) {
+  const picked = capsulePickedMs >= CAPSULE_CUSTOM_MIN_MS ? capsulePickedMs : 60 * 60 * 1000;
+  openTimeSheet({
+    title: t("timeSheet.title"),
+    minMs: CAPSULE_CUSTOM_MIN_MS,
+    maxMs: CAPSULE_CUSTOM_MAX_MS,
+    valueMs: capsuleCustomMs || picked,
+    trigger: chip,
+    onPick: (ms) => {
+      capsuleCustomMs = ms;
+      capsulePickedMs = ms;
+      capsulePickedCustom = true;
+      updateCapsuleForm();
+    },
+  });
 }
 
 function setCapsuleOpensBy(by) {
@@ -1123,8 +1173,16 @@ async function confirmCapsuleDelete(button) {
     else button.focus();
     return;
   }
-  // The next Delete button in the same list (the one above if it was the last), else Write.
   const listId = button.closest("ul").id;
+  openedThisVisit.delete(id);
+  // From the top card (opened on this visit): the card goes, and the focus goes to the section title.
+  if (listId === "capsuleReadyList") {
+    render();
+    showCapsuleStatus("capsuleStatus", t("capsule.deleted"), false);
+    byId("capsuleTitle").focus();
+    return;
+  }
+  // The next Delete button in the same list (the one above if it was the last), else Write.
   const position = [...byId(listId).querySelectorAll(".capsule-delete")].indexOf(button);
   render();
   showCapsuleStatus("capsuleStatus", t("capsule.deleted"), false);
@@ -1149,7 +1207,7 @@ function initCapsules() {
     const button = event.target.closest('[data-action="open"]');
     if (button) openReadyCapsule(button);
   });
-  for (const id of ["capsuleSealedList", "capsuleOpenedList"]) {
+  for (const id of ["capsuleReadyList", "capsuleSealedList", "capsuleOpenedList"]) {
     byId(id).addEventListener("click", (event) => {
       const button = event.target.closest('[data-action="delete"]');
       if (button) confirmCapsuleDelete(button);

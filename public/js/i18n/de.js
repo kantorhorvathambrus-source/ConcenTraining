@@ -431,6 +431,16 @@ I18N_TEXTS.de = {
   "dateSheet.prevMonth": "Vorheriger Monat",
   "dateSheet.nextMonth": "Nächster Monat",
   "dateSheet.close": "Schließen",
+  "capsule.chipCustom": "Eigene Zeit",
+  "capsule.chipCustomValue": "+{time}",
+  "timeSheet.title": "Rundenzeit",
+  "timeSheet.hours": "Stunden",
+  "timeSheet.minutes": "Minuten",
+  "timeSheet.hint": "Erlaubt: {min} bis {max}",
+  "timeSheet.hourLess": "1\u00a0Stunde weniger",
+  "timeSheet.hourMore": "1\u00a0Stunde mehr",
+  "timeSheet.minuteLess": "1\u00a0Minute weniger",
+  "timeSheet.minuteMore": "1\u00a0Minute mehr",
 
   // ---------- export / import ----------
   "import.exported": { one: "{count} Runde exportiert.", other: "{count} Runden exportiert." },

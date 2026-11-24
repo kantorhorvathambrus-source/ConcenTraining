@@ -442,6 +442,16 @@ I18N_TEXTS.es = {
   "dateSheet.prevMonth": "Mes anterior",
   "dateSheet.nextMonth": "Mes siguiente",
   "dateSheet.close": "Cerrar",
+  "capsule.chipCustom": "Personalizado",
+  "capsule.chipCustomValue": "+{time}",
+  "timeSheet.title": "Tiempo en sesiones",
+  "timeSheet.hours": "Horas",
+  "timeSheet.minutes": "Minutos",
+  "timeSheet.hint": "Elige entre {min} y {max}.",
+  "timeSheet.hourLess": "1 hora menos",
+  "timeSheet.hourMore": "1 hora más",
+  "timeSheet.minuteLess": "1 minuto menos",
+  "timeSheet.minuteMore": "1 minuto más",
 
   // ---------- export / import ----------
   "import.exported": {
