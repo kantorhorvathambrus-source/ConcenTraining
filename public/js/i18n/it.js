@@ -409,6 +409,12 @@ I18N_TEXTS.it = {
   "capsule.deleted": "Messaggio eliminato.",
   "capsule.exportNote": "Le capsule del tempo non sono ancora nel file di esportazione.",
   "capsule.summaryReady": "Nella cronologia c'è una capsula del tempo pronta da aprire.",
+  "capsule.pickDay": "Scegli un giorno",
+  "capsule.badgeSetupLabel": { one: "La tua cronologia, {count} messaggio da aprire", many: "La tua cronologia, {count} messaggi da aprire", other: "La tua cronologia, {count} messaggi da aprire" },
+  "capsule.badgeSummaryLabel": { one: "Vedi la cronologia, {count} messaggio da aprire", many: "Vedi la cronologia, {count} messaggi da aprire", other: "Vedi la cronologia, {count} messaggi da aprire" },
+  "dateSheet.prevMonth": "Mese precedente",
+  "dateSheet.nextMonth": "Mese successivo",
+  "dateSheet.close": "Chiudi",
 
   // ---------- export / import ----------
   "import.exported": { one: "{count} sessione esportata.", many: "{count} sessioni esportate.", other: "{count} sessioni esportate." },

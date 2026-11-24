@@ -460,6 +460,12 @@ I18N_TEXTS.pl = {
   "capsule.deleted": "Usunięto wiadomość.",
   "capsule.exportNote": "Kapsuły czasu nie trafiają jeszcze do pliku eksportu.",
   "capsule.summaryReady": "W historii czeka kapsuła czasu gotowa do otwarcia.",
+  "capsule.pickDay": "Wybierz dzień",
+  "capsule.badgeSetupLabel": { one: "Twoja historia, {count} wiadomość do otwarcia", few: "Twoja historia, {count} wiadomości do otwarcia", many: "Twoja historia, {count} wiadomości do otwarcia", other: "Twoja historia, {count} wiadomości do otwarcia" },
+  "capsule.badgeSummaryLabel": { one: "Zobacz historię, {count} wiadomość do otwarcia", few: "Zobacz historię, {count} wiadomości do otwarcia", many: "Zobacz historię, {count} wiadomości do otwarcia", other: "Zobacz historię, {count} wiadomości do otwarcia" },
+  "dateSheet.prevMonth": "Poprzedni miesiąc",
+  "dateSheet.nextMonth": "Następny miesiąc",
+  "dateSheet.close": "Zamknij",
 
   // ---------- export / import ----------
   "import.exported": {

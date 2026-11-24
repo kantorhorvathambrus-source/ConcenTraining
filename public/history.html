@@ -187,8 +187,10 @@
             <button id="capsuleByTime" type="button" class="segmented-option" aria-pressed="false"
                     data-i18n="capsule.afterTime">After more session time</button>
           </div>
+          <!-- Opens the date sheet (js/date-sheet.js). Says "Pick a day" until a day is picked, then
+               that day with its weekday and year (history.js). -->
           <div id="capsuleDatePart">
-            <input id="capsuleDate" type="date" class="text-input capsule-date" aria-labelledby="capsuleByDate">
+            <button id="capsuleDate" type="button" class="text-input capsule-date" aria-haspopup="dialog">Pick a day</button>
           </div>
           <div id="capsuleTimePart" class="capsule-chips" role="group" aria-labelledby="capsuleByTime" hidden></div>
         </fieldset>
@@ -258,6 +260,7 @@
   <script src="js/custom-characters.js"></script>
   <script src="js/history-store.js"></script>
   <script src="js/capsules.js"></script>
+  <script src="js/date-sheet.js"></script>
   <script src="js/language-picker.js"></script>
   <script src="js/history.js"></script>
   <script src="js/sw-register.js"></script>

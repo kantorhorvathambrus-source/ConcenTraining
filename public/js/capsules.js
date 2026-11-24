@@ -302,6 +302,14 @@ function deleteCapsule(id) {
   return writeCapsules(kept) ? "deleted" : "failed";
 }
 
+// For the badge on "Your history →" and "See your history" (app.js): how many capsules are ready and
+// not opened yet. Read-only: it never saves readyAt or announced, so visiting the history page
+// doesn't change it; only Open does. 0 while CAPSULES_ON is false.
+function readyUnopenedCount(history = loadHistory(), now = new Date()) {
+  if (!CAPSULES_ON) return 0;
+  return loadCapsules().filter((c) => isSealed(c) && isCapsuleReady(c, history, now)).length;
+}
+
 // For the summary (app.js): true when at least one capsule is ready, unopened and not yet
 // announced. Those get announced: true (and readyAt if missing), so the line shows once per
 // capsule. A failed write is silent (the line may then show once more next time).

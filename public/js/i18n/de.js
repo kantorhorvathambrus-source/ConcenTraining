@@ -425,6 +425,12 @@ I18N_TEXTS.de = {
   "capsule.deleted": "Nachricht gelöscht.",
   "capsule.exportNote": "Zeitkapseln sind noch nicht in der Exportdatei.",
   "capsule.summaryReady": "In deinem Verlauf kannst du eine Zeitkapsel öffnen.",
+  "capsule.pickDay": "Tag wählen",
+  "capsule.badgeSetupLabel": { one: "Dein Verlauf, {count} Nachricht zum Öffnen bereit", other: "Dein Verlauf, {count} Nachrichten zum Öffnen bereit" },
+  "capsule.badgeSummaryLabel": { one: "Zum Verlauf, {count} Nachricht zum Öffnen bereit", other: "Zum Verlauf, {count} Nachrichten zum Öffnen bereit" },
+  "dateSheet.prevMonth": "Vorheriger Monat",
+  "dateSheet.nextMonth": "Nächster Monat",
+  "dateSheet.close": "Schließen",
 
   // ---------- export / import ----------
   "import.exported": { one: "{count} Runde exportiert.", other: "{count} Runden exportiert." },

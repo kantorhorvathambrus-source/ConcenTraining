@@ -1962,8 +1962,12 @@ and `ct_capsules_v1` is ignored but kept, so switching it on again brings every 
   muted line "Time capsules aren't in the export file yet."
 - **Write a message** opens an inline form (not a dialog): "Your message" (up to 500 characters,
   counter "{count}/500"; the trimmed text can't be empty) and **Opens**, a two-way toggle:
-  - **On a date:** a date field from tomorrow to today + 2 years (the device's local date; checked
-    in the code too, not only by the field).
+  - **On a date:** a button that says "Pick a day" and opens the in-app date sheet (see
+    [The date sheet](#the-date-sheet)): tomorrow to today + 2 years, by the device's local date.
+    Once a day is picked, the button shows it with its weekday and always its year (Hungarian
+    "2026. dec. 24., csütörtök", English "Thu, 24 Dec 2026"). The range is checked again in the code
+    (`isValidOpening`), so a picked day that has become too early (the page stayed open over
+    midnight) keeps **Seal it** disabled.
   - **After more session time:** chips **+5 h**, **+10 h**, **+25 h**, **+50 h**. On the test sites
     only there's also **+1 min**, so a capsule can be opened after one short session on a phone.
 - **Seal it** stays disabled until the text and the opening are valid. **Cancel** clears the form
@@ -2027,6 +2031,56 @@ local date-key helper (`capsuleDateKey`), because `history.js`'s `dayKey` isn't 
   redraw (see [Changes from other tabs](#changes-from-other-tabs)).
 - **Clearing site data** deletes the messages, like the history. They aren't in the export file yet
   (a later change to the export format adds them).
+
+### The ready badge
+
+A small amber circle with the number of time capsules that are **ready and not opened yet**, next to
+**Your history →** on the setup screen and on the summary's **See your history** button (only while
+`CAPSULES_ON`). It uses the design tokens (`--color-accent` fill, `--color-on-accent` number), so
+it follows light and dark.
+
+- **The count:** `readyUnopenedCount()` in `capsules.js`, with the same readiness rule as everything
+  else (`isCapsuleReady`). It's read-only: the badge never saves `readyAt` or `announced`. So
+  visiting the history page doesn't change it; it only goes down when a message is **opened** (or
+  deleted).
+- **When it's drawn** (`renderHistoryBadges()` in `app.js`): when the page loads, when it's shown
+  again (`visibilitychange`, `pageshow`), on the `storage` event for `ct_capsules_v1`, for
+  `ct_history_v1` (a session saved in another tab can make a time capsule ready) and with no key
+  (all site data cleared), with every summary (single session and plan), and on a language switch.
+- **Screen readers:** the circle is `aria-hidden`; the link gets the count in its name, e.g. "Your
+  history, 1 message ready to open" / "See your history, 2 messages ready to open"
+  (`capsule.badgeSetupLabel`, `capsule.badgeSummaryLabel`, with plural forms). With no ready
+  message the `aria-label` is removed and the link reads as before.
+- **Never breaks a screen:** the count is worked out inside `try`/`catch`; on any problem the circles
+  are hidden and the setup screen and summary work as usual.
+- The link texts sit in their own `<span data-i18n>`, because the translation system replaces the
+  whole text of an element with `data-i18n`, which would remove the circle.
+- No badge on the Home Screen icon: the Badging API isn't supported on Android.
+
+### The date sheet
+
+`public/js/date-sheet.js` replaces the native `<input type="date">`, whose system picker ignores the
+app's design on Android. It's built like the [duration sheet](#the-duration-sheet) and uses its
+bottom-sheet styles (`dialog.duration-sheet.date-sheet`):
+
+- A modal `<dialog>` at the bottom: "Pick a day" and **×**, then **‹** month and year **›**, a row of
+  weekday names starting on Monday, and the month's days. Month and weekday names come from Intl in
+  the current language.
+- Days before tomorrow and after today + 2 years are dimmed and disabled: tapping one does nothing
+  (and keeps the focus where it was). **‹ ›** stop at the first and last month that has a day to
+  pick (`aria-disabled`, so a focused button keeps the focus). It opens on the picked day's month,
+  or on tomorrow's month.
+- Tapping a day picks it and closes the sheet. Tapping outside, **×**, Esc and Android Back close it
+  without a change. Focus moves to the picked day (or the first day that can be picked) on open,
+  without scrolling the sheet (so a landscape phone still shows the month and **‹ ›**), and back to
+  the "Pick a day" button on close.
+- **Keyboard:** the days have one tab stop. Arrow keys move a day or a week, Page Up / Page Down a
+  month, Home / End to the start / end of the week; moving past the month's edge shows the next
+  month, and moves stop at the limits. Enter or Space picks.
+- **Sizes:** day cells are at least 44px from a 360px wide screen up; below 360px they're 40×40 (the
+  sheet's side padding is narrower there, so seven columns fit on a 320px phone).
+- Each day button's name is its full date ("Thursday, 24 December 2026"); the picked day has
+  `aria-pressed="true"`.
 
 ### The envelope art (placeholder)
 
@@ -2739,11 +2793,12 @@ and the timer keeps counting from the start time as always.
 | `public/js/custom-characters.js` | Saving and reading `ct_custom_characters_v1`, name rules, the 10 limit, `CUSTOM_PAID`, the feature switch `CUSTOM_CHARACTERS_ENABLED` (and `CUSTOM_CHARACTERS_ON`, which is also true on Netlify's test sites), stand-in for deleted characters (used by all three pages and `stats.html`) |
 | `public/js/avatar.js` | The editor on `avatar.html` |
 | `public/js/plans.js` | Plans: the switch `PLANS_ENABLED` (and `PLANS_ON`, also true on Netlify's test sites and localhost), the block and break presets and limits, the default break, cleaning saved plans (`cleanPlanRows`, `cleanStoredPlan`), the plan builder in step 3 and the segmented timeline (see [Plans](#plans)) |
-| `public/js/capsules.js` | Time capsule data and rules: the switch `CAPSULES_ENABLED` (and `CAPSULES_ON`, also true on Netlify's test sites and localhost), reading and writing `ct_capsules_v1`, the counted session time rule (`countedSessionMs`, `COUNTED_MAX_PER_DAY_MS`), when a capsule is ready, the summary line's check (`announceReadyCapsules`) and the placeholder envelope art (`envelopeArt`). Loaded by `history.html` and `index.html`; uses only `history-store.js` and the i18n files, and touches no DOM when it loads (see [Time capsule](#time-capsule)) |
+| `public/js/capsules.js` | Time capsule data and rules: the switch `CAPSULES_ENABLED` (and `CAPSULES_ON`, also true on Netlify's test sites and localhost), reading and writing `ct_capsules_v1`, the counted session time rule (`countedSessionMs`, `COUNTED_MAX_PER_DAY_MS`), when a capsule is ready, the summary line's check (`announceReadyCapsules`), the ready badge's count (`readyUnopenedCount`, read-only) and the placeholder envelope art (`envelopeArt`). Loaded by `history.html` and `index.html`; uses only `history-store.js` and the i18n files, and touches no DOM when it loads (see [Time capsule](#time-capsule)) |
+| `public/js/date-sheet.js` | The date sheet: the bottom sheet behind the time capsule's "Pick a day" button (month grid starting on Monday, ‹ › months, dimmed days outside the range, keyboard moves; see [The date sheet](#the-date-sheet)). Loaded by `history.html` |
 | `public/js/duration-sheet.js` | The duration sheet: the bottom sheet a plan row's length and break buttons open (presets, Custom with −/+ and Set; see [The duration sheet](#the-duration-sheet)) |
 | `public/js/focus-sound.js` | The focus sound: the list of sounds, generating the noise loops, every sound's level and the volume curve, the generated reverb, and the mixer/player that fades layers and the whole mix in and out (see [Focus sound](#focus-sound)) |
 | `public/js/focus-sound-worklet.js` | The 7 Ambient focus sounds, generated live on the browser's audio thread, and the limiter on the mix (an AudioWorklet module, loaded by `focus-sound.js`) |
-| `public/js/app.js` | Running a plan (blocks, planned breaks, the plan's summary), timer, reaction engine, distraction category picker, Undo, Stop and breaks (Take a break / Resume), disabled Advanced lengths, time away card, leave reminder notification, motivation rotation, the picker and card in the distraction buttons' place on landscape phones, end chime, when the focus sound plays (its setup row, Preview and the mute button), screen wake lock and the "screen may turn off" note, summary, How it works card, iPhone Home Screen tip, persistent storage request, one tab at a time (Web Locks) |
+| `public/js/app.js` | Running a plan (blocks, planned breaks, the plan's summary), timer, reaction engine, distraction category picker, Undo, Stop and breaks (Take a break / Resume), disabled Advanced lengths, time away card, leave reminder notification, motivation rotation, the picker and card in the distraction buttons' place on landscape phones, end chime, when the focus sound plays (its setup row, Preview and the mute button), screen wake lock and the "screen may turn off" note, summary, How it works card, iPhone Home Screen tip, persistent storage request, one tab at a time (Web Locks), the time capsule summary line and ready badge (`renderCapsuleNote`, `renderHistoryBadges`) |
 | `public/js/history-store.js` | Saving/loading history, focus % and summary result (with their thresholds; `resultOf` also judges a plan's totals), break totals and the "Paused …" line, distraction categories, export/import checks, iPhone/iPad and iPhone Safari checks, the "can this browser save?" test (`storageWorks`) (used by both pages) |
 | `public/js/history.js` | Streaks, weekly time and focus charts, time of day, distraction categories, session list and backup buttons on `history.html`, and the time capsule's drawing (ready messages at the top, the section, the form, Open and Delete) |
 | `netlify/functions/picks.mjs` | `POST /api/picks`: counts one session started with a character |

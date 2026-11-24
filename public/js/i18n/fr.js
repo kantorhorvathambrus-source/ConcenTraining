@@ -436,6 +436,12 @@ I18N_TEXTS.fr = {
   "capsule.deleted": "Message supprimé.",
   "capsule.exportNote": "Les capsules temporelles ne sont pas encore dans le fichier d'export.",
   "capsule.summaryReady": "Une capsule temporelle est prête à être ouverte dans ton historique.",
+  "capsule.pickDay": "Choisis un jour",
+  "capsule.badgeSetupLabel": { one: "Ton historique, {count} message à ouvrir", many: "Ton historique, {count} messages à ouvrir", other: "Ton historique, {count} messages à ouvrir" },
+  "capsule.badgeSummaryLabel": { one: "Voir ton historique, {count} message à ouvrir", many: "Voir ton historique, {count} messages à ouvrir", other: "Voir ton historique, {count} messages à ouvrir" },
+  "dateSheet.prevMonth": "Mois précédent",
+  "dateSheet.nextMonth": "Mois suivant",
+  "dateSheet.close": "Fermer",
 
   // ---------- export / import ----------
   "import.exported": { one: "{count} séance exportée.", many: "{count} séances exportées.", other: "{count} séances exportées." },

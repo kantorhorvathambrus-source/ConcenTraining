@@ -446,6 +446,12 @@ I18N_TEXTS.en = {
   "capsule.deleted": "Message deleted.",
   "capsule.exportNote": "Time capsules aren't in the export file yet.",
   "capsule.summaryReady": "A time capsule is ready to open in your history.",
+  "capsule.pickDay": "Pick a day",
+  "capsule.badgeSetupLabel": { one: "Your history, {count} message ready to open", other: "Your history, {count} messages ready to open" },
+  "capsule.badgeSummaryLabel": { one: "See your history, {count} message ready to open", other: "See your history, {count} messages ready to open" },
+  "dateSheet.prevMonth": "Previous month",
+  "dateSheet.nextMonth": "Next month",
+  "dateSheet.close": "Close",
 
   // ---------- export / import ----------
   "import.exported": { one: "Exported {count} session.", other: "Exported {count} sessions." },

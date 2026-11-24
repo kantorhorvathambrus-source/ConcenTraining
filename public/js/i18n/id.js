@@ -422,6 +422,12 @@ I18N_TEXTS.id = {
   "capsule.deleted": "Pesan dihapus.",
   "capsule.exportNote": "Kapsul waktu belum ikut masuk ke file ekspor.",
   "capsule.summaryReady": "Ada kapsul waktu yang siap dibuka di riwayatmu.",
+  "capsule.pickDay": "Pilih hari",
+  "capsule.badgeSetupLabel": { other: "Riwayatmu, {count} pesan siap dibuka" },
+  "capsule.badgeSummaryLabel": { other: "Lihat riwayatmu, {count} pesan siap dibuka" },
+  "dateSheet.prevMonth": "Bulan sebelumnya",
+  "dateSheet.nextMonth": "Bulan berikutnya",
+  "dateSheet.close": "Tutup",
 
   // ---------- export / import ----------
   "import.exported": { other: "{count} sesi diekspor." },

@@ -419,6 +419,12 @@ I18N_TEXTS.hu = {
   "capsule.deleted": "Üzenet törölve.",
   "capsule.exportNote": "Az időkapszulák még nem kerülnek bele az exportfájlba.",
   "capsule.summaryReady": "Egy időkapszulád kinyitható az Előzményekben.",
+  "capsule.pickDay": "Válassz napot",
+  "capsule.badgeSetupLabel": { one: "Előzmények, {count} kinyitható üzenet", other: "Előzmények, {count} kinyitható üzenet" },
+  "capsule.badgeSummaryLabel": { one: "Előzmények, {count} kinyitható üzenet", other: "Előzmények, {count} kinyitható üzenet" },
+  "dateSheet.prevMonth": "Előző hónap",
+  "dateSheet.nextMonth": "Következő hónap",
+  "dateSheet.close": "Bezárás",
 
   // ---------- export / import ----------
   "import.exported": { one: "{count} munkamenet exportálva.", other: "{count} munkamenet exportálva." },

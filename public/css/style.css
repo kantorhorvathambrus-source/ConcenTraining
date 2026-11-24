@@ -2447,6 +2447,135 @@ a {
   margin: 0 0 12px;
 }
 
+/* The "Pick a day" button in the form: looks like a text field, opens the date sheet. */
+.capsule-date {
+  display: block;
+  text-align: left;
+  font-weight: 400;
+}
+
+/* The ready badge on "Your history →" (setup) and "See your history" (summary): an amber circle
+   with the number of time capsules that are ready to open (app.js). aria-hidden: the link's name
+   says it for screen readers. */
+.capsule-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5em;
+  height: 1.5em;
+  margin-left: 0.4em;
+  padding: 0 0.4em;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-size: var(--fs-13);
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  vertical-align: middle;
+}
+
+.capsule-badge[hidden] {
+  display: none;
+}
+
+/* ---------- the date sheet (js/date-sheet.js), on the duration sheet's bottom-sheet styles ---------- */
+
+.date-nav {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.date-nav-btn {
+  min-width: 44px;
+  min-height: 44px;
+  font-size: var(--fs-26);
+  color: var(--color-text);
+}
+
+.date-nav-btn[aria-disabled="true"] {
+  color: var(--color-divider);
+  cursor: not-allowed;
+}
+
+.date-month {
+  margin: 0;
+  text-align: center;
+  font-weight: 600;
+}
+
+.date-weekdays,
+.date-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+
+.date-weekdays {
+  margin-bottom: 4px;
+  color: var(--color-text-muted);
+  font-size: var(--fs-13);
+  text-align: center;
+}
+
+.date-weekdays span {
+  overflow: hidden;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+/* Day cells: at least 44px from a 360px screen up, 40px below that (seven columns must fit). */
+.date-day {
+  min-height: 44px;
+  min-width: 0;
+  padding: 0;
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-text);
+  font-size: var(--fs-16);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 359px) {
+  .date-day {
+    min-height: 40px;
+  }
+
+  /* Less side padding, so seven 40px columns fit on a 320px screen. */
+  .date-sheet .duration-sheet-body {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+}
+
+@media (hover: hover) {
+  .date-day:hover:not(:disabled) {
+    background: var(--color-control-hover);
+  }
+}
+
+.date-day[aria-pressed="true"] {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-weight: 700;
+}
+
+/* Before tomorrow or after 2 years: dimmed and can't be picked. */
+.date-day:disabled {
+  color: var(--color-text-muted);
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.date-day:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: -1px;
+}
+
 /* ===== ENVELOPE ART (placeholder, to be replaced by real artwork; see envelopeArt in
    js/capsules.js). Everything the envelope looks like is in this block. ===== */
 .capsule-art-wrap {

@@ -436,6 +436,12 @@ I18N_TEXTS["pt-BR"] = {
   "capsule.deleted": "Mensagem excluída.",
   "capsule.exportNote": "As cápsulas do tempo ainda não entram no arquivo de exportação.",
   "capsule.summaryReady": "Uma cápsula do tempo está pronta para abrir no seu histórico.",
+  "capsule.pickDay": "Escolha um dia",
+  "capsule.badgeSetupLabel": { one: "Seu histórico, {count} mensagem pronta para abrir", many: "Seu histórico, {count} mensagens prontas para abrir", other: "Seu histórico, {count} mensagens prontas para abrir" },
+  "capsule.badgeSummaryLabel": { one: "Ver histórico, {count} mensagem pronta para abrir", many: "Ver histórico, {count} mensagens prontas para abrir", other: "Ver histórico, {count} mensagens prontas para abrir" },
+  "dateSheet.prevMonth": "Mês anterior",
+  "dateSheet.nextMonth": "Próximo mês",
+  "dateSheet.close": "Fechar",
 
   // ---------- export / import ----------
   "import.exported": { one: "{count} sessão exportada.", many: "{count} sessões exportadas.", other: "{count} sessões exportadas." },

@@ -757,6 +757,7 @@ const openedThisVisit = new Set();
 // The form: how the message opens ("date" or "time") and the picked time chip (ms, or null).
 let capsuleOpensBy = "date";
 let capsulePickedMs = null;
+let capsulePickedDate = ""; // "YYYY-MM-DD" from the date sheet, or ""
 let capsuleCountTimer = 0;
 const capsuleStatusTimers = {};
 
@@ -893,20 +894,12 @@ function renderCapsules(history) {
   limit.textContent = t("capsule.limit", { count: CAPSULE_SEALED_LIMIT });
   limit.hidden = !full;
 
-  // Tomorrow to 2 years ahead, from today's date (redrawn at midnight).
-  const { min, max } = capsuleDateRange(now);
-  const date = byId("capsuleDate");
-  date.min = min;
-  date.max = max;
   updateCapsuleForm();
 }
 
 // What the form says the message opens on, or null.
 function capsuleOpening() {
-  if (capsuleOpensBy === "date") {
-    const value = byId("capsuleDate").value;
-    return value ? { opensOn: value } : null;
-  }
+  if (capsuleOpensBy === "date") return capsulePickedDate ? { opensOn: capsulePickedDate } : null;
   return capsulePickedMs ? { opensAfterMs: capsulePickedMs } : null;
 }
 
@@ -921,6 +914,12 @@ function updateCapsuleForm() {
   byId("capsuleByDate").setAttribute("aria-pressed", String(byDate));
   byId("capsuleByTime").setAttribute("aria-pressed", String(!byDate));
   byId("capsuleDatePart").hidden = !byDate;
+  // "Pick a day", or the picked day with its weekday and always its year ("2026. dec. 24., csütörtök").
+  byId("capsuleDate").textContent = capsulePickedDate
+    ? I18N.formatDate(dateFromKey(capsulePickedDate), {
+        weekday: I18N.language().weekday || "short", day: "numeric", month: "short", year: "numeric",
+      })
+    : t("capsule.pickDay");
   byId("capsuleTimePart").hidden = byDate;
   for (const chip of byId("capsuleTimePart").querySelectorAll(".chip")) {
     chip.setAttribute("aria-pressed", String(Number(chip.dataset.ms) === capsulePickedMs));
@@ -963,7 +962,7 @@ function showCapsuleError(message) {
 
 function resetCapsuleForm() {
   byId("capsuleText").value = "";
-  byId("capsuleDate").value = "";
+  capsulePickedDate = "";
   capsuleOpensBy = "date";
   capsulePickedMs = null;
   clearTimeout(capsuleCountTimer);
@@ -1011,6 +1010,24 @@ function submitCapsule(event) {
   render();
   const card = document.querySelector(`#capsules [data-capsule-id="${capsule.id}"]`);
   (card || byId("capsuleTitle")).focus();
+}
+
+// The date sheet (js/date-sheet.js): tomorrow to 2 years ahead, from today's date. A picked day that
+// has since become too early (the page stayed open over midnight) still fails isValidOpening, so
+// Seal it stays disabled.
+function openCapsuleDateSheet() {
+  const { min, max } = capsuleDateRange();
+  openDateSheet({
+    title: t("capsule.pickDay"),
+    min,
+    max,
+    value: capsulePickedDate,
+    trigger: byId("capsuleDate"),
+    onPick: (key) => {
+      capsulePickedDate = key;
+      updateCapsuleForm();
+    },
+  });
 }
 
 // The counter is read out once typing pauses, not on every key.
@@ -1124,8 +1141,7 @@ function initCapsules() {
   byId("capsuleCancel").addEventListener("click", cancelCapsuleForm);
   byId("capsuleForm").addEventListener("submit", submitCapsule);
   byId("capsuleText").addEventListener("input", onCapsuleInput);
-  byId("capsuleDate").addEventListener("input", updateCapsuleForm);
-  byId("capsuleDate").addEventListener("change", updateCapsuleForm);
+  byId("capsuleDate").addEventListener("click", openCapsuleDateSheet);
   byId("capsuleByDate").addEventListener("click", () => setCapsuleOpensBy("date"));
   byId("capsuleByTime").addEventListener("click", () => setCapsuleOpensBy("time"));
   byId("capsuleTimePart").addEventListener("click", pickCapsuleChip);
