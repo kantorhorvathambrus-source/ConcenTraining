@@ -2105,7 +2105,9 @@ bottom-sheet styles (`dialog.duration-sheet.date-sheet`):
 - **Default time** when a day is selected: today, the next full hour at least 15 minutes away
   (19:50 → 21:00), else the next quarter hour (23:20 → 23:45), else the first allowed minute; any
   other day 8:00 (on the last day moved back into the range). Once the time was changed by hand in
-  the sheet (or the sheet opened with a picked time), picking another day keeps that time.
+  the sheet (or the sheet opened with a picked time), picking another day keeps that time, as long
+  as it's allowed on that day; otherwise that day's default is used (so going back from a later day
+  at 8:00 to today, once 8:00 has passed, gives today's next full hour, not a red hint).
 - **Time:** **−** / **+** move to the previous / next quarter hour (20:07 → 20:00 / 20:15) between 0:00
   and 23:45, holding repeats (the duration sheet's timing). Any hour 0–23 and minute 0–59 can be
   typed. Outside the range (sooner than 15 minutes from now, later than 2 years from now), or with a

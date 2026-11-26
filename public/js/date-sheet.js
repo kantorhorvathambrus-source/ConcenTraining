@@ -17,7 +17,7 @@
 // Selecting a day gives it a default time (today: the next full hour at least minMs away, else the
 // next quarter hour, else the first allowed minute; any other day 8:00, moved into the range on the
 // last day), unless the time was changed by hand in this sheet (or came with the value it opened
-// with): then picking another day keeps that time.
+// with) and is allowed on the new day: then picking another day keeps that time.
 //
 // Keyboard: the days have one tab stop (a roving tabindex). Arrow keys move a day or a week, Page Up
 // / Page Down a month, Home / End to the start / end of the week; a move past the month's edge shows
@@ -357,11 +357,13 @@ function showDateSheetMonth(by) {
   renderDateSheet(null);
 }
 
-// Selects a day (the sheet stays open). Its default time, unless the time was set by hand.
+// Selects a day (the sheet stays open). Its default time, unless the time was set by hand and is
+// allowed on this day too (going back from a later day at 8:00 to today, when 8:00 has passed,
+// gives today's default instead of a red hint).
 function selectDateSheetDay(key) {
   const state = dateSheetState;
   state.selected = key;
-  if (!state.timeTouched) {
+  if (!state.timeTouched || !dateSheetValid()) {
     const minutes = dateSheetDefaultMinutes(key);
     state.els.hours.value = String(Math.floor(minutes / 60));
     state.els.minutes.value = String(minutes % 60).padStart(2, "0");
