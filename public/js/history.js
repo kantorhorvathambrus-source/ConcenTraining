@@ -555,6 +555,7 @@ function render() {
     console.error(error);
   }
   drawnFrom = historySource();
+  scheduleCapsuleRedraw();
   const empty = history.length === 0;
   renderStorageNote();
   // "No finished sessions yet … Start one →" would be a promise this browser can't keep.
@@ -604,7 +605,10 @@ function historySource() {
   }
   // The custom characters too: a rename or delete in another tab changes the names shown.
   // And the time capsules: one sealed, opened or deleted in another tab shows up.
-  return `${dayKey(new Date())}|${canSave}|${saved}|${readCustomRaw()}|${CAPSULES_ON ? readCapsulesRaw() : ""}`;
+  // dueCapsuleCount: how many date capsules have reached their time, so one that opened while the
+  // page was hidden (a sleeping phone) is drawn when it's shown again.
+  const capsules = CAPSULES_ON ? `${readCapsulesRaw()}|${dueCapsuleCount()}` : "";
+  return `${dayKey(new Date())}|${canSave}|${saved}|${readCustomRaw()}|${capsules}`;
 }
 
 // "Today" changes at midnight, and with it the current streak and "this week". A page that stays
@@ -614,6 +618,27 @@ function historySource() {
 // in case nothing was drawn (a timer that went off early, or the dialog was open). A timezone
 // change or a sleeping phone can make it late or early: showing the page again (visibilitychange)
 // checks the day anyway.
+// A date capsule opens at its opensAt, also while the page stays open: a timer goes off half a
+// second after the next sealed capsule's opensAt and draws the page again through
+// refreshInBackground (dueCapsuleCount in historySource has changed then). Set again after every
+// draw and by the timer itself. Times further away than CAPSULE_TIMER_MAX_MS are checked again then.
+function scheduleCapsuleRedraw() {
+  clearTimeout(capsuleOpenTimer);
+  if (!CAPSULES_ON) return;
+  let next = null;
+  try {
+    next = nextCapsuleOpensAt();
+  } catch (error) {
+    console.error(error);
+  }
+  if (next === null) return;
+  const delay = Math.min(Math.max(0, next - Date.now()) + 500, CAPSULE_TIMER_MAX_MS);
+  capsuleOpenTimer = setTimeout(() => {
+    refreshInBackground();
+    scheduleCapsuleRedraw();
+  }, delay);
+}
+
 function scheduleMidnightRedraw() {
   clearTimeout(midnightTimer);
   const nextMidnight = addDays(startOfDay(Date.now()), 1);
@@ -757,7 +782,13 @@ const openedThisVisit = new Set();
 // The form: how the message opens ("date" or "time") and the picked time chip (ms, or null).
 let capsuleOpensBy = "date";
 let capsulePickedMs = null;
-let capsulePickedDate = ""; // "YYYY-MM-DD" from the date sheet, or ""
+let capsulePickedAt = null; // "On a day": the day and time from the date sheet (ms), or null
+let capsuleFormTimer = 0; // while the form is open: checks every 30 s that the picked time isn't too soon
+// Redraws the page when the next date capsule's opensAt comes (see scheduleCapsuleRedraw).
+let capsuleOpenTimer = 0;
+const CAPSULE_FORM_CHECK_MS = 30 * 1000;
+// A browser timer can't wait longer than about 24.8 days: later times are checked again after this.
+const CAPSULE_TIMER_MAX_MS = 24 * 24 * 60 * 60 * 1000;
 // "Custom" (the time sheet): the amount set there (ms, or null) and whether it's the one picked.
 let capsuleCustomMs = null;
 let capsulePickedCustom = false;
@@ -768,6 +799,27 @@ const byId = (id) => document.getElementById(id);
 
 // The history page's date format (weekday, day, month), with the year when it isn't this year:
 // a message can open up to 2 years ahead.
+// When a date capsule opens: "Today, 20:00", "Tomorrow, 8:00" or the date with weekday and year
+// and the time ("2026. dec. 24., csütörtök, 8:00"). "Today" / "tomorrow" come from Intl in the
+// current language (numeric: "auto"), the time in the language's own format. capital: the first
+// letter in upper case (the form's button); the sealed card uses it in the middle of a line
+// ("Opens: tomorrow, 8:00").
+function formatCapsuleWhen(ms, capital) {
+  const date = new Date(ms);
+  const locale = I18N.language().intlLocale;
+  const time = I18N.formatDate(date, { hour: "numeric", minute: "2-digit" });
+  const today = startOfDay(Date.now());
+  const offset = Math.round((startOfDay(ms) - today) / 86400000);
+  let day;
+  if (offset === 0 || offset === 1) {
+    day = new Intl.RelativeTimeFormat(locale, { numeric: "auto" }).format(offset, "day");
+  } else {
+    day = I18N.formatDate(date, { weekday: I18N.language().weekday || "short", day: "numeric", month: "short", year: "numeric" });
+  }
+  const text = t("capsule.when", { day, time });
+  return capital ? text.charAt(0).toLocaleUpperCase(locale) + text.slice(1) : text;
+}
+
 function formatCapsuleDate(date) {
   const options = { weekday: I18N.language().weekday || "short", day: "numeric", month: "short" };
   if (date.getFullYear() !== new Date().getFullYear()) options.year = "numeric";
@@ -836,7 +888,7 @@ function capsuleCard(capsule, kind, history) {
     line(
       "muted small",
       left === null
-        ? t("capsule.opensOn", { date: formatCapsuleDate(dateFromKey(capsule.opensOn)) })
+        ? t("capsule.opensAt", { when: formatCapsuleWhen(capsule.opensAt, false) })
         : t("capsule.opensAfter", { time: formatTimeLeft(left) })
     );
     body.append(capsuleButton(capsule, "delete", t("common.delete"), t("capsule.deleteSealedLabel", { date: sealedOn }), "btn compact capsule-delete"));
@@ -907,7 +959,7 @@ function renderCapsules(history) {
 
 // What the form says the message opens on, or null.
 function capsuleOpening() {
-  if (capsuleOpensBy === "date") return capsulePickedDate ? { opensOn: capsulePickedDate } : null;
+  if (capsuleOpensBy === "date") return capsulePickedAt !== null ? { opensAt: capsulePickedAt } : null;
   return capsulePickedMs ? { opensAfterMs: capsulePickedMs } : null;
 }
 
@@ -922,12 +974,9 @@ function updateCapsuleForm() {
   byId("capsuleByDate").setAttribute("aria-pressed", String(byDate));
   byId("capsuleByTime").setAttribute("aria-pressed", String(!byDate));
   byId("capsuleDatePart").hidden = !byDate;
-  // "Pick a day", or the picked day with its weekday and always its year ("2026. dec. 24., csütörtök").
-  byId("capsuleDate").textContent = capsulePickedDate
-    ? I18N.formatDate(dateFromKey(capsulePickedDate), {
-        weekday: I18N.language().weekday || "short", day: "numeric", month: "short", year: "numeric",
-      })
-    : t("capsule.pickDay");
+  // "Pick a day and time", or the picked moment ("Tomorrow, 8:00"). Each mode keeps its own choice.
+  byId("capsuleDateText").textContent = capsulePickedAt !== null ? formatCapsuleWhen(capsulePickedAt, true) : t("capsule.pickDayTime");
+  byId("capsuleDate").classList.toggle("is-empty", capsulePickedAt === null);
   byId("capsuleTimePart").hidden = byDate;
   for (const chip of byId("capsuleTimePart").querySelectorAll(".chip")) {
     const custom = chip.dataset.custom === "true";
@@ -936,7 +985,16 @@ function updateCapsuleForm() {
     if (custom) chip.textContent = capsuleCustomMs ? t("capsule.chipCustomValue", { time: formatTimeLeft(capsuleCustomMs) }) : t("capsule.chipCustom");
   }
   const text = cleanCapsuleText(byId("capsuleText").value);
-  byId("capsuleSeal").disabled = !(isCapsuleText(text) && isValidOpening(capsuleOpening()));
+  const opening = capsuleOpening();
+  const openingValid = isValidOpening(opening);
+  byId("capsuleSeal").disabled = !(isCapsuleText(text) && openingValid);
+  // What the active mode is missing: nothing picked yet, or a picked time that has become too soon.
+  let missing = "";
+  if (!opening) missing = t(byDate ? "capsule.missingDate" : "capsule.missingTime");
+  else if (!openingValid && byDate) missing = t("capsule.tooSoon");
+  const note = byId("capsuleMissing");
+  if (note.textContent !== missing) note.textContent = missing;
+  note.hidden = !missing;
 }
 
 // The time chips: built once (so a redraw never takes the focus away from one), relabelled when
@@ -984,7 +1042,7 @@ function showCapsuleError(message) {
 
 function resetCapsuleForm() {
   byId("capsuleText").value = "";
-  capsulePickedDate = "";
+  capsulePickedAt = null;
   capsuleOpensBy = "date";
   capsulePickedMs = null;
   capsuleCustomMs = null;
@@ -1000,9 +1058,13 @@ function openCapsuleForm() {
   byId("capsuleForm").hidden = false;
   byId("capsuleWrite").hidden = true;
   byId("capsuleText").focus();
+  // A picked time can become less than 15 minutes away while the form stays open.
+  clearInterval(capsuleFormTimer);
+  capsuleFormTimer = setInterval(updateCapsuleForm, CAPSULE_FORM_CHECK_MS);
 }
 
 function closeCapsuleForm() {
+  clearInterval(capsuleFormTimer);
   byId("capsuleForm").hidden = true;
   resetCapsuleForm();
   byId("capsuleWrite").hidden = false;
@@ -1036,19 +1098,19 @@ function submitCapsule(event) {
   (card || byId("capsuleTitle")).focus();
 }
 
-// The date sheet (js/date-sheet.js): tomorrow to 2 years ahead, from today's date. A picked day that
-// has since become too early (the page stayed open over midnight) still fails isValidOpening, so
-// Seal it stays disabled.
+// The day and time sheet (js/date-sheet.js): 15 minutes from now to 2 years from now. It opens with
+// the picked day and time, if any. A picked time that has since become too soon fails
+// isValidOpening, so Seal it stays disabled and the form says so.
 function openCapsuleDateSheet() {
-  const { min, max } = capsuleDateRange();
+  const { min, max } = capsuleOpenRange();
   openDateSheet({
-    title: t("capsule.pickDay"),
-    min,
-    max,
-    value: capsulePickedDate,
+    title: t("capsule.pickDayTime"),
+    minMs: min,
+    maxMs: max,
+    valueMs: capsulePickedAt,
     trigger: byId("capsuleDate"),
-    onPick: (key) => {
-      capsulePickedDate = key;
+    onPick: (ms) => {
+      capsulePickedAt = ms;
       updateCapsuleForm();
     },
   });

@@ -430,7 +430,7 @@ I18N_TEXTS.pl = {
 
   // ---------- time capsule ----------
   "capsule.title": "Kapsuła czasu",
-  "capsule.intro": "Napisz wiadomość do siebie z przyszłości. Pozostanie zapieczętowana do wybranego dnia albo do czasu, aż spędzisz jeszcze kilka godzin w sesjach.",
+  "capsule.intro": "Napisz wiadomość do siebie z przyszłości. Pozostanie zapieczętowana do wybranego dnia i godziny albo do czasu, aż spędzisz jeszcze kilka godzin w sesjach.",
   "capsule.write": "Napisz wiadomość",
   "capsule.textLabel": "Twoja wiadomość",
   "capsule.count": "{count}/{max}",
@@ -441,7 +441,6 @@ I18N_TEXTS.pl = {
   "capsule.chipMin": "+{minutes}\u00a0min",
   "capsule.seal": "Zapieczętuj",
   "capsule.sealedOn": "Zapieczętowano: {date}",
-  "capsule.opensOn": "Otworzy się: {date}",
   "capsule.opensAfter": "Otworzy się po kolejnych {time} w sesjach",
   "capsule.limit": "Możesz mieć jednocześnie {count} zapieczętowane wiadomości.",
   "capsule.fromPast": "Wiadomość od ciebie z przeszłości",
@@ -460,7 +459,6 @@ I18N_TEXTS.pl = {
   "capsule.deleted": "Usunięto wiadomość.",
   "capsule.exportNote": "Kapsuły czasu nie trafiają jeszcze do pliku eksportu.",
   "capsule.summaryReady": "W historii czeka kapsuła czasu gotowa do otwarcia.",
-  "capsule.pickDay": "Wybierz dzień",
   "capsule.badgeSetupLabel": { one: "Twoja historia, {count} wiadomość do otwarcia", few: "Twoja historia, {count} wiadomości do otwarcia", many: "Twoja historia, {count} wiadomości do otwarcia", other: "Twoja historia, {count} wiadomości do otwarcia" },
   "capsule.badgeSummaryLabel": { one: "Zobacz historię, {count} wiadomość do otwarcia", few: "Zobacz historię, {count} wiadomości do otwarcia", many: "Zobacz historię, {count} wiadomości do otwarcia", other: "Zobacz historię, {count} wiadomości do otwarcia" },
   "dateSheet.prevMonth": "Poprzedni miesiąc",
@@ -476,6 +474,19 @@ I18N_TEXTS.pl = {
   "timeSheet.hourMore": "O 1 godzinę więcej",
   "timeSheet.minuteLess": "O 1 minutę mniej",
   "timeSheet.minuteMore": "O 1 minutę więcej",
+  "capsule.dayTimeLabel": "Dzień i godzina",
+  "capsule.pickDayTime": "Wybierz dzień i godzinę",
+  "capsule.opensAt": "Otworzy się: {when}",
+  "capsule.when": "{day}, {time}",
+  "capsule.missingDate": "Najpierw wybierz dzień i godzinę.",
+  "capsule.missingTime": "Najpierw wybierz, ile jeszcze czasu w sesjach.",
+  "capsule.tooSoon": "Ta godzina jest już za blisko. Wybierz późniejszą.",
+  "dateSheet.time": "Godzina",
+  "dateSheet.hour": "Godzina",
+  "dateSheet.minute": "Minuta",
+  "dateSheet.earlier": "15 minut wcześniej",
+  "dateSheet.later": "15 minut później",
+  "dateSheet.hint": "Co najmniej 15 minut od teraz, najwyżej 2 lata naprzód.",
 
   // ---------- export / import ----------
   "import.exported": {

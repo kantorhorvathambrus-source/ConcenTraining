@@ -165,7 +165,7 @@
          CAPSULES_ON is false. -->
     <section id="capsules" class="history-section capsules" aria-labelledby="capsuleTitle" hidden>
       <h2 id="capsuleTitle" tabindex="-1" data-i18n="capsule.title">Time capsule</h2>
-      <p class="muted small" data-i18n="capsule.intro">Write a message to your future self. It stays sealed until a day you pick, or until you've spent a few more hours in sessions.</p>
+      <p class="muted small" data-i18n="capsule.intro">Write a message to your future self. It stays sealed until a day and time you pick, or until you've spent a few more hours in sessions.</p>
       <ul id="capsuleSealedList" class="capsule-list"></ul>
       <button id="capsuleWrite" type="button" class="btn wide" data-i18n="capsule.write">Write a message</button>
       <p id="capsuleLimit" class="muted small capsule-limit" hidden></p>
@@ -187,10 +187,22 @@
             <button id="capsuleByTime" type="button" class="segmented-option" aria-pressed="false"
                     data-i18n="capsule.afterTime">After more session time</button>
           </div>
-          <!-- Opens the date sheet (js/date-sheet.js). Says "Pick a day" until a day is picked, then
-               that day with its weekday and year (history.js). -->
+          <!-- What the active mode is still missing ("Pick a day and time first."), or that a picked
+               time has become too soon. Each mode keeps its own choice (history.js). -->
+          <p id="capsuleMissing" class="muted small capsule-missing" aria-live="polite" hidden></p>
+          <!-- Opens the day and time sheet (js/date-sheet.js). Its name is the label plus what it
+               shows: "Pick a day and time", or the picked moment ("Tomorrow, 8:00"; history.js). -->
           <div id="capsuleDatePart">
-            <button id="capsuleDate" type="button" class="text-input capsule-date" aria-haspopup="dialog">Pick a day</button>
+            <p id="capsuleDateLabel" class="capsule-label capsule-date-label" data-i18n="capsule.dayTimeLabel">Day and time</p>
+            <button id="capsuleDate" type="button" class="text-input capsule-date is-empty" aria-haspopup="dialog"
+                    aria-labelledby="capsuleDateLabel capsuleDateText">
+              <svg class="capsule-date-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/>
+                <path d="M3.5 10h17M8 3v4M16 3v4"/>
+                <path class="capsule-date-icon-dot" d="M8 14h2M14 14h2M8 17.5h2"/>
+              </svg>
+              <span id="capsuleDateText">Pick a day and time</span>
+            </button>
           </div>
           <div id="capsuleTimePart" class="capsule-chips" role="group" aria-labelledby="capsuleByTime" hidden></div>
         </fieldset>

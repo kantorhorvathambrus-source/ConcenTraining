@@ -406,7 +406,7 @@ I18N_TEXTS.es = {
 
   // ---------- time capsule ----------
   "capsule.title": "Cápsula del tiempo",
-  "capsule.intro": "Escribe un mensaje para tu yo del futuro. Queda sellado hasta el día que elijas o hasta que pases unas horas más en sesiones.",
+  "capsule.intro": "Escribe un mensaje para tu yo del futuro. Queda sellado hasta el día y la hora que elijas o hasta que pases unas horas más en sesiones.",
   "capsule.write": "Escribir un mensaje",
   "capsule.textLabel": "Tu mensaje",
   "capsule.count": "{count}/{max}",
@@ -417,7 +417,6 @@ I18N_TEXTS.es = {
   "capsule.chipMin": "+{minutes}\u00a0min",
   "capsule.seal": "Sellar",
   "capsule.sealedOn": "Sellado el {date}",
-  "capsule.opensOn": "Se abre el {date}",
   "capsule.opensAfter": "Se abre tras {time} más en sesiones",
   "capsule.limit": "Puedes tener {count} mensajes sellados a la vez.",
   "capsule.fromPast": "Un mensaje de tu yo del pasado",
@@ -436,7 +435,6 @@ I18N_TEXTS.es = {
   "capsule.deleted": "Mensaje eliminado.",
   "capsule.exportNote": "Las cápsulas del tiempo aún no se incluyen en el archivo de exportación.",
   "capsule.summaryReady": "Tienes una cápsula del tiempo lista para abrir en tu historial.",
-  "capsule.pickDay": "Elige un día",
   "capsule.badgeSetupLabel": { one: "Tu historial, {count} mensaje listo para abrir", many: "Tu historial, {count} mensajes listos para abrir", other: "Tu historial, {count} mensajes listos para abrir" },
   "capsule.badgeSummaryLabel": { one: "Ver tu historial, {count} mensaje listo para abrir", many: "Ver tu historial, {count} mensajes listos para abrir", other: "Ver tu historial, {count} mensajes listos para abrir" },
   "dateSheet.prevMonth": "Mes anterior",
@@ -452,6 +450,19 @@ I18N_TEXTS.es = {
   "timeSheet.hourMore": "1 hora más",
   "timeSheet.minuteLess": "1 minuto menos",
   "timeSheet.minuteMore": "1 minuto más",
+  "capsule.dayTimeLabel": "Día y hora",
+  "capsule.pickDayTime": "Elige día y hora",
+  "capsule.opensAt": "Se abre: {when}",
+  "capsule.when": "{day}, {time}",
+  "capsule.missingDate": "Primero elige día y hora.",
+  "capsule.missingTime": "Primero elige cuánto tiempo más en sesiones.",
+  "capsule.tooSoon": "Esa hora ya está muy cerca. Elige una más tarde.",
+  "dateSheet.time": "Hora",
+  "dateSheet.hour": "Hora",
+  "dateSheet.minute": "Minuto",
+  "dateSheet.earlier": "15 minutos antes",
+  "dateSheet.later": "15 minutos después",
+  "dateSheet.hint": "Al menos 15 minutos a partir de ahora y hasta 2 años después.",
 
   // ---------- export / import ----------
   "import.exported": {

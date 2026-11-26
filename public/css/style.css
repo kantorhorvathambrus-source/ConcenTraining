@@ -2456,11 +2456,63 @@ a {
   margin: 0 0 12px;
 }
 
-/* The "Pick a day" button in the form: looks like a text field, opens the date sheet. */
+/* "Day and time": a field-like button with a calendar icon that opens the day and time sheet. The
+   label above it is visible; until a time is picked its text is grey ("Pick a day and time"). */
+.capsule-date-label {
+  margin-top: 4px !important;
+}
+
 .capsule-date {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   text-align: left;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.capsule-date.is-empty #capsuleDateText {
+  color: var(--color-text-muted);
   font-weight: 400;
+}
+
+.capsule-date-icon {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: var(--color-accent-text);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* What the active mode is still missing, under the two mode buttons. */
+.capsule-missing {
+  margin: 0 0 10px !important;
+}
+
+/* The date sheet's Time row: − [hours] : [minutes] +. */
+.date-time-field input {
+  width: 3em;
+}
+
+.date-time-field input:disabled {
+  opacity: 0.45;
+}
+
+.date-time-colon {
+  font-weight: 700;
+}
+
+.date-time-row {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-divider);
+}
+
+.date-sheet .duration-hint {
+  margin: 0 0 16px;
 }
 
 /* The ready badge on "Your history →" (setup) and "See your history" (summary): an amber circle
@@ -2562,7 +2614,7 @@ a {
 }
 
 @media (hover: hover) {
-  .date-day:hover:not(:disabled) {
+  .date-day:hover:not(:disabled):not([aria-pressed="true"]) {
     background: var(--color-control-hover);
   }
 }
@@ -2598,7 +2650,8 @@ a {
   margin-bottom: 12px;
 }
 
-.time-sheet-label {
+/* Beats .duration-custom-label's bottom margin (defined later), so the label is centred on its row. */
+.time-sheet-row .time-sheet-label {
   margin: 0;
 }
 

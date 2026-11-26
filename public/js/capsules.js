@@ -1,6 +1,6 @@
 "use strict";
 
-// Time capsule: a short message to your future self, sealed until a chosen day or until you've
+// Time capsule: a short message to your future self, sealed until a chosen day and time or until you've
 // spent a chosen amount of further time in sessions (see "Time capsule" in the README).
 // Loaded by history.html (writing, sealed cards, opening) and index.html (the summary line), after
 // js/history-store.js. It only relies on history-store.js (loadHistory, sessionFocus, sessionDay)
@@ -8,11 +8,13 @@
 // The history page's drawing is in history.js; the summary line in app.js (renderCapsuleNote).
 //
 // Saved data:
-//   ct_capsules_v1 = { v: 1, capsules: [ { id, createdAt, text, opensOn?, opensAfterMs?, readyAt?,
+//   ct_capsules_v1 = { v: 1, capsules: [ { id, createdAt, text, opensAt?, opensAfterMs?, readyAt?,
 //     announced?, openedAt? } ] }
 //   id: "cap-" + 10 random letters/digits. createdAt: Date.now() at Seal. text: the message, trimmed,
-//   1 to CAPSULE_TEXT_MAX characters. Exactly one of opensOn ("YYYY-MM-DD", a local date) or
-//   opensAfterMs (session time, see countedSessionMs). readyAt: Date.now() the first time it was
+//   1 to CAPSULE_TEXT_MAX characters. Exactly one of opensAt (a timestamp in ms: the local day and
+//   time picked in the date sheet) or opensAfterMs (session time, see countedSessionMs). Capsules
+//   from earlier test builds have opensOn ("YYYY-MM-DD") instead: it's read as opensAt = local
+//   midnight of that day, and written as opensAt with the next save. readyAt: Date.now() the first time it was
 //   seen ready; from then on it stays ready, even if sessions are deleted. announced: true once the
 //   summary said "A time capsule is ready". openedAt: Date.now() at Open (the first one wins).
 // Reading never throws: a broken entry is skipped (not the whole list) and unknown fields are
@@ -23,7 +25,8 @@ const CAPSULES_KEY = "ct_capsules_v1";
 const CAPSULE_TEXT_MAX = 500;
 // At most this many sealed (not yet opened) messages at a time.
 const CAPSULE_SEALED_LIMIT = 3;
-// A date capsule opens at the earliest tomorrow, at the latest in 2 years.
+// A date capsule opens at the earliest 15 minutes from now, at the latest 2 years from now.
+const CAPSULE_MIN_LEAD_MS = 15 * 60 * 1000;
 const CAPSULE_MAX_YEARS = 2;
 // The chips of "After more session time", in hours.
 const CAPSULE_HOURS = [5, 10, 25, 50];
@@ -104,7 +107,7 @@ function isDateKey(value) {
   return date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d;
 }
 
-// "YYYY-MM-DD" as a Date at local midnight of that day.
+// "YYYY-MM-DD" as a Date at local midnight of that day (old opensOn values).
 function dateFromKey(key) {
   const [y, m, d] = key.split("-").map(Number);
   return new Date(y, m - 1, d);
@@ -124,16 +127,25 @@ function cleanCapsule(raw) {
   if (!raw || typeof raw !== "object" || !isCapsuleId(raw.id) || !isStamp(raw.createdAt)) return null;
   const text = cleanCapsuleText(raw.text);
   if (!isCapsuleText(text)) return null;
-  const hasDate = Object.hasOwn(raw, "opensOn");
+  // opensAt, or (earlier test builds) opensOn read as local midnight of that day. opensAt wins if
+  // both are there.
+  let opensAt = null;
+  if (Object.hasOwn(raw, "opensAt")) {
+    if (!(Number.isInteger(raw.opensAt) && raw.opensAt >= 0)) return null;
+    opensAt = raw.opensAt;
+  } else if (Object.hasOwn(raw, "opensOn")) {
+    if (!isDateKey(raw.opensOn)) return null;
+    opensAt = dateFromKey(raw.opensOn).getTime();
+  }
+  const hasDate = opensAt !== null;
   const hasTime = Object.hasOwn(raw, "opensAfterMs");
   if (hasDate === hasTime) return null; // exactly one opening condition
-  if (hasDate && !isDateKey(raw.opensOn)) return null;
   if (hasTime && !(Number.isInteger(raw.opensAfterMs) && raw.opensAfterMs > 0)) return null;
   return {
     id: raw.id,
     createdAt: raw.createdAt,
     text,
-    ...(hasDate ? { opensOn: raw.opensOn } : { opensAfterMs: raw.opensAfterMs }),
+    ...(hasDate ? { opensAt } : { opensAfterMs: raw.opensAfterMs }),
     ...(isStamp(raw.readyAt) && { readyAt: raw.readyAt }),
     ...(raw.announced === true && { announced: true }),
     ...(isStamp(raw.openedAt) && { openedAt: raw.openedAt }),
@@ -198,13 +210,12 @@ function sealedCount(list) {
   return list.filter(isSealed).length;
 }
 
-// The earliest and latest day a date capsule can open on, from today's local date.
-function capsuleDateRange(now = new Date()) {
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  return {
-    min: capsuleDateKey(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1)),
-    max: capsuleDateKey(new Date(today.getFullYear() + CAPSULE_MAX_YEARS, today.getMonth(), today.getDate())),
-  };
+// The earliest and latest moment (ms) a date capsule can open at: 15 minutes from now to 2 years
+// from now (by the calendar, so the same clock time 2 years on).
+function capsuleOpenRange(now = new Date()) {
+  const max = new Date(now.getTime());
+  max.setFullYear(max.getFullYear() + CAPSULE_MAX_YEARS);
+  return { min: now.getTime() + CAPSULE_MIN_LEAD_MS, max: max.getTime() };
 }
 
 // The "After more session time" choices in ms: the hour chips, plus "+1 min" on test sites.
@@ -213,14 +224,14 @@ function capsuleTimeChoices() {
   return CAPSULES_TEST_SITE ? [CAPSULE_TEST_MS, ...choices] : choices;
 }
 
-// Whether a new capsule's opening condition is allowed: a date from tomorrow to 2 years ahead (keys
-// compare as text), or a session time of whole minutes from CAPSULE_CUSTOM_MIN_MS to
+// Whether a new capsule's opening condition is allowed: a moment (opensAt, whole ms) from 15 minutes
+// to 2 years from now (capsuleOpenRange), or a session time of whole minutes from CAPSULE_CUSTOM_MIN_MS to
 // CAPSULE_CUSTOM_MAX_MS (every hour chip is inside it), or exactly 1 minute on the test sites.
 function isValidOpening(opening, now = new Date()) {
   if (!opening) return false;
-  if (Object.hasOwn(opening, "opensOn")) {
-    const { min, max } = capsuleDateRange(now);
-    return isDateKey(opening.opensOn) && opening.opensOn >= min && opening.opensOn <= max;
+  if (Object.hasOwn(opening, "opensAt")) {
+    const { min, max } = capsuleOpenRange(now);
+    return Number.isInteger(opening.opensAt) && opening.opensAt >= min && opening.opensAt <= max;
   }
   const ms = opening.opensAfterMs;
   if (!Number.isInteger(ms) || ms % 60000 !== 0) return false;
@@ -234,12 +245,30 @@ function capsuleMsLeft(capsule, history) {
   return Math.max(0, capsule.opensAfterMs - countedSessionMs(history, capsule.createdAt));
 }
 
-// Ready: seen ready before (readyAt), or its condition is met now: today's local date is on or
-// after opensOn, or the counted session time reached opensAfterMs.
+// Ready: seen ready before (readyAt), or its condition is met now: the time is at or after
+// opensAt, or the counted session time reached opensAfterMs.
 function isCapsuleReady(capsule, history, now = new Date()) {
   if (isStamp(capsule.readyAt)) return true;
-  if (Object.hasOwn(capsule, "opensOn")) return capsuleDateKey(now) >= capsule.opensOn;
+  if (Object.hasOwn(capsule, "opensAt")) return now.getTime() >= capsule.opensAt;
   return capsuleMsLeft(capsule, history) === 0;
+}
+
+// For the history page's redraw timer: the soonest opensAt still to come among sealed capsules not
+// yet seen ready, or null.
+function nextCapsuleOpensAt(now = Date.now()) {
+  let next = null;
+  for (const c of loadCapsules()) {
+    if (!isSealed(c) || isStamp(c.readyAt) || !Object.hasOwn(c, "opensAt") || c.opensAt <= now) continue;
+    if (next === null || c.opensAt < next) next = c.opensAt;
+  }
+  return next;
+}
+
+// For the history page's "did anything change?" check: how many date capsules have reached their
+// opensAt. It changes when one opens with the page hidden (a sleeping phone), so showing the page
+// again draws it.
+function dueCapsuleCount(now = Date.now()) {
+  return loadCapsules().filter((c) => Object.hasOwn(c, "opensAt") && c.opensAt <= now).length;
 }
 
 // Reads the capsules fresh, changes them with change(list) (which returns true if it changed
@@ -266,7 +295,7 @@ function refreshCapsules(history, now = new Date()) {
   }).list;
 }
 
-// Seal: text (as typed) and opening ({ opensOn } or { opensAfterMs }). Returns { status, capsule }:
+// Seal: text (as typed) and opening ({ opensAt } or { opensAfterMs }). Returns { status, capsule }:
 // "sealed", "invalid" (empty text or a condition that isn't allowed: nothing saved), "limit"
 // (CAPSULE_SEALED_LIMIT already sealed, perhaps in another tab: nothing saved) or "failed" (the
 // browser refused to store it: nothing changed).
@@ -279,7 +308,7 @@ function sealCapsule(text, opening, now = new Date()) {
     id: newCapsuleId(new Set(list.map((c) => c.id))),
     createdAt: now.getTime(),
     text: clean,
-    ...(Object.hasOwn(opening, "opensOn") ? { opensOn: opening.opensOn } : { opensAfterMs: opening.opensAfterMs }),
+    ...(Object.hasOwn(opening, "opensAt") ? { opensAt: opening.opensAt } : { opensAfterMs: opening.opensAfterMs }),
   };
   list.push(capsule);
   return { status: writeCapsules(list) ? "sealed" : "failed", capsule };
