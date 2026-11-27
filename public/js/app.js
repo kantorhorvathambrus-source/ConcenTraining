@@ -2584,6 +2584,71 @@ function renderPlanSummary(p) {
     count: top.length,
     list: top.map((category) => t("summary.categoryCount", { label: category.label, count: category.count })).join(t("common.listSeparator")),
   });
+
+  // The time capsule line. Never allowed to break the summary (a capsule bug, or capsules.js
+  // missing from a mixed-version cache).
+  try {
+    renderCapsuleNote();
+  } catch (error) {
+    console.error(error);
+    $("#summaryCapsule").hidden = true;
+  }
+  safeRenderHistoryBadges(); // after the note, which may have saved readyAt
+}
+
+// The amber circle on "Your history →" (setup) and "See your history" (summary): how many time
+// capsules are ready and not opened yet (readyUnopenedCount in js/capsules.js, read-only). Screen
+// readers get the count in the link's name ("Your history, 1 message ready to open"); the circle is
+// aria-hidden. Drawn on load, when the page is shown again, on storage changes, with every summary
+// and on a language switch. A capsule problem only hides the circles: the screens keep working.
+function renderHistoryBadges() {
+  const links = [
+    [$("#historyLink"), "capsule.badgeSetupLabel"],
+    [$("#summaryHistoryLink"), "capsule.badgeSummaryLabel"],
+  ];
+  let count = 0;
+  try {
+    count = CAPSULES_ON ? readyUnopenedCount() : 0;
+  } catch (error) {
+    console.error(error);
+    count = 0;
+  }
+  for (const [link, key] of links) {
+    if (!link) continue;
+    const badge = link.querySelector(".capsule-badge");
+    badge.textContent = count > 0 ? String(count) : "";
+    badge.hidden = count === 0;
+    if (count > 0) link.setAttribute("aria-label", t(key, { count }));
+    else link.removeAttribute("aria-label");
+  }
+}
+
+// The storage event for the badge: a capsule sealed, opened or deleted in another tab, a session
+// saved there (it can make a time capsule ready), or all site data cleared (key null).
+function onCapsuleStorage(event) {
+  if (event.key === null || event.key === HISTORY_KEY || (typeof CAPSULES_KEY === "string" && event.key === CAPSULES_KEY)) {
+    safeRenderHistoryBadges();
+  }
+}
+
+// Never lets a badge problem reach the caller (setup screen, summary, events).
+function safeRenderHistoryBadges() {
+  try {
+    renderHistoryBadges();
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// "A time capsule is ready to open in your history." when a capsule is ready, unopened and not yet
+// announced. announceReadyCapsules (js/capsules.js) marks those announced (a failed write is
+// silent), so it shows once per capsule. On a single session's summary and on a plan's, both
+// times inside try/catch.
+function renderCapsuleNote() {
+  const note = $("#summaryCapsule");
+  const show = announceReadyCapsules();
+  note.textContent = show ? t("capsule.summaryReady") : "";
+  note.hidden = !show;
 }
 
 // ---------- one tab at a time (Web Locks API) ----------
@@ -3339,6 +3404,16 @@ function renderSummary(saveFailed) {
     count: top.length,
     list: top.map((category) => t("summary.categoryCount", { label: category.label, count: category.count })).join(t("common.listSeparator")),
   });
+
+  // The time capsule line. Never allowed to break the summary (a capsule bug, or capsules.js
+  // missing from a mixed-version cache).
+  try {
+    renderCapsuleNote();
+  } catch (error) {
+    console.error(error);
+    $("#summaryCapsule").hidden = true;
+  }
+  safeRenderHistoryBadges(); // after the note, which may have saved readyAt
 }
 
 // ---------- formatting ----------
@@ -3401,6 +3476,7 @@ function onLanguageChange() {
   if (!hint.hidden) hint.textContent = t("setup.leaveReminderBlocked");
   if (focusSound.supported) syncFocusSoundSetting(); // tiles, rows, "Preview" / "Stop", "40 %"; the sound plays on
   updateFocusSoundButton();
+  safeRenderHistoryBadges(); // the links' names for screen readers
 }
 
 // ---------- start-up ----------
@@ -3470,6 +3546,12 @@ function init() {
   window.addEventListener("storage", onStorage);
   window.addEventListener("storage", onHistoryStorage);
   window.addEventListener("storage", onCustomStorage);
+  window.addEventListener("storage", onCapsuleStorage);
+  // The time capsule badge: shown again (a capsule may have become ready meanwhile).
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) safeRenderHistoryBadges();
+  });
+  window.addEventListener("pageshow", safeRenderHistoryBadges);
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) tickCustomCountdowns(); // a sleeping tab's countdowns catch up at once
   });
@@ -3481,6 +3563,7 @@ function init() {
 
   checkStorage();
   migrateRagebaitAccepted();
+  safeRenderHistoryBadges();
   // Real images for custom characters' layers (AVATAR_PNG_FILES), once they're loaded.
   loadAvatarPngs(() => {
     renderCustomList();

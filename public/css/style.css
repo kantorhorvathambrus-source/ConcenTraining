@@ -2294,6 +2294,426 @@ a {
   margin: 0 0 12px;
 }
 
+/* ---------- time capsule (history page; js/capsules.js, "Time capsule" in the README) ---------- */
+
+/* Ready messages at the top of the page, under the storage notes. */
+.capsule-ready {
+  margin-bottom: 24px;
+}
+
+.capsule-list {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.capsule-list:empty {
+  margin: 0;
+}
+
+/* One message: the envelope on the left, its lines (and button) on the right. */
+.capsule-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--color-surface);
+  border-radius: var(--radius-tile);
+  box-shadow: var(--shadow-card);
+}
+
+/* Ready to open: the accent ring of something picked, so it stands out at the top. */
+.capsule-card-ready {
+  box-shadow: var(--shadow-selected);
+}
+
+/* A card or message only gets the focus from the script (after Seal or Open): a ring for keyboard
+   users, none after a tap. */
+.capsule-card:focus,
+.capsule-message:focus {
+  outline: none;
+}
+
+.capsule-card:focus-visible,
+.capsule-message:focus-visible,
+.capsule-textarea:focus-visible,
+#capsuleTitle:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+#capsuleTitle:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.capsule-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.capsule-body p {
+  margin: 0 0 4px;
+}
+
+.capsule-card-title {
+  font-weight: 600;
+}
+
+.capsule-body .btn {
+  margin-top: 8px;
+}
+
+/* The user's own text: line breaks kept, a very long word wraps instead of scrolling sideways. */
+.capsule-message {
+  margin-top: 8px !important;
+  padding: 10px 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--color-surface-sunken);
+  border-radius: var(--radius-field);
+}
+
+.capsule-limit {
+  margin: 8px 0 0 !important;
+}
+
+/* The inline form under Write a message. */
+.capsule-form {
+  margin-top: 4px;
+  padding: 16px;
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+.capsule-label {
+  display: block;
+  margin: 0 0 6px;
+  padding: 0;
+  font-weight: 600;
+}
+
+.capsule-textarea {
+  display: block;
+  min-height: 120px;
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.capsule-count {
+  margin: 4px 0 12px;
+  text-align: right;
+}
+
+.capsule-opens {
+  min-width: 0;
+  margin: 0 0 12px;
+  padding: 0;
+  border: 0;
+}
+
+.capsule-segmented {
+  margin-bottom: 10px;
+}
+
+/* Long labels ("After more session time", "További munkamenet-idő után") wrap inside their half. */
+.capsule-segmented .segmented-option {
+  line-height: 1.25;
+}
+
+/* The minimum is in em, so larger text gives fewer, wider columns instead of overflowing chips. */
+.capsule-chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(4.5em, 1fr));
+  gap: 8px;
+}
+
+.capsule-chips .chip {
+  padding: 6px 10px;
+}
+
+/* "Custom" / "+7 h 30 min": a row of its own under the quick picks (whatever the number of columns,
+   also with large text), and its label may wrap. */
+.capsule-chips .capsule-chip-custom {
+  grid-column: 1 / -1;
+  white-space: normal;
+  line-height: 1.2;
+}
+
+.capsule-error {
+  margin: 0 0 12px;
+}
+
+.capsule-opened h3 {
+  margin: 20px 0 10px;
+  font-size: var(--fs-16);
+}
+
+/* Like "Session deleted.", but inside the section. */
+.capsule-status:not(:empty) {
+  margin: 0 0 12px;
+}
+
+/* "Day and time": a field-like button with a calendar icon that opens the day and time sheet. The
+   label above it is visible; until a time is picked its text is grey ("Pick a day and time"). */
+.capsule-date-label {
+  margin-top: 4px !important;
+}
+
+.capsule-date {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.capsule-date.is-empty #capsuleDateText {
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.capsule-date-icon {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: var(--color-accent-text);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* What the active mode is still missing, under the two mode buttons. */
+.capsule-missing {
+  margin: 0 0 10px !important;
+}
+
+/* The date sheet's Time row: − [hours] : [minutes] +. */
+.date-time-field input {
+  width: 3em;
+}
+
+.date-time-field input:disabled {
+  opacity: 0.45;
+}
+
+.date-time-colon {
+  font-weight: 700;
+}
+
+.date-time-row {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-divider);
+}
+
+.date-sheet .duration-hint {
+  margin: 0 0 16px;
+}
+
+/* The ready badge on "Your history →" (setup) and "See your history" (summary): an amber circle
+   with the number of time capsules that are ready to open (app.js). aria-hidden: the link's name
+   says it for screen readers. */
+.capsule-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5em;
+  height: 1.5em;
+  margin-left: 0.4em;
+  padding: 0 0.4em;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-size: var(--fs-13);
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  vertical-align: middle;
+}
+
+.capsule-badge[hidden] {
+  display: none;
+}
+
+/* ---------- the date sheet (js/date-sheet.js), on the duration sheet's bottom-sheet styles ---------- */
+
+.date-nav {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.date-nav-btn {
+  min-width: 44px;
+  min-height: 44px;
+  font-size: var(--fs-26);
+  color: var(--color-text);
+}
+
+.date-nav-btn[aria-disabled="true"] {
+  color: var(--color-divider);
+  cursor: not-allowed;
+}
+
+.date-month {
+  margin: 0;
+  text-align: center;
+  font-weight: 600;
+}
+
+.date-weekdays,
+.date-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+
+.date-weekdays {
+  margin-bottom: 4px;
+  color: var(--color-text-muted);
+  font-size: var(--fs-13);
+  text-align: center;
+}
+
+.date-weekdays span {
+  overflow: hidden;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+/* Day cells: at least 44px from a 360px screen up, 40px below that (seven columns must fit). */
+.date-day {
+  min-height: 44px;
+  min-width: 0;
+  padding: 0;
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-text);
+  font-size: var(--fs-16);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 359px) {
+  .date-day {
+    min-height: 40px;
+  }
+
+  /* Less side padding, so seven 40px columns fit on a 320px screen. */
+  .date-sheet .duration-sheet-body {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+}
+
+@media (hover: hover) {
+  .date-day:hover:not(:disabled):not([aria-pressed="true"]) {
+    background: var(--color-control-hover);
+  }
+}
+
+.date-day[aria-pressed="true"] {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-weight: 700;
+}
+
+/* Before tomorrow or after 2 years: dimmed and can't be picked. */
+.date-day:disabled {
+  color: var(--color-text-muted);
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.date-day:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: -1px;
+}
+
+/* ---------- the time sheet (js/time-sheet.js), on the duration sheet's styles ---------- */
+
+/* Hours and Minutes: the label on the left, − field + on the right; under each other if they
+   don't fit side by side (large text). */
+.time-sheet-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin-bottom: 12px;
+}
+
+/* Beats .duration-custom-label's bottom margin (defined later), so the label is centred on its row. */
+.time-sheet-row .time-sheet-label {
+  margin: 0;
+}
+
+.time-sheet .duration-hint {
+  margin: 0 0 16px;
+}
+
+/* ===== ENVELOPE ART (placeholder, to be replaced by real artwork; see envelopeArt in
+   js/capsules.js). Everything the envelope looks like is in this block. ===== */
+.capsule-art-wrap {
+  flex: none;
+  width: 56px;
+  padding-top: 12px; /* room for the flap once it's folded up */
+}
+
+.capsule-art {
+  display: block;
+  width: 56px;
+  height: 42px;
+  overflow: visible;
+}
+
+.capsule-art-body {
+  fill: var(--color-accent-soft);
+  stroke: var(--color-accent-text);
+  stroke-width: 2;
+}
+
+.capsule-art-fold {
+  fill: none;
+  stroke: var(--color-accent-text);
+  stroke-width: 1.5;
+  opacity: 0.55;
+}
+
+.capsule-art-flap {
+  fill: var(--color-surface);
+  stroke: var(--color-accent-text);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  transform-box: fill-box;
+  transform-origin: 50% 0;
+  transition: transform 400ms var(--ease);
+}
+
+.capsule-art-seal {
+  fill: var(--color-accent);
+  transition: opacity 150ms var(--ease);
+}
+
+/* Open (Open tapped: the .opening card folds it up in 400 ms; an opened message shows it up). */
+.capsule-card.opening .capsule-art-flap,
+.capsule-art-open .capsule-art-flap {
+  transform: scaleY(-1);
+}
+
+.capsule-card.opening .capsule-art-seal,
+.capsule-art-open .capsule-art-seal {
+  opacity: 0;
+}
+/* ===== END ENVELOPE ART ===== */
+
 /* ---------- privacy page ---------- */
 
 /* Lets the email address (or any long word) break at 320px instead of scrolling sideways. */
@@ -3801,7 +4221,9 @@ dialog.duration-sheet[open]::backdrop {
   .char-card,
   .choice,
   .preset,
-  .dark-switch-knob {
+  .dark-switch-knob,
+  .capsule-art-flap,
+  .capsule-art-seal {
     transition: none;
   }
 

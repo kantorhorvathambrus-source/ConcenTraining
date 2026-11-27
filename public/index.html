@@ -112,7 +112,9 @@
         <p class="header-link">
           <button id="howItWorksLink" type="button" class="text-btn" aria-controls="howItWorks" data-i18n="setup.howItWorks">How it works</button>
           <span class="header-sep" aria-hidden="true">·</span>
-          <a href="history.html" data-i18n="setup.historyLink">Your history →</a>
+          <!-- The amber circle: time capsules ready to open (renderHistoryBadges in app.js). The text has
+               its own data-i18n span, so translating it never removes the circle. -->
+          <a id="historyLink" href="history.html"><span data-i18n="setup.historyLink">Your history →</span><span class="capsule-badge" aria-hidden="true" hidden></span></a>
         </p>
       </header>
 
@@ -391,9 +393,12 @@
         <!-- Shown when the browser refused to store the session (renderSummary in app.js). -->
         <p id="summarySaveError" class="summary-text error" role="status" hidden></p>
         <p id="summaryCategories" class="summary-text" hidden></p>
+        <!-- "A time capsule is ready to open in your history.": once per capsule (renderCapsuleNote in
+             app.js, js/capsules.js). -->
+        <p id="summaryCapsule" class="summary-text" hidden></p>
       </div>
       <button id="newSessionButton" type="button" class="btn primary big" data-i18n="summary.again">Start another session</button>
-      <a href="history.html" class="btn big link-btn" data-i18n="summary.history">See your history</a>
+      <a id="summaryHistoryLink" href="history.html" class="btn big link-btn"><span data-i18n="summary.history">See your history</span><span class="capsule-badge" aria-hidden="true" hidden></span></a>
     </section>
 
     <!-- ========== OPEN IN ANOTHER TAB ========== -->
@@ -522,6 +527,7 @@
   <script src="js/history-store.js"></script>
   <script src="js/plans.js"></script>
   <script src="js/duration-sheet.js"></script>
+  <script src="js/capsules.js"></script>
   <script src="js/language-picker.js"></script>
   <script src="js/focus-sound.js"></script>
   <script src="js/app.js"></script>

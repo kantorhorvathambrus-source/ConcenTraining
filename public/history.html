@@ -90,6 +90,15 @@
          like the empty state. -->
     <p id="historyStorageNote" class="error storage-warning" role="status" tabindex="-1" hidden></p>
 
+    <!-- Time capsule (js/capsules.js, drawn by history.js): messages whose day or session time has
+         come, oldest first, each with an Open button. Outside #historyContent, so they also show
+         with no sessions. A sealed message's text is never put on the page, only after Open. -->
+    <section id="capsuleReady" class="capsule-ready" aria-labelledby="capsuleReadyTitle" hidden>
+      <h2 id="capsuleReadyTitle" class="visually-hidden" data-i18n="capsule.title">Time capsule</h2>
+      <ul id="capsuleReadyList" class="capsule-list"></ul>
+      <p id="capsuleReadyStatus" class="delete-status capsule-status" role="status"></p>
+    </section>
+
     <!-- tabindex="-1": gets the focus after the last session is deleted (history.js). -->
     <p id="historyEmpty" class="empty-state" tabindex="-1" hidden>
       <span data-i18n="history.empty">No finished sessions yet. Every session that runs at least 1 minute shows up here once it ends.</span>
@@ -150,6 +159,69 @@
          read out) after the last session is deleted. Takes no space while it's empty. -->
     <p id="deleteStatus" class="delete-status" role="status"></p>
 
+    <!-- Time capsule (js/capsules.js, drawn by history.js; "Time capsule" in the README). Outside
+         #historyContent, so it shows with no sessions too. The form is written here and never
+         rebuilt by a redraw, so a change in another tab can't wipe what's being typed. Hidden while
+         CAPSULES_ON is false. -->
+    <section id="capsules" class="history-section capsules" aria-labelledby="capsuleTitle" hidden>
+      <h2 id="capsuleTitle" tabindex="-1" data-i18n="capsule.title">Time capsule</h2>
+      <p class="muted small" data-i18n="capsule.intro">Write a message to your future self. It stays sealed until a day and time you pick, or until you've spent a few more hours in sessions.</p>
+      <ul id="capsuleSealedList" class="capsule-list"></ul>
+      <button id="capsuleWrite" type="button" class="btn wide" data-i18n="capsule.write">Write a message</button>
+      <p id="capsuleLimit" class="muted small capsule-limit" hidden></p>
+
+      <form id="capsuleForm" class="capsule-form" novalidate hidden>
+        <label for="capsuleText" class="capsule-label" data-i18n="capsule.textLabel">Your message</label>
+        <textarea id="capsuleText" class="text-input capsule-textarea" rows="5" maxlength="500"
+                  aria-describedby="capsuleCount"></textarea>
+        <!-- The visible counter changes on every key; the hidden copy next to it is read out once
+             typing pauses (history.js), so a screen reader isn't flooded. -->
+        <p id="capsuleCount" class="muted small capsule-count" aria-hidden="true"></p>
+        <p id="capsuleCountSpoken" class="visually-hidden" aria-live="polite"></p>
+
+        <fieldset class="capsule-opens">
+          <legend class="capsule-label" data-i18n="capsule.opens">Opens</legend>
+          <div class="segmented capsule-segmented">
+            <button id="capsuleByDate" type="button" class="segmented-option" aria-pressed="true"
+                    data-i18n="capsule.onDate">At a day and time</button>
+            <button id="capsuleByTime" type="button" class="segmented-option" aria-pressed="false"
+                    data-i18n="capsule.afterTime">After more session time</button>
+          </div>
+          <!-- What the active mode is still missing ("Pick a day and time first."), or that a picked
+               time has become too soon. Each mode keeps its own choice (history.js). -->
+          <p id="capsuleMissing" class="muted small capsule-missing" aria-live="polite" hidden></p>
+          <!-- Opens the day and time sheet (js/date-sheet.js). Its name is the label plus what it
+               shows: "Pick a day and time", or the picked moment ("Tomorrow, 8:00"; history.js). -->
+          <div id="capsuleDatePart">
+            <p id="capsuleDateLabel" class="capsule-label capsule-date-label" data-i18n="capsule.dayTimeLabel">Day and time</p>
+            <button id="capsuleDate" type="button" class="text-input capsule-date is-empty" aria-haspopup="dialog"
+                    aria-labelledby="capsuleDateLabel capsuleDateText">
+              <svg class="capsule-date-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/>
+                <path d="M3.5 10h17M8 3v4M16 3v4"/>
+                <path class="capsule-date-icon-dot" d="M8 14h2M14 14h2M8 17.5h2"/>
+              </svg>
+              <span id="capsuleDateText">Pick a day and time</span>
+            </button>
+          </div>
+          <div id="capsuleTimePart" class="capsule-chips" role="group" aria-labelledby="capsuleByTime" hidden></div>
+        </fieldset>
+
+        <p id="capsuleError" class="error capsule-error" role="status" hidden></p>
+        <div class="dialog-actions capsule-actions">
+          <button id="capsuleCancel" type="button" class="btn" data-i18n="common.cancel">Cancel</button>
+          <button id="capsuleSeal" type="submit" class="btn primary" data-i18n="capsule.seal" disabled>Seal it</button>
+        </div>
+      </form>
+
+      <div id="capsuleOpenedPart" class="capsule-opened" hidden>
+        <h3 data-i18n="capsule.openedTitle">Opened messages</h3>
+        <ul id="capsuleOpenedList" class="capsule-list"></ul>
+      </div>
+      <p id="capsuleStatus" class="delete-status capsule-status" role="status"></p>
+      <p class="muted small" data-i18n="capsule.exportNote">Time capsules aren't in the export file yet.</p>
+    </section>
+
     <section id="backup" class="history-section">
       <h2 data-i18n="history.backupTitle">Backup</h2>
       <p class="muted small" data-i18n="history.backupText">Your sessions are saved automatically on this device. Export a copy before you switch phones or clear your browser data. Export saves all your sessions as a .json file. Import adds the sessions from such a file; sessions you already have are skipped. Only the newest 1000 sessions are kept: if the total goes over 1000, the oldest sessions are removed.</p>
@@ -180,12 +252,28 @@
     </form>
   </dialog>
 
+  <!-- Opened by a time capsule's Delete button (sealed or opened). Like the session dialog: Cancel
+       first, so it has the focus; Esc and Back close it like Cancel. The text is set by history.js. -->
+  <dialog id="capsuleDeleteDialog" aria-labelledby="capsuleDeleteTitle" aria-describedby="capsuleDeleteText">
+    <form method="dialog">
+      <h2 id="capsuleDeleteTitle" data-i18n="capsule.deleteTitle">Delete this message?</h2>
+      <p id="capsuleDeleteText"></p>
+      <div class="dialog-actions">
+        <button value="cancel" class="btn" data-i18n="common.cancel">Cancel</button>
+        <button value="delete" class="btn danger" data-i18n="common.delete">Delete</button>
+      </div>
+    </form>
+  </dialog>
+
   <script src="js/data/characters.js"></script>
   <script src="js/data/messages.js"></script>
   <script src="js/avatar-parts.js"></script>
   <script src="js/avatar-costumes.js"></script>
   <script src="js/custom-characters.js"></script>
   <script src="js/history-store.js"></script>
+  <script src="js/capsules.js"></script>
+  <script src="js/date-sheet.js"></script>
+  <script src="js/time-sheet.js"></script>
   <script src="js/language-picker.js"></script>
   <script src="js/history.js"></script>
   <script src="js/sw-register.js"></script>
