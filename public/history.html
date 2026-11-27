@@ -142,10 +142,13 @@
 
       <!-- Inner weather (js/mood.js, drawn by renderMoods in history.js; "Inner weather" in the
            README): the last 7 days, today on the right, one icon per day (the day's most frequent
-           mood) or an empty dot. Only while MOOD_ON and at least one session has a mood. -->
+           mood) or an empty dot. Each day is a button: tapping it shows "Rainy: it was hard going"
+           (or "Not marked") in the line under the strip, which keeps its space while empty. Only
+           while MOOD_ON and at least one session has a mood. -->
       <section id="moodSection" class="history-section mood-section" aria-labelledby="moodTitle" hidden>
         <h2 id="moodTitle" data-i18n="mood.title">Inner weather</h2>
         <ol id="moodWeek" class="mood-week"></ol>
+        <p id="moodDayLine" class="mood-picked mood-day-line"></p>
         <p class="muted small" data-i18n="mood.note">How your sessions felt, as you marked them after each one.</p>
       </section>
 

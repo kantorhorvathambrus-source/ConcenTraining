@@ -18,8 +18,11 @@
 
 const MOOD_KEY = "ct_moods_v1";
 
-// The moods, in the order they're offered. Their names are the i18n keys mood.<id>.
-const MOOD_IDS = ["sunny", "partly", "cloudy", "rain", "storm", "fog"];
+// The moods: six steps of one scale, from easy to hard, in the order they're offered (left to right
+// on the summary). Each has a name (i18n key mood.<id>, "Rainy") and a short meaning
+// (mood.meaning.<id>, "it was hard going"), shown together as "Rainy: it was hard going" (moodText).
+// An id saved by an earlier test build that isn't here any more ("fog") is skipped as unknown.
+const MOOD_IDS = ["sunny", "partly", "cloudy", "drizzle", "rain", "storm"];
 
 // The switch for the whole feature. It is true: Inner weather is on in production
 // (https://concentraining.com) and on the GitHub Pages backup. Setting it to false turns it off
@@ -41,6 +44,12 @@ const MOOD_TEST_SITE = (() => {
 
 // Whether Inner weather is on in this page: every check uses this.
 const MOOD_ON = MOOD_ENABLED || MOOD_TEST_SITE;
+
+// "Rainy: it was hard going": a mood's name and meaning, as every screen shows and reads it (the
+// summary's line and buttons, the history page's icons and strip).
+function moodText(id) {
+  return t("mood.nameMeaning", { name: t(`mood.${id}`), meaning: t(`mood.meaning.${id}`) });
+}
 
 // ---------- reading ----------
 
@@ -187,13 +196,15 @@ function moodArt(id) {
     partly: `<circle class="mood-art-sun" cx="20" cy="18" r="8"/>
       <path class="mood-art-rays" d="M20 3 V6 M5 18 H8 M9.4 7.4 L11.5 9.5 M30.6 7.4 L28.5 9.5 M9.4 28.6 L11.5 26.5"/>
       <path class="mood-art-cloud" d="${MOOD_SMALL_CLOUD}"/>`,
-    cloudy: `<path class="mood-art-cloud mood-art-cloud-back" d="M27 27 H47 A7 7 0 0 0 46 13 A9 9 0 0 0 29 14 A6 6 0 0 0 27 27 Z"/>
-      <path class="mood-art-cloud" d="${MOOD_SMALL_CLOUD}"/>`,
+    cloudy: `<g transform="translate(-6 0)">
+      <path class="mood-art-cloud mood-art-cloud-back" d="M27 27 H47 A7 7 0 0 0 46 13 A9 9 0 0 0 29 14 A6 6 0 0 0 27 27 Z"/>
+      <path class="mood-art-cloud" d="${MOOD_SMALL_CLOUD}"/></g>`,
+    drizzle: `<path class="mood-art-cloud" d="${MOOD_CLOUD}"/>
+      <path class="mood-art-drizzle" d="M21 41 L20.4 43 M31 41 L30.4 43 M26 46 L25.4 48 M36 46 L35.4 48"/>`,
     rain: `<path class="mood-art-cloud" d="${MOOD_CLOUD}"/>
-      <path class="mood-art-rain" d="M20 40 L18 46 M29 40 L27 46 M38 40 L36 46"/>`,
+      <path class="mood-art-rain" d="M19 39 L16.5 47 M27 39 L24.5 47 M35 39 L32.5 47 M43 39 L40.5 47"/>`,
     storm: `<path class="mood-art-cloud mood-art-cloud-dark" d="${MOOD_CLOUD}"/>
       <path class="mood-art-bolt" d="M30 33 L24 42 H29 L26 49 L35 38 H30 L33 33 Z"/>`,
-    fog: `<path class="mood-art-fog" d="M10 16 H38 M16 24 H46 M10 32 H40 M18 40 H44"/>`,
   };
   const inner = parts[id] || `<circle class="mood-art-empty" cx="28" cy="26" r="5"/>`;
   return `<svg class="mood-art${id ? "" : " mood-art-none"}" viewBox="0 0 56 52" aria-hidden="true" focusable="false">${inner}</svg>`;

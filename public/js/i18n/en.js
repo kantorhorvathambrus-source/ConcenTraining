@@ -475,23 +475,38 @@ I18N_TEXTS.en = {
   "dateSheet.hint": "At least 15 minutes from now, up to 2 years ahead.",
 
   // ---------- inner weather (summary question, setup checkbox, history page; js/mood.js) ----------
-  // The setup checkbox (index.html), the summary's question and its six moods (renderMoodRow in
-  // app.js), and the history page's 7-day strip (renderMoods in history.js). Factual, never judging.
+  // The setup checkbox (index.html), the summary's question (renderMoodRow in app.js) and the
+  // history page's 7-day strip (renderMoods in history.js). The six moods are six steps of one
+  // scale, from easy to hard. Factual, never judging.
   "mood.setupQuestion": "Ask how it felt at the end",
-  "mood.question": "How did it feel inside?",
+  "mood.question": "What was the weather like inside?",
+  // Under the two ends of the summary's row of six icons.
+  "mood.easy": "Easy",
+  "mood.hard": "Hard",
+  // The six moods' names, from easy to hard.
   "mood.sunny": "Sunny",
   "mood.partly": "Partly cloudy",
   "mood.cloudy": "Cloudy",
+  "mood.drizzle": "Drizzle",
   "mood.rain": "Rainy",
   "mood.storm": "Stormy",
-  "mood.fog": "Foggy",
+  // What each mood means. Shown after its name in mood.nameMeaning ("Rainy: it was hard going"),
+  // so they start in lower case where the language allows. Short: the whole line fits at 320 px.
+  "mood.meaning.sunny": "it went easily",
+  "mood.meaning.partly": "it mostly went well",
+  "mood.meaning.cloudy": "it was mixed",
+  "mood.meaning.drizzle": "it was a bit hard",
+  "mood.meaning.rain": "it was hard going",
+  "mood.meaning.storm": "it was really hard",
+  // A mood's name and meaning: the summary's line, every button's and icon's name, the strip's line.
+  "mood.nameMeaning": "{name}: {meaning}",
   "mood.error": "Couldn't save that. Try again.",
   "mood.title": "Inner weather",
   "mood.note": "How your sessions felt, as you marked them after each one.",
-  // The strip's day without a mood, read in mood.dayLabel (screen readers).
-  "mood.none": "not marked",
-  // A day of the strip for screen readers: "Monday 24 November: Sunny".
-  "mood.dayLabel": "{day}: {mood}",
+  // A day of the strip without a mood (the line under the strip, and in mood.dayLabel).
+  "mood.none": "Not marked",
+  // A day of the strip for screen readers: "Monday 24 November, Rainy: it was hard going".
+  "mood.dayLabel": "{day}, {mood}",
   "mood.stripLabel": "Last 7 days",
 
   // ---------- export / import ----------

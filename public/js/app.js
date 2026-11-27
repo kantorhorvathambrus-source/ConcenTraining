@@ -3428,9 +3428,11 @@ function renderSummary(saved) {
 
 // ---------- inner weather (js/mood.js; "Inner weather" in the README) ----------
 
-// The summary's optional question "How did it feel inside?": six weather buttons, at most one picked.
-// It records a feeling, not performance: nothing else on any screen changes with the pick (no pose,
-// no message, no text about it). Shown only for sessions that are in the history, while MOOD_ON
+// The summary's optional question "What was the weather like inside?": six weather icon buttons in
+// one row, six steps of one scale from sunny (easy) to stormy (hard), at most one picked. Each
+// button's name is "Rainy: it was hard going" (moodText in js/mood.js); the line under the row shows
+// the picked one the same way. It records a feeling, not performance: nothing else on any screen
+// changes with the pick (no pose, no message). Shown only for sessions that are in the history, while MOOD_ON
 // and the setup checkbox (prefs.moodQuestion) are on. A tap saves at once; tapping the picked one
 // again removes it; picking another replaces it. A plan asks once and saves the mood for each of
 // its saved blocks (startedAts). The mood is keyed by startedAt in ct_moods_v1, never in the
@@ -3469,11 +3471,8 @@ function renderMoodRow(startedAts) {
     button.type = "button";
     button.className = "mood-option";
     button.dataset.mood = id;
+    button.setAttribute("aria-label", moodText(id));
     button.innerHTML = moodArt(id);
-    const label = document.createElement("span");
-    label.className = "mood-option-label";
-    label.textContent = t(`mood.${id}`);
-    button.append(label);
     options.append(button);
   }
   syncMoodButtons();
@@ -3490,10 +3489,13 @@ function safeRenderMoodRow(startedAts) {
   }
 }
 
+// The buttons' pressed state and the line under them ("Rainy: it was hard going", empty when none
+// is picked; the line keeps its height either way, so nothing jumps).
 function syncMoodButtons() {
   for (const button of $("#summaryMoodOptions").children) {
     button.setAttribute("aria-pressed", String(button.dataset.mood === moodRow.picked));
   }
+  $("#summaryMoodPicked").textContent = moodRow.picked ? moodText(moodRow.picked) : "";
 }
 
 function clearMoodError() {

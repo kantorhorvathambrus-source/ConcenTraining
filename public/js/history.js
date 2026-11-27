@@ -507,7 +507,7 @@ function renderSessionList(history, moods) {
       const icon = document.createElement("span");
       icon.className = "session-mood";
       icon.setAttribute("role", "img");
-      icon.setAttribute("aria-label", t(`mood.${mood}`));
+      icon.setAttribute("aria-label", moodText(mood));
       icon.innerHTML = moodArt(mood);
       item.querySelector(".session-item-main > div").append(" ", icon);
     }
@@ -611,32 +611,51 @@ function shownMoods() {
   return moodOn() ? loadMoods() : new Map();
 }
 
+// The day picked in the strip ("YYYY-MM-DD", see dayKey), or null: its line stays through redraws
+// while that day is still one of the 7.
+let moodDayPicked = null;
+
 // The "Inner weather" section: only when at least one session in the history has a mood. The last
 // 7 days (weekMoods in js/mood.js), today on the right: the day's icon, or an empty dot for a day
 // without a mood, with its weekday under it (short, or narrow in a narrow section: see .mood-section
-// in css/style.css). Screen readers get the full date and the mood.
+// in css/style.css). Each day is a toggle button named with its full date and mood ("Monday 24
+// November, Rainy: it was hard going"); tapping it shows "Rainy: it was hard going" (or "Not marked")
+// in the line under the strip, tapping it again clears the line.
 function renderMoods(history, moods, now) {
   const section = document.getElementById("moodSection");
   const any = history.some((entry) => entry && moods.has(entry.startedAt));
   section.hidden = !any;
   const list = document.getElementById("moodWeek");
+  // A redraw replaces the buttons: the focused one gets its replacement's focus back.
+  const focusedDay = list.contains(document.activeElement) ? document.activeElement.dataset.day : null;
   list.textContent = "";
-  if (!any) return;
+  if (!any) {
+    moodDayPicked = null;
+    showMoodDay(null);
+    return;
+  }
   list.setAttribute("aria-label", t("mood.stripLabel"));
-  for (const { day, mood } of weekMoods(history, moods, now)) {
+  const week = weekMoods(history, moods, now);
+  if (!week.some(({ day }) => dayKey(day) === moodDayPicked)) moodDayPicked = null;
+  for (const { day, mood } of week) {
+    const key = dayKey(day);
     const item = document.createElement("li");
     item.className = "mood-day";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "mood-day-button";
+    button.dataset.day = key;
+    button.dataset.text = mood ? moodText(mood) : t("mood.none");
+    button.setAttribute("aria-pressed", String(key === moodDayPicked));
+    button.setAttribute("aria-label", t("mood.dayLabel", {
+      day: I18N.formatDate(day, { weekday: "long", day: "numeric", month: "long" }),
+      mood: button.dataset.text,
+    }));
     const icon = document.createElement("span");
     icon.className = "mood-day-icon";
-    icon.setAttribute("role", "img");
-    icon.setAttribute("aria-label", t("mood.dayLabel", {
-      day: I18N.formatDate(day, { weekday: "long", day: "numeric", month: "long" }),
-      mood: t(mood ? `mood.${mood}` : "mood.none"),
-    }));
     icon.innerHTML = moodArt(mood);
     const label = document.createElement("span");
     label.className = "mood-day-label";
-    label.setAttribute("aria-hidden", "true"); // the icon's name already has the full date
     const short = document.createElement("span");
     short.className = "mood-day-short";
     short.textContent = I18N.formatDate(day, { weekday: "short" });
@@ -644,9 +663,28 @@ function renderMoods(history, moods, now) {
     narrow.className = "mood-day-narrow";
     narrow.textContent = I18N.formatDate(day, { weekday: "narrow" });
     label.append(short, narrow);
-    item.append(icon, label);
+    button.append(icon, label);
+    item.append(button);
     list.append(item);
+    if (key === focusedDay) button.focus();
   }
+  showMoodDay(list.querySelector(`[data-day="${moodDayPicked}"]`));
+}
+
+// The line under the strip: the picked day's "Rainy: it was hard going" or "Not marked", empty when
+// no day is picked (it keeps its height, so nothing moves).
+function showMoodDay(button) {
+  document.getElementById("moodDayLine").textContent = button ? button.dataset.text : "";
+}
+
+function onMoodDayClick(event) {
+  const button = event.target.closest(".mood-day-button");
+  if (!button) return;
+  moodDayPicked = moodDayPicked === button.dataset.day ? null : button.dataset.day;
+  for (const other of document.querySelectorAll("#moodWeek .mood-day-button")) {
+    other.setAttribute("aria-pressed", String(other.dataset.day === moodDayPicked));
+  }
+  showMoodDay(moodDayPicked ? button : null);
 }
 
 // "Your browser isn't letting this site save data": in place of the empty state, or above the
@@ -1469,6 +1507,7 @@ function init() {
     if (file) importHistory(file);
   });
   document.getElementById("editButton").addEventListener("click", toggleEditing);
+  document.getElementById("moodWeek").addEventListener("click", onMoodDayClick);
   document.getElementById("sessionList").addEventListener("click", (event) => {
     const button = event.target.closest(".session-delete");
     if (button) confirmDelete(button);

@@ -2716,10 +2716,11 @@ a {
 
 /* ---------- inner weather (js/mood.js; "Inner weather" in the README) ---------- */
 
-/* The summary's question "How did it feel inside?": six toggle buttons. How many per row follows
-   the question's own width in rem (a container query), so a larger text size gets fewer, wider
-   buttons: six in a row where there's room, three on a phone, two, and at a very large text size
-   one per row with the icon beside the name. Without container queries: three per row. */
+/* The summary's question "What was the weather like inside?": six icon buttons in one row, sunny
+   (easy) on the left to stormy (hard) on the right, so the row reads as the scale, with "Easy" and
+   "Hard" under its ends. The buttons are sized in rem (at least 44 px at the normal text size), so
+   at a large text size they grow; once six no longer fit, the row wraps to 3 + 3, keeping the order
+   (a container query on the question's own width). */
 .mood-ask {
   max-width: 34rem;
   margin: 0 auto 28px;
@@ -2731,48 +2732,50 @@ a {
   font-weight: 600;
 }
 
-.mood-options {
+/* As wide as the row (up to the screen's width), so the end labels sit at its ends: both under the
+   row, or, once it wraps to 3 + 3, "Easy" above the first button and "Hard" under the last. */
+.mood-scale {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-areas:
+    "options options"
+    "easy hard";
+  column-gap: 8px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto;
 }
 
-@container (min-width: 33rem) {
-  .mood-options {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-  }
+.mood-options {
+  grid-area: options;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(2.75rem, 3.75rem));
+  gap: 0.25rem;
+  justify-content: center;
 }
 
-/* A mood: its icon and its name under it. Picked: an amber ring, a tint and a check mark in the
-   corner (like a picked character), so it isn't marked by colour alone. */
+/* A mood: its icon only (its name and meaning are the button's name, and the line under the row
+   shows the picked one). Picked: an amber ring, a tint and a check mark in the corner, so it isn't
+   marked by colour alone. */
 .mood-option {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
+  display: grid;
+  place-items: center;
   min-width: 44px;
   min-height: 44px;
-  padding: 10px 4px 8px;
+  aspect-ratio: 1;
+  padding: 0;
   border: 1.5px solid transparent;
-  border-radius: var(--radius-tile);
+  border-radius: var(--radius-field);
   background: var(--color-control);
-  font-size: var(--fs-13);
-  font-weight: 600;
-  line-height: 1.2;
-  overflow-wrap: anywhere;
-  hyphens: auto;
   transition: transform var(--dur) var(--ease), opacity var(--dur) var(--ease);
 }
 
 .mood-option .mood-art {
-  flex: none;
-  width: 40px;
-  height: 37px;
+  width: 78%;
+  height: auto;
 }
 
-/* The button itself is always the tap's target, never a line of the icon or the label. */
+/* The button itself is always the tap's target, never a line of the icon. */
 .mood-option > * {
   pointer-events: none;
 }
@@ -2786,10 +2789,10 @@ a {
 .mood-option[aria-pressed="true"]::after {
   content: "";
   position: absolute;
-  top: 5px;
-  right: 5px;
-  width: 16px;
-  height: 16px;
+  top: 2px;
+  right: 2px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: var(--color-accent) var(--img-check-on-accent) center / 100% no-repeat;
 }
@@ -2804,35 +2807,54 @@ a {
   }
 }
 
-/* Fewer per row at a large text size (after the rules above, so these win). */
-@container (max-width: 16rem) {
+/* "Easy" at the sunny end, "Hard" at the stormy end. */
+.mood-end {
+  margin-top: 6px;
+  font-size: var(--fs-12);
+  color: var(--color-text-muted);
+}
+
+.mood-end-easy {
+  grid-area: easy;
+  justify-self: start;
+}
+
+.mood-end-hard {
+  grid-area: hard;
+  justify-self: end;
+}
+
+/* 3 + 3 once six don't fit (6 × 2.75rem plus the gaps), keeping the order; "Easy" moves above the
+   first row, next to sunny. */
+@container (max-width: 17.7rem) {
+  .mood-scale {
+    grid-template-areas:
+      "easy"
+      "options"
+      "hard";
+  }
+
   .mood-options {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(2.75rem, 3.75rem));
+  }
+
+  .mood-end-easy {
+    margin: 0 0 6px;
   }
 }
 
-@container (max-width: 11.5rem) {
-  .mood-options {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .mood-option {
-    flex-direction: row;
-    justify-content: flex-start;
-    gap: 12px;
-    padding: 8px 32px 8px 12px; /* room on the right for the check mark */
-    text-align: start;
-  }
-
-  .mood-option[aria-pressed="true"]::after {
-    top: 50%;
-    right: 10px;
-    margin-top: -8px;
-  }
+/* "Rainy: it was hard going": the picked mood. Keeps one line's height when empty, so picking or
+   removing a mood never moves anything below it. */
+.mood-picked {
+  min-height: 1.4em;
+  margin: 10px 0 0;
+  font-size: var(--fs-15);
+  font-weight: 600;
+  line-height: 1.4;
 }
 
 .mood-ask .summary-text.error {
-  margin-top: 10px;
+  margin-top: 6px;
 }
 
 /* The history page: the small icon at the end of a session row's first line. */
@@ -2856,9 +2878,9 @@ a {
 .mood-week {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 4px;
-  margin: 0 0 10px;
-  padding: 12px 8px 10px;
+  gap: 2px;
+  margin: 0;
+  padding: 6px 4px;
   list-style: none;
   background: var(--color-surface);
   border-radius: var(--radius-card);
@@ -2867,10 +2889,39 @@ a {
 
 .mood-day {
   display: flex;
+  min-width: 0;
+}
+
+/* A day: a toggle button as wide as its column and at least 44 px tall. Picked (its line shows
+   under the strip): the same amber ring and tint as a picked mood. */
+.mood-day-button {
+  display: flex;
+  flex: 1;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 4px;
   min-width: 0;
+  min-height: 44px;
+  padding: 6px 0 4px;
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-field);
+  background: transparent;
+}
+
+.mood-day-button > * {
+  pointer-events: none;
+}
+
+.mood-day-button[aria-pressed="true"] {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+@media (hover: hover) {
+  .mood-day-button:hover:not([aria-pressed="true"]) {
+    background: var(--color-control);
+  }
 }
 
 .mood-day-icon {
@@ -2907,6 +2958,11 @@ a {
 }
 
 /* Today, the last day */
+/* The line under the strip: the picked day's mood. */
+.mood-day-line {
+  margin: 8px 0 6px;
+}
+
 .mood-day:last-child .mood-day-label {
   color: var(--color-text);
   font-weight: 700;
@@ -2959,11 +3015,12 @@ a {
   stroke-linejoin: round;
 }
 
-.mood-art-fog {
+.mood-art-drizzle {
   fill: none;
-  stroke: var(--color-text-muted);
-  stroke-width: 3.5;
+  stroke: var(--color-info-text);
+  stroke-width: 2.25;
   stroke-linecap: round;
+  opacity: 0.75;
 }
 
 /* A day without a mood: a small, quiet dot. */

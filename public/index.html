@@ -403,13 +403,21 @@
              app.js, js/capsules.js). -->
         <p id="summaryCapsule" class="summary-text" hidden></p>
       </div>
-      <!-- Inner weather (js/mood.js; renderMoodRow in app.js): "How did it feel inside?" and six
-           toggle buttons, built in the current language. Only for a session (or a plan's blocks)
-           in the history, while MOOD_ON and the setup checkbox are on. Skippable: nothing happens
-           without a tap, and a pick changes nothing else on the screen. -->
+      <!-- Inner weather (js/mood.js; renderMoodRow in app.js): "What was the weather like inside?"
+           and six icon toggle buttons in one row, from sunny (easy) to stormy (hard), so the row
+           reads as the scale; "Easy" and "Hard" under its ends (aria-hidden: every button's name
+           already says "Rainy: it was hard going"). The line under it shows the picked mood and keeps
+           its space when none is picked. Only for a session (or a plan's blocks) in the history,
+           while MOOD_ON and the setup checkbox are on. Skippable: nothing happens without a tap, and
+           a pick changes nothing else on the screen. -->
       <div id="summaryMood" class="mood-ask" role="group" aria-labelledby="summaryMoodTitle" hidden>
-        <p id="summaryMoodTitle" class="mood-ask-title" data-i18n="mood.question">How did it feel inside?</p>
-        <div id="summaryMoodOptions" class="mood-options"></div>
+        <p id="summaryMoodTitle" class="mood-ask-title" data-i18n="mood.question">What was the weather like inside?</p>
+        <div class="mood-scale">
+          <span class="mood-end mood-end-easy" aria-hidden="true" data-i18n="mood.easy">Easy</span>
+          <div id="summaryMoodOptions" class="mood-options"></div>
+          <span class="mood-end mood-end-hard" aria-hidden="true" data-i18n="mood.hard">Hard</span>
+        </div>
+        <p id="summaryMoodPicked" class="mood-picked"></p>
         <p id="summaryMoodError" class="summary-text error" role="status" hidden></p>
       </div>
       <button id="newSessionButton" type="button" class="btn primary big" data-i18n="summary.again">Start another session</button>
