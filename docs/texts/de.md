@@ -566,7 +566,7 @@ How to read it:
 | `capsule.textLabel` | `Your message` | `Deine Nachricht` |
 | `capsule.count` | `{count}/{max}` | `{count}/{max}` |
 | `capsule.opens` | `Opens` | `Öffnet sich` |
-| `capsule.onDate` | `On a date` | `An einem Datum` |
+| `capsule.onDate` | `At a day and time` | `Zu einem bestimmten Zeitpunkt` |
 | `capsule.afterTime` | `After more session time` | `Nach mehr Rundenzeit` |
 | `capsule.chipHours` | `+{hours}~h` | `+{hours}~Std.` |
 | `capsule.chipMin` | `+{minutes}~min` | `+{minutes}~Min.` |

@@ -394,7 +394,7 @@ I18N_TEXTS.hu = {
   "capsule.textLabel": "Az üzeneted",
   "capsule.count": "{count}/{max}",
   "capsule.opens": "Mikor nyíljon ki",
-  "capsule.onDate": "Egy adott napon",
+  "capsule.onDate": "Adott időpontban",
   "capsule.afterTime": "További munkamenet-idő után",
   "capsule.chipHours": "+{hours}\u00a0óra",
   "capsule.chipMin": "+{minutes}\u00a0perc",

@@ -566,7 +566,7 @@ How to read it:
 | `capsule.textLabel` | `Your message` | `Pesanmu` |
 | `capsule.count` | `{count}/{max}` | `{count}/{max}` |
 | `capsule.opens` | `Opens` | `Terbuka` |
-| `capsule.onDate` | `On a date` | `Pada tanggal tertentu` |
+| `capsule.onDate` | `At a day and time` | `Pada hari dan jam tertentu` |
 | `capsule.afterTime` | `After more session time` | `Setelah waktu sesi tambahan` |
 | `capsule.chipHours` | `+{hours}~h` | `+{hours}~jam` |
 | `capsule.chipMin` | `+{minutes}~min` | `+{minutes}~mnt` |

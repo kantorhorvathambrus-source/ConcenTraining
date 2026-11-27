@@ -400,7 +400,7 @@ I18N_TEXTS.de = {
   "capsule.textLabel": "Deine Nachricht",
   "capsule.count": "{count}/{max}",
   "capsule.opens": "Öffnet sich",
-  "capsule.onDate": "An einem Datum",
+  "capsule.onDate": "Zu einem bestimmten Zeitpunkt",
   "capsule.afterTime": "Nach mehr Rundenzeit",
   "capsule.chipHours": "+{hours}\u00a0Std.",
   "capsule.chipMin": "+{minutes}\u00a0Min.",

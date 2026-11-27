@@ -384,7 +384,7 @@ I18N_TEXTS.it = {
   "capsule.textLabel": "Il tuo messaggio",
   "capsule.count": "{count}/{max}",
   "capsule.opens": "Si apre",
-  "capsule.onDate": "In una data",
+  "capsule.onDate": "Giorno e ora precisi",
   "capsule.afterTime": "Dopo altro tempo in sessione",
   "capsule.chipHours": "+{hours}\u00a0h",
   "capsule.chipMin": "+{minutes}\u00a0min",

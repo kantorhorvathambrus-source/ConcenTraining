@@ -411,7 +411,7 @@ I18N_TEXTS.fr = {
   "capsule.textLabel": "Ton message",
   "capsule.count": "{count}/{max}",
   "capsule.opens": "Ouverture",
-  "capsule.onDate": "À une date",
+  "capsule.onDate": "À un jour et une heure précis",
   "capsule.afterTime": "Après plus de temps en séance",
   "capsule.chipHours": "+{hours}\u00a0h",
   "capsule.chipMin": "+{minutes}\u00a0min",

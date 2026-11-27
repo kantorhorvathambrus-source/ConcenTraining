@@ -1962,7 +1962,7 @@ and `ct_capsules_v1` is ignored but kept, so switching it on again brings every 
   muted line "Time capsules aren't in the export file yet."
 - **Write a message** opens an inline form (not a dialog): "Your message" (up to 500 characters,
   counter "{count}/500"; the trimmed text can't be empty) and **Opens**, a two-way toggle:
-  - **On a date:** a visible label "Day and time" (hu "Nap és időpont") above a field-like button
+  - **At a day and time:** a visible label "Day and time" (hu "Nap és időpont") above a field-like button
     with a calendar icon that says "Pick a day and time" (grey) and opens the in-app
     [day and time sheet](#the-day-and-time-sheet): any moment from 15 minutes from now to 2 years from
     now. After **Set** it shows "Today, 20:00", "Tomorrow, 8:00" or the date with weekday, year and
@@ -1981,7 +1981,7 @@ and `ct_capsules_v1` is ignored but kept, so switching it on again brings every 
     `isValidOpening` accepts any whole number of minutes from `CAPSULE_CUSTOM_MIN_MS` (15 min) to
     `CAPSULE_CUSTOM_MAX_MS` (999 h), plus exactly 1 minute on the test sites; `cleanCapsule` accepts
     any positive whole number of ms, so older or hand-made amounts still read.
-- **Each mode keeps its own choice:** switching between **On a date** and **After more session time**
+- **Each mode keeps its own choice:** switching between **At a day and time** and **After more session time**
   loses nothing; the active mode's choice is what gets sealed. While the active mode has no choice
   yet, a muted line under the two buttons says what's missing ("Pick a day and time first." / "Pick
   how much more session time first.").

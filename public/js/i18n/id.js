@@ -397,7 +397,7 @@ I18N_TEXTS.id = {
   "capsule.textLabel": "Pesanmu",
   "capsule.count": "{count}/{max}",
   "capsule.opens": "Terbuka",
-  "capsule.onDate": "Pada tanggal tertentu",
+  "capsule.onDate": "Pada hari dan jam tertentu",
   "capsule.afterTime": "Setelah waktu sesi tambahan",
   "capsule.chipHours": "+{hours}\u00a0jam",
   "capsule.chipMin": "+{minutes}\u00a0mnt",

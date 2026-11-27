@@ -566,7 +566,7 @@ How to read it:
 | `capsule.textLabel` | `Your message` | `Az üzeneted` |
 | `capsule.count` | `{count}/{max}` | `{count}/{max}` |
 | `capsule.opens` | `Opens` | `Mikor nyíljon ki` |
-| `capsule.onDate` | `On a date` | `Egy adott napon` |
+| `capsule.onDate` | `At a day and time` | `Adott időpontban` |
 | `capsule.afterTime` | `After more session time` | `További munkamenet-idő után` |
 | `capsule.chipHours` | `+{hours}~h` | `+{hours}~óra` |
 | `capsule.chipMin` | `+{minutes}~min` | `+{minutes}~perc` |

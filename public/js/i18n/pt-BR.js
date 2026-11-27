@@ -411,7 +411,7 @@ I18N_TEXTS["pt-BR"] = {
   "capsule.textLabel": "Sua mensagem",
   "capsule.count": "{count}/{max}",
   "capsule.opens": "Abre",
-  "capsule.onDate": "Em uma data",
+  "capsule.onDate": "Em um dia e horário definidos",
   "capsule.afterTime": "Depois de mais tempo em sessões",
   "capsule.chipHours": "+{hours}\u00a0h",
   "capsule.chipMin": "+{minutes}\u00a0min",
