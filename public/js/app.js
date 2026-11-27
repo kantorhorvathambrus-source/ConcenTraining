@@ -144,6 +144,8 @@ function countCharacterPick(character) {
 // plans are off (PLANS_ON).
 // ragebaitAccepted: the ids of the characters whose ragebait warning was accepted on Start
 // (see confirmRagebait).
+// moodQuestion: the setup checkbox "Ask how it felt at the end" (see "inner weather"). Prefs saved
+// before it existed get true.
 // focusNoise / focusNoiseVolume / focusMix / focusVolume: the Focus sound setting (see "focus sound"
 // and cleanFocusMix in js/focus-sound.js): the noise that's on ("off" or a noise) and its volume, the
 // Ambient mixer ({ rain: { on, volume } }, a sound is in it once it has been on) and the master volume,
@@ -154,7 +156,7 @@ const prefs = Object.assign(
     characterId: null, mode: "simple", minutes: 25, endSound: true, keepScreenOn: true, leaveReminder: false,
     homeScreenTipDismissed: false, persistRequested: false, howItWorksDismissed: false, usePlan: false,
     ragebaitAccepted: [], focusNoise: "off", focusNoiseVolume: FOCUS_LAYER_DEFAULT, focusMix: {},
-    focusVolume: FOCUS_VOLUME_DEFAULT,
+    focusVolume: FOCUS_VOLUME_DEFAULT, moodQuestion: true,
   },
   load(PREFS_KEY, {}),
 );
@@ -2594,6 +2596,9 @@ function renderPlanSummary(p) {
     $("#summaryCapsule").hidden = true;
   }
   safeRenderHistoryBadges(); // after the note, which may have saved readyAt
+
+  // How it felt: one question for the whole plan, saved for every block that's in the history.
+  safeRenderMoodRow(p.parts.filter((part) => part.status === "saved" || part.status === "exists").map((part) => part.startedAt));
 }
 
 // The amber circle on "Your history →" (setup) and "See your history" (summary): how many time
@@ -3189,7 +3194,7 @@ function finishSession(endedAt, keep = true, endPlan = false) {
     showScreen("setupScreen");
     return;
   }
-  renderSummary(saved === "failed");
+  renderSummary(saved);
   showScreen("summaryScreen");
   // Focus was on the session (now hidden): the title gets it, so a screen reader reads the result.
   $("#summaryTitle").focus({ preventScroll: true });
@@ -3341,8 +3346,10 @@ function showMotivation() {
 // The pose, title and message all follow the session result (great / okay / rough / early / short).
 // Both modes show a factual line (time and distractions); Simple mode also shows a sentence above it.
 // A short session only shows the title and the "not saved" note, in both modes.
-// saveFailed: the browser refused to store the session, so the summary says so.
-function renderSummary(saveFailed) {
+// saved: what saveFinishedSession returned ("saved", "exists", "short" or "failed"). "failed": the
+// browser refused to store the session, so the summary says so.
+function renderSummary(saved) {
+  const saveFailed = saved === "failed";
   $("#summaryBlocks").hidden = true; // a plan's lines (renderPlanSummary)
   $("#summaryBlockList").hidden = true;
   const character = sessionCharacter(session);
@@ -3414,6 +3421,129 @@ function renderSummary(saveFailed) {
     $("#summaryCapsule").hidden = true;
   }
   safeRenderHistoryBadges(); // after the note, which may have saved readyAt
+
+  // How it felt: only for a session that is in the history (not a short one, not a failed save).
+  safeRenderMoodRow(saved === "saved" || saved === "exists" ? [session.startedAt] : []);
+}
+
+// ---------- inner weather (js/mood.js; "Inner weather" in the README) ----------
+
+// The summary's optional question "How did it feel inside?": six weather buttons, at most one picked.
+// It records a feeling, not performance: nothing else on any screen changes with the pick (no pose,
+// no message, no text about it). Shown only for sessions that are in the history, while MOOD_ON
+// and the setup checkbox (prefs.moodQuestion) are on. A tap saves at once; tapping the picked one
+// again removes it; picking another replaces it. A plan asks once and saves the mood for each of
+// its saved blocks (startedAts). The mood is keyed by startedAt in ct_moods_v1, never in the
+// history entry.
+// startedAts: the sessions the question is about. picked: the mood shown as picked (only changed
+// after a write worked, so a failed one keeps the previous state).
+const moodRow = { startedAts: [], picked: null, errorTimer: null };
+
+// Whether Inner weather is on in this page. typeof: js/mood.js can be missing from a mixed-version
+// cache; the summary then simply has no question.
+function moodOn() {
+  return typeof MOOD_ON === "boolean" && MOOD_ON;
+}
+
+// The saved mood of the question's sessions: the first one that has one (a plan's blocks normally
+// all have the same).
+function savedMoodOfRow() {
+  const moods = loadMoods();
+  for (const startedAt of moodRow.startedAts) {
+    if (moods.has(startedAt)) return moods.get(startedAt);
+  }
+  return null;
+}
+
+function renderMoodRow(startedAts) {
+  const row = $("#summaryMood");
+  clearMoodError();
+  moodRow.startedAts = moodOn() && prefs.moodQuestion ? startedAts : [];
+  row.hidden = moodRow.startedAts.length === 0;
+  if (row.hidden) return;
+  moodRow.picked = savedMoodOfRow();
+  const options = $("#summaryMoodOptions");
+  options.textContent = "";
+  for (const id of MOOD_IDS) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "mood-option";
+    button.dataset.mood = id;
+    button.innerHTML = moodArt(id);
+    const label = document.createElement("span");
+    label.className = "mood-option-label";
+    label.textContent = t(`mood.${id}`);
+    button.append(label);
+    options.append(button);
+  }
+  syncMoodButtons();
+}
+
+// Never lets a mood problem break the summary: the question is then just not there.
+function safeRenderMoodRow(startedAts) {
+  try {
+    renderMoodRow(startedAts);
+  } catch (error) {
+    console.error(error);
+    $("#summaryMood").hidden = true;
+    moodRow.startedAts = [];
+  }
+}
+
+function syncMoodButtons() {
+  for (const button of $("#summaryMoodOptions").children) {
+    button.setAttribute("aria-pressed", String(button.dataset.mood === moodRow.picked));
+  }
+}
+
+function clearMoodError() {
+  clearTimeout(moodRow.errorTimer);
+  const error = $("#summaryMoodError");
+  error.textContent = "";
+  error.hidden = true;
+}
+
+// The text is set a moment after the line appears, so a screen reader reads it out again on a
+// second failure in a row.
+function showMoodError() {
+  clearMoodError();
+  $("#summaryMoodError").hidden = false;
+  moodRow.errorTimer = setTimeout(() => {
+    $("#summaryMoodError").textContent = t("mood.error");
+  }, 100);
+}
+
+function onMoodClick(event) {
+  const button = event.target.closest(".mood-option");
+  if (!button || !moodRow.startedAts.length) return;
+  const id = button.dataset.mood;
+  const next = moodRow.picked === id ? null : id;
+  let ok = false;
+  try {
+    ok = setMood(moodRow.startedAts, next);
+  } catch (error) {
+    console.error(error);
+  }
+  if (!ok) {
+    showMoodError();
+    return;
+  }
+  clearMoodError();
+  moodRow.picked = next;
+  syncMoodButtons();
+}
+
+// A mood changed in another tab (a session deleted on the history page removes its mood), or all
+// site data was cleared: the open question shows what is saved now.
+function onMoodStorage(event) {
+  if (!moodOn() || !moodRow.startedAts.length || $("#summaryMood").hidden) return;
+  if (event.key !== null && event.key !== MOOD_KEY) return;
+  try {
+    moodRow.picked = savedMoodOfRow();
+    syncMoodButtons();
+  } catch (error) {
+    console.error(error);
+  }
 }
 
 // ---------- formatting ----------
@@ -3547,6 +3677,9 @@ function init() {
   window.addEventListener("storage", onHistoryStorage);
   window.addEventListener("storage", onCustomStorage);
   window.addEventListener("storage", onCapsuleStorage);
+  window.addEventListener("storage", onMoodStorage);
+  $("#summaryMoodOptions").addEventListener("click", onMoodClick);
+  $("#moodQuestionRow").hidden = !moodOn(); // the setup checkbox, only while Inner weather is on
   // The time capsule badge: shown again (a capsule may have become ready meanwhile).
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) safeRenderHistoryBadges();

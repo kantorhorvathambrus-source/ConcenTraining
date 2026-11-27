@@ -437,6 +437,22 @@ I18N_TEXTS.it = {
   "dateSheet.later": "15 minuti dopo",
   "dateSheet.hint": "Almeno 15 minuti da adesso, fino a 2 anni in avanti.",
 
+  // ---------- inner weather ----------
+  "mood.setupQuestion": "Chiedi alla fine com'è andata dentro",
+  "mood.question": "Com'è andata, dentro di te?",
+  "mood.sunny": "Soleggiato",
+  "mood.partly": "Parzialmente nuvoloso",
+  "mood.cloudy": "Nuvoloso",
+  "mood.rain": "Piovoso",
+  "mood.storm": "Tempestoso",
+  "mood.fog": "Nebbioso",
+  "mood.error": "Impossibile salvare. Riprova.",
+  "mood.title": "Meteo interiore",
+  "mood.note": "Come sono andate dentro di te le sessioni, come le hai segnate dopo ognuna.",
+  "mood.none": "non segnato",
+  "mood.dayLabel": "{day}: {mood}",
+  "mood.stripLabel": "Ultimi 7 giorni",
+
   // ---------- export / import ----------
   "import.exported": { one: "{count} sessione esportata.", many: "{count} sessioni esportate.", other: "{count} sessioni esportate." },
   "import.tooBig": "Questo file è troppo grande per essere un'esportazione di ConcenTraining.",

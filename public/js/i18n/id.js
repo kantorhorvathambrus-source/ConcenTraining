@@ -450,6 +450,22 @@ I18N_TEXTS.id = {
   "dateSheet.later": "15 menit lebih lambat",
   "dateSheet.hint": "Minimal 15 menit dari sekarang, paling lama 2 tahun ke depan.",
 
+  // ---------- inner weather ----------
+  "mood.setupQuestion": "Tanyakan di akhir bagaimana rasanya",
+  "mood.question": "Bagaimana rasanya di dalam?",
+  "mood.sunny": "Cerah",
+  "mood.partly": "Cerah berawan",
+  "mood.cloudy": "Berawan",
+  "mood.rain": "Hujan",
+  "mood.storm": "Badai",
+  "mood.fog": "Berkabut",
+  "mood.error": "Tidak bisa disimpan. Coba lagi.",
+  "mood.title": "Cuaca batin",
+  "mood.note": "Bagaimana rasanya sesi-sesimu, seperti yang kamu tandai setelah tiap sesi.",
+  "mood.none": "belum ditandai",
+  "mood.dayLabel": "{day}: {mood}",
+  "mood.stripLabel": "7 hari terakhir",
+
   // ---------- export / import ----------
   "import.exported": { other: "{count} sesi diekspor." },
   "import.tooBig": "File ini terlalu besar untuk menjadi file ekspor ConcenTraining.",

@@ -474,6 +474,26 @@ I18N_TEXTS.en = {
   "dateSheet.later": "15 minutes later",
   "dateSheet.hint": "At least 15 minutes from now, up to 2 years ahead.",
 
+  // ---------- inner weather (summary question, setup checkbox, history page; js/mood.js) ----------
+  // The setup checkbox (index.html), the summary's question and its six moods (renderMoodRow in
+  // app.js), and the history page's 7-day strip (renderMoods in history.js). Factual, never judging.
+  "mood.setupQuestion": "Ask how it felt at the end",
+  "mood.question": "How did it feel inside?",
+  "mood.sunny": "Sunny",
+  "mood.partly": "Partly cloudy",
+  "mood.cloudy": "Cloudy",
+  "mood.rain": "Rainy",
+  "mood.storm": "Stormy",
+  "mood.fog": "Foggy",
+  "mood.error": "Couldn't save that. Try again.",
+  "mood.title": "Inner weather",
+  "mood.note": "How your sessions felt, as you marked them after each one.",
+  // The strip's day without a mood, read in mood.dayLabel (screen readers).
+  "mood.none": "not marked",
+  // A day of the strip for screen readers: "Monday 24 November: Sunny".
+  "mood.dayLabel": "{day}: {mood}",
+  "mood.stripLabel": "Last 7 days",
+
   // ---------- export / import ----------
   "import.exported": { one: "Exported {count} session.", other: "Exported {count} sessions." },
   "import.tooBig": "This file is too big to be a ConcenTraining export.",

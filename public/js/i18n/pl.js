@@ -488,6 +488,22 @@ I18N_TEXTS.pl = {
   "dateSheet.later": "15 minut później",
   "dateSheet.hint": "Co najmniej 15 minut od teraz, najwyżej 2 lata naprzód.",
 
+  // ---------- inner weather ----------
+  "mood.setupQuestion": "Pytaj na końcu, jak było",
+  "mood.question": "Jak było w środku?",
+  "mood.sunny": "Słonecznie",
+  "mood.partly": "Lekko pochmurno",
+  "mood.cloudy": "Pochmurno",
+  "mood.rain": "Deszczowo",
+  "mood.storm": "Burzowo",
+  "mood.fog": "Mgliście",
+  "mood.error": "Nie udało się zapisać. Spróbuj jeszcze raz.",
+  "mood.title": "Wewnętrzna pogoda",
+  "mood.note": "Twoje sesje od środka, tak jak oznaczasz je po każdej z nich.",
+  "mood.none": "brak oznaczenia",
+  "mood.dayLabel": "{day}: {mood}",
+  "mood.stripLabel": "Ostatnie 7 dni",
+
   // ---------- export / import ----------
   "import.exported": {
     one: "Wyeksportowano {count} sesję.",

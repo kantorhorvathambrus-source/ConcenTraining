@@ -464,6 +464,22 @@ I18N_TEXTS["pt-BR"] = {
   "dateSheet.later": "15 minutos depois",
   "dateSheet.hint": "Pelo menos 15 minutos a partir de agora, até 2 anos à frente.",
 
+  // ---------- inner weather ----------
+  "mood.setupQuestion": "Perguntar no fim como foi",
+  "mood.question": "Como foi por dentro?",
+  "mood.sunny": "Ensolarado",
+  "mood.partly": "Parcialmente nublado",
+  "mood.cloudy": "Nublado",
+  "mood.rain": "Chuvoso",
+  "mood.storm": "Tempestuoso",
+  "mood.fog": "Com neblina",
+  "mood.error": "Não deu para salvar. Tente de novo.",
+  "mood.title": "Clima interior",
+  "mood.note": "Como suas sessões foram por dentro, do jeito que você marcou depois de cada uma.",
+  "mood.none": "sem marcação",
+  "mood.dayLabel": "{day}: {mood}",
+  "mood.stripLabel": "Últimos 7 dias",
+
   // ---------- export / import ----------
   "import.exported": { one: "{count} sessão exportada.", many: "{count} sessões exportadas.", other: "{count} sessões exportadas." },
   "import.tooBig": "Este arquivo é grande demais para ser uma exportação do ConcenTraining.",

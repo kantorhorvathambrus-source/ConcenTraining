@@ -2714,6 +2714,266 @@ a {
 }
 /* ===== END ENVELOPE ART ===== */
 
+/* ---------- inner weather (js/mood.js; "Inner weather" in the README) ---------- */
+
+/* The summary's question "How did it feel inside?": six toggle buttons. How many per row follows
+   the question's own width in rem (a container query), so a larger text size gets fewer, wider
+   buttons: six in a row where there's room, three on a phone, two, and at a very large text size
+   one per row with the icon beside the name. Without container queries: three per row. */
+.mood-ask {
+  max-width: 34rem;
+  margin: 0 auto 28px;
+  container-type: inline-size;
+}
+
+.mood-ask-title {
+  margin: 0 0 12px;
+  font-weight: 600;
+}
+
+.mood-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+@container (min-width: 33rem) {
+  .mood-options {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+/* A mood: its icon and its name under it. Picked: an amber ring, a tint and a check mark in the
+   corner (like a picked character), so it isn't marked by colour alone. */
+.mood-option {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 10px 4px 8px;
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-tile);
+  background: var(--color-control);
+  font-size: var(--fs-13);
+  font-weight: 600;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+  transition: transform var(--dur) var(--ease), opacity var(--dur) var(--ease);
+}
+
+.mood-option .mood-art {
+  flex: none;
+  width: 40px;
+  height: 37px;
+}
+
+/* The button itself is always the tap's target, never a line of the icon or the label. */
+.mood-option > * {
+  pointer-events: none;
+}
+
+.mood-option[aria-pressed="true"] {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  box-shadow: var(--shadow-selected);
+}
+
+.mood-option[aria-pressed="true"]::after {
+  content: "";
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-accent) var(--img-check-on-accent) center / 100% no-repeat;
+}
+
+.mood-option:active {
+  transform: scale(0.97);
+}
+
+@media (hover: hover) {
+  .mood-option:hover:not([aria-pressed="true"]) {
+    background: var(--color-control-hover);
+  }
+}
+
+/* Fewer per row at a large text size (after the rules above, so these win). */
+@container (max-width: 16rem) {
+  .mood-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container (max-width: 11.5rem) {
+  .mood-options {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mood-option {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 8px 32px 8px 12px; /* room on the right for the check mark */
+    text-align: start;
+  }
+
+  .mood-option[aria-pressed="true"]::after {
+    top: 50%;
+    right: 10px;
+    margin-top: -8px;
+  }
+}
+
+.mood-ask .summary-text.error {
+  margin-top: 10px;
+}
+
+/* The history page: the small icon at the end of a session row's first line. */
+.session-mood {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.session-mood .mood-art {
+  width: 22px;
+  height: 20px;
+}
+
+/* The 7-day strip: one column per day, today on the right. Each day has its short weekday ("Mon")
+   and its narrow one ("M"); the narrow one shows when the section is narrow in rem (a container
+   query: a small screen with a large text size). */
+.mood-section {
+  container-type: inline-size;
+}
+
+.mood-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  margin: 0 0 10px;
+  padding: 12px 8px 10px;
+  list-style: none;
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+.mood-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.mood-day-icon {
+  display: block;
+  width: 100%;
+  max-width: 36px;
+}
+
+.mood-day .mood-art {
+  width: 100%;
+  height: auto;
+}
+
+.mood-day-label {
+  max-width: 100%;
+  font-size: var(--fs-12);
+  color: var(--color-text-muted);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.mood-day-narrow {
+  display: none;
+}
+
+@container (max-width: 17rem) {
+  .mood-day-short {
+    display: none;
+  }
+
+  .mood-day-narrow {
+    display: inline;
+  }
+}
+
+/* Today, the last day */
+.mood-day:last-child .mood-day-label {
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+/* ===== MOOD ART (placeholder, to be replaced by real artwork; see moodArt in js/mood.js).
+   Everything the mood icons look like is in this block. ===== */
+.mood-art {
+  display: block;
+  overflow: visible;
+}
+
+.mood-art-sun {
+  fill: var(--color-accent);
+}
+
+.mood-art-rays {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.mood-art-cloud {
+  fill: var(--color-surface);
+  stroke: var(--color-text-muted);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+
+.mood-art-cloud-back {
+  fill: var(--color-surface-sunken);
+}
+
+.mood-art-cloud-dark {
+  fill: color-mix(in srgb, var(--color-text-muted) 45%, var(--color-surface));
+}
+
+.mood-art-rain {
+  fill: none;
+  stroke: var(--color-info-text);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.mood-art-bolt {
+  fill: var(--color-accent);
+  stroke: var(--color-accent);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+
+.mood-art-fog {
+  fill: none;
+  stroke: var(--color-text-muted);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+}
+
+/* A day without a mood: a small, quiet dot. */
+.mood-art-empty {
+  fill: var(--color-divider);
+  stroke: var(--color-field-border);
+  stroke-width: 1.5;
+}
+/* ===== END MOOD ART ===== */
+
 /* ---------- privacy page ---------- */
 
 /* Lets the email address (or any long word) break at 320px instead of scrolling sideways. */
@@ -4223,7 +4483,8 @@ dialog.duration-sheet[open]::backdrop {
   .preset,
   .dark-switch-knob,
   .capsule-art-flap,
-  .capsule-art-seal {
+  .capsule-art-seal,
+  .mood-option {
     transition: none;
   }
 

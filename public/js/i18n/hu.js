@@ -447,6 +447,22 @@ I18N_TEXTS.hu = {
   "dateSheet.later": "15 perccel később",
   "dateSheet.hint": "Legalább 15 perccel későbbi időpont, legfeljebb 2 évre előre.",
 
+  // ---------- inner weather ----------
+  "mood.setupQuestion": "Kérdezze meg a végén, milyen volt",
+  "mood.question": "Milyen volt belülről?",
+  "mood.sunny": "Napos",
+  "mood.partly": "Részben felhős",
+  "mood.cloudy": "Felhős",
+  "mood.rain": "Esős",
+  "mood.storm": "Viharos",
+  "mood.fog": "Ködös",
+  "mood.error": "Ezt nem sikerült menteni. Próbáld újra.",
+  "mood.title": "Belső időjárás",
+  "mood.note": "Hogyan érezted magad a munkamenetek alatt, ahogy utánuk megjelölted.",
+  "mood.none": "nincs jelölve",
+  "mood.dayLabel": "{day}: {mood}",
+  "mood.stripLabel": "Az elmúlt 7 nap",
+
   // ---------- export / import ----------
   "import.exported": { one: "{count} munkamenet exportálva.", other: "{count} munkamenet exportálva." },
   "import.tooBig": "Ez a fájl túl nagy ahhoz, hogy ConcenTraining-export legyen.",
