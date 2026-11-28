@@ -582,7 +582,7 @@ a:focus-visible {
 
 .char-card {
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 /* Picked (a character, a mode): an amber ring, a tint and a check mark in the corner, so it
@@ -702,12 +702,12 @@ a:focus-visible {
 
 /* The name is the user's own text: long words break instead of widening the card. */
 .custom-item .char-name {
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 /* "Time left to make changes: 9:41" under a card that can still be edited (renderCustomList). The
-   card is narrow: with large text a long word is hyphenated (in the page's language) rather than
-   pushing the card wider; only a word that still doesn't fit breaks anywhere. */
+   card is narrow: lines wrap between words (never hyphenated by the browser); only a word that
+   is wider than the whole card on its own would break (see "Large text" in the README). */
 .custom-countdown {
   margin: 0;
   padding: 0 8px 8px;
@@ -715,7 +715,6 @@ a:focus-visible {
   font-size: var(--fs-14);
   color: var(--color-text-muted);
   overflow-wrap: break-word;
-  hyphens: auto;
 }
 
 .custom-actions {
@@ -1144,8 +1143,9 @@ a:focus-visible {
   gap: 8px;
 }
 
+/* At least 76px or 4.75em (the same at 100%), so with large text "10+ min" keeps its line. */
 .distraction-buttons.advanced {
-  grid-template-columns: repeat(auto-fit, minmax(76px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(max(76px, 4.75em), 1fr));
 }
 
 /* Softly tinted in the level's colour, with a band under the word that grows from Barely to
@@ -1475,7 +1475,7 @@ a:focus-visible {
 
 .pill-button-text {
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .pill-button-chevron {
@@ -1918,11 +1918,11 @@ dialog .check-row {
   margin-top: 12px;
 }
 
-/* A long single word ("Hintergrundrauschen") may break rather than run off a narrow screen. */
+/* Last resort only: a single word wider than the whole column breaks rather than run off the
+   screen. ("Hintergrundrauschen" has a soft hyphen in de.js, so it wraps there instead.) */
 .setting-label,
 .chip-group-label {
   overflow-wrap: break-word;
-  hyphens: auto;
 }
 
 .setting-label {
@@ -1958,7 +1958,6 @@ dialog .check-row {
   white-space: normal;
   line-height: 1.25;
   text-align: center;
-  hyphens: auto;
   overflow-wrap: break-word;
 }
 
@@ -2370,7 +2369,7 @@ a {
   margin-top: 8px !important;
   padding: 10px 12px;
   white-space: pre-wrap;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   background: var(--color-surface-sunken);
   border-radius: var(--radius-field);
 }
@@ -2940,7 +2939,7 @@ a {
   font-size: var(--fs-12);
   color: var(--color-text-muted);
   text-align: center;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .mood-day-narrow {
@@ -3033,9 +3032,10 @@ a {
 
 /* ---------- privacy page ---------- */
 
-/* Lets the email address (or any long word) break at 320px instead of scrolling sideways. */
+/* The e-mail address wraps after its "@" (<wbr> in privacy.html); any other word wider than the
+   column breaks only as a last resort, instead of scrolling sideways. */
 .privacy-page {
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .privacy-top {
@@ -3269,14 +3269,13 @@ a {
 
 /* The 10-minute rule under the title (avatar.js): the note before the first Save or on a final
    character, the countdown while it can still be changed, and the message when the time ran out.
-   Long words are hyphenated (or, if they still don't fit, broken) rather than push the page wider
-   than a narrow screen. */
+   Lines wrap between words (no browser hyphenation); only a word wider than the whole column on
+   its own would break, rather than push the page wider than a narrow screen. */
 .edit-note,
 .edit-countdown,
 .edit-ended {
   margin: 0 0 16px;
   overflow-wrap: break-word;
-  hyphens: auto;
 }
 
 .edit-note {
@@ -3324,8 +3323,8 @@ a {
   object-fit: contain;
 }
 
-/* The buttons take the rest of the row; with large text a long word may break rather than push
-   the page wider than the screen. */
+/* The buttons take the rest of the row. Labels wrap between words; with large text the picture
+   gets smaller first (see "Large text" at the end of this file), so no word has to break. */
 .avatar-preview-actions {
   flex: 1 1 0;
   display: flex;
@@ -3337,7 +3336,7 @@ a {
 .avatar-preview-actions .btn {
   padding-left: 10px;
   padding-right: 10px;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .editor-section {
@@ -3387,7 +3386,7 @@ a {
   margin: 0;
   font-size: var(--fs-20);
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .editor-group > summary::after {
@@ -3423,9 +3422,11 @@ a {
 
 /* Costume presets: buttons with a picture and a name. The columns get wider with larger text, so
    a name breaks between words, not inside one. */
+/* At least 76px or 4.75em (the same at 100%): with large text the tiles get fewer and wider, so an
+   11-letter name ("Księżniczka") stays whole. */
 .preset-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(max(76px, 4em), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(max(76px, 4.75em), 1fr));
   gap: 8px;
   margin: 0 0 24px;
 }
@@ -3458,8 +3459,7 @@ a {
   font-weight: 600;
   line-height: 1.2;
   text-align: center;
-  overflow-wrap: anywhere;
-  hyphens: auto;
+  overflow-wrap: break-word;
 }
 
 /* A section of look options off screen isn't styled, laid out or painted at all (with every
@@ -3516,7 +3516,7 @@ a {
   border: 1.5px solid transparent;
   border-radius: var(--radius-pill);
   cursor: pointer;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .theme-input:checked + .theme-chip-text {
@@ -3856,9 +3856,10 @@ a {
   }
 
   /* As many cards per row as fit (7 on a laptop, 5 on a landscape phone), each at least 150px
-     wide: about the width of a card on a 320px phone today. */
+     wide: about the width of a card on a 320px phone today. 9em is the same 150px at 100%; with
+     large text the cards get fewer and wider, so names stay whole. */
   .character-list {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(max(150px, 9em), 1fr));
   }
 
   /* Session: the character on the left, the timer and buttons on the right, vertically centred.
@@ -3903,12 +3904,15 @@ a {
     object-position: 50% 100%;
   }
 
+  /* Also the "page" for its buttons' large-text rules (container queries, see "large text"). In
+     portrait it has no box (display: contents), so .app is. */
   .session-main {
     display: flex;
     flex-direction: column;
     width: 100%;
     max-width: 520px;
     justify-self: center;
+    container: ct-page / inline-size;
   }
 
   .timer {
@@ -3976,7 +3980,7 @@ a {
 
   /* Advanced: four per row even in a narrow column (568x320), so the seven lengths stay on two rows. */
   .distraction-buttons.advanced {
-    grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(max(70px, 4.375em), 1fr));
   }
 
   /* Still at least 44px tall. */
@@ -4324,7 +4328,7 @@ dialog.language-sheet,
   flex: 1;
   flex-direction: column;
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .language-english {
@@ -4411,11 +4415,13 @@ dialog.duration-sheet,
   margin-bottom: 20px;
 }
 
+/* 4px side padding: "120 Min." (its space is a no-break space) fits its cell on wide screens too,
+   instead of breaking as "Min|.". */
 .duration-preset {
   min-height: 48px;
-  padding: 6px 8px;
+  padding: 6px 4px;
   white-space: normal;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   font-size: var(--fs-16);
 }
 
@@ -4514,6 +4520,334 @@ dialog.duration-sheet[open] {
 dialog.language-sheet[open]::backdrop,
 dialog.duration-sheet[open]::backdrop {
   animation: backdrop-in 240ms var(--ease);
+}
+
+/* ---------- large text ---------- */
+
+/* With the phone's text size at 150% or 200%, a 320–390px phone has room for only 9–15 letters of
+   body text per line. These rules keep every page free of sideways scrolling and keep words whole
+   (see "Large text" in the README). At the normal text size nothing here changes the layout.
+
+   Container queries: a rule inside "@container ct-page (max-width: 17.5em)" applies when the page
+   column (or a session's right column) is narrower than 17.5 letters (em) of its own text. That
+   width follows the text size, not the screen: a 320px phone is 18em wide at 100% (never
+   "narrow"), 12em at 150% and 9em at 200%. It also works when a browser shows a large font size as
+   page zoom (the column then has fewer CSS pixels). Browsers without container queries ignore all
+   of it and keep today's layout; the units that follow a container's width (cqi) are only used
+   inside "@supports (container-type: inline-size)" for the same reason.
+
+   The rules outside the queries only add things that change nothing at 100%: em-based minimum
+   widths that equal today's px at the normal size, and wrapping/min-width: 0 that only matters
+   when something doesn't fit. */
+
+body {
+  container: ct-body / inline-size;
+}
+
+.app,
+dialog {
+  container-type: inline-size;
+}
+
+.app {
+  container-name: ct-page;
+}
+
+dialog {
+  container-name: ct-dialog;
+}
+
+/* Wrap only when something doesn't fit: Test sound goes under its checkbox text, the Custom field
+   under its label. */
+.setting-row,
+.custom-minutes {
+  flex-wrap: wrap;
+}
+
+/* The checkbox text keeps the row with Test sound until it would get narrower than 10em. */
+.setting-row .check-row {
+  flex: 1 1 10em;
+}
+
+/* Long text in a row shrinks instead of pushing the row's other part off the screen. */
+.session-item-main,
+.quick-start-text {
+  min-width: 0;
+}
+
+/* Last resort where a word could still be wider than its box: a character card's name, badge and
+   tagline (a flex column, so they need max-width), a session's text. With container queries the
+   layout above gives them room first; without them (older browsers) they break as before instead
+   of running out of their card. */
+.char-card > span {
+  max-width: 100%;
+}
+
+.session-item-main {
+  overflow-wrap: break-word;
+}
+
+/* Costume tiles: 1px side padding (was 4px), so a name like "Scarecrow" or "Czarownica" fits on
+   one line; the tiles keep their size. A name still wider than its tile stays inside it
+   (max-width), so the last-resort break can work. */
+.preset {
+  padding-left: 1px;
+  padding-right: 1px;
+}
+
+.preset-label {
+  max-width: 100%;
+}
+
+/* Last resort for a single word wider than the whole card or line (see "Large text" in the README):
+   a motivation message, the plan's time line. */
+.motivation-card p,
+.plan-timeline-text {
+  overflow-wrap: break-word;
+}
+
+/* Large text on a phone (the screen is under 19.5em wide; a 320px phone is 20em at 100%): dialogs
+   get 16px padding and 8px from each screen edge. max-width too: the browser's own dialog style
+   takes 2em off the width, which grows with the text size. */
+@container ct-body (max-width: 19.5em) {
+  dialog {
+    padding: 16px;
+    width: calc(100vw - 16px);
+    max-width: calc(100vw - 16px);
+  }
+}
+
+/* The page column is narrow for its text. */
+@container ct-page (max-width: 17.5em) {
+  /* One column: characters, the mode cards, the streak cards, Export / Import, the capsule's
+     "Opens" choice. */
+  .character-list,
+  .choice-group,
+  .stat-cards,
+  .backup-actions,
+  .capsule-segmented {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Durations: 2 per row (4 rows), still even. */
+  .chips {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* Tip cards: a little less padding and list indent, so a long word ("zurückkommen:") fits. */
+  .tip-card {
+    padding: 12px;
+  }
+
+  /* The bullets move inside the text column, so a long word ("automatiquement") has the card's
+     whole width. */
+  .how-it-works ul {
+    padding-left: 0;
+    list-style-position: inside;
+  }
+
+  /* Setup hints under the checkboxes: no 30px indent, so a long word ("webhelybeállításaiban")
+     has the whole column. */
+  .setting-hint {
+    margin-left: 0;
+  }
+
+  /* Quick start: the Start button under the line, full width. */
+  .quick-start {
+    flex-wrap: wrap;
+  }
+
+  .quick-start-text {
+    flex: 1 1 0;
+  }
+
+  .quick-start-btn {
+    flex: 1 1 100%;
+  }
+
+  /* Distraction buttons and categories: as many per row as fit their longest word. */
+  .distraction-buttons.simple,
+  .distraction-buttons.advanced {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 7.5em), 1fr));
+  }
+
+  .distraction-buttons.advanced {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 4.75em), 1fr));
+  }
+
+  .distraction-buttons.simple .btn.level,
+  .distraction-buttons.simple .btn.level:nth-child(n + 4) {
+    grid-column: auto;
+  }
+
+  .category-buttons {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 6.5em), 1fr));
+  }
+
+  /* The question gets its own line if Skip doesn't fit beside it. */
+  .category-head {
+    flex-wrap: wrap;
+  }
+
+  .category-head .skip-btn {
+    margin-left: auto;
+  }
+
+  /* Motivate me (or Undo, Resume, Start now) above Stop. Start now may wrap onto a second line
+     (normally it stays on one, see #startNextButton). */
+  .session-bar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #startNextButton {
+    white-space: normal;
+  }
+
+  /* Landscape phones: the picker over the distraction block gets 2 categories per row and Skip on
+     a row of its own, and scrolls inside the block if it's taller. */
+  @media (orientation: landscape) and (max-height: 500px) {
+    .category-picker {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      overflow-y: auto;
+    }
+
+    .category-picker .skip-btn {
+      grid-column: 1 / -1;
+      grid-row: auto;
+    }
+  }
+
+  /* History: Edit / Done under the title if it doesn't fit beside it; a session's focus % under its
+     text if needed (in edit mode always, with Delete under it). */
+  .list-head,
+  .session-item,
+  .day-part-head {
+    flex-wrap: wrap;
+  }
+
+  /* Import / delete messages: a little less side padding, so a long word fits
+     ("elkalandozásforrás", "przechowywanych"). */
+  .backup-status,
+  .delete-status:not(:empty) {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  /* Time capsule cards: the text under the envelope when it doesn't fit beside it. */
+  .capsule-card {
+    flex-wrap: wrap;
+    padding: 12px;
+  }
+
+  .capsule-body {
+    flex: 1 1 10em;
+  }
+
+  /* The editor's "No costume" tile: its own row, so "Pas de déguisement" keeps its words whole. */
+  .preset-grid-none {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* The motivation card (portrait; landscape phones have their own fixed layout): with large text
+     the message starts below the 44px × (badge line + 8px), so only the badge line keeps room for
+     it, and 12px side padding: a long word ("niedokończonego") gets the card's whole width. */
+  @media not all and (orientation: landscape) and (max-height: 500px) {
+    .motivation-card {
+      padding-left: 12px;
+      padding-right: 12px;
+    }
+
+    .motivation-badge {
+      display: block;
+      margin-right: 32px;
+    }
+  }
+
+  .session-list.editing .session-item {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* The editor: a smaller picture, so the two buttons beside it have room for their words. */
+  .avatar-preview-img {
+    width: 72px;
+  }
+
+  /* Stats (English only, for the owner): each row is the name on its own line, then the two
+     numbers side by side under their headers. */
+  .stats-table tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .stats-table th:first-child,
+  .stats-table td:first-child {
+    grid-column: 1 / -1;
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .stats-table th,
+  .stats-table td {
+    padding: 8px 10px;
+  }
+}
+
+/* Inside a dialog: the restart dialog's durations 2 per row when 4 don't fit; the language sheet's
+   rows a little less side padding. */
+@container ct-dialog (max-width: 14.5em) {
+  .chips {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .language-row {
+    flex-wrap: wrap;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  /* BETA and the check mark go under the name when the name wouldn't fit beside them. */
+  .language-names {
+    flex: 1 1 6em;
+  }
+}
+
+/* Single words that can't wrap (the app's name, one-word titles, the focus %, the date sheet's
+   weekdays) grow with the text size only as far as the column allows. At 100% the caps are far
+   above the normal size, so nothing changes. cqi = 1% of the column's (or dialog's) width. */
+@supports (container-type: inline-size) {
+  h1 {
+    font-size: min(var(--fs-30), 13cqi);
+  }
+
+  .avatar-page h1 {
+    font-size: min(var(--fs-26), 13cqi);
+  }
+
+  h2 {
+    font-size: min(var(--fs-18), 11cqi);
+  }
+
+  .editor-group > summary h2 {
+    font-size: min(var(--fs-20), 12cqi);
+  }
+
+  /* A sheet's title shares its line with the 44px ×. */
+  .duration-sheet-head h2 {
+    font-size: min(var(--fs-18), 8cqi);
+  }
+
+  .summary-percent {
+    font-size: min(var(--fs-48), 18cqi);
+  }
+
+  /* "niedz." (Polish) is the longest: 4.5cqi keeps it inside its seventh of the sheet. */
+  .date-weekdays {
+    font-size: min(var(--fs-13), 4.5cqi);
+  }
+
+  .date-day {
+    font-size: min(var(--fs-16), 9cqi);
+  }
 }
 
 /* ---------- reduced motion ---------- */

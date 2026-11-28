@@ -1152,7 +1152,7 @@ I18N_TEXTS.it = {
   "avatar.preset.p-prince": "Principe",
   "avatar.preset.p-princess": "Principessa",
   "avatar.preset.p-jester": "Giullare",
-  "avatar.preset.p-scarecrow": "Spaventapasseri",
+  "avatar.preset.p-scarecrow": "Spaventa\u00adpasseri",
   "avatar.preset.p-vampire": "Vampiro",
   "avatar.preset.p-ghost": "Fantasma",
   "avatar.preset.p-skeleton": "Scheletro",

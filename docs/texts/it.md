@@ -1190,7 +1190,7 @@ How to read it:
 | `avatar.preset.p-prince` | `Prince` | `Principe` |
 | `avatar.preset.p-princess` | `Princess` | `Principessa` |
 | `avatar.preset.p-jester` | `Jester` | `Giullare` |
-| `avatar.preset.p-scarecrow` | `Scarecrow` | `Spaventapasseri` |
+| `avatar.preset.p-scarecrow` | `Scarecrow` | `Spaventa·passeri` |
 | `avatar.preset.p-vampire` | `Vampire` | `Vampiro` |
 | `avatar.preset.p-ghost` | `Ghost` | `Fantasma` |
 | `avatar.preset.p-skeleton` | `Skeleton` | `Scheletro` |

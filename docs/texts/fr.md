@@ -1176,7 +1176,7 @@ How to read it:
 | `avatar.theme.history` | `History` | `Histoire` |
 | `avatar.theme.jobs` | `Jobs` | `Métiers` |
 | `avatar.theme.fun` | `Fun` | `Rigolo` |
-| `avatar.preset.p-none` | `No costume` | `Pas de déguisement` |
+| `avatar.preset.p-none` | `No costume` | `Pas de dé·guisement` |
 | `avatar.preset.p-witch` | `Witch` | `Sorcière` |
 | `avatar.preset.p-wizard` | `Wizard` | `Magicien` |
 | `avatar.preset.p-king` | `King` | `Roi` |

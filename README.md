@@ -871,8 +871,10 @@ way.
   pill ends; focus blocks amber, breaks striped. Under it: "2 h 30 min focus · 3 h 10 min with breaks
   · ends around 17:13" (just "… focus · ends around …" without breaks; the end time is now + the
   total, in the language's time format, updated on every change and every minute while the setup
-  screen shows). "ends around 17:13" is joined with no-break spaces in every language, so the time
-  never wraps onto a line of its own.
+  screen shows). "ends around 17:13" is joined with no-break spaces, so the time
+  never wraps onto a line of its own. Spanish and Portuguese ("termina hacia las 18:30", "termina
+  por volta das 18:30") keep one only before the time: the whole phrase didn't fit a line at large
+  text (see [Large text](#large-text)).
 - The first time Plan is picked: one row, 30 min ×2, 10 min break. The plan is saved as `plan` in
   `ct_prefs_v1` on every change and comes back next time. A broken saved plan falls back to that.
   Lengths and breaks are saved as plain whole minutes, presets or custom alike, so plans saved
@@ -2892,6 +2894,9 @@ Two sizes are not steps, on purpose: the timer (`--timer-size`, `--timer-size-wi
 screen's width between a smallest and a largest size) and the chart labels (12 units inside the
 chart's own drawing, which is scaled with the chart).
 
+With large text, a few one-word sizes stop growing where the column ends (the app's name, the
+summary's focus %); see [Large text](#large-text).
+
 ### Light and dark
 
 - **The switch** is a pill (84×44px) with a sun on the left and a moon on the right, and an amber
@@ -3020,6 +3025,77 @@ over the distraction block like the paused text, and **Start now** takes Motivat
 
 **Rotating the phone** during a session only switches CSS: nothing is reset, nothing is saved again,
 and the timer keeps counting from the start time as always.
+
+### Large text
+
+With the phone's or browser's text size at 150% or 200%, a 320–390px phone has room for only 9–15
+letters per line. Every page then still has **no sideways scrolling**, and **no word is split in
+the middle**, in all 9 languages, light and dark. All of it is CSS (the "large text" part at the end
+of `style.css`); at the normal text size the layout is unchanged.
+
+**How it switches.** The page column (`.app`), a session's right column in the two-column layout
+(`.session-main`) and every dialog are *containers*: CSS can ask how wide they are, measured in
+letters (em) of their own text, with a **container query** (`@container ct-page (max-width: 17.5em)`).
+That width follows the text size, not the screen: a 320px phone is 18em wide at 100% (never
+"narrow"), 12em at 150% and 9em at 200%. It works the same whether the browser makes the text
+bigger or zooms the whole page (Android may do either). Browsers without container queries ignore
+these rules and keep the normal layout; nothing else depends on them.
+
+**When the column is narrower than 17.5em:**
+
+- One column: the character cards (also "Your characters"), Simple / Advanced, the two streak
+  cards, Export / Import, the time capsule's "Opens" choice.
+- The duration chips: 2 per row (4 rows). In the continue/restart dialog when the dialog is under
+  14.5em.
+- Distraction buttons and categories: as many per row as fit their longest word (at least 7.5em,
+  4.75em for Advanced's lengths, 6.5em for categories); the question gets its own line if Skip
+  doesn't fit beside it.
+- Motivate me (or Undo, Resume, Start now) above Stop; Start now may take two lines. On landscape
+  phones the category picker over the distraction block gets 2 categories per row and Skip on its
+  own row, and scrolls inside the block if it's taller.
+- Quick start: Start under the line, full width. Test sound under its checkbox text. The hints
+  under the setup checkboxes lose their indent.
+- History: Edit / Done under the title, a session's focus % under its text (in edit mode always),
+  a time capsule's text under its envelope, a "Best time of day" or category value under its name.
+- Tip cards: 12px padding, the How it works bullets inside the text column. The import and
+  delete messages on the history page: 8px side padding.
+- The motivation card's message uses the whole card width (the × sits next to the badge line),
+  with 12px side padding.
+- The editor's picture is 72px wide, so Preview reactions / Randomize have room. The "No costume"
+  tile gets its own row.
+- Stats tables: the name on its own line, the two numbers side by side under their headers.
+- Dialogs (screen under 19.5em): 16px padding and 8px from the screen edges.
+
+**Always, at every size** (they change nothing at 100%):
+
+- Lines wrap only between words. The browser never hyphenates (`hyphens: auto` isn't used), and
+  `overflow-wrap: break-word` (never `anywhere`) splits a word only as a last resort, if it is wider
+  than the whole column on its own. Translators' soft hyphens (`\u00ad`, e.g. "Gedan\u00adken")
+  are kept: a word may break there, with a visible hyphen. A word that is wider than a 320px phone's
+  card at 200% gets one in its translation ("Hintergrund\u00adrauschen", "Aufmerksamkeits\u00adresiduum",
+  "megakadá\u00adlyozhatja", "menghubung\u00adkannya"; on the editor's tiles "Spaventa\u00adpasseri",
+  "Pas de dé\u00adguisement").
+- Grids with a minimum column width use `max(<today's px>, <em>)`: the same at 100%, wider with
+  large text (the two-column character grid: 150px or 9em; Advanced's lengths and the editor's
+  tiles: 76px or 4.75em). The duration sheet's presets have 4px side padding (was 8px), so
+  "120 Min." no longer splits on wide screens.
+- Single words that can't wrap grow with the text only as far as the column allows: `h1` (the
+  app's name) at most 13% of the column's width, `h2` 11%, the summary's focus % 18%, the date
+  sheet's weekdays 4.5% and days 9% (`cqi` units, only inside `@supports (container-type:
+  inline-size)`). At 100% these caps are far above the normal sizes.
+- The e-mail address on the privacy page may wrap after the "@" (`<wbr>`).
+- The editor's costume tiles have 1px side padding (was 4px), so a 10-letter name ("Scarecrow",
+  "Czarownica") fits on one line at 100%.
+- A character card's name, badge and tagline, and a history row's text, keep `overflow-wrap:
+  break-word` with `max-width: 100%`, so in a browser without container queries a too-long word
+  breaks inside its card (as before) instead of running out of it.
+- Tap targets stay at least 44px.
+
+**When you add something:** a row of buttons gets `flex-wrap: wrap` (or a grid with an em-based
+minimum), a flex or grid child with text gets `min-width: 0`, no fixed px widths for anything with
+text, no `white-space: nowrap` on a label that can be long in another language, and anything that
+needs a different layout with large text goes into the `@container ct-page (max-width: 17.5em)`
+block. Check it at 200% text on a 320px screen in German, Hungarian and Polish (the longest words).
 
 ## Files
 
