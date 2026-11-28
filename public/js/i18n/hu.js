@@ -207,6 +207,7 @@ I18N_TEXTS.hu = {
   "end.keepGoing": "Folytatom",
 
   "away.title": "{duration} voltál távol.",
+  "away.titleEnded": "A munkamenet végén {duration} voltál távol.",
   "away.question": "Elkalandoztál?",
   "away.no": "Nem, a feladathoz kellett",
 

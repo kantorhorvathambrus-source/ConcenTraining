@@ -517,7 +517,8 @@
     </form>
   </dialog>
 
-  <!-- Opens when the page was hidden for 15 s or more during a session (time away in app.js).
+  <!-- Opens when the page was hidden for 15 s or more during a session (time away in app.js),
+       also before a session that ran out meanwhile is saved (askAwayAtEnd, with its own title).
        "Yes" logs the measured time away at once. -->
   <dialog id="awayDialog" class="away-dialog" aria-labelledby="awayTitle" aria-describedby="awayQuestion">
     <h2 id="awayTitle"></h2>

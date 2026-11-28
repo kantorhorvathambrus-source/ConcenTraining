@@ -212,6 +212,7 @@ I18N_TEXTS["pt-BR"] = {
   "end.keepGoing": "Continuar",
 
   "away.title": "Você ficou fora por {duration}.",
+  "away.titleEnded": "Você ficou fora por {duration}, até o fim da sessão.",
   "away.question": "Você se distraiu?",
   "away.no": "Não, era parte da tarefa",
 

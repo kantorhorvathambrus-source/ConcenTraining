@@ -225,6 +225,7 @@ I18N_TEXTS.en = {
   "end.keepGoing": "Keep going",
 
   "away.title": "You were away for {duration}.",
+  "away.titleEnded": "You were away for the last {duration} of the session.",
   "away.question": "Were you distracted?",
   "away.no": "No, it was for the task",
 

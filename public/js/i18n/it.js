@@ -204,6 +204,7 @@ I18N_TEXTS.it = {
   "end.keepGoing": "Continua",
 
   "away.title": "Hai lasciato l'app per {duration}.",
+  "away.titleEnded": "Hai lasciato l'app per {duration}, fino alla fine della sessione.",
   "away.question": "Hai perso il filo?",
   "away.no": "No, faceva parte del lavoro",
 
