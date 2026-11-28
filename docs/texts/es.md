@@ -134,8 +134,8 @@ How to read it:
 | `plan.lastNoBreak` | `Last block, no break after it` | `Último bloque, sin descanso después` |
 | `plan.noneAfterLast` | `(none after the last one)` | `(ninguno después del último)` |
 | `plan.add` | `+ Add block` | `+ Añadir bloque` |
-| `plan.timeline` | `{focus} focus · {total} with breaks · ends~around~{time}` | `{focus} de concentración · {total} con descansos · termina~hacia~las~{time}` |
-| `plan.timelineNoBreaks` | `{focus} focus · ends~around~{time}` | `{focus} de concentración · termina~hacia~las~{time}` |
+| `plan.timeline` | `{focus} focus · {total} with breaks · ends~around~{time}` | `{focus} de concentración · {total} con descansos · termina hacia las~{time}` |
+| `plan.timelineNoBreaks` | `{focus} focus · ends~around~{time}` | `{focus} de concentración · termina hacia las~{time}` |
 | `plan.min` | `{minutes} min` | `{minutes} min` |
 | `plan.h` | `{hours} h` | `{hours} h` |
 | `plan.hMin` | `{hours} h {minutes} min` | `{hours} h {minutes} min` |

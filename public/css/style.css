@@ -4750,15 +4750,16 @@ dialog {
 
   /* The motivation card (portrait; landscape phones have their own fixed layout): with large text
      the message starts below the 44px × (badge line + 8px), so only the badge line keeps room for
-     it and a long word ("Aufmerksamkeitsresiduum") gets the card's whole width. */
+     it, and 12px side padding: a long word ("niedokończonego") gets the card's whole width. */
   @media not all and (orientation: landscape) and (max-height: 500px) {
     .motivation-card {
-      padding-right: 16px;
+      padding-left: 12px;
+      padding-right: 12px;
     }
 
     .motivation-badge {
       display: block;
-      margin-right: 28px;
+      margin-right: 32px;
     }
   }
 

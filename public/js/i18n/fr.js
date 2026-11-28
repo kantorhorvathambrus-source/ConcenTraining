@@ -1184,7 +1184,7 @@ I18N_TEXTS.fr = {
   "avatar.theme.history": "Histoire",
   "avatar.theme.jobs": "Métiers",
   "avatar.theme.fun": "Rigolo",
-  "avatar.preset.p-none": "Pas de déguisement",
+  "avatar.preset.p-none": "Pas de dé\u00adguisement",
   "avatar.preset.p-witch": "Sorcière",
   "avatar.preset.p-wizard": "Magicien",
   "avatar.preset.p-king": "Roi",

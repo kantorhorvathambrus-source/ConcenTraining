@@ -688,7 +688,7 @@ I18N_TEXTS.id = {
   "motivation.middle-6": "Dalam sebuah penelitian berbasis catatan harian, hari kerja terbaik orang paling sering punya satu kesamaan: kemajuan pada sesuatu yang penting bagi mereka, sekecil apa pun langkahnya.",
   "motivation.middle-7": "Selesaikan satu bagian kecil sekarang. Lihat jam setelahnya, bukan sebelumnya.",
   "motivation.middle-8": "Minum seteguk air, duduk tegak, turunkan bahu. Lalu langsung kembali bekerja.",
-  "motivation.middle-9": "Bertanya pada diri sendiri “kenapa ini benar?” lalu menghubungkannya dengan apa yang sudah kamu ketahui membantu materi baru lebih melekat.",
+  "motivation.middle-9": "Bertanya pada diri sendiri “kenapa ini benar?” lalu menghubung\u00adkannya dengan apa yang sudah kamu ketahui membantu materi baru lebih melekat.",
   "motivation.middle-10": "Perhatikan posisimu sekarang: baris yang mana, langkah yang mana. Kalau nanti pikiranmu melayang, kamu tahu persis harus kembali ke mana.",
   "motivation.middle-11": "Memantau kemajuanmu membuatmu lebih mungkin mencapai tujuan, terutama kalau kamu menuliskannya.",
   "motivation.middle-12": "Bagian seperti inilah yang paling gampang ditunda. Tapi kamu tetap mengerjakannya.",

@@ -849,8 +849,10 @@ way.
   pill ends; focus blocks amber, breaks striped. Under it: "2 h 30 min focus · 3 h 10 min with breaks
   · ends around 17:13" (just "… focus · ends around …" without breaks; the end time is now + the
   total, in the language's time format, updated on every change and every minute while the setup
-  screen shows). "ends around 17:13" is joined with no-break spaces in every language, so the time
-  never wraps onto a line of its own.
+  screen shows). "ends around 17:13" is joined with no-break spaces, so the time
+  never wraps onto a line of its own. Spanish and Portuguese ("termina hacia las 18:30", "termina
+  por volta das 18:30") keep one only before the time: the whole phrase didn't fit a line at large
+  text (see [Large text](#large-text)).
 - The first time Plan is picked: one row, 30 min ×2, 10 min break. The plan is saved as `plan` in
   `ct_prefs_v1` on every change and comes back next time. A broken saved plan falls back to that.
   Lengths and breaks are saved as plain whole minutes, presets or custom alike, so plans saved
@@ -3032,7 +3034,8 @@ these rules and keep the normal layout; nothing else depends on them.
   a time capsule's text under its envelope, a "Best time of day" or category value under its name.
 - Tip cards: 12px padding, the How it works bullets inside the text column. The import and
   delete messages on the history page: 8px side padding.
-- The motivation card's message uses the whole card width (the × sits next to the badge line).
+- The motivation card's message uses the whole card width (the × sits next to the badge line),
+  with 12px side padding.
 - The editor's picture is 72px wide, so Preview reactions / Randomize have room. The "No costume"
   tile gets its own row.
 - Stats tables: the name on its own line, the two numbers side by side under their headers.
@@ -3043,8 +3046,10 @@ these rules and keep the normal layout; nothing else depends on them.
 - Lines wrap only between words. The browser never hyphenates (`hyphens: auto` isn't used), and
   `overflow-wrap: break-word` (never `anywhere`) splits a word only as a last resort, if it is wider
   than the whole column on its own. Translators' soft hyphens (`\u00ad`, e.g. "Gedan\u00adken")
-  are kept: a word may break there, with a visible hyphen. A long new word in a translation gets
-  one too ("Hintergrund\u00adrauschen").
+  are kept: a word may break there, with a visible hyphen. A word that is wider than a 320px phone's
+  card at 200% gets one in its translation ("Hintergrund\u00adrauschen", "Aufmerksamkeits\u00adresiduum",
+  "megakadá\u00adlyozhatja", "menghubung\u00adkannya"; on the editor's tiles "Spaventa\u00adpasseri",
+  "Pas de dé\u00adguisement").
 - Grids with a minimum column width use `max(<today's px>, <em>)`: the same at 100%, wider with
   large text (the two-column character grid: 150px or 9em; Advanced's lengths and the editor's
   tiles: 76px or 4.75em). The duration sheet's presets have 4px side padding (was 8px), so
