@@ -213,6 +213,7 @@ I18N_TEXTS.de = {
   "end.keepGoing": "Weitermachen",
 
   "away.title": "Du warst {duration} weg.",
+  "away.titleEnded": "Du warst {duration} weg, bis zum Ende der Runde.",
   "away.question": "Warst du abgelenkt?",
   "away.no": "Nein, das gehörte zur Aufgabe",
 

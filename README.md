@@ -332,9 +332,10 @@ there, see [Domain, redirect and security headers](#domain-redirect-and-security
       continue/restart question once the Undo window is over. If only part of the time was a
       distraction, Undo it and log that part with the buttons.
     - In Advanced mode it counts as logged time for the disabled lengths, like any distraction.
-  - The timer check comes first: if the session ran out while you were away, the end (summary, or the
-    "Welcome back" question) happens as before and there's no card. If it runs out while the card is
-    open, the card closes and nothing is logged.
+  - The timer check comes first: if the session ran out while you were away, the end comes first, and
+    the card asks about the time away before the session is saved, with its own title (see **Timer ran
+    out while you were away** below). If it runs out while the card is open (you're back and watching),
+    the card closes and nothing is logged.
   - If Stop's question or the continue/restart question was open when you left, it stays and
     comes first; the card follows after **Keep going** / **Continue** (and is dropped after **End
     session** or **Start new session**). An open category picker stays as it was (it still belongs to the
@@ -461,9 +462,30 @@ are in `public/js/data/messages.js`.
     distractions you logged, `null` in Simple mode) and shows the summary. **Discard** saves nothing
     and goes back to the setup screen. Esc doesn't answer it, and if the page is closed before
     answering, the question comes back next time.
+  - **The time away at the end:** the app knows when you left (`leftAt`), so if you left 15 s or more
+    (`AWAY_MIN_MS`) before the end, the time away card asks about that part before the session is
+    saved: "You were away for the last 24 min of the session. Were you distracted?" The length is the
+    session time from leaving to the end, in whole seconds (a break that started after leaving isn't
+    counted). Without it the app would save time nobody measured as fully focused.
+    - Back within 30 minutes: the card shows over the session screen at its end (0:00, full bar, the
+      character holding its `level1` pose), also when the app was closed and is opened again.
+      After "Welcome back": only once **Save** is tapped, right over the setup screen. **Discard** asks
+      nothing.
+    - **Yes** adds the usual time away distraction (`at`: when you left, level by length as in the
+      table above, `ms` only in Advanced mode, `"phone"`, `source: "away"`), then saves the session
+      and shows the summary. There's no reaction, no Undo and no continue/restart question, also at
+      level 5: the session is already over.
+    - **No, it was for the task** (or Esc) saves it exactly as before.
+    - Nothing is saved until the card is answered: a reload or a closed page asks again next time
+      (through "Welcome back" if that's more than 30 minutes after the end). If another tab takes the
+      session over meanwhile ("Continue here"), the card is asked there instead.
+    - Watching the timer end, or leaving less than 15 s before it, changes nothing: no card, and the
+      end chime is never delayed (when the timer runs out in a background tab, the chime still plays
+      at the end and the card waits for you).
   - Both cases work the same in Simple and Advanced mode. A continue/restart question that was
-    still waiting is dropped, as before, and so is the time away card.
-  - Neither case plays the end chime (see below).
+    still waiting is dropped, as before, and so is a time away card from earlier in the session (the
+    card at the end covers that time too, from the first leave).
+  - Neither case plays the end chime on your return (see below).
 
 ### Sound and screen
 
@@ -1007,6 +1029,9 @@ One summary for the whole plan, on the summary screen:
   saved as always (the chime only if it's happening now) and the break started when the block ended,
   so you land on the break or on break over. Back later than `REOPEN_ASK_AFTER_MS`: the "Welcome back"
   question for that block, as always; Save or Discard, then the plan goes on (the break or break over).
+  If the page was left 15 s or more before the block's end, the time away card at the end comes first
+  (after Save in "Welcome back"), as for a single session: its answer belongs to that block only (its
+  history entry and its line in the plan's summary), and the break still started when the block ended.
 - **A plan left for a long time:** if a plan is in its break and that break ended more than 12 hours
   ago (`PLAN_STALE_MS`) when the app is opened again (start-up, reopening, a reload or Continue here),
   the plan is closed instead of showing "Break over": its summary shows (blocks that didn't run simply

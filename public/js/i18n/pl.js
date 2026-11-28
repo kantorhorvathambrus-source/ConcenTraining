@@ -216,6 +216,7 @@ I18N_TEXTS.pl = {
   "end.keepGoing": "Kontynuuj",
 
   "away.title": "Nie było cię przez {duration}.",
+  "away.titleEnded": "Nie było cię przez {duration}, aż do końca sesji.",
   "away.question": "Coś cię rozproszyło?",
   "away.no": "Nie, to było potrzebne do zadania",
 

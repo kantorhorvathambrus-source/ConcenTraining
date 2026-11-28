@@ -214,6 +214,7 @@ I18N_TEXTS.fr = {
   "end.keepGoing": "Continuer",
 
   "away.title": "Tu as quitté l'appli pendant {duration}.",
+  "away.titleEnded": "Tu as quitté l'appli pendant {duration}, jusqu'à la fin de la séance.",
   "away.question": "Tu as décroché\u202f?",
   "away.no": "Non, c'était pour la tâche",
 

@@ -210,6 +210,7 @@ I18N_TEXTS.id = {
   "end.keepGoing": "Lanjutkan",
 
   "away.title": "Kamu tadi pergi selama {duration}.",
+  "away.titleEnded": "Kamu tadi pergi selama {duration}, sampai sesi selesai.",
   "away.question": "Tadi kamu terdistraksi?",
   "away.no": "Tidak, itu bagian dari tugas",
 

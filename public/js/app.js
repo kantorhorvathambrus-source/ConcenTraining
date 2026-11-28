@@ -2948,7 +2948,9 @@ function noteLeave() {
 // Also runs right after a reload, with the leftAt saved before it.
 function noteReturn() {
   if (!session.leftAt) return;
-  tick(); // the timer check comes first: if the session ran out while away, the end logic wins
+  // The timer check comes first: if the session ran out while away, the end logic wins (and
+  // askAwayAtEnd asks about the time away before saving).
+  tick();
   if (!session || session.endedAt) return;
   const now = Date.now();
   const from = session.leftAt;
@@ -3212,8 +3214,11 @@ function finishSession(endedAt, keep = true, endPlan = false) {
 
 // Back soon after the end (or watching it end): saved as a full session, as always.
 // Back much later: the app can't tell whether the user kept focusing, so it asks.
+// Either way, if the page was left 15 s or more before the end, the time away card asks about that
+// part first (askAwayAtEnd; after "Welcome back" only once Save is tapped).
 // running: called by the running timer (not on start-up after a reload or reopen).
-// The chime only plays if the end is happening right now, not when someone comes back later.
+// The chime only plays if the end is happening right now, not when someone comes back later. It
+// comes before the card, so it's never delayed.
 function onTimerRanOut(running) {
   const endedAt = effectiveEnd(session);
   const late = Date.now() - endedAt;
@@ -3222,21 +3227,26 @@ function onTimerRanOut(running) {
     return;
   }
   if (running && late <= (document.hidden ? END_SOUND_HIDDEN_MS : END_SOUND_VISIBLE_MS)) announceEnd();
-  finishSession(endedAt);
+  askAwayAtEnd(endedAt, false);
 }
 
-async function askSaveLateSession(endedAt) {
+// The session stops before a question about its end ("Welcome back", the time away card at the end).
+// Only in memory: session.endedAt stops it, and a dialog closed below (continue/restart, End
+// session, a time away card that was open) sees it as ended. ct_session_v1 stays as it was until
+// the answer, so closing or reloading the page now asks again next time.
+function stopAtEnd(endedAt) {
   clearInterval(tickTimer);
   cancelLeaveReminder();
   stopStage();
   closePicker(false);
   closeUndo(false);
-  // Only in memory: stops the session, and a dialog closed below (continue/restart,
-  // End session) sees it as ended. ct_session_v1 stays as it was until the answer,
-  // so closing the page now asks again next time.
   session.endedAt = endedAt;
   document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
   document.title = PAGE_TITLE;
+}
+
+async function askSaveLateSession(endedAt) {
+  stopAtEnd(endedAt);
   showScreen("setupScreen");
 
   const character = sessionCharacter(session);
@@ -3255,7 +3265,7 @@ async function askSaveLateSession(endedAt) {
   }
 
   if (answer === "save") {
-    finishSession(endedAt);
+    askAwayAtEnd(endedAt, true);
   } else if (plan) {
     afterPlanBlock("discarded", false); // the plan goes on: its break started when the block ended
   } else {
@@ -3264,6 +3274,80 @@ async function askSaveLateSession(endedAt) {
     session = null;
     renderCharacterList();
   }
+}
+
+// ---------- time away at the end ----------
+
+// The session ran out while the page was hidden: leftAt is still set (the return is handled after
+// the timer check, see noteReturn), or the page was closed and opened again. The session time
+// between leaving and the end, in whole seconds, or 0 if it's under AWAY_MIN_MS (or leftAt makes no
+// sense). A break that started after leftAt isn't counted: leftAt keeps the first leave while a
+// card waits, and a break can come before the card is answered. So the length always fits the
+// session (never longer than its time, and at is never inside a break), as imports check.
+function awayAtEndMs(s, endedAt) {
+  const from = s.leftAt;
+  if (!Number.isFinite(from) || from < s.startedAt || from >= endedAt) return 0;
+  const pauses = Array.isArray(s.pauses) ? s.pauses : [];
+  const breaks = pauses.filter((p) => p.at >= from).reduce((sum, p) => sum + p.ms, 0);
+  const sessionMs = endedAt - s.startedAt - pausedTotal(pauses);
+  const ms = Math.floor(Math.min(endedAt - from - breaks, sessionMs) / 1000) * 1000;
+  return ms >= AWAY_MIN_MS ? ms : 0;
+}
+
+// Before the session that ran out is saved: if the page was left 15 s or more before the end, the
+// time away card asks about that part ("You were away for the last 24 min of the session."). "Yes"
+// adds the usual away distraction (as logAwayDistraction: at the moment the page was left, level
+// from awayLevel, ms only in Advanced mode, "phone", source "away"), but straight into the session:
+// no reaction, no Undo and no continue/restart question (also at level 5: the session is over).
+// "No" or Esc saves it as it was. Then finishSession saves it and shows the summary (in a plan:
+// the block's break, the answer belongs to this block only). No card: saved at once, as before.
+// afterLate: Save in "Welcome back", which already stopped the session and shows the setup screen:
+// the card comes right over it. Otherwise the card is shown over the session screen at its end
+// (0:00, full bar, the character's level1 pose held still, as for the card during a session),
+// also when the app was opened again after the end.
+async function askAwayAtEnd(endedAt, afterLate) {
+  const ms = awayAtEndMs(session, endedAt);
+  if (!ms) {
+    finishSession(endedAt);
+    return;
+  }
+  const ended = session;
+  const from = session.leftAt;
+  const card = $("#awayDialog");
+  if (!afterLate) {
+    const cardOpen = card.open; // the card of an earlier return, left open when the page was left again
+    stopAtEnd(endedAt);
+    showEndedSession();
+    // Its close event comes later: it must not answer the new card.
+    if (cardOpen) await new Promise((resolve) => card.addEventListener("close", resolve, { once: true }));
+    if (session !== ended) return; // another tab took it over meanwhile: it asks there
+  }
+  $("#awayTitle").textContent = t("away.titleEnded", { duration: formatDuration(ms) });
+  const answer = await ask(card);
+  if (session !== ended) return; // another tab took it over: this one stops asking
+  if (answer === "yes") {
+    session.distractions.push({
+      at: from, level: awayLevel(ms), ms: session.mode === "advanced" ? ms : 0, category: "phone", source: "away",
+    });
+  }
+  finishSession(endedAt);
+}
+
+// The session screen at the end of a session that ran out (stopAtEnd has already stopped it). Built
+// by enterSession if the app was just opened (its tick does nothing: the session counts as ended).
+function showEndedSession() {
+  if ($("#sessionScreen").hidden) {
+    enterSession();
+    clearInterval(tickTimer);
+    stopStage();
+  }
+  $("#timer").textContent = formatClock(0);
+  $("#endClock").textContent = formatClock(0);
+  $("#progressBar").style.width = "100%";
+  if (plan) updatePlanTimeline(1);
+  document.title = PAGE_TITLE;
+  stage.reacting = true; // held still: no blinking while the card is open
+  setPose("level1");
 }
 
 // ---------- motivation ----------
@@ -3681,7 +3765,7 @@ function init() {
   $("#awayNoButton").addEventListener("click", () => $("#awayDialog").close());
   $("#awayYesButton").addEventListener("click", () => {
     away.yes = true;
-    $("#awayDialog").close();
+    $("#awayDialog").close("yes"); // the value answers the card at a session's end (askAwayAtEnd)
   });
   $("#awayDialog").addEventListener("close", onAwayClosed);
   $("#continueHereButton").addEventListener("click", onContinueHereClick);

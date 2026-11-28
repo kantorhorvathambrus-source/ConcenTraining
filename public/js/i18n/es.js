@@ -213,6 +213,7 @@ I18N_TEXTS.es = {
   "end.keepGoing": "Seguir",
 
   "away.title": "Estuviste fuera {duration}.",
+  "away.titleEnded": "Estuviste fuera {duration}, hasta el final de la sesión.",
   "away.question": "¿Te distrajiste?",
   "away.no": "No, era para la tarea",
 
