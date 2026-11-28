@@ -409,7 +409,7 @@ I18N_TEXTS.en = {
 
   "history.backupTitle": "Backup",
   "history.backupText":
-    "Your sessions are saved automatically on this device. Export a copy before you switch phones or clear your browser data. Export saves all your sessions as a .json file. Import adds the sessions from such a file; sessions you already have are skipped. Only the newest 1000 sessions are kept: if the total goes over 1000, the oldest sessions are removed.",
+    "Your sessions are saved automatically on this device. Export a copy before you switch phones or clear your browser data. Export saves all your sessions as a .json file. Import adds the sessions from such a file: sessions you already have are skipped, and it never removes any of yours (sessions that don't fit are left out). Only the newest {max} sessions are kept: once there are more, each new session removes the oldest one.",
   "history.export": "Export history",
   "history.import": "Import history",
   "history.backToTimer": "← Back to the timer",
@@ -511,6 +511,10 @@ I18N_TEXTS.en = {
 
   // ---------- export / import ----------
   "import.exported": { one: "Exported {count} session.", other: "Exported {count} sessions." },
+  "import.exportInvalid": {
+    one: " {count} session in the file wouldn't import ({why}).",
+    other: " {count} sessions in the file wouldn't import ({why}).",
+  },
   "import.tooBig": "This file is too big to be a ConcenTraining export.",
   "import.saveFailed": "Couldn't save the imported sessions: this browser's storage is full or blocked.",
   "import.imported": { one: "Imported {count} session.", other: "Imported {count} sessions." },
@@ -522,14 +526,10 @@ I18N_TEXTS.en = {
     one: " {count} older session from the file didn't fit (max. {max}).",
     other: " {count} older sessions from the file didn't fit (max. {max}).",
   },
-  "import.allTooOld": "Nothing was imported: all new sessions in this file are older than the {max} sessions kept.",
+  "import.full": "Nothing was imported: your history is full ({max} sessions).",
   "import.nothing": "Nothing was imported.",
   "import.nothingNew": "Nothing new to import: you already have every session in this file ({count}).",
   "import.nothingNewValid": "Nothing new to import: you already have every valid session in this file ({count}).",
-  "import.removed": {
-    one: " Your oldest session was removed to stay under {max}.",
-    other: " Your {count} oldest sessions were removed to stay under {max}.",
-  },
   "import.invalid": {
     one: " Skipped {count} invalid session ({why}).",
     other: " Skipped {count} invalid sessions ({why}).",
@@ -543,14 +543,13 @@ I18N_TEXTS.en = {
   // Why one session in the file was skipped (cleanImportedSession in history-store.js).
   "import.reason.notSession": "not a session",
   "import.reason.badTimes": "bad start or end time",
+  "import.reason.future": "date in the future",
   "import.reason.unknownEndReason": "unknown end reason",
   "import.reason.badCharacter": "bad character id",
   "import.reason.unknownStyle": "unknown style",
   "import.reason.unknownMode": "unknown mode",
-  "import.reason.badDurations": "bad duration fields",
-  "import.reason.focusInSimple": "focus % in Simple mode",
-  "import.reason.badFocus": "bad focus %",
   "import.reason.noDistractions": "no distraction list",
+  "import.reason.tooManyDistractions": "too many distractions",
   "import.reason.badBreakList": "bad break list",
   "import.reason.badBreak": "bad break",
   "import.reason.breakOutside": "break outside the session",
@@ -558,19 +557,15 @@ I18N_TEXTS.en = {
   "import.reason.badDistraction": "bad distraction",
   "import.reason.unknownCategory": "unknown distraction category",
   "import.reason.unknownSource": "unknown distraction source",
-  "import.reason.elapsedMismatch": "elapsed time doesn't match start and end",
   "import.reason.tooShort": "shorter than 1 minute",
   "import.reason.badPlanned": "bad planned length",
   "import.reason.longerThanPlanned": "longer than planned",
   "import.reason.endReasonMismatch": "end reason doesn't match the times",
-  "import.reason.distractionOutside": "distraction outside the session",
   "import.reason.distractionInBreak": "distraction during a break",
   "import.reason.simpleWithLength": "Simple distraction with a length",
   "import.reason.awayLength": "away distraction length out of range",
   "import.reason.awayLevel": "away distraction level doesn't match its length",
   "import.reason.advancedLength": "Advanced distraction length out of range",
-  "import.reason.totalMismatch": "distraction total doesn't add up",
-  "import.reason.focusMismatch": "focus % doesn't match distraction time",
 
   // ---------- character editor (avatar.html) ----------
   "avatar.pageTitle": "Your Character · ConcenTraining",

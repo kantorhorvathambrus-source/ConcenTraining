@@ -140,6 +140,12 @@ const I18N = (() => {
     return cached("date", options, () => new Intl.DateTimeFormat(language().intlLocale, options)).format(date);
   }
 
+  // A number as the current language writes it: 5000 is "5,000" in English, "5000" in Hungarian,
+  // "5.000" in German, "5 000" in French.
+  function formatNumber(value) {
+    return cached("number", {}, () => new Intl.NumberFormat(language().intlLocale)).format(value);
+  }
+
   // "45 min ago" / "45 perce": value units ago, in the language's relativeTimeStyle.
   function formatAgo(value, unit) {
     const style = language().relativeTimeStyle;
@@ -285,7 +291,7 @@ const I18N = (() => {
   startTranslatingWhileParsing();
   devCheck();
 
-  return { t, has, localize, source, detect, current, language, formatDate, formatAgo, setLanguage, translateTree, pluralCategory };
+  return { t, has, localize, source, detect, current, language, formatDate, formatNumber, formatAgo, setLanguage, translateTree, pluralCategory };
 })();
 
 const t = I18N.t;

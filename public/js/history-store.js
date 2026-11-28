@@ -3,7 +3,10 @@
 // its own key, separate from the running session (ct_session_v1).
 
 const HISTORY_KEY = "ct_history_v1";
-const HISTORY_LIMIT = 1000; // newest sessions kept (~300 KB)
+// Newest sessions kept (about 1.5 MB with typical sessions; four a day for more than three years).
+// A new session over the limit removes the oldest one (saveFinishedSession); an import never
+// removes any (mergeIntoHistory).
+const HISTORY_LIMIT = 5000;
 const HISTORY_MIN_MS = 60 * 1000; // shorter sessions count as accidental starts and aren't saved
 
 // How a finished session went: "short", "early", "great", "okay" or "rough" (see sessionResult).
@@ -46,8 +49,26 @@ const ENDED_BY_RULES = {
   startOver: (elapsedMs, plannedMs) => elapsedMs < plannedMs,
 };
 
-// Planned lengths are whole minutes, at least 1.
+// Planned lengths are whole minutes, from 1 to 240 (the same as MAX_MINUTES in app.js and
+// PLAN_MAX_MINUTES in plans.js).
 const MIN_PLANNED_MS = 60 * 1000;
+const MAX_PLANNED_MS = 240 * 60 * 1000;
+
+// Sanity limits for imported sessions (a damaged or hand-edited file). Each is far outside what
+// the app can save. No session starts before IMPORT_EARLIEST_START (safely before the app's first
+// release), and none ends more than IMPORT_FUTURE_MS after the moment of the import (the day
+// allows for a device clock that is a little off). At most IMPORT_MAX_BREAKS breaks.
+const IMPORT_EARLIEST_START = Date.UTC(2024, 0, 1);
+const IMPORT_FUTURE_MS = 24 * 60 * 60 * 1000;
+const IMPORT_MAX_BREAKS = 1000;
+
+// The most distractions a session of this length (session time, without breaks) can hold: 5 per
+// second, at least 100. Taps are limited to one per 400 ms (TAP_GUARD_MS in app.js), which is 2.5
+// per second, so real sessions always fit. The import rejects more, and the app (addDistraction)
+// never logs more, so it can't save a session its own import would reject.
+function distractionLimit(elapsedMs) {
+  return Math.max(100, Math.floor((elapsedMs * 5) / 1000));
+}
 // Imported Advanced-mode distractions must be as long as one of its buttons:
 // 30 sec (shortest) to 10 min (longest). Simple-mode distractions have no length.
 const IMPORT_MIN_DISTRACTION_MS = 30 * 1000;
@@ -268,7 +289,9 @@ function writeHistory(history) {
   }
 }
 
-// Adds a finished session to the front of the history (newest first).
+// Adds a finished session to the history, which is kept sorted by start time, newest first (a
+// "Welcome back" save of an older session, or a device clock set back, lands in its place).
+// Over HISTORY_LIMIT the oldest sessions are removed, without a warning.
 // endedBy is worked out from the times ("timer" or "manual") unless it's given: "timer" when the
 // session time (without breaks) reached the planned length.
 // Returns "saved", "exists" (already in the saved history: same start time, nothing is written),
@@ -284,7 +307,7 @@ function saveFinishedSession(session, endedBy) {
   // Set when the session started (startSession in app.js). A session that was already running when
   // the app was updated doesn't have it: its offset is worked out from its start time now.
   const utcOffsetMin = isUtcOffset(session.utcOffsetMin) ? session.utcOffsetMin : utcOffsetAt(session.startedAt);
-  history.unshift({
+  history.push({
     startedAt: session.startedAt,
     ...(isUtcOffset(utcOffsetMin) && { utcOffsetMin }),
     endedAt: session.endedAt,
@@ -304,6 +327,7 @@ function saveFinishedSession(session, endedBy) {
     // Only when the session had breaks.
     ...(pauses.length && { pauses }),
   });
+  history.sort((a, b) => b.startedAt - a.startedAt);
   history.length = Math.min(history.length, HISTORY_LIMIT);
   // If it fails the app keeps working, the session just isn't remembered (and the user is told).
   return writeHistory(history) ? "saved" : "failed";
@@ -357,30 +381,46 @@ function buildHistoryExport() {
   };
 }
 
-const isTime = (value) => Number.isFinite(value) && value >= 0;
+// Times are whole milliseconds that JavaScript can hold exactly.
+const isTime = (value) => Number.isSafeInteger(value) && value >= 0;
+const isLength = (value) => Number.isFinite(value) && value >= 0;
 
-// Checks one session from an import file. Returns a clean copy (only the known
-// fields) or throws an Error whose message is the code of a short reason, shown in the
-// import result in the current language (import.reason.<code> in js/i18n/en.js, e.g.
-// "tooShort": "shorter than 1 minute"). Besides each field on its own,
-// it checks that the numbers agree with each other the way the app saves them,
-// so a hand-edited session can't contradict itself. Unknown character ids are
-// fine (a newer export can have new characters). Version 1 files have no
-// distraction categories, so their distractions get category: null. Before
-// version 3 the only styles were "kind" and "strict", and "firm" exists from
-// version 5. Before version 4 the only end reasons were "timer" and "manual".
-// Before version 6 there are no away distractions: a source field is dropped and
-// every Advanced distraction needs a button length, exactly as those versions did.
-// Before version 7 there are no breaks: a pauses field is dropped, and elapsedMs must
-// be endedAt - startedAt, exactly as those versions did. From version 8 a session can have
-// utcOffsetMin (see "the day a session counts on"): a valid one is kept, a missing or invalid one
-// is left out and the session still imports (it then counts in the device's current timezone, like
-// every older session). Before version 8 the field is dropped.
-function cleanImportedSession(raw, version) {
+// Checks one session from an import file (and, for the export's self-test, one session about to be
+// exported). now: the moment of the import. Returns a clean copy (only the known fields) or throws
+// an Error whose message is the code of a short reason, shown in the import result in the current
+// language (import.reason.<code> in js/i18n/en.js, e.g. "tooShort": "shorter than 1 minute").
+//
+// Rejected: what can't be true (an end before the start, an unknown mode or style, a break outside
+// the session, breaks that overlap, ...) and what is outside the sanity limits at the top (a start
+// before 2024, an end more than a day after now, a planned length over 240 minutes, more than
+// distractionLimit() distractions or IMPORT_MAX_BREAKS breaks).
+// Repaired, so a session the app saved itself is never lost:
+// - elapsedMs, distractedMs and focusPercent are worked out again from the times, the breaks and
+//   the distractions (sessionFocus), whatever the file says; endedBy, "at least 1 minute" and "not
+//   longer than planned" are then checked against those. One exception: before 19 Oct 2026 the app
+//   rounded a tiny distraction (under 0.5% of the session) up to 100%, and such a 100 is kept.
+// - a distraction whose at is outside the session (more than IMPORT_LATE_DISTRACTION_MS after the
+//   end, or before the start: a device clock changed during the session) is moved to the session's
+//   start or end; its length, level and category stay.
+// - characterName (custom characters only) is kept when it's a usable name, otherwise dropped.
+//
+// Unknown character ids are fine (a newer export can have new characters). Version 1 files have no
+// distraction categories, so their distractions get category: null. Before version 3 the only
+// styles were "kind" and "strict", and "firm" exists from version 5. Before version 4 the only end
+// reasons were "timer" and "manual". Before version 6 there are no away distractions: a source
+// field is dropped and every Advanced distraction needs a button length, exactly as those versions
+// did. Before version 7 there are no breaks: a pauses field is dropped. From version 8 a session can
+// have utcOffsetMin (see "the day a session counts on"): a valid one is kept, a missing or invalid
+// one is left out and the session still imports (it then counts in the device's current timezone,
+// like every older session). Before version 8 the field is dropped.
+function cleanImportedSession(raw, version, now = Date.now()) {
   if (!raw || typeof raw !== "object") throw new Error("notSession");
 
-  const { startedAt, endedAt, endedBy, characterId, style, mode, plannedMs, elapsedMs, distractedMs, focusPercent } = raw;
-  if (!isTime(startedAt) || !isTime(endedAt) || endedAt < startedAt) throw new Error("badTimes");
+  const { startedAt, endedAt, endedBy, characterId, style, mode, plannedMs } = raw;
+  if (!isTime(startedAt) || !isTime(endedAt) || endedAt < startedAt || startedAt < IMPORT_EARLIEST_START) {
+    throw new Error("badTimes");
+  }
+  if (endedAt > now + IMPORT_FUTURE_MS) throw new Error("future");
   if (!Object.hasOwn(ENDED_BY_RULES, endedBy) || (endedBy === "startOver" && version < 4)) {
     throw new Error("unknownEndReason");
   }
@@ -390,21 +430,17 @@ function cleanImportedSession(raw, version) {
   if (version >= 5) styles.push("firm");
   if (!styles.includes(style)) throw new Error("unknownStyle");
   if (mode !== "simple" && mode !== "advanced") throw new Error("unknownMode");
-  if (!isTime(plannedMs) || !isTime(elapsedMs) || !isTime(distractedMs) || distractedMs > elapsedMs) {
-    throw new Error("badDurations");
-  }
-  if (mode === "simple" && focusPercent !== null) throw new Error("focusInSimple");
-  if (mode === "advanced" && !(Number.isInteger(focusPercent) && focusPercent >= 0 && focusPercent <= 100)) {
-    throw new Error("badFocus");
+  if (!Number.isInteger(plannedMs) || plannedMs < MIN_PLANNED_MS || plannedMs > MAX_PLANNED_MS || plannedMs % MIN_PLANNED_MS !== 0) {
+    throw new Error("badPlanned");
   }
   if (!Array.isArray(raw.distractions)) throw new Error("noDistractions");
 
-  // Breaks (version 7): each inside the session, in order and not overlapping. They're attached
-  // before the numbers are checked below, so session time is measured without them, exactly as
-  // the app saves it (a session with breaks that ran to the timer is still "timer").
+  // Breaks (version 7): each inside the session, in order and not overlapping. They're checked
+  // before the distractions, so session time is measured without them, exactly as the app saves it
+  // (a session with breaks that ran to the timer is still "timer").
   let pauses = [];
   if (version >= 7 && Object.hasOwn(raw, "pauses")) {
-    if (!Array.isArray(raw.pauses)) throw new Error("badBreakList");
+    if (!Array.isArray(raw.pauses) || raw.pauses.length > IMPORT_MAX_BREAKS) throw new Error("badBreakList");
     let previousEnd = startedAt;
     pauses = raw.pauses.map((p) => {
       if (!p || !isTime(p.at) || !Number.isInteger(p.ms) || p.ms <= 0) throw new Error("badBreak");
@@ -415,8 +451,12 @@ function cleanImportedSession(raw, version) {
     });
   }
 
+  // Session time, as sessionFocus works it out (no distraction can change it).
+  const elapsedMs = Math.max(0, endedAt - startedAt - pausedTotal(pauses));
+  if (raw.distractions.length > distractionLimit(elapsedMs)) throw new Error("tooManyDistractions");
+
   const distractions = raw.distractions.map((d) => {
-    if (!d || !isTime(d.at) || !Number.isInteger(d.level) || d.level < 1 || d.level > 5 || !isTime(d.ms)) {
+    if (!d || !isTime(d.at) || !Number.isInteger(d.level) || d.level < 1 || d.level > 5 || !isLength(d.ms)) {
       throw new Error("badDistraction");
     }
     if (version >= 2 && d.category !== null && !isCategory(d.category)) {
@@ -425,21 +465,20 @@ function cleanImportedSession(raw, version) {
     if (version >= 6 && Object.hasOwn(d, "source") && d.source !== "away") {
       throw new Error("unknownSource");
     }
-    const clean = { at: d.at, level: d.level, ms: d.ms, category: version >= 2 ? d.category : null };
+    // Inside the session, or up to IMPORT_LATE_DISTRACTION_MS after the end (a tap just as the timer
+    // ran out): kept as it is. Anything else is moved to the nearer end of the session.
+    const outside = d.at < startedAt || d.at > endedAt + IMPORT_LATE_DISTRACTION_MS;
+    const at = outside ? Math.min(endedAt, Math.max(startedAt, d.at)) : d.at;
+    const clean = { at, level: d.level, ms: d.ms, category: version >= 2 ? d.category : null };
     if (version >= 6 && d.source === "away") clean.source = "away";
     return clean;
   });
 
-  // Do the numbers agree? The app's own calculation is the reference.
-  const expected = sessionFocus({ startedAt, endedAt, mode, distractions, pauses });
-  if (elapsedMs !== expected.elapsedMs) throw new Error("elapsedMismatch");
   if (elapsedMs < HISTORY_MIN_MS) throw new Error("tooShort");
-  if (plannedMs < MIN_PLANNED_MS || plannedMs % MIN_PLANNED_MS !== 0) throw new Error("badPlanned");
   if (elapsedMs > plannedMs) throw new Error("longerThanPlanned");
   const endedByRule = ENDED_BY_RULES[endedBy];
   if (endedByRule && !endedByRule(elapsedMs, plannedMs)) throw new Error("endReasonMismatch");
   for (const d of distractions) {
-    if (d.at < startedAt || d.at > endedAt + IMPORT_LATE_DISTRACTION_MS) throw new Error("distractionOutside");
     // The distraction buttons are hidden during a break, and leaving the page then logs nothing.
     if (pauses.some((p) => d.at > p.at && d.at < p.at + p.ms)) throw new Error("distractionInBreak");
     if (mode === "simple" && d.ms !== 0) throw new Error("simpleWithLength");
@@ -454,27 +493,59 @@ function cleanImportedSession(raw, version) {
       throw new Error("advancedLength");
     }
   }
-  if (distractedMs !== expected.distractedMs) throw new Error("totalMismatch");
-  // Before 19 Oct 2026 the app rounded a tiny distraction (under 0.5% of the
-  // session) up to 100%, so that old value is accepted too.
-  const oldRoundedTo100 = Math.round(((elapsedMs - distractedMs) / elapsedMs) * 100) === 100;
-  if (mode === "advanced" && focusPercent !== expected.focusPercent && !(focusPercent === 100 && oldRoundedTo100)) {
-    throw new Error("focusMismatch");
-  }
+
+  // The numbers are always the app's own calculation.
+  const expected = sessionFocus({ startedAt, endedAt, mode, distractions, pauses });
+  // Before 19 Oct 2026 the app rounded a tiny distraction (under 0.5% of the session) up to 100%:
+  // that saved 100 is kept, so a restored session shows what it showed before.
+  const oldRoundedTo100 =
+    mode === "advanced" && raw.focusPercent === 100 && expected.focusPercent === 99 &&
+    Math.round(((elapsedMs - expected.distractedMs) / elapsedMs) * 100) === 100;
+  const focusPercent = oldRoundedTo100 ? 100 : expected.focusPercent;
+
+  // A custom character's name when the session ran (see saveFinishedSession), within the editor's
+  // limits. Shown as plain text only (textContent), never as HTML.
+  const name = isCustomId(characterId) && typeof raw.characterName === "string" ? raw.characterName.trim() : "";
+  const characterName = name && nameLength(name) <= CUSTOM_NAME_MAX ? name : "";
 
   return {
     startedAt,
     ...(version >= 8 && isUtcOffset(raw.utcOffsetMin) && { utcOffsetMin: raw.utcOffsetMin }),
-    endedAt, endedBy, characterId, style, mode, plannedMs, elapsedMs, distractedMs, focusPercent, distractions,
+    endedAt, endedBy, characterId,
+    ...(characterName && { characterName }),
+    style, mode, plannedMs, elapsedMs, distractedMs: expected.distractedMs, focusPercent, distractions,
     ...(pauses.length && { pauses }),
   };
+}
+
+// Counts how many sessions fail, by reason code. Returns [[code, count], ...] in the order the
+// codes first appear.
+function countReasons(reasons) {
+  const counts = new Map();
+  for (const reason of reasons) counts.set(reason, (counts.get(reason) || 0) + 1);
+  return [...counts];
+}
+
+// The export's self-test: every session of an export runs through the same check as an import
+// (cleanImportedSession), so a session that a restore would lose is found now, not then. Returns
+// one reason code per session that wouldn't import. Those sessions are still in the file.
+function exportProblems(data, now = Date.now()) {
+  const reasons = [];
+  for (const entry of data.sessions) {
+    try {
+      cleanImportedSession(entry, data.version, now);
+    } catch (error) {
+      reasons.push(error.message);
+    }
+  }
+  return reasons;
 }
 
 // Reads the text of an import file. Returns { sessions, invalidReasons }: the
 // cleaned sessions, and one reason code per session that was skipped because
 // it's invalid. A problem with the file itself throws an Error whose message is a code:
-// import.file.<code> in js/i18n/en.js.
-function parseHistoryExport(text) {
+// import.file.<code> in js/i18n/en.js. now: the moment of the import (for "date in the future").
+function parseHistoryExport(text, now = Date.now()) {
   let data;
   try {
     data = JSON.parse(text);
@@ -492,7 +563,7 @@ function parseHistoryExport(text) {
   const invalidReasons = [];
   for (const raw of data.sessions) {
     try {
-      sessions.push(cleanImportedSession(raw, data.version));
+      sessions.push(cleanImportedSession(raw, data.version, now));
     } catch (error) {
       invalidReasons.push(error.message);
     }
@@ -500,34 +571,35 @@ function parseHistoryExport(text) {
   return { sessions, invalidReasons };
 }
 
-// Adds imported sessions to the history, skipping any with a start time that's
-// already there. Like saveFinishedSession, only the newest HISTORY_LIMIT sessions
-// are kept, so the cut can drop imported sessions (droppedImported) as well as
-// sessions that were already there (removedExisting). added counts only imported
-// sessions that are really in the saved history. saved is false if the browser
-// refused to store the result.
+// Adds imported sessions to the history. It never removes a session you have: a session whose
+// start time is already in the history (or earlier in the file) is skipped, and the new ones are
+// added newest first while the history has room under HISTORY_LIMIT; the rest didn't fit. The saved
+// history is read again right here, in the same step as the write, so a session saved meanwhile in
+// another tab is never lost. Returns { added, skipped, didNotFit, full, saved }: full is true when
+// there were new sessions but no room for any; saved is false if the browser refused to store the
+// result (then nothing changed).
 function mergeIntoHistory(sessions) {
   const history = loadHistory();
   const known = new Set(history.map((entry) => entry.startedAt));
-  const imported = new Set();
+  const fresh = [];
   let skipped = 0;
   for (const session of sessions) {
     if (known.has(session.startedAt)) {
       skipped++;
     } else {
       known.add(session.startedAt);
-      history.push(session);
-      imported.add(session);
+      fresh.push(session);
     }
   }
 
-  history.sort((a, b) => b.startedAt - a.startedAt);
-  const cut = history.splice(HISTORY_LIMIT);
-  const droppedImported = cut.filter((entry) => imported.has(entry)).length;
-  const removedExisting = cut.length - droppedImported;
-  const added = imported.size - droppedImported;
+  fresh.sort((a, b) => b.startedAt - a.startedAt);
+  const room = Math.max(0, HISTORY_LIMIT - history.length);
+  const toAdd = fresh.slice(0, room);
+  const didNotFit = fresh.length - toAdd.length;
+  const full = fresh.length > 0 && toAdd.length === 0;
+  if (toAdd.length === 0) return { added: 0, skipped, didNotFit, full, saved: true };
 
-  const changed = added > 0 || removedExisting > 0;
-  const saved = !changed || writeHistory(history);
-  return { added, skipped, droppedImported, removedExisting, saved };
+  const merged = history.concat(toAdd).sort((a, b) => b.startedAt - a.startedAt);
+  const saved = writeHistory(merged);
+  return { added: saved ? toAdd.length : 0, skipped, didNotFit, full, saved };
 }

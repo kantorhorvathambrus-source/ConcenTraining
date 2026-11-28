@@ -1,0 +1,68 @@
+{
+  "app": "ConcenTraining",
+  "type": "session-history",
+  "version": 8,
+  "exportedAt": "2026-11-28T09:00:00.000Z",
+  "sessions": [
+    {
+      "startedAt": 1790784000000,
+      "utcOffsetMin": 120,
+      "endedAt": 1790785500000,
+      "endedBy": "timer",
+      "characterId": "custom-a1b2c3d4e5",
+      "style": "kind",
+      "mode": "simple",
+      "plannedMs": 1500000,
+      "elapsedMs": 1500000,
+      "distractedMs": 0,
+      "focusPercent": null,
+      "distractions": [],
+      "characterName": "Captain Focus 🚀"
+    },
+    {
+      "startedAt": 1790787600000,
+      "utcOffsetMin": 120,
+      "endedAt": 1790788800000,
+      "endedBy": "manual",
+      "characterId": "custom-f6g7h8i9j0",
+      "style": "kind",
+      "mode": "simple",
+      "plannedMs": 1500000,
+      "elapsedMs": 1200000,
+      "distractedMs": 0,
+      "focusPercent": null,
+      "distractions": [],
+      "characterName": "<b>Bold Max</b>"
+    },
+    {
+      "startedAt": 1790791200000,
+      "utcOffsetMin": 120,
+      "endedAt": 1790792100000,
+      "endedBy": "manual",
+      "characterId": "custom-k1l2m3n4o5",
+      "style": "kind",
+      "mode": "simple",
+      "plannedMs": 1500000,
+      "elapsedMs": 900000,
+      "distractedMs": 0,
+      "focusPercent": null,
+      "distractions": [],
+      "characterName": "A name that is much too long"
+    },
+    {
+      "startedAt": 1790794800000,
+      "utcOffsetMin": 120,
+      "endedAt": 1790795400000,
+      "endedBy": "manual",
+      "characterId": "grandma",
+      "style": "kind",
+      "mode": "simple",
+      "plannedMs": 1500000,
+      "elapsedMs": 600000,
+      "distractedMs": 0,
+      "focusPercent": null,
+      "distractions": [],
+      "characterName": "Not Grandma"
+    }
+  ]
+}

@@ -382,7 +382,7 @@ I18N_TEXTS.hu = {
 
   "history.backupTitle": "Biztonsági mentés",
   "history.backupText":
-    "A munkameneteid automatikusan mentődnek ezen az eszközön. Exportálj egy másolatot, mielőtt telefont cserélsz vagy törlöd a böngészőadataidat. Az exportálás az összes munkamenetedet egy .json fájlba menti. Az importálás hozzáadja egy ilyen fájl munkameneteit; a már meglévőket kihagyja. Csak a legújabb 1000 munkamenet marad meg: ha összesen több lesz 1000-nél, a legrégebbiek törlődnek.",
+    "A munkameneteid automatikusan mentődnek ezen az eszközön. Exportálj egy másolatot, mielőtt telefont cserélsz vagy törlöd a böngészőadataidat. Az exportálás az összes munkamenetedet egy .json fájlba menti. Az importálás hozzáadja egy ilyen fájl munkameneteit: a már meglévőket kihagyja, és a tieidből soha nem töröl (ami már nem fér el, az kimarad). Csak a legújabb {max} munkamenet marad meg: ha több lesz, minden új munkamenet a legrégebbit törli.",
   "history.export": "Exportálás",
   "history.import": "Importálás",
   "history.backToTimer": "← Vissza az időzítőhöz",
@@ -474,6 +474,10 @@ I18N_TEXTS.hu = {
 
   // ---------- export / import ----------
   "import.exported": { one: "{count} munkamenet exportálva.", other: "{count} munkamenet exportálva." },
+  "import.exportInvalid": {
+    one: " A fájlban {count} munkamenet nem lenne importálható ({why}).",
+    other: " A fájlban {count} munkamenet nem lenne importálható ({why}).",
+  },
   "import.tooBig": "Ez a fájl túl nagy ahhoz, hogy ConcenTraining-export legyen.",
   "import.saveFailed": "Nem sikerült menteni az importált munkameneteket: a böngésző tárhelye megtelt vagy le van tiltva.",
   "import.imported": { one: "{count} munkamenet importálva.", other: "{count} munkamenet importálva." },
@@ -485,14 +489,10 @@ I18N_TEXTS.hu = {
     one: " A fájlból {count} régebbi munkamenet nem fért bele (legfeljebb {max}).",
     other: " A fájlból {count} régebbi munkamenet nem fért bele (legfeljebb {max}).",
   },
-  "import.allTooOld": "Semmi sem lett importálva: a fájl összes új munkamenete régebbi a megtartott {max} munkamenetnél.",
+  "import.full": "Nem került be semmi: az előzményeid megteltek ({max} munkamenet).",
   "import.nothing": "Semmi sem lett importálva.",
   "import.nothingNew": "Nincs új importálnivaló: a fájl minden munkamenete megvan már ({count}).",
   "import.nothingNewValid": "Nincs új importálnivaló: a fájl minden érvényes munkamenete megvan már ({count}).",
-  "import.removed": {
-    one: " A legrégebbi munkameneted törlődött, hogy a szám {max} alatt maradjon.",
-    other: " {count} legrégebbi munkameneted törlődött, hogy a szám {max} alatt maradjon.",
-  },
   "import.invalid": {
     one: " {count} érvénytelen munkamenet kihagyva ({why}).",
     other: " {count} érvénytelen munkamenet kihagyva ({why}).",
@@ -504,14 +504,13 @@ I18N_TEXTS.hu = {
   "import.file.unknownVersion": "Ennek az exportnak ismeretlen a verziószáma.",
   "import.reason.notSession": "nem munkamenet",
   "import.reason.badTimes": "hibás kezdési vagy befejezési idő",
+  "import.reason.future": "jövőbeli dátum",
   "import.reason.unknownEndReason": "ismeretlen befejezési ok",
   "import.reason.badCharacter": "hibás karakterazonosító",
   "import.reason.unknownStyle": "ismeretlen stílus",
   "import.reason.unknownMode": "ismeretlen mód",
-  "import.reason.badDurations": "hibás időtartammezők",
-  "import.reason.focusInSimple": "fókuszszázalék Egyszerű módban",
-  "import.reason.badFocus": "hibás fókuszszázalék",
   "import.reason.noDistractions": "hiányzó elkalandozáslista",
+  "import.reason.tooManyDistractions": "túl sok elkalandozás",
   "import.reason.badBreakList": "hibás szünetlista",
   "import.reason.badBreak": "hibás szünet",
   "import.reason.breakOutside": "szünet a munkameneten kívül",
@@ -519,19 +518,15 @@ I18N_TEXTS.hu = {
   "import.reason.badDistraction": "hibás elkalandozás",
   "import.reason.unknownCategory": "ismeretlen elkalandozás-kategória",
   "import.reason.unknownSource": "ismeretlen elkalandozásforrás",
-  "import.reason.elapsedMismatch": "az eltelt idő nem egyezik a kezdéssel és a befejezéssel",
   "import.reason.tooShort": "1 percnél rövidebb",
   "import.reason.badPlanned": "hibás tervezett hossz",
   "import.reason.longerThanPlanned": "hosszabb a tervezettnél",
   "import.reason.endReasonMismatch": "a befejezési ok nem egyezik az időpontokkal",
-  "import.reason.distractionOutside": "elkalandozás a munkameneten kívül",
   "import.reason.distractionInBreak": "elkalandozás szünet közben",
   "import.reason.simpleWithLength": "Egyszerű módú elkalandozás időtartammal",
   "import.reason.awayLength": "a távollét hossza a megengedett tartományon kívül esik",
   "import.reason.awayLevel": "a távollét szintje nem egyezik a hosszával",
   "import.reason.advancedLength": "a Részletes módú elkalandozás hossza a megengedett tartományon kívül esik",
-  "import.reason.totalMismatch": "az elkalandozások összege nem stimmel",
-  "import.reason.focusMismatch": "a fókuszszázalék nem egyezik az elkalandozási idővel",
 
   // ---------- character editor (avatar.html) ----------
   "avatar.pageTitle": "Saját karakter · ConcenTraining",

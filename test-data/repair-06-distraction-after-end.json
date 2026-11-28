@@ -1,0 +1,29 @@
+{
+  "app": "ConcenTraining",
+  "type": "session-history",
+  "version": 8,
+  "exportedAt": "2026-11-28T09:00:00.000Z",
+  "sessions": [
+    {
+      "startedAt": 1790755200000,
+      "utcOffsetMin": 120,
+      "endedAt": 1790755440000,
+      "endedBy": "manual",
+      "characterId": "professor",
+      "style": "firm",
+      "mode": "advanced",
+      "plannedMs": 1500000,
+      "elapsedMs": 240000,
+      "distractedMs": 120000,
+      "focusPercent": 50,
+      "distractions": [
+        {
+          "at": 1790755800000,
+          "level": 3,
+          "ms": 120000,
+          "category": "phone"
+        }
+      ]
+    }
+  ]
+}

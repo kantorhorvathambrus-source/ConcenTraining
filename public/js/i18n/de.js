@@ -388,7 +388,7 @@ I18N_TEXTS.de = {
 
   "history.backupTitle": "Sicherung",
   "history.backupText":
-    "Deine Runden werden automatisch auf diesem Gerät gespeichert. Exportiere eine Kopie, bevor du das Handy wechselst oder deine Browserdaten löschst. Beim Exportieren werden alle deine Runden als .json-Datei gespeichert. Beim Importieren werden die Runden aus so einer Datei hinzugefügt; Runden, die du schon hast, werden übersprungen. Nur die neuesten 1000 Runden bleiben erhalten: Wenn es insgesamt mehr als 1000 werden, werden die ältesten entfernt.",
+    "Deine Runden werden automatisch auf diesem Gerät gespeichert. Exportiere eine Kopie, bevor du das Handy wechselst oder deine Browserdaten löschst. Beim Exportieren werden alle deine Runden als .json-Datei gespeichert. Beim Importieren werden die Runden aus so einer Datei hinzugefügt: Runden, die du schon hast, werden übersprungen, und von deinen Runden wird nie eine entfernt (was keinen Platz mehr hat, bleibt draußen). Nur die neuesten {max} Runden bleiben erhalten: Sind es mehr, entfernt jede neue Runde die älteste.",
   "history.export": "Verlauf exportieren",
   "history.import": "Verlauf importieren",
   "history.backToTimer": "← Zurück zum Timer",
@@ -480,6 +480,10 @@ I18N_TEXTS.de = {
 
   // ---------- export / import ----------
   "import.exported": { one: "{count} Runde exportiert.", other: "{count} Runden exportiert." },
+  "import.exportInvalid": {
+    one: " {count} Runde in der Datei ließe sich nicht importieren ({why}).",
+    other: " {count} Runden in der Datei ließen sich nicht importieren ({why}).",
+  },
   "import.tooBig": "Diese Datei ist zu groß für einen ConcenTraining-Export.",
   "import.saveFailed": "Die importierten Runden konnten nicht gespeichert werden: Der Speicher dieses Browsers ist voll oder blockiert.",
   "import.imported": { one: "{count} Runde importiert.", other: "{count} Runden importiert." },
@@ -491,14 +495,10 @@ I18N_TEXTS.de = {
     one: " {count} ältere Runde aus der Datei hatte keinen Platz mehr (max. {max}).",
     other: " {count} ältere Runden aus der Datei hatten keinen Platz mehr (max. {max}).",
   },
-  "import.allTooOld": "Nichts importiert: Alle neuen Runden in dieser Datei sind älter als die {max} Runden, die behalten werden.",
+  "import.full": "Nichts importiert: Dein Verlauf ist voll ({max} Runden).",
   "import.nothing": "Nichts importiert.",
   "import.nothingNew": "Nichts Neues zum Importieren: Du hast schon alle Runden aus dieser Datei ({count}).",
   "import.nothingNewValid": "Nichts Neues zum Importieren: Du hast schon alle gültigen Runden aus dieser Datei ({count}).",
-  "import.removed": {
-    one: " Deine älteste Runde wurde entfernt, um unter {max} zu bleiben.",
-    other: " Deine {count} ältesten Runden wurden entfernt, um unter {max} zu bleiben.",
-  },
   "import.invalid": {
     one: " {count} ungültige Runde übersprungen ({why}).",
     other: " {count} ungültige Runden übersprungen ({why}).",
@@ -510,14 +510,13 @@ I18N_TEXTS.de = {
   "import.file.unknownVersion": "Dieser Export hat eine unbekannte Versionsnummer.",
   "import.reason.notSession": "keine Runde",
   "import.reason.badTimes": "ungültige Start- oder Endzeit",
+  "import.reason.future": "Datum in der Zukunft",
   "import.reason.unknownEndReason": "unbekannter Grund für das Ende",
   "import.reason.badCharacter": "ungültige Figuren-ID",
   "import.reason.unknownStyle": "unbekannter Stil",
   "import.reason.unknownMode": "unbekannter Modus",
-  "import.reason.badDurations": "ungültige Angaben zur Dauer",
-  "import.reason.focusInSimple": "Fokus in Prozent im Modus „Einfach“",
-  "import.reason.badFocus": "ungültiger Fokus in Prozent",
   "import.reason.noDistractions": "Liste der Ablenkungen fehlt",
+  "import.reason.tooManyDistractions": "zu viele Ablenkungen",
   "import.reason.badBreakList": "ungültige Liste der Pausen",
   "import.reason.badBreak": "ungültige Pause",
   "import.reason.breakOutside": "Pause außerhalb der Runde",
@@ -525,19 +524,15 @@ I18N_TEXTS.de = {
   "import.reason.badDistraction": "ungültige Ablenkung",
   "import.reason.unknownCategory": "unbekannte Kategorie einer Ablenkung",
   "import.reason.unknownSource": "unbekannte Quelle einer Ablenkung",
-  "import.reason.elapsedMismatch": "verstrichene Zeit passt nicht zu Start und Ende",
   "import.reason.tooShort": "kürzer als 1\u00a0Minute",
   "import.reason.badPlanned": "ungültige geplante Dauer",
   "import.reason.longerThanPlanned": "länger als geplant",
   "import.reason.endReasonMismatch": "Grund für das Ende passt nicht zu den Zeiten",
-  "import.reason.distractionOutside": "Ablenkung außerhalb der Runde",
   "import.reason.distractionInBreak": "Ablenkung während einer Pause",
   "import.reason.simpleWithLength": "Ablenkung im Modus „Einfach“ mit Dauer",
   "import.reason.awayLength": "Dauer einer Abwesenheit außerhalb des gültigen Bereichs",
   "import.reason.awayLevel": "Stufe einer Abwesenheit passt nicht zu ihrer Dauer",
   "import.reason.advancedLength": "Dauer einer Ablenkung im Modus „Detailliert“ außerhalb des gültigen Bereichs",
-  "import.reason.totalMismatch": "Summe der Ablenkungen geht nicht auf",
-  "import.reason.focusMismatch": "Fokus in Prozent passt nicht zur Ablenkungszeit",
 
   // ---------- character editor (avatar.html) ----------
   "avatar.pageTitle": "Deine Figur · ConcenTraining",

@@ -1420,7 +1420,12 @@ function exportHistory() {
   link.click();
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-  showBackupStatus(t("import.exported", { count: data.sessions.length }), false);
+  // Self-test: the sessions a restore from this file would skip are still in it, but the user hears
+  // about them now, not at restore time.
+  const problems = exportProblems(data, Date.now());
+  let message = t("import.exported", { count: data.sessions.length });
+  if (problems.length > 0) message += t("import.exportInvalid", { count: problems.length, why: reasonsText(problems) });
+  showBackupStatus(message, problems.length > 0);
 }
 
 async function importHistory(file) {
@@ -1431,7 +1436,7 @@ async function importHistory(file) {
 
   let sessions, invalidReasons;
   try {
-    ({ sessions, invalidReasons } = parseHistoryExport(await file.text()));
+    ({ sessions, invalidReasons } = parseHistoryExport(await file.text(), Date.now()));
   } catch (error) {
     // A problem with the file (a code from parseHistoryExport), or the browser couldn't read it.
     const key = `import.file.${error.message}`;
@@ -1439,43 +1444,58 @@ async function importHistory(file) {
     return;
   }
 
-  const { added, skipped, droppedImported, removedExisting, saved } = mergeIntoHistory(sessions);
+  const { added, skipped, didNotFit, full, saved } = mergeIntoHistory(sessions);
   if (!saved) {
     showBackupStatus(t("import.saveFailed"), true);
     return;
   }
 
-  // The added parts start with their own space (in the language files).
+  // The added parts start with their own space (in the language files). An import never removes a
+  // session you have: what doesn't fit under HISTORY_LIMIT is left out (see mergeIntoHistory).
+  const max = historyLimitText();
   let message;
   if (added > 0) {
     message = t("import.imported", { count: added });
     if (skipped > 0) message += t("import.skipped", { count: skipped });
-    if (droppedImported > 0) message += t("import.didNotFit", { count: droppedImported, max: HISTORY_LIMIT });
-  } else if (droppedImported > 0) {
-    message = t("import.allTooOld", { max: HISTORY_LIMIT });
+    if (didNotFit > 0) message += t("import.didNotFit", { count: didNotFit, max });
+  } else if (full) {
+    message = t("import.full", { max });
+    if (skipped > 0) message += t("import.skipped", { count: skipped });
   } else if (sessions.length === 0 && invalidReasons.length > 0) {
     message = t("import.nothing");
   } else {
     message = t(invalidReasons.length > 0 ? "import.nothingNewValid" : "import.nothingNew", { count: sessions.length });
   }
   if (invalidReasons.length > 0) message += invalidSummary(invalidReasons);
-  if (removedExisting > 0) message += t("import.removed", { count: removedExisting, max: HISTORY_LIMIT });
-  showBackupStatus(message, added === 0 && invalidReasons.length > 0);
+  showBackupStatus(message, added === 0 && (invalidReasons.length > 0 || full));
   render();
 }
 
-// One line about the sessions skipped as invalid, e.g. " Skipped 3 invalid
-// sessions (2 shorter than 1 minute, 1 bad focus %)." With one reason, no counts.
+// The history limit as the current language writes numbers ("5,000" in English, "5000" in Hungarian).
+function historyLimitText() {
+  return I18N.formatNumber(HISTORY_LIMIT);
+}
+
+// The reasons, e.g. "2 shorter than 1 minute, 1 bad planned length". With one reason, no counts.
 // reasons: codes from cleanImportedSession (import.reason.<code>).
-function invalidSummary(reasons) {
+function reasonsText(reasons) {
   const reasonText = (code) => t(`import.reason.${code}`);
-  const counts = new Map();
-  for (const reason of reasons) counts.set(reason, (counts.get(reason) || 0) + 1);
-  const why =
-    counts.size === 1
-      ? reasonText(reasons[0])
-      : [...counts].map(([reason, count]) => t("import.reasonCount", { count, reason: reasonText(reason) })).join(t("common.listSeparator"));
-  return t("import.invalid", { count: reasons.length, why });
+  const counts = countReasons(reasons);
+  return counts.length === 1
+    ? reasonText(reasons[0])
+    : counts.map(([reason, count]) => t("import.reasonCount", { count, reason: reasonText(reason) })).join(t("common.listSeparator"));
+}
+
+// One line about the sessions skipped as invalid, e.g. " Skipped 3 invalid
+// sessions (2 shorter than 1 minute, 1 bad planned length)."
+function invalidSummary(reasons) {
+  return t("import.invalid", { count: reasons.length, why: reasonsText(reasons) });
+}
+
+// The Backup section's text names the history limit, so it's filled here (on load and when the
+// language changes), not by data-i18n. history.html has the English text for a page without script.
+function renderBackupText() {
+  document.getElementById("backupText").textContent = t("history.backupText", { max: historyLimitText() });
 }
 
 // Shown again: site data may have been allowed or blocked meanwhile, and the history may have changed.
@@ -1490,6 +1510,7 @@ function recheckAndRefresh() {
 // message: they report something that already happened.
 function onLanguageChange() {
   if (CAPSULES_ON) relabelCapsuleChips();
+  renderBackupText();
   render(); // also the capsule counter (updateCapsuleForm)
 }
 
@@ -1498,6 +1519,7 @@ function init() {
   initLanguagePicker();
   // The 7-day rule only applies in Safari on iPhone/iPad (see iosSafariNotInstalled in history-store.js).
   document.getElementById("iosStorageNote").hidden = !iosSafariNotInstalled();
+  renderBackupText();
   const fileInput = document.getElementById("importFile");
   document.getElementById("exportButton").addEventListener("click", exportHistory);
   document.getElementById("importButton").addEventListener("click", () => fileInput.click());
