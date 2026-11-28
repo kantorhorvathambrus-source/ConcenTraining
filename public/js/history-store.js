@@ -413,7 +413,7 @@ const isLength = (value) => Number.isFinite(value) && value >= 0;
 // have utcOffsetMin (see "the day a session counts on"): a valid one is kept, a missing or invalid
 // one is left out and the session still imports (it then counts in the device's current timezone,
 // like every older session). Before version 8 the field is dropped.
-function cleanImportedSession(raw, version, now) {
+function cleanImportedSession(raw, version, now = Date.now()) {
   if (!raw || typeof raw !== "object") throw new Error("notSession");
 
   const { startedAt, endedAt, endedBy, characterId, style, mode, plannedMs } = raw;
@@ -529,7 +529,7 @@ function countReasons(reasons) {
 // The export's self-test: every session of an export runs through the same check as an import
 // (cleanImportedSession), so a session that a restore would lose is found now, not then. Returns
 // one reason code per session that wouldn't import. Those sessions are still in the file.
-function exportProblems(data, now) {
+function exportProblems(data, now = Date.now()) {
   const reasons = [];
   for (const entry of data.sessions) {
     try {
@@ -545,7 +545,7 @@ function exportProblems(data, now) {
 // cleaned sessions, and one reason code per session that was skipped because
 // it's invalid. A problem with the file itself throws an Error whose message is a code:
 // import.file.<code> in js/i18n/en.js. now: the moment of the import (for "date in the future").
-function parseHistoryExport(text, now) {
+function parseHistoryExport(text, now = Date.now()) {
   let data;
   try {
     data = JSON.parse(text);
