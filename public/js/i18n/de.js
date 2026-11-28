@@ -88,7 +88,7 @@ I18N_TEXTS.de = {
   "setup.keepScreenOn": "Bildschirm während der Runde anlassen",
   "setup.leaveReminder": "Erinnere mich, wenn ich die App verlasse",
   "setup.leaveReminderBlocked": "Benachrichtigungen sind für diese Website blockiert. Du kannst sie in den Website-Einstellungen deines Browsers erlauben.",
-  "setup.focusSound": "Hintergrundrauschen",
+  "setup.focusSound": "Hintergrund\u00adrauschen",
   "setup.focusSoundNoise": "Rauschen",
   "setup.focusSoundAmbient": "Klänge",
   "setup.focusSoundOff": "Aus",
