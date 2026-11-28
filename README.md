@@ -85,7 +85,8 @@ there, see [Domain, redirect and security headers](#domain-redirect-and-security
   On iPhone, silent mode can mute it.") and **Keep the screen on during the session**.
   See "Sound and screen" below. A third one, **Remind me if I leave the app**, is off by default and
   only shown where it can work (on iPhone and iPad only in the Home Screen app, never in a Safari
-  tab); see [Leave reminder](#leave-reminder).
+  tab); see [Leave reminder](#leave-reminder). A fourth one, **Ask how it felt at the end**, on by
+  default, turns the summary's optional mood question on or off (see [Inner weather](#inner-weather)).
   Below them, **Focus sound**: **Noise** (one choice: Off · Brown · Pink · White · Green) and
   **Ambient** (a mixer of toggle tiles: Rain · Birds · Wind · Waves · Crickets · Fan · Vacuum, any number
   on).
@@ -395,6 +396,9 @@ there, see [Domain, redirect and security headers](#domain-redirect-and-security
   no distraction lengths, so this is the session's length (distractions included), never "focused"
   time; "(… planned)" follows the same rule as in Advanced mode. A session under 1 minute only shows
   the title and the "not saved" note (no focus %, sentence, factual line, breaks or categories).
+  Under the details, a saved session gets the optional question "What was the weather like inside?"
+  with a row of six weather icons from easy to hard (see [Inner weather](#inner-weather)); it changes
+  nothing else on the summary.
 - **Couldn't save:** if the browser refused to store a finished session (storage full or site data
   blocked; usually the setup and session screens already said so, see
   [When the browser won't save](#when-the-browser-wont-save)), the summary adds one red line under the details: "Couldn't save this session to your
@@ -972,6 +976,9 @@ One summary for the whole plan, on the summary screen:
   4 min"); the top 3 categories.
 - The history page, stats and export are unchanged: each block is already in the history as its own
   session (no new history fields, no new `EXPORT_VERSION`).
+- **How it felt:** the optional question "What was the weather like inside?" shows once, under the plan's
+  summary, when at least one block is in the history (`saved` or `exists`). One tap saves the mood for
+  every such block, each its own session (see [Inner weather](#inner-weather)).
 
 ### Storage, reloads and tabs
 
@@ -1627,12 +1634,15 @@ to history" checkbox was unticked (see above). The page shows:
   A slot can only be "best" once it has at least 3 sessions with a focus %
   (`MIN_SESSIONS_FOR_BEST_TIME` at the top of `public/js/history.js`). Until one does, the page says
   "Not enough data yet".
+- **Inner weather:** how the last 7 days felt, as marked after each session (see
+  [Inner weather](#inner-weather)). Only once at least one session has a mood.
 - **What distracts you:** the picked categories across all sessions, most common first, with count
   and share. Distractions without a category (picker skipped, or logged before categories existed)
   are left out of the bars and only counted in the note above them.
 - **Last 30 sessions** with date, character, mode, length, distractions and focus %. Sessions saved
   by **Start over** have a small "restarted" label. The title says "Last 30 sessions (of N)" once
-  there are more than 30, otherwise "N sessions". See [Deleting a session](#deleting-a-session).
+  there are more than 30, otherwise "N sessions". A session with a mood has a small weather icon at
+  the end of its first line. See [Deleting a session](#deleting-a-session).
 - **Time capsule:** a message to your future self, sealed until a day or more session time (see
   [Time capsule](#time-capsule)). Ready messages show at the very top of the page.
 - **Backup:** "Your sessions are saved automatically on this device. Export a copy before you
@@ -1704,9 +1714,9 @@ empty state, as on a first visit (Export is disabled then).
 ### Changes from other tabs
 
 The page doesn't keep showing old numbers: it's drawn again from the saved history when
-- another tab saves, deletes or imports sessions, seals, opens or deletes a time capsule, or all
-  site data is cleared there (the `storage` event for `ct_history_v1` or `ct_capsules_v1`, or with
-  no key);
+- another tab saves, deletes or imports sessions, seals, opens or deletes a time capsule, picks,
+  changes or removes a mood on a summary, or all site data is cleared there (the `storage` event for
+  `ct_history_v1`, `ct_capsules_v1` or `ct_moods_v1`, or with no key);
 - it comes back from the browser's back/forward cache (`pageshow` with `persisted`), e.g. Android
   Back after a session was saved on the app page;
 - it's shown again (`visibilitychange`), because Android can freeze a background tab so it misses
@@ -1736,9 +1746,10 @@ page again after nothing happened draws nothing, and an Import only draws once (
 | `ct_session_v1` | The session that's running right now (removed when it ends). `characterName`: only with a custom character (its name when the session started). `restartPending: true` while the continue/restart question is unanswered; older saved sessions don't have it, which means `false`. `leftAt` (timestamp in ms): only while the page is hidden, for the time away card; missing means the page wasn't left. Never copied into the history. `pausedAt` (timestamp in ms, or `null`): when the current break started (see **Take a break**). `pauses` (`[{ at, ms }]`): the breaks that are over. Sessions saved before breaks existed have neither, which means never paused. `utcOffsetMin`: the device's offset from UTC in minutes when the session started (copied into the history, see [Which day a session counts on](#which-day-a-session-counts-on)); a session started before it existed doesn't have it |
 | `ct_history_v1` | Finished sessions, newest first, max. 1000 |
 | `ct_custom_characters_v1` | Characters made in the editor: `{ v: 1, characters: [ { id, name, personality, createdAt, look: { gender, skin, hairColor, hairStyle, face, outfit, eyewear, earrings, necklace, facialHair, headwear, mask, earsHorns, costumeBeard, costumeOutfit, back, held, pet } } ] }`. The 8 costume fields are optional: characters saved before costumes don't have them, which means None. `id` is `custom-` plus 10 random letters/digits, never reused (a new id also avoids every id in the history). `personality` is the style its sessions run in. `createdAt`: `Date.now()` at the first Save, never changed by an edit; the look and personality can be changed for 10 minutes after it (see [The 10-minute rule](#the-10-minute-rule)), and 0 or a missing value means final. Reading never fails: a broken entry is skipped (not the whole list), an unknown look value gets the default. See [Custom characters](#custom-characters) |
-| `ct_prefs_v1` | Last chosen character, mode and duration, plus `endSound` and `keepScreenOn` (the two setup checkboxes, `true`/`false`). Prefs saved before these existed get `true` for both. `leaveReminder`: the **Remind me if I leave the app** checkbox (see [Leave reminder](#leave-reminder)); prefs saved before it existed get `false`. `homeScreenTipDismissed`: `true` once **Got it** was tapped on the iPhone Home Screen tip. `persistRequested`: `true` once persistent storage was asked for (or skipped in Firefox), see [iPhone storage and the Home Screen app](#iphone-storage-and-the-home-screen-app). Prefs saved before these two existed get `false` for both. `howItWorksDismissed`: `true` once **Got it** was tapped on the How it works card; prefs saved before it existed get `false`, so the card shows once. `language`: only once a language was picked in the language sheet (`"en"`, `"hu"`); without it the app follows the browser's language (see [Languages](#languages)). `theme`: `"light"` or `"dark"`, only once the light/dark switch was tapped; without it the app follows the phone's setting (see [Light and dark](#light-and-dark)). A `style` value saved by older versions is ignored and dropped. `ragebaitAccepted`: the ids of the characters whose ragebait warning was accepted on Start (see **Ragebait warning** in [How it works](#how-it-works)); prefs saved before it existed count the ragebait character chosen then as accepted. `usePlan` (`true` while **Plan** is picked in step 3; missing means `false`) and `plan` (`{ rows: [{ minutes, count, breakMinutes, breakPicked }] }`, the plan built there; `breakPicked`: that row's break was picked by hand): see [Plans](#plans); prefs saved before them have neither, which means Single block and, once Plan is picked, the first-time plan. `focusNoise` (`"off"`, `"brown"`, `"pink"`, `"white"` or `"green"`), `focusNoiseVolume` (5–100, in %), `focusMix` (`{ rain: { on: true, volume: 40 }, … }`: every Ambient sound that has ever been on, with its volume) and `focusVolume` (the master, 5–100): the **Focus sound** setting (see [Focus sound](#focus-sound)); missing or bad values mean Off, 70% per layer and 55% master, and unknown sounds are dropped. A `focusSound` value saved by an early test version is dropped. Saved field by field (see [Several tabs](#several-tabs-one-tab-at-a-time)) |
+| `ct_prefs_v1` | Last chosen character, mode and duration, plus `endSound` and `keepScreenOn` (the two setup checkboxes, `true`/`false`). Prefs saved before these existed get `true` for both. `leaveReminder`: the **Remind me if I leave the app** checkbox (see [Leave reminder](#leave-reminder)); prefs saved before it existed get `false`. `homeScreenTipDismissed`: `true` once **Got it** was tapped on the iPhone Home Screen tip. `persistRequested`: `true` once persistent storage was asked for (or skipped in Firefox), see [iPhone storage and the Home Screen app](#iphone-storage-and-the-home-screen-app). Prefs saved before these two existed get `false` for both. `howItWorksDismissed`: `true` once **Got it** was tapped on the How it works card; prefs saved before it existed get `false`, so the card shows once. `language`: only once a language was picked in the language sheet (`"en"`, `"hu"`); without it the app follows the browser's language (see [Languages](#languages)). `theme`: `"light"` or `"dark"`, only once the light/dark switch was tapped; without it the app follows the phone's setting (see [Light and dark](#light-and-dark)). A `style` value saved by older versions is ignored and dropped. `ragebaitAccepted`: the ids of the characters whose ragebait warning was accepted on Start (see **Ragebait warning** in [How it works](#how-it-works)); prefs saved before it existed count the ragebait character chosen then as accepted. `usePlan` (`true` while **Plan** is picked in step 3; missing means `false`) and `plan` (`{ rows: [{ minutes, count, breakMinutes, breakPicked }] }`, the plan built there; `breakPicked`: that row's break was picked by hand): see [Plans](#plans); prefs saved before them have neither, which means Single block and, once Plan is picked, the first-time plan. `focusNoise` (`"off"`, `"brown"`, `"pink"`, `"white"` or `"green"`), `focusNoiseVolume` (5–100, in %), `focusMix` (`{ rain: { on: true, volume: 40 }, … }`: every Ambient sound that has ever been on, with its volume) and `focusVolume` (the master, 5–100): the **Focus sound** setting (see [Focus sound](#focus-sound)); missing or bad values mean Off, 70% per layer and 55% master, and unknown sounds are dropped. A `focusSound` value saved by an early test version is dropped. `moodQuestion`: the **Ask how it felt at the end** checkbox (see [Inner weather](#inner-weather)); prefs saved before it existed get `true`. Saved field by field (see [Several tabs](#several-tabs-one-tab-at-a-time)) |
 | `ct_plan_v1` | The running plan (see [Plans](#plans)), removed when its summary shows: `{ v: 1, startedAt, characterId, characterName?, style, mode, blocks: [{ minutes, breakMinutes }], index, phase, blockStartedAt, breakStartedAt, parts }`. `index`: the block that runs (`phase: "block"`, whose session in `ct_session_v1` has `startedAt` = `blockStartedAt`) or the next one (`phase: "break"`, the break after block `index − 1`, started at `breakStartedAt`). `parts`: what each finished block measured, for the plan's summary (`{ block, startedAt, plannedMs, elapsedMs, distractedMs, focusPercent, distractions: [{ level, category }], pauses, status, startedOver? }`, `status` `"saved"`, `"exists"`, `"failed"`, `"short"`, `"unsaved"` or `"discarded"`). Never copied into the history. Ignored and cleared while plans are off |
 | `ct_capsules_v1` | Time capsule messages (see [Time capsule](#time-capsule)): `{ v: 1, capsules: [ { id, createdAt, text, opensAt?, opensAfterMs?, readyAt?, announced?, openedAt? } ] }`. `id` is `cap-` plus 10 random letters/digits. `text`: the message, trimmed, 1 to 500 characters. Exactly one of `opensAt` (a timestamp in ms: the local day and time picked in the day and time sheet; ready when `Date.now() >= opensAt`) or `opensAfterMs` (counted session time in ms). Capsules from earlier test builds have `opensOn` (`"YYYY-MM-DD"`) instead: it's read as `opensAt` = local midnight of that day and saved as `opensAt` with the next change (if both are there, `opensAt` wins). `readyAt`: when it was first seen ready; from then on it stays ready. `announced: true` once the summary line was shown for it. `openedAt`: when **Open** was tapped (the first one is kept). Reading never fails: a broken entry is skipped (not the whole list), unknown fields are dropped. Not in the export file yet. Ignored but kept while `CAPSULES_ON` is false |
+| `ct_moods_v1` | Inner weather (see [Inner weather](#inner-weather)): `{ v: 1, moods: { "<startedAt>": "<mood id>" } }`, keyed by the history entry's `startedAt`; the id is `sunny`, `partly`, `cloudy`, `drizzle`, `rain` or `storm`. Reading never fails: unknown ids (such as `fog` from an earlier test build) and broken entries are skipped. Every write reads the key fresh first and drops the moods whose session is no longer in the history. The history entries themselves have no mood field. Not in the export file yet. Ignored but kept while `MOOD_ON` is false |
 
 Each history entry: `startedAt`, `endedAt` (timestamps in ms), `utcOffsetMin` (the device's offset
 from UTC in minutes when the session started, a whole number from −720 to 840; entries saved before
@@ -2153,6 +2164,120 @@ The envelope is a simple inline SVG made with the design tokens, so it works in 
 Everything about it is in one marked block: `envelopeArt(state)` in `capsules.js` (`sealed`,
 `ready`, `open`) and the "ENVELOPE ART" block (`.capsule-art*`) in `css/style.css`. To use real
 artwork, replace those two blocks; nothing else depends on the drawing.
+
+## Inner weather
+
+After a session the user can mark, optionally, how it felt inside, as weather. The history page shows
+the marks as a small weather diary. It records a feeling, not performance: a stormy session is fine
+and never judged, and a mood never changes a result, a number, a message or a character's pose
+(characters react only to the session, never to the mood). The data and rules are in
+`public/js/mood.js`, the question in `public/js/app.js` (`renderMoodRow`), the history page's parts in
+`public/js/history.js` (`renderMoods`, the icon in `renderSessionList`).
+
+### The switch (`MOOD_ENABLED`)
+
+`MOOD_ENABLED` at the top of `public/js/mood.js` is **`true`**. Like plans and time capsules, Inner
+weather is also **always on** on Netlify's test sites (`deploy-preview-…`, `main--…`) and on
+`localhost` / `127.0.0.1` (`MOOD_TEST_SITE`); the code checks `MOOD_ON`, never the switch alone. Set
+to `false`: no setup checkbox, no question on the summary, no icons or section on the history page,
+and `ct_moods_v1` is ignored but kept (nothing reads or writes it, so nothing is dropped), so switching
+it on again brings every mood back.
+
+### The setting
+
+The setup checkbox **Ask how it felt at the end** (`moodQuestion` in `ct_prefs_v1`, on by default;
+prefs saved before it existed count as on). Off: the summary doesn't ask. Moods already marked still
+show on the history page.
+
+### The six moods: one scale
+
+The moods are six steps of one scale, from easy to hard, always in this order (`MOOD_IDS`). Each has a
+name and a short meaning, always shown together as "name: meaning" (`moodText`, the format
+`mood.nameMeaning`):
+
+| id | Name | Meaning |
+|---|---|---|
+| `sunny` | Sunny | it went easily |
+| `partly` | Partly cloudy | it mostly went well |
+| `cloudy` | Cloudy | it was mixed |
+| `drizzle` | Drizzle | it was a bit hard |
+| `rain` | Rainy | it was hard going |
+| `storm` | Stormy | it was really hard |
+
+The names are the keys `mood.<id>`, the meanings `mood.meaning.<id>`. A meaning is written as it
+reads after the colon ("Rainy: it was hard going"), so it starts in lower case where the language
+allows, and each "name: meaning" fits on one line at 320 px in every language. An earlier test build
+had `fog`: a saved `fog` is skipped as unknown.
+
+### The question on the summary
+
+- **When:** under the summary's lines, above "Start another session", only for a session that is in
+  the history (`saveFinishedSession` returned `"saved"` or `"exists"`), so never after a session under
+  1 minute, a failed save or "Save this session" unticked, and only while `MOOD_ON` and `moodQuestion`
+  are on. A session saved in another tab can only get its mood on its own summary.
+- **What:** "What was the weather like inside?" and the six moods as icon toggle buttons
+  (`aria-pressed`) in **one row**, left to right from sunny to stormy, so the row itself reads as the
+  scale, with small end labels "Easy" under the left end and "Hard" under the right (`aria-hidden`).
+  There's no label under each icon: each button's name is the full "Rainy: it was hard going", and
+  the line under the row shows the picked one the same way. That line keeps its height when nothing
+  is picked, so picking or removing never moves anything. The group is named by the question. A
+  picked button has an amber ring, a tint and a check mark (not colour alone).
+- **Size:** the buttons are square, 2.75rem to 3.75rem (44 to 60 px at the normal text size), and fit
+  in one row at 320 px without sideways scrolling. Sized in rem, they grow with the text size; once
+  six no longer fit in the question's width (a CSS container query), the row wraps to 3 + 3, keeping
+  the order.
+- **Taps:** skippable, nothing happens without a tap. A tap saves at once; tapping the picked one
+  again removes the mood; picking another replaces it. The buttons only change once the write worked:
+  if the browser refuses it (storage blocked or full), or the session was deleted in another tab
+  meanwhile, "Couldn't save that. Try again." shows under the line and the previous state stays.
+  The only text about the choice is its own "name: meaning"; there's no character reaction.
+- **Plans:** the question shows once on the plan's summary; a tap saves the same mood for every block
+  that is in the history (each block is its own session).
+- **Other tabs:** if `ct_moods_v1` changes in another tab while the question shows (a session deleted
+  on the history page), the buttons show what is saved now.
+- The call is wrapped in `try`/`catch`, and `app.js` checks that `js/mood.js` is there (`moodOn()`),
+  so a mood problem or a mixed-version cache only leaves the question out.
+
+### Storage
+
+- **`ct_moods_v1`** = `{ v: 1, moods: { "<startedAt>": "<mood id>" } }`, keyed by the session's
+  `startedAt`, the same id the history uses. The history entries, `history-store.js` and the export
+  format are unchanged.
+- **Reading never fails:** unknown ids, keys that aren't a start time, and a broken file are skipped.
+- **Writing** (`setMood`, the only write): reads the key fresh (so another tab's mood is never lost),
+  changes the given sessions, then drops every mood whose session is no longer in the history, so the
+  key can't grow forever (sessions over the 1000 limit, deleted or replaced by an import). If the
+  history can't be read (broken data, storage blocked), nothing is dropped, so one bad read can't wipe
+  the moods; no history saved at all drops them all.
+- **Deleting a session** on the history page also removes its mood (also when another tab already
+  deleted the session). If that write fails nothing is shown: the next write drops it anyway.
+- **Import:** imported sessions have no mood, because moods aren't in the export file yet (a later
+  change to the export format adds them).
+
+### On the history page
+
+- **Session list:** a small weather icon at the end of a session's first line, when it has a mood
+  (`role="img"` named "Rainy: it was hard going").
+- **Inner weather** section, above "What distracts you", only while `MOOD_ON` and at least one session
+  in the history has a mood: the last 7 days as a strip, today on the right (local days; a session
+  counts on its day as in [Which day a session counts on](#which-day-a-session-counts-on)). Each day
+  shows its most frequent mood; a tie goes to the mood of the latest session among the tied ones
+  (`weekMoods`). A day without a mood shows a small empty dot. Under each day its short weekday
+  ("Mon"), or its narrow one ("M") when the section is narrow in rem (small screen, large text);
+  today's is bold. Each day is a toggle button, at least 44 px tall, named with its full date and mood
+  ("Monday 24 November, Rainy: it was hard going", or "…, Not marked"). Tapping a day shows its
+  "name: meaning" (or "Not marked") in a line under the strip and marks the day with an amber ring;
+  tapping it again clears the line. The line keeps its height while empty, and the picked day stays
+  picked through redraws while it's still one of the 7. The note under it: "How your sessions felt,
+  as you marked them after each one."
+
+### The mood art (placeholder)
+
+The six icons and the empty dot are simple inline SVGs made with the design tokens, so they work in
+light and dark. They get heavier along the scale: sun, sun with a cloud, two clouds, a cloud with a
+few short light drops (drizzle), a cloud with long rain lines, a darker cloud with lightning. Everything about them is in one marked block: `moodArt(id)` in `mood.js` and the "MOOD
+ART" block (`.mood-art*`) in `css/style.css`. To use real artwork, replace those two blocks; nothing
+else depends on the drawing.
 
 ## Privacy page (`privacy.html`)
 
@@ -2833,7 +2958,7 @@ and the timer keeps counting from the start time as always.
 | File | What's in it |
 |---|---|
 | `public/index.html` | All screens (setup, session, summary, "open in another tab" notice) and dialogs |
-| `public/history.html` | Your finished sessions, streaks, time per week and focus trends, and the time capsule |
+| `public/history.html` | Your finished sessions, streaks, time per week and focus trends, Inner weather, and the time capsule |
 | `public/avatar.html` | The character editor (see [Custom characters](#custom-characters)) |
 | `public/privacy.html` | Privacy page: what stays on the device, what is sent to the server, hosting, your rights (its only script is `js/theme.js`) |
 | `public/about.html` | The public About page: what the app does today, English only (its only script is `js/theme.js`; see [About page](#about-page-abouthtml)) |
@@ -2859,14 +2984,15 @@ and the timer keeps counting from the start time as always.
 | `public/js/avatar.js` | The editor on `avatar.html` |
 | `public/js/plans.js` | Plans: the switch `PLANS_ENABLED` (and `PLANS_ON`, also true on Netlify's test sites and localhost), the block and break presets and limits, the default break, cleaning saved plans (`cleanPlanRows`, `cleanStoredPlan`), the plan builder in step 3 and the segmented timeline (see [Plans](#plans)) |
 | `public/js/capsules.js` | Time capsule data and rules: the switch `CAPSULES_ENABLED` (and `CAPSULES_ON`, also true on Netlify's test sites and localhost), reading and writing `ct_capsules_v1`, the counted session time rule (`countedSessionMs`, `COUNTED_MAX_PER_DAY_MS`), when a capsule is ready, the summary line's check (`announceReadyCapsules`), the ready badge's count (`readyUnopenedCount`, read-only) and the placeholder envelope art (`envelopeArt`). Loaded by `history.html` and `index.html`; uses only `history-store.js` and the i18n files, and touches no DOM when it loads (see [Time capsule](#time-capsule)) |
+| `public/js/mood.js` | Inner weather data and rules: the switch `MOOD_ENABLED` (and `MOOD_ON`, also true on Netlify's test sites and localhost), the mood ids, reading and writing `ct_moods_v1` (`loadMoods`, `setMood`, `removeMood`, dropping moods of sessions no longer in the history), the 7-day strip rule (`weekMoods`) and the placeholder mood art (`moodArt`). Loaded by `index.html` and `history.html`; uses only `history-store.js` and the i18n files, and touches no DOM when it loads (see [Inner weather](#inner-weather)) |
 | `public/js/date-sheet.js` | The day and time sheet: the bottom sheet behind the time capsule's "Pick a day and time" field (month grid starting on Monday, ‹ › months, dimmed days without an allowed minute, the Time row in 15-minute steps, Set; see [The day and time sheet](#the-day-and-time-sheet)). Loaded by `history.html` |
 | `public/js/time-sheet.js` | The custom time sheet: the bottom sheet behind the time capsule's **Custom** chip (Hours and Minutes with − / + and typing, the 15 min – 999 h range, Set; see [The custom time sheet](#the-custom-time-sheet)). Loaded by `history.html` |
 | `public/js/duration-sheet.js` | The duration sheet: the bottom sheet a plan row's length and break buttons open (presets, Custom with −/+ and Set; see [The duration sheet](#the-duration-sheet)) |
 | `public/js/focus-sound.js` | The focus sound: the list of sounds, generating the noise loops, every sound's level and the volume curve, the generated reverb, and the mixer/player that fades layers and the whole mix in and out (see [Focus sound](#focus-sound)) |
 | `public/js/focus-sound-worklet.js` | The 7 Ambient focus sounds, generated live on the browser's audio thread, and the limiter on the mix (an AudioWorklet module, loaded by `focus-sound.js`) |
-| `public/js/app.js` | Running a plan (blocks, planned breaks, the plan's summary), timer, reaction engine, distraction category picker, Undo, Stop and breaks (Take a break / Resume), disabled Advanced lengths, time away card, leave reminder notification, motivation rotation, the picker and card in the distraction buttons' place on landscape phones, end chime, when the focus sound plays (its setup row, Preview and the mute button), screen wake lock and the "screen may turn off" note, summary, How it works card, iPhone Home Screen tip, persistent storage request, one tab at a time (Web Locks), the time capsule summary line and ready badge (`renderCapsuleNote`, `renderHistoryBadges`) |
+| `public/js/app.js` | Running a plan (blocks, planned breaks, the plan's summary), timer, reaction engine, distraction category picker, Undo, Stop and breaks (Take a break / Resume), disabled Advanced lengths, time away card, leave reminder notification, motivation rotation, the picker and card in the distraction buttons' place on landscape phones, end chime, when the focus sound plays (its setup row, Preview and the mute button), screen wake lock and the "screen may turn off" note, summary, How it works card, iPhone Home Screen tip, persistent storage request, one tab at a time (Web Locks), the time capsule summary line and ready badge (`renderCapsuleNote`, `renderHistoryBadges`), the summary's "What was the weather like inside?" question (`renderMoodRow`) |
 | `public/js/history-store.js` | Saving/loading history, focus % and summary result (with their thresholds; `resultOf` also judges a plan's totals), break totals and the "Paused …" line, distraction categories, export/import checks, iPhone/iPad and iPhone Safari checks, the "can this browser save?" test (`storageWorks`) (used by both pages) |
-| `public/js/history.js` | Streaks, weekly time and focus charts, time of day, distraction categories, session list and backup buttons on `history.html`, and the time capsule's drawing (ready messages at the top, the section, the form, Open and Delete) |
+| `public/js/history.js` | Streaks, weekly time and focus charts, time of day, distraction categories, session list and backup buttons on `history.html`, the time capsule's drawing (ready messages at the top, the section, the form, Open and Delete), and Inner weather's 7-day strip and list icons (`renderMoods`) |
 | `netlify/functions/picks.mjs` | `POST /api/picks`: counts one session started with a character |
 | `netlify/functions/stats.mjs` | `GET /api/stats`: popularity + which characters are paid |
 | `netlify/lib/characters.mjs` | The characters whose picks are counted (id + name); a new character must be added here |

@@ -464,6 +464,31 @@ I18N_TEXTS.es = {
   "dateSheet.later": "15 minutos después",
   "dateSheet.hint": "Al menos 15 minutos a partir de ahora y hasta 2 años después.",
 
+  // ---------- inner weather ----------
+  "mood.setupQuestion": "Preguntar al final cómo se sintió",
+  "mood.question": "¿Qué tiempo hacía por dentro?",
+  "mood.easy": "Fácil",
+  "mood.hard": "Difícil",
+  "mood.sunny": "Soleado",
+  "mood.partly": "Parcialmente nublado",
+  "mood.cloudy": "Nublado",
+  "mood.drizzle": "Llovizna",
+  "mood.rain": "Lluvioso",
+  "mood.storm": "Tormentoso",
+  "mood.meaning.sunny": "fue fácil",
+  "mood.meaning.partly": "casi todo bien",
+  "mood.meaning.cloudy": "hubo de todo",
+  "mood.meaning.drizzle": "fue un poco difícil",
+  "mood.meaning.rain": "costó bastante",
+  "mood.meaning.storm": "fue muy difícil",
+  "mood.nameMeaning": "{name}: {meaning}",
+  "mood.error": "No se pudo guardar. Inténtalo de nuevo.",
+  "mood.title": "Clima interior",
+  "mood.note": "Cómo se sintieron tus sesiones por dentro, tal como las marcaste después de cada una.",
+  "mood.none": "Sin marcar",
+  "mood.dayLabel": "{day}, {mood}",
+  "mood.stripLabel": "Últimos 7 días",
+
   // ---------- export / import ----------
   "import.exported": {
     one: "Se exportó {count} sesión.",

@@ -99,6 +99,7 @@ const SECTIONS = [
   ["summary", "Summary"],
   ["history", "History page"],
   ["capsule", "Time capsule (history page, its date and time sheets, its line on the summary and the ready badge)"],
+  ["mood", "Inner weather (the summary's question, the setup checkbox and the history page's 7-day strip)"],
   ["import", "Export and import messages"],
   ["editor", "Character editor"],
   ["editor-base", "Editor options: base (gender, skin, hair, face)"],
@@ -136,6 +137,7 @@ function sectionOf(key, notes) {
   if (["summary", "pauses"].includes(area)) return "summary";
   if (["history", "dayPart"].includes(area)) return "history";
   if (["capsule", "dateSheet", "timeSheet"].includes(area)) return "capsule";
+  if (area === "mood") return "mood";
   if (area === "import") return "import";
   if (area === "avatar") {
     if (BASE_FIELDS.includes(second)) return "editor-base";

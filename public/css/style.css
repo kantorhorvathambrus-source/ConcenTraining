@@ -2714,6 +2714,323 @@ a {
 }
 /* ===== END ENVELOPE ART ===== */
 
+/* ---------- inner weather (js/mood.js; "Inner weather" in the README) ---------- */
+
+/* The summary's question "What was the weather like inside?": six icon buttons in one row, sunny
+   (easy) on the left to stormy (hard) on the right, so the row reads as the scale, with "Easy" and
+   "Hard" under its ends. The buttons are sized in rem (at least 44 px at the normal text size), so
+   at a large text size they grow; once six no longer fit, the row wraps to 3 + 3, keeping the order
+   (a container query on the question's own width). */
+.mood-ask {
+  max-width: 34rem;
+  margin: 0 auto 28px;
+  container-type: inline-size;
+}
+
+.mood-ask-title {
+  margin: 0 0 12px;
+  font-weight: 600;
+}
+
+/* As wide as the row (up to the screen's width), so the end labels sit at its ends: both under the
+   row, or, once it wraps to 3 + 3, "Easy" above the first button and "Hard" under the last. */
+.mood-scale {
+  display: grid;
+  grid-template-areas:
+    "options options"
+    "easy hard";
+  column-gap: 8px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.mood-options {
+  grid-area: options;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(2.75rem, 3.75rem));
+  gap: 0.25rem;
+  justify-content: center;
+}
+
+/* A mood: its icon only (its name and meaning are the button's name, and the line under the row
+   shows the picked one). Picked: an amber ring, a tint and a check mark in the corner, so it isn't
+   marked by colour alone. */
+.mood-option {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-field);
+  background: var(--color-control);
+  transition: transform var(--dur) var(--ease), opacity var(--dur) var(--ease);
+}
+
+.mood-option .mood-art {
+  width: 78%;
+  height: auto;
+}
+
+/* The button itself is always the tap's target, never a line of the icon. */
+.mood-option > * {
+  pointer-events: none;
+}
+
+.mood-option[aria-pressed="true"] {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  box-shadow: var(--shadow-selected);
+}
+
+.mood-option[aria-pressed="true"]::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-accent) var(--img-check-on-accent) center / 100% no-repeat;
+}
+
+.mood-option:active {
+  transform: scale(0.97);
+}
+
+@media (hover: hover) {
+  .mood-option:hover:not([aria-pressed="true"]) {
+    background: var(--color-control-hover);
+  }
+}
+
+/* "Easy" at the sunny end, "Hard" at the stormy end. */
+.mood-end {
+  margin-top: 6px;
+  font-size: var(--fs-12);
+  color: var(--color-text-muted);
+}
+
+.mood-end-easy {
+  grid-area: easy;
+  justify-self: start;
+}
+
+.mood-end-hard {
+  grid-area: hard;
+  justify-self: end;
+}
+
+/* 3 + 3 once six don't fit (6 × 2.75rem plus the gaps), keeping the order; "Easy" moves above the
+   first row, next to sunny. */
+@container (max-width: 17.7rem) {
+  .mood-scale {
+    grid-template-areas:
+      "easy"
+      "options"
+      "hard";
+  }
+
+  .mood-options {
+    grid-template-columns: repeat(3, minmax(2.75rem, 3.75rem));
+  }
+
+  .mood-end-easy {
+    margin: 0 0 6px;
+  }
+}
+
+/* "Rainy: it was hard going": the picked mood. Keeps one line's height when empty, so picking or
+   removing a mood never moves anything below it. */
+.mood-picked {
+  min-height: 1.4em;
+  margin: 10px 0 0;
+  font-size: var(--fs-15);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.mood-ask .summary-text.error {
+  margin-top: 6px;
+}
+
+/* The history page: the small icon at the end of a session row's first line. */
+.session-mood {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.session-mood .mood-art {
+  width: 22px;
+  height: 20px;
+}
+
+/* The 7-day strip: one column per day, today on the right. Each day has its short weekday ("Mon")
+   and its narrow one ("M"); the narrow one shows when the section is narrow in rem (a container
+   query: a small screen with a large text size). */
+.mood-section {
+  container-type: inline-size;
+}
+
+.mood-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+  margin: 0;
+  padding: 6px 4px;
+  list-style: none;
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+.mood-day {
+  display: flex;
+  min-width: 0;
+}
+
+/* A day: a toggle button as wide as its column and at least 44 px tall. Picked (its line shows
+   under the strip): the same amber ring and tint as a picked mood. */
+.mood-day-button {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 6px 0 4px;
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-field);
+  background: transparent;
+}
+
+.mood-day-button > * {
+  pointer-events: none;
+}
+
+.mood-day-button[aria-pressed="true"] {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+@media (hover: hover) {
+  .mood-day-button:hover:not([aria-pressed="true"]) {
+    background: var(--color-control);
+  }
+}
+
+.mood-day-icon {
+  display: block;
+  width: 100%;
+  max-width: 36px;
+}
+
+.mood-day .mood-art {
+  width: 100%;
+  height: auto;
+}
+
+.mood-day-label {
+  max-width: 100%;
+  font-size: var(--fs-12);
+  color: var(--color-text-muted);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.mood-day-narrow {
+  display: none;
+}
+
+@container (max-width: 17rem) {
+  .mood-day-short {
+    display: none;
+  }
+
+  .mood-day-narrow {
+    display: inline;
+  }
+}
+
+/* Today, the last day */
+/* The line under the strip: the picked day's mood. */
+.mood-day-line {
+  margin: 8px 0 6px;
+}
+
+.mood-day:last-child .mood-day-label {
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+/* ===== MOOD ART (placeholder, to be replaced by real artwork; see moodArt in js/mood.js).
+   Everything the mood icons look like is in this block. ===== */
+.mood-art {
+  display: block;
+  overflow: visible;
+}
+
+.mood-art-sun {
+  fill: var(--color-accent);
+}
+
+.mood-art-rays {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.mood-art-cloud {
+  fill: var(--color-surface);
+  stroke: var(--color-text-muted);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+
+.mood-art-cloud-back {
+  fill: var(--color-surface-sunken);
+}
+
+.mood-art-cloud-dark {
+  fill: color-mix(in srgb, var(--color-text-muted) 45%, var(--color-surface));
+}
+
+.mood-art-rain {
+  fill: none;
+  stroke: var(--color-info-text);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.mood-art-bolt {
+  fill: var(--color-accent);
+  stroke: var(--color-accent);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+
+.mood-art-drizzle {
+  fill: none;
+  stroke: var(--color-info-text);
+  stroke-width: 2.25;
+  stroke-linecap: round;
+  opacity: 0.75;
+}
+
+/* A day without a mood: a small, quiet dot. */
+.mood-art-empty {
+  fill: var(--color-divider);
+  stroke: var(--color-field-border);
+  stroke-width: 1.5;
+}
+/* ===== END MOOD ART ===== */
+
 /* ---------- privacy page ---------- */
 
 /* Lets the email address (or any long word) break at 320px instead of scrolling sideways. */
@@ -4223,7 +4540,8 @@ dialog.duration-sheet[open]::backdrop {
   .preset,
   .dark-switch-knob,
   .capsule-art-flap,
-  .capsule-art-seal {
+  .capsule-art-seal,
+  .mood-option {
     transition: none;
   }
 

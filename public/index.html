@@ -225,6 +225,12 @@
         </label>
         <!-- Only after a tick was refused. Text is set when shown, so screen readers announce it. -->
         <p id="leaveReminderHint" class="setting-hint muted" role="status" hidden></p>
+        <!-- Inner weather (js/mood.js): the question on the summary. Hidden while MOOD_ON is false
+             (init in app.js). -->
+        <label id="moodQuestionRow" class="check-row" hidden>
+          <input id="moodQuestionCheck" type="checkbox" data-pref="moodQuestion">
+          <span data-i18n="mood.setupQuestion">Ask how it felt at the end</span>
+        </label>
         <!-- Focus sound (js/focus-sound.js, "focus sound" in app.js): a mix of generated sounds during
              focus time. Noise: one choice. Ambient: toggle tiles (built from FOCUS_AMBIENTS), any number
              on. Hidden where the browser has no Web Audio, and the Ambient group where it has no
@@ -397,6 +403,23 @@
              app.js, js/capsules.js). -->
         <p id="summaryCapsule" class="summary-text" hidden></p>
       </div>
+      <!-- Inner weather (js/mood.js; renderMoodRow in app.js): "What was the weather like inside?"
+           and six icon toggle buttons in one row, from sunny (easy) to stormy (hard), so the row
+           reads as the scale; "Easy" and "Hard" under its ends (aria-hidden: every button's name
+           already says "Rainy: it was hard going"). The line under it shows the picked mood and keeps
+           its space when none is picked. Only for a session (or a plan's blocks) in the history,
+           while MOOD_ON and the setup checkbox are on. Skippable: nothing happens without a tap, and
+           a pick changes nothing else on the screen. -->
+      <div id="summaryMood" class="mood-ask" role="group" aria-labelledby="summaryMoodTitle" hidden>
+        <p id="summaryMoodTitle" class="mood-ask-title" data-i18n="mood.question">What was the weather like inside?</p>
+        <div class="mood-scale">
+          <span class="mood-end mood-end-easy" aria-hidden="true" data-i18n="mood.easy">Easy</span>
+          <div id="summaryMoodOptions" class="mood-options"></div>
+          <span class="mood-end mood-end-hard" aria-hidden="true" data-i18n="mood.hard">Hard</span>
+        </div>
+        <p id="summaryMoodPicked" class="mood-picked"></p>
+        <p id="summaryMoodError" class="summary-text error" role="status" hidden></p>
+      </div>
       <button id="newSessionButton" type="button" class="btn primary big" data-i18n="summary.again">Start another session</button>
       <a id="summaryHistoryLink" href="history.html" class="btn big link-btn"><span data-i18n="summary.history">See your history</span><span class="capsule-badge" aria-hidden="true" hidden></span></a>
     </section>
@@ -528,6 +551,7 @@
   <script src="js/plans.js"></script>
   <script src="js/duration-sheet.js"></script>
   <script src="js/capsules.js"></script>
+  <script src="js/mood.js"></script>
   <script src="js/language-picker.js"></script>
   <script src="js/focus-sound.js"></script>
   <script src="js/app.js"></script>

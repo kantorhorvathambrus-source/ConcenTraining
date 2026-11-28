@@ -469,7 +469,8 @@ function renderCategories(history) {
   });
 }
 
-function renderSessionList(history) {
+// moods: startedAt → mood id (shownMoods), for the small icon in a row that has one.
+function renderSessionList(history, moods) {
   const recent = history.slice(0, LIST_SIZE);
   // No-break spaces in history.listLast: next to the Edit button at 320px the title wraps before
   // "sessions (of 40)", not inside the brackets.
@@ -499,6 +500,16 @@ function renderSessionList(history) {
       tag.textContent = t("history.restartedTag");
       tag.title = t("history.restartedTitle");
       item.querySelector(".session-item-mode").after(" ", tag);
+    }
+    // Inner weather: the mood marked after the session, as a small icon at the end of the first line.
+    const mood = moods.get(entry.startedAt);
+    if (mood) {
+      const icon = document.createElement("span");
+      icon.className = "session-mood";
+      icon.setAttribute("role", "img");
+      icon.setAttribute("aria-label", moodText(mood));
+      icon.innerHTML = moodArt(mood);
+      item.querySelector(".session-item-main > div").append(" ", icon);
     }
     item.querySelector(".session-item-meta").textContent = [
       formatSessionDate(entry),
@@ -572,8 +583,108 @@ function render() {
   renderWeeklyTime(history, now);
   renderTrend(history, now);
   renderDayParts(history);
+  // A mood problem only leaves Inner weather out: the rest of the page is drawn as always.
+  let moods = new Map();
+  try {
+    moods = shownMoods();
+    renderMoods(history, moods, new Date(now));
+  } catch (error) {
+    console.error(error);
+    moods = new Map();
+    document.getElementById("moodSection").hidden = true;
+  }
   renderCategories(history);
-  renderSessionList(history);
+  renderSessionList(history, moods);
+}
+
+// ---------- inner weather (data and rules: js/mood.js; "Inner weather" in the README) ----------
+
+// Whether Inner weather is on in this page. typeof: js/mood.js can be missing from a mixed-version
+// cache; the page then simply has no mood parts.
+function moodOn() {
+  return typeof MOOD_ON === "boolean" && MOOD_ON;
+}
+
+// The saved moods of the sessions in the history (startedAt → mood id), or none while Inner
+// weather is off (saved moods are then ignored, but kept).
+function shownMoods() {
+  return moodOn() ? loadMoods() : new Map();
+}
+
+// The day picked in the strip ("YYYY-MM-DD", see dayKey), or null: its line stays through redraws
+// while that day is still one of the 7.
+let moodDayPicked = null;
+
+// The "Inner weather" section: only when at least one session in the history has a mood. The last
+// 7 days (weekMoods in js/mood.js), today on the right: the day's icon, or an empty dot for a day
+// without a mood, with its weekday under it (short, or narrow in a narrow section: see .mood-section
+// in css/style.css). Each day is a toggle button named with its full date and mood ("Monday 24
+// November, Rainy: it was hard going"); tapping it shows "Rainy: it was hard going" (or "Not marked")
+// in the line under the strip, tapping it again clears the line.
+function renderMoods(history, moods, now) {
+  const section = document.getElementById("moodSection");
+  const any = history.some((entry) => entry && moods.has(entry.startedAt));
+  section.hidden = !any;
+  const list = document.getElementById("moodWeek");
+  // A redraw replaces the buttons: the focused one gets its replacement's focus back.
+  const focusedDay = list.contains(document.activeElement) ? document.activeElement.dataset.day : null;
+  list.textContent = "";
+  if (!any) {
+    moodDayPicked = null;
+    showMoodDay(null);
+    return;
+  }
+  list.setAttribute("aria-label", t("mood.stripLabel"));
+  const week = weekMoods(history, moods, now);
+  if (!week.some(({ day }) => dayKey(day) === moodDayPicked)) moodDayPicked = null;
+  for (const { day, mood } of week) {
+    const key = dayKey(day);
+    const item = document.createElement("li");
+    item.className = "mood-day";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "mood-day-button";
+    button.dataset.day = key;
+    button.dataset.text = mood ? moodText(mood) : t("mood.none");
+    button.setAttribute("aria-pressed", String(key === moodDayPicked));
+    button.setAttribute("aria-label", t("mood.dayLabel", {
+      day: I18N.formatDate(day, { weekday: "long", day: "numeric", month: "long" }),
+      mood: button.dataset.text,
+    }));
+    const icon = document.createElement("span");
+    icon.className = "mood-day-icon";
+    icon.innerHTML = moodArt(mood);
+    const label = document.createElement("span");
+    label.className = "mood-day-label";
+    const short = document.createElement("span");
+    short.className = "mood-day-short";
+    short.textContent = I18N.formatDate(day, { weekday: "short" });
+    const narrow = document.createElement("span");
+    narrow.className = "mood-day-narrow";
+    narrow.textContent = I18N.formatDate(day, { weekday: "narrow" });
+    label.append(short, narrow);
+    button.append(icon, label);
+    item.append(button);
+    list.append(item);
+    if (key === focusedDay) button.focus();
+  }
+  showMoodDay(list.querySelector(`[data-day="${moodDayPicked}"]`));
+}
+
+// The line under the strip: the picked day's "Rainy: it was hard going" or "Not marked", empty when
+// no day is picked (it keeps its height, so nothing moves).
+function showMoodDay(button) {
+  document.getElementById("moodDayLine").textContent = button ? button.dataset.text : "";
+}
+
+function onMoodDayClick(event) {
+  const button = event.target.closest(".mood-day-button");
+  if (!button) return;
+  moodDayPicked = moodDayPicked === button.dataset.day ? null : button.dataset.day;
+  for (const other of document.querySelectorAll("#moodWeek .mood-day-button")) {
+    other.setAttribute("aria-pressed", String(other.dataset.day === moodDayPicked));
+  }
+  showMoodDay(moodDayPicked ? button : null);
 }
 
 // "Your browser isn't letting this site save data": in place of the empty state, or above the
@@ -608,7 +719,9 @@ function historySource() {
   // dueCapsuleCount: how many date capsules have reached their time, so one that opened while the
   // page was hidden (a sleeping phone) is drawn when it's shown again.
   const capsules = CAPSULES_ON ? `${readCapsulesRaw()}|${dueCapsuleCount()}` : "";
-  return `${dayKey(new Date())}|${canSave}|${saved}|${readCustomRaw()}|${capsules}`;
+  // And the moods: one picked or removed on a summary in another tab shows up.
+  const moods = moodOn() ? readMoodsRaw() : "";
+  return `${dayKey(new Date())}|${canSave}|${saved}|${readCustomRaw()}|${capsules}|${moods}`;
 }
 
 // "Today" changes at midnight, and with it the current streak and "this week". A page that stays
@@ -752,7 +865,17 @@ async function confirmDelete(button) {
   const startedAt = Number(button.dataset.startedAt);
 
   // "missing" (already deleted in another tab) needs no message of its own: it's gone either way.
-  if (answer !== "delete" || deleteFromHistory(startedAt) === "failed") {
+  const deleted = answer === "delete" ? deleteFromHistory(startedAt) : "";
+  // Its mood goes too (also when another tab deleted the session). A failed write needs no message:
+  // the next mood write drops it anyway (setMood in js/mood.js).
+  if (deleted && deleted !== "failed" && moodOn()) {
+    try {
+      removeMood(startedAt);
+    } catch (error) {
+      console.error(error);
+    }
+  }
+  if (answer !== "delete" || deleted === "failed") {
     if (answer === "delete") {
       showDeleteStatus(t("history.deleteFailed"), true);
     }
@@ -1384,14 +1507,17 @@ function init() {
     if (file) importHistory(file);
   });
   document.getElementById("editButton").addEventListener("click", toggleEditing);
+  document.getElementById("moodWeek").addEventListener("click", onMoodDayClick);
   document.getElementById("sessionList").addEventListener("click", (event) => {
     const button = event.target.closest(".session-delete");
     if (button) confirmDelete(button);
   });
   window.addEventListener("storage", (event) => {
     // null: all storage was cleared. CUSTOM_KEY: a custom character renamed or deleted elsewhere.
-    // CAPSULES_KEY: a time capsule sealed, opened or deleted elsewhere.
-    if (event.key === HISTORY_KEY || event.key === CUSTOM_KEY || event.key === CAPSULES_KEY || event.key === null) {
+    // CAPSULES_KEY: a time capsule sealed, opened or deleted elsewhere. MOOD_KEY: a mood picked,
+    // changed or removed on a summary in another tab.
+    const moodKey = moodOn() ? MOOD_KEY : "";
+    if (event.key === HISTORY_KEY || event.key === CUSTOM_KEY || event.key === CAPSULES_KEY || event.key === moodKey || event.key === null) {
       refreshInBackground();
     }
   });
