@@ -4646,6 +4646,12 @@ dialog {
     list-style-position: inside;
   }
 
+  /* Setup hints under the checkboxes: no 30px indent, so a long word ("webhelybeállításaiban")
+     has the whole column. */
+  .setting-hint {
+    margin-left: 0;
+  }
+
   /* Quick start: the Start button under the line, full width. */
   .quick-start {
     flex-wrap: wrap;

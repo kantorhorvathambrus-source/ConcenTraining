@@ -3026,7 +3026,8 @@ these rules and keep the normal layout; nothing else depends on them.
 - Motivate me (or Undo, Resume, Start now) above Stop; Start now may take two lines. On landscape
   phones the category picker over the distraction block gets 2 categories per row and Skip on its
   own row, and scrolls inside the block if it's taller.
-- Quick start: Start under the line, full width. Test sound under its checkbox text.
+- Quick start: Start under the line, full width. Test sound under its checkbox text. The hints
+  under the setup checkboxes lose their indent.
 - History: Edit / Done under the title, a session's focus % under its text (in edit mode always),
   a time capsule's text under its envelope, a "Best time of day" or category value under its name.
 - Tip cards: 12px padding, the How it works bullets inside the text column. The import and
