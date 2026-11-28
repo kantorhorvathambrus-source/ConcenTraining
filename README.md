@@ -180,7 +180,7 @@ there, see [Domain, redirect and security headers](#domain-redirect-and-security
   it) stops and the character goes back to its normal pose, the category picker closes, the "doing well" timer is set back to what it
   was before the tap, and the session is saved. A new tap inside the 5 s moves Undo to the new
   distraction and starts the 5 s again. After a reload there's no Undo.
-- **Tap guard:** a tap that comes less than 0.4 s after the previous accepted tap is ignored everywhere in the app (`TAP_GUARD_MS` in `public/js/app.js`), so an accidental double tap never logs twice or presses what appears under the finger; keyboard and screen reader activation, Undo, text fields and checkbox labels are never blocked.
+- **Tap guard:** a tap that comes less than 0.4 s after the previous accepted tap is ignored everywhere in the app (`TAP_GUARD_MS` in `public/js/app.js`), so an accidental double tap never logs twice or presses what appears under the finger; keyboard and screen reader activation, Undo, text fields and checkbox labels are never blocked. On the distraction buttons a held-down key's auto-repeat is ignored (only the first press logs), and a session never holds more distractions than max(100, 5 per second of session time) (`distractionLimit` in `public/js/history-store.js`, the import's limit): a tap beyond it is ignored.
 - **Distraction categories:** after each distraction button, once the reaction has played (1.4 s,
   `PICKER_DELAY_MS`), a small picker appears above the bottom buttons: "What distracted you?" with
   Screen, Thoughts, Noise, People, Tired, Other, and a grey **Skip** button on the right. There's no
@@ -1646,7 +1646,17 @@ to history" checkbox was unticked (see above). The page shows:
 - **Time capsule:** a message to your future self, sealed until a day or more session time (see
   [Time capsule](#time-capsule)). Ready messages show at the very top of the page.
 - **Backup:** "Your sessions are saved automatically on this device. Export a copy before you
-  switch phones or clear your browser data.", then Export and Import buttons (see below).
+  switch phones or clear your browser data. …", then Export and Import buttons (see
+  [Export and import](#export-and-import)). The text names the history limit, written the way the
+  language writes numbers ("5,000" in English, "5000" in Hungarian, "5.000" in German), so
+  `history.js` fills it (`renderBackupText`) instead of `data-i18n`; `history.html` has the English
+  text for a page without script.
+
+The history keeps the **newest 5000 sessions** (`HISTORY_LIMIT` in `public/js/history-store.js`,
+about 1.5 MB with typical sessions). It's always sorted by start time, newest first:
+`saveFinishedSession` sorts before it cuts and writes, so a "Welcome back" save of an older session
+or a device clock set back lands in its place. Once there are more than 5000, each new session
+silently removes the oldest one. An import never removes a session (see below).
 
 Simple-mode sessions have no focus % (their buttons aren't time-based). They count for streaks and
 time per week and appear in the list as "—", but are left out of the focus trend and time-of-day
@@ -1744,7 +1754,7 @@ page again after nothing happened draws nothing, and an Import only draws once (
 | Key | What's in it |
 |---|---|
 | `ct_session_v1` | The session that's running right now (removed when it ends). `characterName`: only with a custom character (its name when the session started). `restartPending: true` while the continue/restart question is unanswered; older saved sessions don't have it, which means `false`. `leftAt` (timestamp in ms): only while the page is hidden, for the time away card; missing means the page wasn't left. Never copied into the history. `pausedAt` (timestamp in ms, or `null`): when the current break started (see **Take a break**). `pauses` (`[{ at, ms }]`): the breaks that are over. Sessions saved before breaks existed have neither, which means never paused. `utcOffsetMin`: the device's offset from UTC in minutes when the session started (copied into the history, see [Which day a session counts on](#which-day-a-session-counts-on)); a session started before it existed doesn't have it |
-| `ct_history_v1` | Finished sessions, newest first, max. 1000 |
+| `ct_history_v1` | Finished sessions, sorted by start time (newest first), max. 5000: a new session over the limit removes the oldest one, an import never removes any |
 | `ct_custom_characters_v1` | Characters made in the editor: `{ v: 1, characters: [ { id, name, personality, createdAt, look: { gender, skin, hairColor, hairStyle, face, outfit, eyewear, earrings, necklace, facialHair, headwear, mask, earsHorns, costumeBeard, costumeOutfit, back, held, pet } } ] }`. The 8 costume fields are optional: characters saved before costumes don't have them, which means None. `id` is `custom-` plus 10 random letters/digits, never reused (a new id also avoids every id in the history). `personality` is the style its sessions run in. `createdAt`: `Date.now()` at the first Save, never changed by an edit; the look and personality can be changed for 10 minutes after it (see [The 10-minute rule](#the-10-minute-rule)), and 0 or a missing value means final. Reading never fails: a broken entry is skipped (not the whole list), an unknown look value gets the default. See [Custom characters](#custom-characters) |
 | `ct_prefs_v1` | Last chosen character, mode and duration, plus `endSound` and `keepScreenOn` (the two setup checkboxes, `true`/`false`). Prefs saved before these existed get `true` for both. `leaveReminder`: the **Remind me if I leave the app** checkbox (see [Leave reminder](#leave-reminder)); prefs saved before it existed get `false`. `homeScreenTipDismissed`: `true` once **Got it** was tapped on the iPhone Home Screen tip. `persistRequested`: `true` once persistent storage was asked for (or skipped in Firefox), see [iPhone storage and the Home Screen app](#iphone-storage-and-the-home-screen-app). Prefs saved before these two existed get `false` for both. `howItWorksDismissed`: `true` once **Got it** was tapped on the How it works card; prefs saved before it existed get `false`, so the card shows once. `language`: only once a language was picked in the language sheet (`"en"`, `"hu"`); without it the app follows the browser's language (see [Languages](#languages)). `theme`: `"light"` or `"dark"`, only once the light/dark switch was tapped; without it the app follows the phone's setting (see [Light and dark](#light-and-dark)). A `style` value saved by older versions is ignored and dropped. `ragebaitAccepted`: the ids of the characters whose ragebait warning was accepted on Start (see **Ragebait warning** in [How it works](#how-it-works)); prefs saved before it existed count the ragebait character chosen then as accepted. `usePlan` (`true` while **Plan** is picked in step 3; missing means `false`) and `plan` (`{ rows: [{ minutes, count, breakMinutes, breakPicked }] }`, the plan built there; `breakPicked`: that row's break was picked by hand): see [Plans](#plans); prefs saved before them have neither, which means Single block and, once Plan is picked, the first-time plan. `focusNoise` (`"off"`, `"brown"`, `"pink"`, `"white"` or `"green"`), `focusNoiseVolume` (5–100, in %), `focusMix` (`{ rain: { on: true, volume: 40 }, … }`: every Ambient sound that has ever been on, with its volume) and `focusVolume` (the master, 5–100): the **Focus sound** setting (see [Focus sound](#focus-sound)); missing or bad values mean Off, 70% per layer and 55% master, and unknown sounds are dropped. A `focusSound` value saved by an early test version is dropped. `moodQuestion`: the **Ask how it felt at the end** checkbox (see [Inner weather](#inner-weather)); prefs saved before it existed get `true`. Saved field by field (see [Several tabs](#several-tabs-one-tab-at-a-time)) |
 | `ct_plan_v1` | The running plan (see [Plans](#plans)), removed when its summary shows: `{ v: 1, startedAt, characterId, characterName?, style, mode, blocks: [{ minutes, breakMinutes }], index, phase, blockStartedAt, breakStartedAt, parts }`. `index`: the block that runs (`phase: "block"`, whose session in `ct_session_v1` has `startedAt` = `blockStartedAt`) or the next one (`phase: "break"`, the break after block `index − 1`, started at `breakStartedAt`). `parts`: what each finished block measured, for the plan's summary (`{ block, startedAt, plannedMs, elapsedMs, distractedMs, focusPercent, distractions: [{ level, category }], pauses, status, startedOver? }`, `status` `"saved"`, `"exists"`, `"failed"`, `"short"`, `"unsaved"` or `"discarded"`). Never copied into the history. Ignored and cleared while plans are off |
@@ -1888,21 +1898,58 @@ doesn't do this.
   }
   ```
 
-- **Import** reads such a file and **adds** its sessions to the history. A session whose start time
-  is already in the history, or appears twice in the file, is skipped ("Skipped 2 duplicates or
-  sessions you already had"). Like when a new session is saved, only the newest 1000
-  sessions are kept: if the total goes over 1000, the oldest sessions are removed, whether they
-  came from the file or were already in the history. The result message says how many were
-  imported, how many from the file didn't fit, and how many existing sessions were removed.
+- **Export checks its own file:** every exported session runs through the same check as an import
+  (`exportProblems` in `public/js/history-store.js`). Sessions that fail are still written to the
+  file, but the status line turns red and says how many wouldn't import and why, e.g. "Exported 120
+  sessions. 2 sessions in the file wouldn't import (2 break outside the session)." So a problem
+  shows up at export time, not when you restore.
+- **Import** reads such a file and **adds** its sessions to the history. It **never removes a
+  session you have.** A session whose start time is already in the history, or appears twice in the
+  file, is skipped ("Skipped 2 duplicates or sessions you already had"). The new sessions are
+  added newest first while the history has room under the limit of 5000; the rest are left out
+  ("5 older sessions from the file didn't fit (max. 5,000)"). With a full history nothing is
+  written: "Nothing was imported: your history is full (5,000 sessions)." `mergeIntoHistory` reads
+  the saved history again in the same step as the write, so a session saved meanwhile in another
+  tab is never lost, and if the browser refuses the write nothing changes ("Couldn't save the
+  imported sessions: …").
 - The file itself must have the right `app`, `type` and `version`, otherwise nothing is imported
   and the page says what's wrong. Max. file size: 5 MB.
 - Each session is checked on its own. An invalid session is skipped and the rest still import;
   one line says how many were skipped and why, for example
-  "Skipped 3 invalid sessions (2 shorter than 1 minute, 1 focus % doesn't match distraction time)".
-  A session must have valid times, `endedBy`, character id, mode, style, focus % and distractions
-  (unknown character ids are fine, so a newer export with new characters still imports), **and
-  its numbers must agree with each other** the way the app saves them:
-  - at least 1 minute long (same rule as saving), and `elapsedMs` = `endedAt − startedAt` minus the
+  "Skipped 3 invalid sessions (2 shorter than 1 minute, 1 bad planned length)".
+  A session must have valid times, `endedBy`, character id, mode, style and distractions
+  (unknown character ids are fine, so a newer export with new characters still imports), stay
+  within the **sanity limits**, and not contain anything that can't be true. What can be worked out
+  again is **repaired** instead of rejected, so a session the app saved itself is never lost.
+- **Sanity limits** (far outside what the app can save):
+  - every time (`startedAt`, `endedAt`, each distraction's and each break's `at`) is a whole number
+    of milliseconds (`Number.isSafeInteger`), and `endedAt` isn't before `startedAt`
+  - `startedAt` isn't before 1 January 2024 ("bad start or end time"), and `endedAt` isn't more
+    than one day after the moment of the import ("date in the future"; the day allows for a phone
+    clock that is a little off)
+  - `plannedMs` is a whole number of minutes from 1 to 240 (`MAX_PLANNED_MS`, the same as the
+    timer's maximum; "bad planned length")
+  - at most max(100, 5 per second of session time) distractions ("too many distractions",
+    `distractionLimit`). Taps are limited to one per 400 ms, which is 2.5 per second, so real
+    sessions always fit: 300 for a one-minute session. The app never logs more than this limit
+    either, and a held-down Enter on a distraction button counts once (key auto-repeat is ignored),
+    so it can't save a session its own import would reject.
+  - at most 1000 breaks ("bad break list")
+- **Repairs:**
+  - `elapsedMs`, `distractedMs` and `focusPercent` are always worked out again from the times, the
+    breaks and the distractions (`sessionFocus`), whatever the file says (Simple mode's
+    `focusPercent` is always `null`). Before 19 Oct 2026 the app rounded a distraction under 0.5% of
+    the session up to 100%; such a saved 100 is kept.
+  - a distraction whose `at` is outside the session (before the start, or more than 1 minute after
+    the end, e.g. after the phone's clock was changed during the session) is moved to the session's
+    start or end, whichever is nearer. Its length, level and category stay. A break outside the
+    session is still rejected.
+  - `characterName` is kept when `characterId` is a custom character's id and the name is
+    non-empty text of at most 20 characters (after trimming); otherwise it's dropped and the session
+    still imports. So after a restore, sessions with a custom character show its name again (the
+    characters themselves aren't in the file yet). The name is only ever shown as plain text.
+- What must still agree, checked against the worked-out numbers:
+  - at least 1 minute long (same rule as saving); session time is `endedAt − startedAt` minus the
     breaks (version 7; before that there are no breaks)
   - from version 7, `pauses` is missing or a list of breaks: each `at` a time and each `ms` a whole
     number above 0 ("bad break"), each inside the session ("break outside the session"), in order and
@@ -1914,10 +1961,9 @@ doesn't do this.
     less. The allowed values and their rules are in `ENDED_BY_RULES` in
     `public/js/history-store.js`: a new value needs one line there, plus a version check in
     `cleanImportedSession` (like the one for `"startOver"`).
-  - every distraction is inside the session (up to 1 minute after the end is allowed, for a tap
-    just as the timer runs out; a time away distraction's `at` is the moment the page was left,
-    which is always inside); Simple-mode distractions have `ms: 0`, tapped Advanced ones are
-    30 sec to 10 min long
+  - a distraction up to 1 minute after the end is kept as it is (a tap just as the timer runs out;
+    a time away distraction's `at` is the moment the page was left, which is always inside);
+    Simple-mode distractions have `ms: 0`, tapped Advanced ones are 30 sec to 10 min long
   - from version 6, `source` is missing (a tap) or `"away"`, anything else is an "unknown
     distraction source". An Advanced away distraction is a measured length: whole seconds, at
     least 15 s and not longer than the session ("away distraction length out of range"), and its
@@ -1927,9 +1973,6 @@ doesn't do this.
   - from version 8, `utcOffsetMin` is optional: a whole number from −720 to 840 is kept, anything
     else is left out and the session still imports (it then counts in the phone's current
     timezone, like every older session). In version 1–7 files the field is dropped.
-  - `distractedMs` and the Advanced `focusPercent` are what the app calculates from the
-    distractions. Simple mode's `focusPercent` must be `null`. Before 19 Oct 2026 the app
-    rounded a distraction under 0.5% of the session up to 100%, so that old value is accepted too.
 - `test-data/` has small files for testing these checks (see `test-data/README.md`).
 - **Versions:** version 2 added `category` to each distraction. Version 1 files (made before that)
   still import; their distractions get `category: null`. From version 2, every distraction must
@@ -2246,7 +2289,7 @@ had `fog`: a saved `fog` is skipped as unknown.
 - **Reading never fails:** unknown ids, keys that aren't a start time, and a broken file are skipped.
 - **Writing** (`setMood`, the only write): reads the key fresh (so another tab's mood is never lost),
   changes the given sessions, then drops every mood whose session is no longer in the history, so the
-  key can't grow forever (sessions over the 1000 limit, deleted or replaced by an import). If the
+  key can't grow forever (sessions over the 5000 limit, or deleted). If the
   history can't be read (broken data, storage blocked), nothing is dropped, so one bad read can't wipe
   the moods; no history saved at all drops them all.
 - **Deleting a session** on the history page also removes its mood (also when another tab already

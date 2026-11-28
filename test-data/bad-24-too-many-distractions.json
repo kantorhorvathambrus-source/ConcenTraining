@@ -1,0 +1,1829 @@
+{
+  "app": "ConcenTraining",
+  "type": "session-history",
+  "version": 8,
+  "exportedAt": "2026-11-28T09:00:00.000Z",
+  "sessions": [
+    {
+      "startedAt": 1790762400000,
+      "utcOffsetMin": 120,
+      "endedAt": 1790762460000,
+      "endedBy": "timer",
+      "characterId": "grandma",
+      "style": "kind",
+      "mode": "simple",
+      "plannedMs": 60000,
+      "elapsedMs": 60000,
+      "distractedMs": 0,
+      "focusPercent": null,
+      "distractions": [
+        {
+          "at": 1790762400000,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762400190,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762400380,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762400570,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762400760,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762400950,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762401140,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762401330,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762401520,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762401710,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762401900,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762402090,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762402280,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762402470,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762402660,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762402850,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762403040,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762403230,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762403420,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762403610,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762403800,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762403990,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762404180,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762404370,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762404560,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762404750,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762404940,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762405130,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762405320,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762405510,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762405700,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762405890,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762406080,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762406270,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762406460,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762406650,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762406840,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762407030,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762407220,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762407410,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762407600,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762407790,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762407980,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762408170,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762408360,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762408550,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762408740,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762408930,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762409120,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762409310,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762409500,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762409690,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762409880,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762410070,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762410260,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762410450,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762410640,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762410830,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762411020,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762411210,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762411400,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762411590,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762411780,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762411970,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762412160,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762412350,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762412540,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762412730,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762412920,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762413110,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762413300,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762413490,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762413680,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762413870,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762414060,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762414250,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762414440,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762414630,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762414820,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762415010,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762415200,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762415390,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762415580,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762415770,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762415960,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762416150,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762416340,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762416530,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762416720,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762416910,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762417100,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762417290,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762417480,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762417670,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762417860,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762418050,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762418240,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762418430,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762418620,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762418810,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762419000,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762419190,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762419380,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762419570,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762419760,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762419950,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762420140,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762420330,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762420520,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762420710,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762420900,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762421090,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762421280,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762421470,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762421660,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762421850,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762422040,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762422230,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762422420,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762422610,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762422800,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762422990,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762423180,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762423370,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762423560,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762423750,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762423940,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762424130,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762424320,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762424510,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762424700,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762424890,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762425080,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762425270,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762425460,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762425650,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762425840,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762426030,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762426220,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762426410,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762426600,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762426790,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762426980,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762427170,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762427360,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762427550,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762427740,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762427930,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762428120,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762428310,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762428500,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762428690,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762428880,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762429070,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762429260,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762429450,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762429640,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762429830,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762430020,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762430210,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762430400,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762430590,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762430780,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762430970,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762431160,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762431350,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762431540,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762431730,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762431920,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762432110,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762432300,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762432490,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762432680,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762432870,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762433060,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762433250,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762433440,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762433630,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762433820,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762434010,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762434200,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762434390,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762434580,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762434770,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762434960,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762435150,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762435340,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762435530,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762435720,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762435910,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762436100,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762436290,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762436480,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762436670,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762436860,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762437050,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762437240,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762437430,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762437620,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762437810,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762438000,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762438190,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762438380,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762438570,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762438760,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762438950,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762439140,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762439330,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762439520,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762439710,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762439900,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762440090,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762440280,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762440470,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762440660,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762440850,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762441040,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762441230,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762441420,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762441610,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762441800,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762441990,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762442180,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762442370,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762442560,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762442750,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762442940,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762443130,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762443320,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762443510,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762443700,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762443890,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762444080,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762444270,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762444460,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762444650,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762444840,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762445030,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762445220,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762445410,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762445600,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762445790,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762445980,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762446170,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762446360,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762446550,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762446740,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762446930,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762447120,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762447310,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762447500,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762447690,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762447880,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762448070,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762448260,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762448450,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762448640,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762448830,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762449020,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762449210,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762449400,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762449590,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762449780,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762449970,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762450160,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762450350,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762450540,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762450730,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762450920,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762451110,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762451300,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762451490,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762451680,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762451870,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762452060,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762452250,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762452440,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762452630,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762452820,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762453010,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762453200,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762453390,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762453580,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762453770,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762453960,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762454150,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762454340,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762454530,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762454720,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762454910,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762455100,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762455290,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762455480,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762455670,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762455860,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762456050,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762456240,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762456430,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762456620,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762456810,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        },
+        {
+          "at": 1790762457000,
+          "level": 1,
+          "ms": 0,
+          "category": null
+        }
+      ]
+    }
+  ]
+}

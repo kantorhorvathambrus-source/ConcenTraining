@@ -1638,6 +1638,11 @@ function buildDistractionButtons(mode) {
     button.className = `btn level level-${option.level}`;
     button.textContent = t(option.key);
     button.addEventListener("click", () => logDistraction(option, button));
+    // A held-down Enter repeats its key press many times a second, and each would click the button
+    // (keyboard clicks pass the tap guard on purpose). Only the first press counts.
+    button.addEventListener("keydown", (event) => {
+      if (event.repeat) event.preventDefault();
+    });
     buttons.append(button);
   }
 }
@@ -1715,13 +1720,17 @@ function tick() {
 function logDistraction(option, button) {
   if (!session || session.endedAt) return;
   const distraction = { at: Date.now(), level: option.level, ms: option.ms || 0, category: null };
-  addDistraction(distraction, Boolean(option.askRestart));
-  schedulePicker(distraction, button);
+  if (addDistraction(distraction, Boolean(option.askRestart))) schedulePicker(distraction, button);
 }
 
 // Saves a distraction and plays its reaction, with Undo. askRestart: level 5, which asks
 // continue or restart once the picker (if any) and the Undo window are over.
+// A distraction beyond distractionLimit() (history-store.js: 5 per second of session time so far,
+// at least 100) is ignored, so the app never saves a session its own import would reject.
+// Session time only grows, so a session within the limit now is within it at the end too.
+// Returns false when it was ignored.
 function addDistraction(distraction, askRestart) {
+  if (session.distractions.length >= distractionLimit(activeElapsed(session))) return false;
   const setRestart = askRestart && !session.restartPending;
   session.distractions.push(distraction);
   if (askRestart) session.restartPending = true;
@@ -1732,6 +1741,7 @@ function addDistraction(distraction, askRestart) {
   react(`level${distraction.level}`, distraction.level);
   announce(describePose(stage.character, `level${distraction.level}`));
   updateLengthButtons();
+  return true;
 }
 
 // Advanced mode: a length longer than the free time (time so far minus the distraction
